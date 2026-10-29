@@ -1,0 +1,150 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U10",
+      "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Demonstrate that the template editor preview inherits cross-step conditional behaviour from the shared Stepper, with no source change in this plugin.",
+      "rules": [
+        "Import `TemplateEditorForm` relatively from './TemplateEditorForm'. It is a named export of that file and is not re-exported from the directory barrel.",
+        "Feed the component through its `content` prop as a YAML string with `contentIsSpec: true`, so it parses `parameters` directly without needing a Template entity wrapper.",
+        "The YAML holds two parameter steps in the mobile-SDK shape: the first declaring a boolean `mobile` titled 'Is this a mobile SDK?', the second declaring its own string `repo` plus `dependencies.mobile.oneOf` adding a required string `sdkName` titled 'SDK Name' under `mobile: { const: true }`, with a `mobile: { const: false }` branch.",
+        "The component parses `content` inside a 250 ms `useDebounce`, so the first assertion must be an awaited `findBy*` query; a synchronous `getBy*` on first render will fail before the debounce fires.",
+        "Render with `renderInTestApp` and a `TestApiProvider`, following the sibling tests in this directory. Pass `setErrorText={jest.fn()}` and `fieldExtensions={[]}`.",
+        "Assert the YAML parsed without error by checking the jest.fn() passed as `setErrorText` was never called with a message, so a schema the preview cannot read fails loudly rather than silently rendering nothing.",
+        "This unit adds NO source change to plugins/scaffolder/src — parity is inherited because TemplateEditorForm renders the shared Stepper. The test exists to prove that, per FR-11.",
+        "Drive the wizard with `act` + `fireEvent`, and query by accessible name. Do not add a test ID to any component."
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/CustomFieldsPage.test.tsx",
+        "reason": "The sibling test idiom for this exact directory: Apache header, `renderInTestApp` with a `TestApiProvider` of mocked api refs, `screen` queries, no test IDs."
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.tsx",
+          "lines": [
+            92,
+            200
+          ],
+          "reason": "The component under test: its props, the `contentIsSpec` branch that reads `parameters` straight off the parsed root, the 250 ms useDebounce, and the Stepper it renders."
+        },
+        {
+          "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateFormPreviewer.tsx",
+          "lines": [
+            53,
+            80
+          ],
+          "reason": "Its EXAMPLE_TEMPLATE_PARAMS_YAML shows the exact YAML shape this component expects under `contentIsSpec`, to copy for the fixture."
+        }
+      ],
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-11",
+        "AC-7"
+      ],
+      "tests": [
+        {
+          "name": "shows a cross-step conditional field in the preview only when the governing answer is set",
+          "given": "The mobile-SDK parameters YAML rendered as a preview, advanced to the second step with the flag unset, then back with the flag set and advanced again",
+          "expect": "The second step shows 'Repo' but no 'SDK Name' while the flag is unset, and shows 'SDK Name' once it is set, with setErrorText never called with a message"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "docs/features/software-templates/writing-templates.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document cross-step conditional fields for template authors, with the mobile-SDK worked example, next to the existing section on hiding fields by feature flag.",
+      "rules": [
+        "Insert a new `###` section titled 'Show fields based on an answer from an earlier step', placed after the feature-flag section and before '### The Repository Picker', since both sections are about which fields a template shows.",
+        "Follow docs/contribute/doc-style-guide.md: sentence-case heading, second person, present tense, every fenced block tagged `yaml`.",
+        "State what is supported: a field in any step may be shown, hidden or required based on an answer given in an earlier step, expressed with standard JSON Schema `dependencies` or `if`/`then`. No Backstage-specific syntax is involved.",
+        "State what is not supported, explicitly: whole steps are never skipped — every step in `parameters` still renders. Conditions govern fields only.",
+        "Give the worked example from the originating issue as a single YAML block: step 1 asks 'Is this a mobile SDK?' as a boolean; step 2 declares its own repository field plus a `dependencies.mobile.oneOf` whose first branch adds the SDK-specific fields and marks them required under `mobile: { const: true }`, with a second branch for `mobile: { const: false }`.",
+        "Show the `if`/`then` alternative in a second short YAML block, so authors see both standard forms.",
+        "Document the behaviour change plainly: when an author's condition stops holding, the dependent answer is removed from the form data, so it does not appear on the review step and is not passed to `spec.steps`. An author who referenced that parameter in a step should guard it.",
+        "Note that the review step lists a conditional field only while its condition holds, and that the template editor preview behaves the same as the live form.",
+        "Do not add a mkdocs.yml nav entry: this is a new section inside an already-listed page, and mkdocs.yml is outside this run's allowlist.",
+        "Do not restructure, reword or re-indent any existing section of this file."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 468,
+          "to": 468,
+          "first_line": "### The Repository Picker",
+          "rule": "Insert the new section and a trailing blank line here, so it closes the group of field-visibility sections that begins at '### Remove sections or fields based on feature flags' (line 404) and the Repository Picker heading stays at the start of its own section."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-templates/writing-templates.md",
+        "lines": [
+          404,
+          440
+        ],
+        "reason": "The adjacent feature-flag section is the closest precedent: a short prose lead, one annotated YAML block of a `spec.parameters` fixture, then a paragraph explaining the outcome."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-9"
+      ],
+      "checks": [
+        "fmt"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset covering the one published package this run changes, with a minor bump and an adopter-facing note that includes the dropped-value behaviour change.",
+      "rules": [
+        "The file is YAML front matter between `---` fences naming exactly one package, then the message as markdown prose. Copy the shape of any existing file in .changeset/.",
+        "Name exactly one package: `'@backstage/plugin-scaffolder-react': minor`. It is at 3.0.0-next.0, so an additive feature at >= 1.0.0 takes minor.",
+        "Do NOT name @backstage/plugin-scaffolder: this run adds only a test there, and a test-only change needs no changeset.",
+        "Write for adopters in plain language. Name no internal code symbol — no function, hook, file or variable name. `dependencies` and `if`/`then` are fine: they are JSON Schema keywords an author writes in a template, not internal symbols.",
+        "First state the feature: a scaffolder template's form can now show, hide or require a field based on an answer given in an earlier step of the wizard, using standard JSON Schema conditions, and the review step reflects those conditions.",
+        "Then state the behaviour change in its own sentence, because adopters must learn it here rather than from a changed payload: when an answer's governing condition stops holding, that answer is now removed from the form data, so it no longer appears on the review step and is no longer submitted. Previously it persisted.",
+        "Keep it to a few sentences. Do not add a heading, a bullet list of requirement ids, or a link to this run."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/brave-subjects-canonical.md",
+        "reason": "An existing changeset in this repo: the front-matter fence, the quoted package name with its bump level, and the prose message beneath."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-7",
+        "FR-13",
+        "AC-10"
+      ],
+      "checks": [
+        "fmt"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder/src/alpha/components/TemplateEditorPage/CustomFieldsPage.test.tsx": "979bac85d0103b636390d53493c678f07b8f7beff73a6a88fa624da7bda97ea7",
+    "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.tsx": "05ae2cf5b0fedf1e00e1181ed4affb1e454d7af53907a49218a4cfcd2a3dec25",
+    "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateFormPreviewer.tsx": "7ba236526317637e1b2b6c9dc6052915fa7f6ae62fd14be74a7a8d73121952ce",
+    "docs/features/software-templates/writing-templates.md": "835a793d3790dcd50ab72697a975e6c79795ede084ce2c0fc9e99c253a97be50",
+    ".changeset/brave-subjects-canonical.md": "a27a8c069489114e47e2eeda475db79fd3b011a7549bf6cca75a85f3fb0cea83"
+  }
+}

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "tp_debug_r4_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. The senior review's blocker-1 fix (pruneUnreachableFormState must NOT drop a conditional property belonging to a step that resolveStepSchema returns by identity) has landed in conditionalSchema.ts but is NOT covered by any test, so the regression it fixes is still invisible to the suite. Add cases to the existing `describe('pruneUnreachableFormState', ...)` block, following this file's existing style and using its existing helpers:\n\n1. The classic SAME-STEP dependencies shape: a step `{type:'object', properties:{creditCard:{type:'string'}}, dependencies:{creditCard:{properties:{billingAddress:{type:'string'}}}}}`. With formState `{creditCard:'4111', billingAddress:'1 High St'}`, assert pruneUnreachableFormState returns the IDENTICAL formState reference (use `toBe`, not `toEqual`) — billingAddress must survive, because RJSF resolves that condition locally and this module cannot see the outcome.\n\n2. The dependencies-only shape with NO own `properties` key: `{type:'object', dependencies:{mobile:{properties:{sdkName:{type:'string'}}}}}`. With formState `{mobile:true, sdkName:'ArcKit'}`, assert the identical reference is returned (`toBe`) — sdkName must survive.\n\n3. A same-step root `if`/`then` shape: `{type:'object', properties:{mobile:{type:'boolean'}}, if:{properties:{mobile:{const:true}}}, then:{properties:{sdkName:{type:'string'}}}}`. With formState `{mobile:true, sdkName:'ArcKit'}`, assert the identical reference is returned (`toBe`).\n\n4. A governing key that is present in formState but declared in no step's top-level `properties` (the minor finding at line 147): assert it is never dropped.\n\nPrefer one thorough test with multiple assertions over several tiny ones, per repo convention. Do not change conditionalSchema.ts and do not modify or delete any existing test case in this file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r4_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. The senior review's two blocker fixes have landed in Stepper.tsx but neither is covered by a test, so both regressions stay invisible to the suite. Add two cases, appended to the existing describe block in this file's existing style (React Testing Library, `screen` and `.findBy*` queries rather than `waitFor`, no test IDs added to the implementation):\n\n1. FEATURE-FLAG STRIPPING (blocker 2). Stepper.tsx:167 now renders from `steps[activeStep]?.schema` (the parsed, feature-flag-filtered schema) instead of the raw `mergedSchema`. Add a test with a step whose property carries an INACTIVE `ui:backstage.featureFlag` and assert that property's field does NOT render, while a sibling property with no flag DOES render. Follow how useTemplateSchema.test.tsx sets up feature flags for the shape of the manifest and any required api/mock wiring; if this file already has an apis/TestApiProvider wrapper helper, reuse it rather than inventing one.\n\n2. SAME-STEP CONDITIONAL VALUE SURVIVES A KEYSTROKE (blocker 1). Using the same-step shape `{properties:{creditCard}, dependencies:{creditCard:{properties:{billingAddress}}}}` in a single step: fill the governing field (creditCard), then type a value into the dependent field (billingAddress) that RJSF reveals, and assert the typed value is still present afterwards — it must not be pruned out of form state on that same keystroke. Assert it survives through to submission (the onCreate/onComplete spy this file already uses) so the test proves the value reaches the payload, not merely that the input looks filled.\n\nThere is a pre-existing `it.skip('should omit properties that are no longer pertinent to the current step')` at line 173. LEAVE IT SKIPPED and do not modify, revive or delete it — it is known-broken and out of scope for this run. Do not change Stepper.tsx and do not modify any existing active test case.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

@@ -1,0 +1,278 @@
+[
+  {
+    "id": "tp_debug_r5_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/conditionalSchema.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Two security-review findings in this file.\n\nFINDING 2 (High, data loss) at pruneUnreachableFormState (~L426-453). `canResolve` is computed PER STEP, but collectConditionalPropertyNames(step) then adds ALL of that step's conditional property names as drop candidates. In a step that MIXES a cross-step condition with a same-step dependency, the cross-step `if` makes canResolve true, so the same-step dependency's properties also become drop candidates — yet resolveStepSchema leaves same-step `dependencies` unresolved (returns them untouched in result.dependencies), so they never land in reachableProperties and get dropped. Reviewer's probe: step `{properties:{repo,creditCard}, dependencies:{creditCard:{properties:{billingAddress}}}, if:{properties:{mobile:{const:true}}}, then:{properties:{sdkName}}}` with state `{mobile:true,repo:'r',creditCard:true,billingAddress:'1 Main St',sdkName:'MySDK'}` returns `{mobile:true,repo:'r',creditCard:true,sdkName:'MySDK'}` — billingAddress is removed while its field is still visible and filled, and it is never submitted.\n\nFIX 2: make the drop-candidate set PER-CONDITION, not per-step. A property name is a drop candidate only when the governing key of the subschema that declares it is CROSS-STEP for that step (i.e. that governing key is absent from the step's own top-level `properties`). A property declared under a subschema whose governing key IS in the step's own `properties` (same-step `dependencies` or same-step `if`) must be added to reachableProperties instead, as the existing comment at ~L448-449 already intends. Keep the approved FR-7 behaviour intact: a genuinely unreachable cross-step-governed value is still dropped. Keep returning the identical formState reference when nothing is dropped.\n\nFINDING 3 (Medium, feature-flag bypass) at the property-hoisting step (~L333-338, `const nextProperties = { ...ownProperties }` merging collectedAddedProperties). The `ui:backstage.featureFlag` filter in useTemplateSchema walks only top-level step.schema.properties and never descends into `dependencies`/`then`/`else`. resolveStepSchema hoists properties out of those branches into top-level `properties` AFTER that filter has run, so a property whose flag is inactive renders. Reviewer's probe: step 2 `if mobile -> then {sdkName with 'ui:backstage':{featureFlag:'never-on-flag'}}` with the flag inactive renders the SDK Name textbox.\n\nFIX 3: give resolveStepSchema an OPTIONAL third parameter so a caller can exclude flagged-off properties, e.g. `resolveStepSchema(stepSchema, formState, options?: { isPropertyEnabled?: (propertyName: string) => boolean })`. When the callback is supplied, skip any hoisted property name for which it returns false — apply it ONLY to the properties hoisted out of conditional branches (collectedAddedProperties), never to the step's own top-level ownProperties (those are already filtered upstream by useTemplateSchema). Also drop any such excluded name from the merged `required` list so an invisible field cannot be required. The parameter MUST be optional and the function MUST keep its exact current behaviour when it is omitted, including returning the SAME object reference when there is no cross-step condition. Export any new option type from this module.\n\nConstraints for both: do not mutate inputs; keep the JsonObject/JsonValue typing with no `any` and no ts-ignore; keep all traversal hasOwnProperty-guarded; keep the try/catch around retrieveSchema; do not change pickConditionData's behaviour; do not modify any existing exported function's required parameters.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. FINDING 1 (High, validation bypass) at ~L166-174. `resolvedSchema` is built from `steps[activeStep]?.schema` and passed BOTH to createAsyncValidators and (via renderedSchema) to <Form>. But `schema` is the output of extractSchemaFromStep, which DELETES every `ui:` key (lib/schema.ts L45-48), and createAsyncValidators dispatches solely on `'ui:field' in definitionInSchema` (createAsyncValidators.ts L121/L152). So it now finds no `ui:field` anywhere and runs ZERO field-extension validators across the whole wizard — not just conditional fields (RepoUrlPicker host allow-listing, entity pickers, secret validators). Probed: baseline validator invoked once, post-change zero times.\n\nFIX 1: use TWO resolutions of the same accumulated state.\n- For VALIDATION: `createAsyncValidators(resolveStepSchema(steps[activeStep]?.mergedSchema ?? {}, stepsState), validators, { apiHolder })` — mergedSchema still carries the `ui:` keys the validator dispatches on.\n- For RENDERING: keep the existing `schema`-derived resolution for `renderedSchema` only (it is the feature-flag-filtered, ui:-stripped schema that must be rendered).\nBoth must resolve against the same `stepsState`, so FR-6 ('validation built from the same resolved schema that was rendered') holds as the same RESOLUTION, not the same ui:-stripped object. Use two separate useMemos with correct dependency arrays; keep eslint react-hooks/exhaustive-deps clean with --max-warnings 0 (list every dependency actually read; do not add an eslint-disable).\n\nFINDING 3 wiring: the rendering resolution must also exclude feature-flagged-off properties hoisted out of conditional branches. conditionalSchema.ts is being given an optional third options parameter `{ isPropertyEnabled?: (name: string) => boolean }`. Pass it ONLY on the rendering resolution: build the predicate from this component's existing data — read the per-property flag as `currentStep?.uiSchema?.[name]?.['ui:backstage']?.featureFlag` (extractUiSchema already hoists conditional-branch ui: options into the flat step uiSchema) and resolve it with the featureFlags API: `import { featureFlagsApiRef, useApi } from '@backstage/core-plugin-api'` and `const featureFlags = useApi(featureFlagsApiRef);`, returning `flag ? featureFlags.isActive(flag) : true`. Note `useApi` must be added to the existing import from that module, which currently imports useAnalytics and useApiHolder. Memoize the predicate so the rendering useMemo is stable. Do NOT pass the predicate to the validation resolution.\n\nConstraints: do not touch handleCreate or the stepper-label onClick prune behaviour (explicitly out of scope). Do not change the prune call sites' arguments. Keep the file's existing style and keep `yarn eslint --max-warnings 0` clean.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Add regression tests for security-review findings 2 and 3 in this file's existing style (prefer fewer thorough tests with multiple assertions). Do not modify or delete any existing test case.\n\n1. FINDING 2 — the mixed-step case, which is the reviewer's exact probe. Step schema `{type:'object', properties:{repo:{type:'string'}, creditCard:{type:'boolean'}}, dependencies:{creditCard:{properties:{billingAddress:{type:'string'}}}}, if:{properties:{mobile:{const:true}}}, then:{properties:{sdkName:{type:'string'}}}}`, with a step 1 declaring `mobile` top-level. With state `{mobile:true, repo:'r', creditCard:true, billingAddress:'1 Main St', sdkName:'MySDK'}`, assert pruneUnreachableFormState KEEPS billingAddress (the same-step dependency answer) and keeps sdkName. Then with `{mobile:false, repo:'r', creditCard:true, billingAddress:'1 Main St'}` assert billingAddress is STILL kept while the cross-step-governed sdkName is absent/dropped — proving the approved FR-7 drop still works and is now correctly scoped.\n\n2. FINDING 3 — the isPropertyEnabled option on resolveStepSchema. With a step whose cross-step `then` declares a property, assert that passing `{ isPropertyEnabled: name => name !== 'sdkName' }` resolves WITHOUT sdkName in the returned `properties` and without sdkName in `required`, while the same call with no options object DOES include it. Also assert that omitting the options argument entirely preserves the identity-return behaviour (use toBe) for a step with no cross-step condition.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Add regression tests for security-review findings 1 and 3, appended in this file's existing style: React Testing Library with `screen` and `.findBy*` queries rather than waitFor, no test IDs added to the implementation, reusing whatever api/TestApiProvider wrapper helper this file already has. Do not modify or delete any existing active test, and LEAVE the pre-existing `it.skip` at ~L173 skipped and untouched.\n\n1. FINDING 1 — THE PERMANENT FIX FOR THE COVERAGE HOLE. This assertion is the whole point: a green suite previously hid a wizard-wide validation bypass because no test asserted a field-extension validation callback actually fires. Register a scaffolder field extension that carries a `validation` callback (follow how this file and createAsyncValidators.test.ts already construct extensions, e.g. a jest.fn() validation on an extension whose name is referenced by `ui:field` in the step's uiSchema), render the Stepper with a step using that `ui:field`, fill the field, click Next, and assert with an explicit expectation that the validation callback WAS invoked (e.g. expect(validateSpy).toHaveBeenCalled()). Make this assertion explicit and primary, not incidental to another assertion.\n\n2. FINDING 3 — feature-flagged-off property inside a conditional branch must not render. Two cases, per the request for both shapes: (a) a flagged-off property declared inside a cross-step `then` branch, and (b) a flagged-off property declared inside a `dependencies` subschema. In each, with the governing answer set so the condition HOLDS and the named feature flag INACTIVE, assert the flagged property's field does NOT render, while a sibling property in the same branch with no flag DOES render. Follow useTemplateSchema.test.tsx for how to wire the featureFlagsApi mock so isActive returns false for the named flag.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "docs/features/software-templates/writing-templates.md",
+    "instruction": "Fix `docs/features/software-templates/writing-templates.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Two documentation additions to the existing section on showing fields based on an answer from an earlier step (security-review finding 4 and advisory item 5). Follow docs/contribute/doc-style-guide.md and the surrounding prose style. Change nothing else in this file.\n\n1. FINDING 4 (Medium) — the section currently says a dropped answer will not appear on the review step and will not be passed to spec.steps, with no caveat. The scaffolder backend validates submitted values against the whole merged parameters schema and does not restrict additional properties or re-evaluate which branch was reachable, so a direct POST to the tasks API can supply any schema-valid value regardless of conditions. A template author can read the current wording as 'hidden field means the value cannot reach my steps' and use conditional visibility to gate a privileged input. Add an explicit caveat, in substance: conditional visibility is a form-rendering convenience, not an access control; the scaffolder API accepts any value permitted by the template's parameter schema, so never rely on a hidden field to protect a value — enforce it in the action or with permissions instead. Make it prominent enough that an author skimming the section cannot miss it.\n\n2. ADVISORY ITEM 5 — resolveStepSchema only inspects root-level `if` / `dependencies`. A cross-step condition wrapped in `allOf` (or nested under a property) is silently inert: the field never appears and the author gets no error. The chosen treatment is documentation rather than a code change. State plainly that a cross-step condition must be declared at the ROOT of a step's schema (as a top-level `dependencies` or a top-level `if`/`then`), and that a condition nested inside `allOf`/`anyOf`/`oneOf` or under another property will not be evaluated across steps.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-templates/writing-templates.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-templates/writing-templates.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/writing-templates.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  }
+]

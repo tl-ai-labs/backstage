@@ -465,6 +465,85 @@ spec:
         ...
 ```
 
+### Show fields based on an answer from an earlier step
+
+You can show, hide or require a field in any step based on an answer given in an earlier step. Use standard JSON Schema conditional keywords such as `dependencies` or `if`/`then` on a later step to reference parameter keys defined in earlier steps. No Backstage-specific syntax is needed.
+
+Whole steps are never skipped — every step declared in `parameters` still renders. Conditions govern individual fields only.
+
+The following example uses `dependencies` with `oneOf`. Step 1 asks whether the project is a mobile SDK. Step 2 declares its own `repo` field, and adds SDK-specific fields only when `mobile` is `true`:
+
+```yaml
+spec:
+  parameters:
+    - title: Project type
+      properties:
+        mobile:
+          type: boolean
+          title: Is this a mobile SDK?
+          default: false
+    - title: Repository details
+      properties:
+        repo:
+          type: string
+          title: Repository name
+      dependencies:
+        mobile:
+          oneOf:
+            - properties:
+                mobile:
+                  const: true
+                sdkName:
+                  type: string
+                  title: SDK Name
+              required:
+                - sdkName
+            - properties:
+                mobile:
+                  const: false
+```
+
+You can also write cross-step conditions using standard `if`/`then` syntax:
+
+```yaml
+spec:
+  parameters:
+    - title: Project type
+      properties:
+        mobile:
+          type: boolean
+          title: Is this a mobile SDK?
+          default: false
+    - title: Repository details
+      properties:
+        repo:
+          type: string
+          title: Repository name
+      if:
+        properties:
+          mobile:
+            const: true
+      then:
+        properties:
+          sdkName:
+            type: string
+            title: SDK Name
+        required:
+          - sdkName
+```
+
+When a condition stops holding (for example, if a user navigates back and changes their answer), the dependent answer is removed from the form data. It will not appear on the review step and will not be passed to `spec.steps`. If you reference that parameter in a later step action, guard its use accordingly.
+
+:::warning[Conditional Visibility is Not Access Control]
+
+Conditional visibility is a form-rendering convenience, not an access control. The scaffolder backend validates submitted values against the template's overall parameter schema and does not restrict additional properties or re-evaluate which branch was reachable, so a direct request to the scaffolder tasks API can supply any schema-valid value regardless of conditions. Never rely on a hidden field to protect a privileged value — enforce authorization within the action or with Backstage permissions instead.
+
+:::
+
+A cross-step condition must be declared at the root of a step's schema (as a top-level `dependencies` or a top-level `if`/`then`). A condition nested inside `allOf`, `anyOf`, `oneOf`, or under another property will not be evaluated across steps.
+
+The review step lists a conditional field only while its condition holds. The template editor preview behaves the same as the live form.
+
 ### The Repository Picker
 
 In order to make working with repository providers easier, we've built a custom

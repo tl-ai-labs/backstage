@@ -1,0 +1,245 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Pure helpers that resolve a wizard step's JSON Schema against the accumulated answers of all steps, so a condition in step N can reference an answer from an earlier step, and that report which answers have become unreachable.",
+      "rules": [
+        "Declare a module-local `function isObject(value: unknown): value is JsonObject` exactly as lib/schema.ts does. Do not import one.",
+        "Declare a module-local `const validator = customizeValidator();` at module scope, from '@rjsf/validator-ajv8'. Build it once per module, never per call.",
+        "Import `retrieveSchema` from '@rjsf/utils'. It is exported from that package's root.",
+        "`collectGoverningKeys(stepSchema)`: return the set of property names a step's conditions test. Collect every key of `stepSchema.dependencies` when it is an object. When `stepSchema.if` is an object, collect every key of `if.properties` when that is an object, and every string entry of `if.required` when that is an array. Recurse into `then`, `else`, and each object entry of `allOf`, `anyOf`, `oneOf`, and into each object value of `dependencies`, collecting their `dependencies` keys and `if` keys the same way. Never collect a plain `properties` key as governing.",
+        "`collectConditionalPropertyNames(stepSchema)`: return the set of property names declared ONLY inside conditional subschemas. Walk `dependencies` values, `if`, `then`, `else`, and each object entry of `allOf`, `anyOf`, `oneOf`, recursively; at every node BELOW the root collect the keys of that node's `properties` when it is an object. Never collect the keys of the root's own `properties`.",
+        "`pickConditionData(stepSchema, formState)`: return a new plain object holding, for each key of `collectGoverningKeys(stepSchema)`, that key's value from `formState` when `formState` has it as an own property. Omit any key `formState` lacks. Never include a key that is not governing.",
+        "`resolveStepSchema(stepSchema, formState)` returns the SAME `stepSchema` reference, with no copying, when any of: `stepSchema` is not an object; it has no object `dependencies` and no object `if`; it has no own object `properties` key (RJSF already resolves a dependencies-only step correctly, so leave it alone); or every governing key is already a key of its own `properties`.",
+        "Otherwise `resolveStepSchema` computes, for each governing dependency key NOT in its own `properties`, an isolated probe `{ type: 'object', properties: { [key]: {} }, dependencies: { [key]: stepSchema.dependencies[key] } }`, calls `retrieveSchema(validator, probe, probe, formState)`, and takes from the outcome every `properties` entry except the probe's own stub key, plus every `required` entry except that stub key.",
+        "When `stepSchema.if` is an object and at least one of its governing keys is absent from the step's own `properties`, resolve it with one further probe `{ type: 'object', properties: <a stub {} per absent governing key>, if: stepSchema.if, then: stepSchema.then, else: stepSchema.else }`, include `then`/`else` only when each is present, and take from the outcome every property and required entry except the stub keys.",
+        "The returned schema is a shallow copy of `stepSchema` with: `properties` set to the step's own properties followed by the collected additions (an addition never overwrites an own property of the same name); `required` set to the step's own `required` entries followed by the collected additions, de-duplicated, and the `required` key deleted entirely when that list is empty; each consumed cross-step dependency key removed from `dependencies`, and the `dependencies` key deleted when nothing is left in it; and `if`, `then`, `else` deleted when the `if` probe ran. Never mutate `stepSchema` or anything reachable from it.",
+        "`pruneUnreachableFormState(stepSchemas, formState)` returns the SAME `formState` reference whenever it would drop nothing, including when no step declares a conditional property.",
+        "A key is dropped by `pruneUnreachableFormState` only when all of: it is in the union of `collectConditionalPropertyNames` over every step; it is NOT a top-level `properties` key of ANY step (a key any step declares at top level is a real answer and always survives); it is absent from the `properties` of EVERY step's `resolveStepSchema(step, formState)` under the current state; and `formState` has it as an own property. Dropping otherwise is a defect.",
+        "When at least one key is dropped, return a new shallow copy of `formState` without those keys. Never delete a key from the argument.",
+        "No helper throws for any input. A governing key answered in no step yields no additions and no drops. A malformed subschema (a string, null, an array where an object is expected) is skipped, not an error.",
+        "No helper logs, and none deep-clones a whole step schema or the manifest."
+      ],
+      "exports": [
+        {
+          "name": "resolveStepSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formState",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "pruneUnreachableFormState",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchemas",
+              "type": "JsonObject[]"
+            },
+            {
+              "name": "formState",
+              "type": "Record<string, JsonValue>"
+            }
+          ],
+          "returns": "Record<string, JsonValue>"
+        },
+        {
+          "name": "pickConditionData",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "Partial<{ [key: string]: JsonValue }>"
+        }
+      ],
+      "import_line": "import { resolveStepSchema, pruneUnreachableFormState, pickConditionData } from '../../lib/conditionalSchema';",
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "The house shape for a pure JSON Schema walker in this package: module-local isObject type guard, named export function, recursion over properties/items/anyOf/oneOf/allOf/dependencies/then/else, TSDoc with an @alpha tag on each export."
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+          "lines": [
+            16,
+            52
+          ],
+          "reason": "Shows how this package imports JsonObject/JsonValue and constructs schema tooling at module scope; the resolved schema this module returns is what gets handed to createAsyncValidators."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "NFR-6"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Unit tests for the cross-step resolution helpers, covering the mobile-SDK shape from the originating issue, the additive-identity guarantees, and the unanswered-key case.",
+      "rules": [
+        "Import the helpers relatively from './conditionalSchema'. No package-scoped self-import.",
+        "Build step schemas as inline literals typed `JsonObject`, shaped like a scaffolder step: `{ type: 'object', properties: { ... }, dependencies: { ... } }`.",
+        "The mobile-SDK fixture is two steps: step 1 declares `mobile` as a boolean; step 2 declares its own `repo` string and a `dependencies.mobile.oneOf` whose first branch adds `sdkName` with `required: ['sdkName']` under `mobile: { const: true }` and whose second branch is `mobile: { const: false }`.",
+        "Assert identity with `toBe` where a rule promises the same reference, and value with `toEqual` where it promises a resolved shape. `toBe` is the point of the additive-identity cases; `toEqual` there would pass vacuously.",
+        "Group the cases with `describe` per exported helper, following this package's test files."
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "reason": "The colocated pure-module test idiom for this exact directory: plain describe/it, inline JsonObject literals, no React or test-app harness."
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-7",
+        "NFR-1",
+        "NFR-5",
+        "AC-8"
+      ],
+      "tests": [
+        {
+          "name": "resolveStepSchema surfaces a cross-step dependency field when the earlier answer satisfies it",
+          "given": "The mobile-SDK step 2, resolved against `{ mobile: true, repo: 'r' }`",
+          "expect": "The result's properties hold `repo` and `sdkName`, its required list holds `sdkName`, and it no longer carries a `dependencies` key; the input step schema object is unchanged"
+        },
+        {
+          "name": "resolveStepSchema omits the field and its required entry when the earlier answer does not satisfy the condition",
+          "given": "The same step 2 resolved against `{ mobile: false, repo: 'r' }`",
+          "expect": "The result's properties hold only `repo`, and the result has no `required` key and no `dependencies` key"
+        },
+        {
+          "name": "resolveStepSchema treats a governing key answered in no step as not holding and does not throw",
+          "given": "The same step 2 resolved against `{ repo: 'r' }`, and a step whose dependency names a key no step declares",
+          "expect": "Neither call throws; both results hold only the step's own properties and no added required entry"
+        },
+        {
+          "name": "resolveStepSchema resolves a root-level if/then that references an earlier step's answer",
+          "given": "A step with own `repo`, `if: { properties: { mobile: { const: true } }, required: ['mobile'] }` and `then` adding a required `sdkName`, resolved against `{ mobile: true }` and then `{ mobile: false }`",
+          "expect": "The first result holds `sdkName` and requires it; the second holds only `repo`, requires nothing, and neither result carries `if`, `then` or `else`"
+        },
+        {
+          "name": "resolveStepSchema resolves a dependency whose branch only adds required entries",
+          "given": "A step declaring both `repo` and `sdkName` in its own properties with `dependencies: { mobile: ['sdkName'] }`, resolved against `{ mobile: true }`",
+          "expect": "The result requires `sdkName` while its properties are unchanged"
+        },
+        {
+          "name": "resolveStepSchema returns the identical object for a step with no cross-step condition",
+          "given": "A step with no conditions; a step whose dependency key is declared in its own properties (a same-step condition); and a step with dependencies but no properties key",
+          "expect": "Each call returns the very object passed in, asserted with toBe"
+        },
+        {
+          "name": "pruneUnreachableFormState drops only the answer whose governing condition stopped holding",
+          "given": "The two mobile-SDK steps and `{ mobile: false, repo: 'r', sdkName: 's' }`",
+          "expect": "The result is `{ mobile: false, repo: 'r' }` — `sdkName` gone, the governing `mobile` and the unconditional `repo` kept"
+        },
+        {
+          "name": "pruneUnreachableFormState keeps a conditional answer while its condition still holds and returns the identical state when nothing is unreachable",
+          "given": "The same steps with `{ mobile: true, repo: 'r', sdkName: 's' }`, then two steps with no conditions at all and a state holding both their answers",
+          "expect": "The first result equals the input state; the second returns the very object passed in, asserted with toBe"
+        },
+        {
+          "name": "pickConditionData copies only the keys a step's conditions test",
+          "given": "A step whose `dependencies` names `mobile`, and one whose `if` names `mobile` via properties and required, against `{ mobile: true, repo: 'r', unrelated: 1 }`",
+          "expect": "Both results are `{ mobile: true }`; a state lacking `mobile` yields `{}` for both and neither call throws"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/lib/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Re-export the new cross-step resolution helpers from the lib barrel so they reach the package's /alpha entry point.",
+      "rules": [
+        "Add one explicit named re-export statement after the existing one. Keep `export *` out of this file.",
+        "Export exactly `resolveStepSchema`, `pruneUnreachableFormState` and `pickConditionData` from './conditionalSchema'.",
+        "Do not touch the Apache header or its year."
+      ],
+      "exports": [
+        {
+          "name": "resolveStepSchema",
+          "params": [],
+          "returns": "re-export"
+        },
+        {
+          "name": "pruneUnreachableFormState",
+          "params": [],
+          "returns": "re-export"
+        },
+        {
+          "name": "pickConditionData",
+          "params": [],
+          "returns": "re-export"
+        }
+      ],
+      "import_line": "import { resolveStepSchema, pruneUnreachableFormState, pickConditionData } from '../lib';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 16,
+          "to": 16,
+          "first_line": "export { extractSchemaFromStep, createFieldValidation } from './schema';",
+          "rule": "Append the new named re-export from './conditionalSchema' on the lines after this one, matching this file's single-line-per-module style."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "NFR-2"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.ts": "1dd5faea67e4b4b4fba22f446ff8765efcac6c7bb60529ca1868f1c38be82d88",
+    "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts": "880684218d1f1bfa377adc5137244cba13889d5211790f66b72d701c150f40d6",
+    "plugins/scaffolder-react/src/next/lib/schema.test.ts": "fe2aad12e20f3d68973c4a79be1664107132bacfeb9fac62abc8d998ee76bdd9",
+    "plugins/scaffolder-react/src/next/lib/index.ts": "10a88c4f49f3c837ad17c5e0132a3900e7a3c98016951034441acee125ab9d72"
+  }
+}

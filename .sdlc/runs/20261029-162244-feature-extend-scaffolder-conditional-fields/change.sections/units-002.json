@@ -1,0 +1,166 @@
+[
+  {
+    "id": "U04",
+    "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Stop the feature-flag property stripping from overwriting a step's schema with top-level properties only, so a property that exists solely inside a conditional subschema survives parsing.",
+    "rules": [
+      "The parsed `schema` is what RJSF renders, so a conditional property must STAY inside its condition. Do not hoist anything into top-level `properties`.",
+      "Rewrite `strippedSchema.schema.properties` only when the step actually declares a top-level `properties` object. When the step has no `properties` key, leave the copied schema's shape untouched — do not write `properties: {}` onto it.",
+      "Keep the feature-flag filter itself byte-identical: a property survives when `step.uiSchema[key]?.['ui:backstage']?.featureFlag` is absent or that flag is active.",
+      "A step that declares `properties: {}` explicitly must still come out with `properties: {}` — an empty own object is a declaration, an absent key is not. The existing test 'should deal with steps having no properties' covers a step with neither properties nor dependencies and expects `properties: {}`; that case must keep passing, so the condition cannot be `properties` presence alone.",
+      "Resolve those two together: rewrite `properties` when the step declares `properties`, OR when it declares no `dependencies` (which preserves today's empty-object outcome for a plain step with neither). Do not widen further.",
+      "Do not change the hook's signature, the ParsedTemplateSchema interface, the step-level feature-flag filter, or the Apache header year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 73,
+        "to": 85,
+        "first_line": "if (step.schema?.properties || !step.schema?.dependencies) {",
+        "last_line": "}",
+        "rule": "Replace this guard and its body so the `properties` rewrite happens only per the rules above: a step declaring top-level `properties`, or a step declaring no `dependencies`. The body's filter predicate stays exactly as it is."
+      }
+    ],
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "lines": [244, 391],
+        "reason": "The two existing cases this edit must not disturb: 'should deal with steps having no properties' expects `properties: {}`, and 'should deal with dependencies and oneOf options' expects the second step's schema to equal exactly `{ dependencies: secondStepDependencies }` with no properties key."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "AC-6"],
+    "checks": ["fmt", "lint"]
+  },
+  {
+    "id": "U05",
+    "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Append a case proving a property declared only inside a conditional subschema survives parsing, alongside the existing feature-flag cases.",
+    "rules": [
+      "Append only. Do not edit or re-indent any existing case — NFR-1 requires every existing case pass unchanged.",
+      "Insert the new `it` inside the existing `describe('FeatureFlags')` block, after its last case, so it reuses that block's `renderHook` + `TestApiProvider` + `mockApis.featureFlags.mock` idiom.",
+      "The fixture is a step declaring its own `repo` property plus a `dependencies.mobile` whose branch adds `sdkName`, with the feature-flag API returning false, so the case proves stripping no longer discards the conditional subschema."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 389,
+        "to": 389,
+        "first_line": "});",
+        "rule": "This line closes the final `it('should deal with dependencies and oneOf options')` inside the FeatureFlags describe. Insert the new `it` block after it, still inside that describe, which line 390 closes."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+      "lines": [280, 389],
+      "reason": "The adjacent case in this very file already builds a dependencies/oneOf manifest and asserts on result.current.steps; copy its shape exactly."
+    },
+    "depends_on": ["U04"],
+    "covers": ["FR-1", "AC-6"],
+    "tests": [
+      {
+        "name": "should keep properties that exist only inside a dependencies subschema",
+        "given": "A manifest whose step declares its own `repo` property and a `dependencies.mobile` branch adding `sdkName`, with the feature flag API inactive",
+        "expect": "The parsed step's schema still carries the whole `dependencies` object unaltered, and its top-level properties hold `repo` and do not hold `sdkName`"
+      }
+    ],
+    "checks": ["fmt", "lint", "unit"]
+  },
+  {
+    "id": "U06",
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Resolve each review-step key against the accumulated answers of all steps, so a key governed by an earlier step's answer resolves against the value actually given.",
+    "rules": [
+      "Replace the hand-rolled `data` construction with `pickConditionData(schema, formState)`, imported from '../../lib'.",
+      "Do NOT pass the whole `formState` as `data`. json-schema-library synthesises a schema for any key via additionalProperties, so a full state makes `getSchema` succeed for every key and `findSchemaForKey` returns the first step for all of them — that breaks four existing cases in util.test.ts.",
+      "Keep everything else in `findSchemaForKey` as it is: the loop over `schemas`, `step.mergedSchema`, the `new JSONSchema(schema)` construction, the `#/${key}` pointer, the truthiness return of `step`, and the trailing `null`.",
+      "Leave `isJsonObject` and `formatKey` exactly as they are — both are exported and covered by existing tests. `isJsonObject` must stay exported even if this file no longer calls it.",
+      "Do not change the function's signature or the Apache header year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 41,
+        "to": 62,
+        "first_line": "/*",
+        "last_line": "}",
+        "rule": "Replace the explanatory comment block and the dependencies-only `data` construction with a short comment stating that conditions resolve against the accumulated answers of all steps, plus `const data = pickConditionData(schema, formState);`. The `const schema = step.mergedSchema;` line at 51 must survive, either kept in place or restated above the new data line."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 20,
+        "to": 20,
+        "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+        "rule": "Add the relative import of `pickConditionData` from '../../lib' after the existing imports."
+      }
+    ],
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "lines": [83, 173],
+        "reason": "The five existing findSchemaForKey cases that must stay green, including the fixture where a bare `artifact` key must resolve to the third schema via its dependencies and `nonexistentKey` must resolve to null."
+      }
+    ],
+    "depends_on": ["U01", "U03"],
+    "covers": ["FR-9", "FR-10", "AC-4", "AC-6"],
+    "checks": ["fmt", "lint"]
+  },
+  {
+    "id": "U07",
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Append cases proving a cross-step conditional key resolves against accumulated state, and is not found when its condition does not hold.",
+    "rules": [
+      "Append only. The five existing `findSchemaForKey` cases and the `isJsonObject` / `formatKey` describes must stay exactly as they are.",
+      "Add the new cases inside the existing `describe('findSchemaForKey')` block, after its last case, so they sit beside the fixtures they contrast with.",
+      "Declare new local fixtures for the cross-step shapes rather than altering the shared `schemas` and `formState` consts the existing cases assert against.",
+      "Cover both conditional forms: a `dependencies` branch and a root-level `if`/`then`. The if/then case is the one that returns null today because the current code only ever populated dependency keys."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 172,
+        "to": 172,
+        "first_line": "});",
+        "rule": "This line closes the final `it('should return the schema for an object key')`. Insert the new cases after it, still inside the findSchemaForKey describe, which line 173 closes."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "lines": [83, 172],
+      "reason": "The existing findSchemaForKey describe: ParsedTemplateSchema array literals with mergedSchema/schema/title/uiSchema, a plain formState object, and toBe assertions against the fixture elements."
+    },
+    "depends_on": ["U06"],
+    "covers": ["FR-9", "FR-10", "AC-4"],
+    "tests": [
+      {
+        "name": "should resolve a key governed by an earlier step's answer",
+        "given": "Two schemas — the first declaring `mobile`, the second declaring its own `repo` plus a `dependencies.mobile` branch adding `sdkName` — with formState `{ mobile: true, repo: 'r', sdkName: 's' }`",
+        "expect": "`findSchemaForKey('sdkName', ...)` returns the second schema, and `findSchemaForKey('mobile', ...)` returns the first"
+      },
+      {
+        "name": "should not resolve a cross-step conditional key when its condition does not hold",
+        "given": "The same two schemas with formState `{ mobile: false, repo: 'r', sdkName: 's' }`",
+        "expect": "`findSchemaForKey('sdkName', ...)` returns null while `repo` still resolves to the second schema"
+      },
+      {
+        "name": "should resolve a key governed by an earlier answer through if/then",
+        "given": "A second schema using `if: { properties: { mobile: { const: true } }, required: ['mobile'] }` with `then` adding `sdkName`, against `{ mobile: true, sdkName: 's' }` and then `{ mobile: false, sdkName: 's' }`",
+        "expect": "The key resolves to that schema in the first state and to null in the second"
+      }
+    ],
+    "checks": ["fmt", "lint", "unit"]
+  }
+]

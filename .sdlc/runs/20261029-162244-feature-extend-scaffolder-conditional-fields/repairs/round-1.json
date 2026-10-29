@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Unit U08's edits were not applied: all three attempts were rejected and the file is back to its pre-change state, so the whole of U08 still has to be made. Apply every planned site from the unit brief, and additionally satisfy this lint error, which failed the last two attempts verbatim:\n\n  yarn eslint --max-warnings 0 'plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx' (exit 1)\n  239:5  error  React Hook useCallback has a missing dependency: 'steps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps\n\nThe useCallback that newly reads `steps` (because it now calls the prune/resolve helpers over all steps) must list `steps` in its dependency array. Do not silence the rule with an eslint-disable comment and do not drop the dependency array. `steps` is derived from useTemplateSchema and is stable across renders, so adding it to the deps array is correct and does not introduce a render loop.\n\nAlso note the first attempt was rejected for changing lines outside its sites (it added lines after line 245): change only the sites the brief names.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]
