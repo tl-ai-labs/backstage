@@ -1,0 +1,2319 @@
+{
+  "schema_version": 1,
+  "plugin_version": "0.9.3",
+  "built_at": "2026-10-29T12:52:52Z",
+  "run_id": "20261029-bugfix-userouteref-startup",
+  "intent_hint": "bugfix",
+  "git": {
+    "head": "2e8b88268c8ad911d46ee3ad404162eddcc36c8c",
+    "branch": "BS-BF-08/opus55-plus-sonnet55",
+    "dirty": true,
+    "dirty_note": "Only untracked path is .sdlc/ (plugin-owned). No modified or untracked source files.",
+    "dirty_paths_excluding_sdlc": [],
+    "remotes": [
+      {
+        "name": "origin",
+        "url": "https://github.com/tl-ai-labs/backstage.git"
+      },
+      {
+        "name": "upstream",
+        "url": "https://github.com/backstage/backstage.git"
+      }
+    ],
+    "is_worktree": true,
+    "gitignore_covers_sdlc": false
+  },
+  "gitignore_covers_sdlc": false,
+  "topology": {
+    "top_level_dirs": [
+      ".changeset",
+      ".claude",
+      ".cursor",
+      ".devcontainer",
+      ".github",
+      ".husky",
+      ".lighthouseci",
+      ".patches",
+      ".storybook",
+      ".yarn",
+      "beps",
+      "contrib",
+      "dist-types",
+      "docs",
+      "docs-ui",
+      "microsite",
+      "node_modules",
+      "packages",
+      "plugins",
+      "scripts",
+      "workspaces"
+    ],
+    "entry_points": [
+      "packages/app/src/index.tsx",
+      "packages/app-legacy/src/index.tsx",
+      "packages/backend/src/index.ts"
+    ],
+    "git_tracked_files": 12302,
+    "notes": "Yarn 4 workspaces over packages/* (74 dirs) and plugins/* (160 dirs). docs-ui/ and microsite/ are separate non-workspace Node projects with their own yarn.lock. workspaces/ui is a separate nested workspace with its own yarn.lock."
+  },
+  "stacks": [
+    {
+      "manifest": "package.json",
+      "stack": "node-typescript",
+      "package_manager": "yarn@4.18.0",
+      "node_engines": "22 || 24",
+      "typescript": "~5.7.0",
+      "detected_frameworks": [
+        "backstage",
+        "react",
+        "react-router",
+        "express",
+        "knex",
+        "jest",
+        "testing-library",
+        "material-ui-v4",
+        "mui-v5",
+        "zod",
+        "storybook",
+        "playwright"
+      ]
+    },
+    {
+      "manifest": "docs-ui/package.json",
+      "stack": "node-typescript",
+      "detected_frameworks": ["next"],
+      "note": "Separate docs site, not a root workspace"
+    },
+    {
+      "manifest": "microsite/package.json",
+      "stack": "node-javascript",
+      "detected_frameworks": ["docusaurus"],
+      "note": "Separate website, not a root workspace"
+    }
+  ],
+  "adapter_match": {
+    "available": ["generic.md", "nest.md", "python.md"],
+    "matched": null,
+    "tier2b_triggered": true,
+    "tier2b_reason": "Primary stack is TypeScript/React plus the Backstage in-house plugin framework; no pre-authored adapter matches."
+  },
+  "stack_profile_path": ".sdlc/baseline/stack-profile.md",
+  "test_command_proposed": "CI=1 yarn test <path>",
+  "test_command_source": "package.json#scripts.test (backstage-cli repo test) + AGENTS.md/.claude/CLAUDE.md \"Development Flow\" (always pass a path; never run all tests)",
+  "test_command_notes": [
+    "Run from repo root; path may be a file or a directory, e.g. CI=1 yarn test packages/frontend-plugin-api/src/routing",
+    "Type check: yarn tsc (repo root, no options). Lint: yarn lint --fix. Format: yarn prettier --write <changed files>.",
+    "Forbidden by project instructions: yarn build, yarn changesets version, yarn release.",
+    "Not executed during discovery (Tier 2 confirmation happens at Gate 0). node_modules/ is present, so yarn install appears done."
+  ],
+  "docs_present": [
+    {
+      "path": "README.md",
+      "kind": "readme"
+    },
+    {
+      "path": "README-fr_FR.md",
+      "kind": "readme-translation"
+    },
+    {
+      "path": "README-ja_JP.md",
+      "kind": "readme-translation"
+    },
+    {
+      "path": "README-ko_kr.md",
+      "kind": "readme-translation"
+    },
+    {
+      "path": "README-zh_Hans.md",
+      "kind": "readme-translation"
+    },
+    {
+      "path": "AGENTS.md",
+      "kind": "agent-instructions"
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "kind": "claude-instructions",
+      "note": "symlink to ../AGENTS.md"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "kind": "contributing"
+    },
+    {
+      "path": "STYLE.md",
+      "kind": "style-guide"
+    },
+    {
+      "path": "REVIEWING.md",
+      "kind": "review-and-changeset-guide"
+    },
+    {
+      "path": "SECURITY.md",
+      "kind": "security-policy"
+    },
+    {
+      "path": "docs/architecture-decisions/",
+      "kind": "adr-directory"
+    },
+    {
+      "path": "docs/contribute/project-structure.md",
+      "kind": "architecture"
+    },
+    {
+      "path": "docs/contribute/doc-style-guide.md",
+      "kind": "doc-style-guide"
+    },
+    {
+      "path": "beps/",
+      "kind": "design-proposals"
+    }
+  ],
+  "ai_configs_detected": [
+    {
+      "path": ".claude/",
+      "type": "claude-code-project"
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "type": "claude-instructions",
+      "note": "symlink to AGENTS.md"
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "type": "claude-code-settings-local"
+    },
+    {
+      "path": ".claude/skills/",
+      "type": "claude-code-skills"
+    },
+    {
+      "path": "AGENTS.md",
+      "type": "agent-instructions"
+    },
+    {
+      "path": ".cursor/rules/",
+      "type": "cursor",
+      "note": "backstage-project.mdc is a symlink to AGENTS.md; tests/*.mdc"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "type": "copilot"
+    }
+  ],
+  "env_keys_by_file": {
+    ".devcontainer/devcontainer.env": ["NODE_OPTIONS"]
+  },
+  "env_keys_all": ["NODE_OPTIONS"],
+  "env_files_note": "No .env, .env.local, .env.example or .env.* files at repo root; .gitignore already ignores .env, .env.test, .envrc.",
+  "env_keys_referenced_in_code": [
+    "__FAKE_FS_O_FILENAME__",
+    "__MINIMATCH_TESTING_PLATFORM__",
+    "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+    "ACTIONS_ID_TOKEN_REQUEST_URL",
+    "APP_CONFIG",
+    "APPDATA",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_CONFIG_FILE",
+    "AWS_CREDENTIAL_EXPIRATION",
+    "AWS_DEFAULT_REGION",
+    "AWS_REGION",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+    "AWS_SHARED_CREDENTIALS_FILE",
+    "AZURE_CLIENT_ID",
+    "AZURE_CLIENT_SECRET",
+    "AZURE_TENANT_ID",
+    "BACKSTAGE_APP_NAME",
+    "BACKSTAGE_CLI_BUILD_PARALLEL",
+    "BACKSTAGE_CLI_CHANNEL",
+    "BACKSTAGE_CLI_CONCURRENCY",
+    "BACKSTAGE_CLI_LINKED_WORKSPACE",
+    "BACKSTAGE_E2E_CLI_TEST",
+    "BACKSTAGE_ENV",
+    "BACKSTAGE_INSTANCE_ID",
+    "BACKSTAGE_MANIFEST_FILE",
+    "BACKSTAGE_OLD_TESTS",
+    "BACKSTAGE_TEST_DISABLE_DOCKER",
+    "BACKSTAGE_TEST_DOCKER_REGISTRY",
+    "BACKSTAGE_VERSIONS_BASE_URL",
+    "BUILD_INFO",
+    "C",
+    "CI",
+    "CIRCLECI",
+    "COMMIT_SHA_BEFORE",
+    "CONFLUENCE_TOKEN",
+    "COREPACK_ROOT",
+    "CUSTOM_VAR",
+    "DEBUG",
+    "DEBUG_CLI",
+    "DISCORD_PULL_REQUESTS_WEBHOOK",
+    "DISCORD_WEBHOOK",
+    "DOTENV_KEY",
+    "EXPERIMENTAL_LAZY_COMPILATION",
+    "EXPERIMENTAL_TRIM_NEXT_ENTRY",
+    "FILES",
+    "FORCE_COLOR",
+    "FOSSA_API_KEY",
+    "FUNCTION_TARGET",
+    "GIT_SSH",
+    "GIT_SSH_COMMAND",
+    "GITHUB_ACTIONS",
+    "GITHUB_BASE_REF",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_OUTPUT",
+    "GITHUB_REF",
+    "GITHUB_TOKEN",
+    "GITHUB_WORKSPACE",
+    "GITLAB_CI",
+    "GOLDEN_PATH",
+    "GOOGLE_RUNTIME",
+    "HAS_REACT_DOM_CLIENT",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "HOSTNAME",
+    "ISSUE_NUMBER",
+    "KONSOLE_VERSION",
+    "KUBERNETES_CA_FILE_PATH",
+    "KUBERNETES_SERVICE_HOST",
+    "KUBERNETES_SERVICE_PORT",
+    "LEGACY_WEBPACK_BUILD",
+    "LOCALAPPDATA",
+    "LOG_LEVEL",
+    "MY_SECRET",
+    "MYSQL_CONNECTION",
+    "NM_DEBUG_LEVEL",
+    "NODE_DEBUG",
+    "NODE_ENV",
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "NODE_TLS_REJECT_UNAUTHORIZED",
+    "NPM_ID_TOKEN",
+    "OSTYPE",
+    "PATCH_BRANCH",
+    "PATCH_RELEASE_BRANCH",
+    "PATH",
+    "PATHEXT",
+    "PERFORMANCE_TEST",
+    "PERFORMANCE_TRACE",
+    "PLAYWRIGHT_URL",
+    "PNP_ALWAYS_WARN_ON_FALLBACK",
+    "PNP_DEBUG_LEVEL",
+    "PORT",
+    "POSTGRES_HOST",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_PORT",
+    "POSTGRES_USER",
+    "PR_BODY",
+    "PR_EXISTS",
+    "PR_NUMBER",
+    "PSM",
+    "Q",
+    "READABLE_STREAM",
+    "RELEASE_VERSION",
+    "REPORT",
+    "RUNNER_TEMP",
+    "SIGSTORE_ID_TOKEN",
+    "STORYBOOK_STORY_SET",
+    "SUBSTITUTE_ME",
+    "TERM_PROGRAM",
+    "TESTING_TAR_FAKE_PLATFORM",
+    "TZ",
+    "USER",
+    "WATCH_REPORT_DEPENDENCIES",
+    "WEBSITE_AUTH_DEFAULT_PROVIDER",
+    "WEBSITE_AUTH_ENABLED",
+    "WEBSITE_AUTH_TOKEN_STORE",
+    "WEBSITE_SKU",
+    "WT_SESSION",
+    "XDG_CONFIG_HOME",
+    "XDG_DATA_HOME",
+    "YARN_CACHE_CHECKPOINT_OVERRIDE",
+    "YARN_CACHE_VERSION_OVERRIDE",
+    "YARN_CPU_OVERRIDE",
+    "YARN_ENABLE_IMMUTABLE_INSTALLS",
+    "YARN_IGNORE_NODE",
+    "YARN_IGNORE_PATH",
+    "YARN_INJECT_NPM_2FA_TOKEN",
+    "YARN_IS_TEST_ENV",
+    "YARN_LIBC_OVERRIDE",
+    "YARN_LOCKFILE_VERSION_OVERRIDE",
+    "YARN_OS_OVERRIDE",
+    "YARN_PLUGINS",
+    "YARN_ZIP_DATA_EPILOGUE"
+  ],
+  "monorepo": {
+    "type": "yarn-workspaces",
+    "workspace_globs": ["packages/*", "plugins/*"],
+    "package_count": 233,
+    "per_package_test_command": "CI=1 yarn test <package-root-or-file>  (alt: yarn workspace <name> test)",
+    "nested_non_workspace_projects": ["docs-ui", "microsite", "workspaces/ui"],
+    "packages": [
+      {
+        "name": "example-app",
+        "root": "packages/app",
+        "manifest": "packages/app/package.json",
+        "role": "frontend",
+        "private": true,
+        "version": "0.0.40-next.1"
+      },
+      {
+        "name": "@backstage/app-defaults",
+        "root": "packages/app-defaults",
+        "manifest": "packages/app-defaults/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.7.13-next.0"
+      },
+      {
+        "name": "app-example-plugin",
+        "root": "packages/app-example-plugin",
+        "manifest": "packages/app-example-plugin/package.json",
+        "role": "frontend-plugin",
+        "private": true,
+        "version": "0.0.40-next.0"
+      },
+      {
+        "name": "example-app-legacy",
+        "root": "packages/app-legacy",
+        "manifest": "packages/app-legacy/package.json",
+        "role": "frontend",
+        "private": true,
+        "version": "0.2.126-next.1"
+      },
+      {
+        "name": "example-backend",
+        "root": "packages/backend",
+        "manifest": "packages/backend/package.json",
+        "role": "backend",
+        "private": true,
+        "version": "0.0.55-next.2"
+      },
+      {
+        "name": "@backstage/backend-app-api",
+        "root": "packages/backend-app-api",
+        "manifest": "packages/backend-app-api/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "1.8.0-next.1"
+      },
+      {
+        "name": "@backstage/backend-defaults",
+        "root": "packages/backend-defaults",
+        "manifest": "packages/backend-defaults/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.18.1-next.2"
+      },
+      {
+        "name": "@backstage/backend-dev-utils",
+        "root": "packages/backend-dev-utils",
+        "manifest": "packages/backend-dev-utils/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.1.7"
+      },
+      {
+        "name": "@backstage/backend-dynamic-feature-service",
+        "root": "packages/backend-dynamic-feature-service",
+        "manifest": "packages/backend-dynamic-feature-service/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.8.8-next.1"
+      },
+      {
+        "name": "@internal/backend",
+        "root": "packages/backend-internal",
+        "manifest": "packages/backend-internal/package.json",
+        "role": "node-library",
+        "private": true,
+        "version": "0.0.5-next.1"
+      },
+      {
+        "name": "@backstage/backend-openapi-utils",
+        "root": "packages/backend-openapi-utils",
+        "manifest": "packages/backend-openapi-utils/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.7.3-next.2"
+      },
+      {
+        "name": "@backstage/backend-plugin-api",
+        "root": "packages/backend-plugin-api",
+        "manifest": "packages/backend-plugin-api/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "1.11.0-next.1"
+      },
+      {
+        "name": "@backstage/backend-test-utils",
+        "root": "packages/backend-test-utils",
+        "manifest": "packages/backend-test-utils/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "1.11.8-next.1"
+      },
+      {
+        "name": "@backstage/catalog-client",
+        "root": "packages/catalog-client",
+        "manifest": "packages/catalog-client/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.16.3-next.0"
+      },
+      {
+        "name": "@backstage/catalog-model",
+        "root": "packages/catalog-model",
+        "manifest": "packages/catalog-model/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.10.2-next.0"
+      },
+      {
+        "name": "@backstage/cli",
+        "root": "packages/cli",
+        "manifest": "packages/cli/package.json",
+        "role": "cli",
+        "private": false,
+        "version": "0.36.7-next.0"
+      },
+      {
+        "name": "@backstage/cli-common",
+        "root": "packages/cli-common",
+        "manifest": "packages/cli-common/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.3.2-next.0"
+      },
+      {
+        "name": "@backstage/cli-defaults",
+        "root": "packages/cli-defaults",
+        "manifest": "packages/cli-defaults/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.7-next.0"
+      },
+      {
+        "name": "@internal/cli",
+        "root": "packages/cli-internal",
+        "manifest": "packages/cli-internal/package.json",
+        "role": "node-library",
+        "private": true,
+        "version": "0.0.6-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-actions",
+        "root": "packages/cli-module-actions",
+        "manifest": "packages/cli-module-actions/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.4-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-auth",
+        "root": "packages/cli-module-auth",
+        "manifest": "packages/cli-module-auth/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.5-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-build",
+        "root": "packages/cli-module-build",
+        "manifest": "packages/cli-module-build/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.9-next.1"
+      },
+      {
+        "name": "@backstage/cli-module-catalog",
+        "root": "packages/cli-module-catalog",
+        "manifest": "packages/cli-module-catalog/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.2.0-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-config",
+        "root": "packages/cli-module-config",
+        "manifest": "packages/cli-module-config/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.8-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-github",
+        "root": "packages/cli-module-github",
+        "manifest": "packages/cli-module-github/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.5-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-info",
+        "root": "packages/cli-module-info",
+        "manifest": "packages/cli-module-info/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.5-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-lint",
+        "root": "packages/cli-module-lint",
+        "manifest": "packages/cli-module-lint/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.6-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-maintenance",
+        "root": "packages/cli-module-maintenance",
+        "manifest": "packages/cli-module-maintenance/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.6-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-migrate",
+        "root": "packages/cli-module-migrate",
+        "manifest": "packages/cli-module-migrate/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.2.2-next.1"
+      },
+      {
+        "name": "@backstage/cli-module-new",
+        "root": "packages/cli-module-new",
+        "manifest": "packages/cli-module-new/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.8-next.1"
+      },
+      {
+        "name": "@backstage/cli-module-package-manager-yarn",
+        "root": "packages/cli-module-package-manager-yarn",
+        "manifest": "packages/cli-module-package-manager-yarn/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.3-next.2"
+      },
+      {
+        "name": "@backstage/cli-module-scaffolder",
+        "root": "packages/cli-module-scaffolder",
+        "manifest": "packages/cli-module-scaffolder/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.2.0-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-search",
+        "root": "packages/cli-module-search",
+        "manifest": "packages/cli-module-search/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.2.0-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-test-jest",
+        "root": "packages/cli-module-test-jest",
+        "manifest": "packages/cli-module-test-jest/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.7-next.0"
+      },
+      {
+        "name": "@backstage/cli-module-translations",
+        "root": "packages/cli-module-translations",
+        "manifest": "packages/cli-module-translations/package.json",
+        "role": "cli-module",
+        "private": false,
+        "version": "0.1.5-next.0"
+      },
+      {
+        "name": "@backstage/cli-node",
+        "root": "packages/cli-node",
+        "manifest": "packages/cli-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.3.5-next.1"
+      },
+      {
+        "name": "@backstage/config",
+        "root": "packages/config",
+        "manifest": "packages/config/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.3.10-next.0"
+      },
+      {
+        "name": "@backstage/config-loader",
+        "root": "packages/config-loader",
+        "manifest": "packages/config-loader/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "1.11.4-next.0"
+      },
+      {
+        "name": "@backstage/connections",
+        "root": "packages/connections",
+        "manifest": "packages/connections/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.4.1-next.0"
+      },
+      {
+        "name": "@backstage/connections-node",
+        "root": "packages/connections-node",
+        "manifest": "packages/connections-node/package.json",
+        "role": "node-library",
+        "private": true,
+        "version": "0.2.4-next.1"
+      },
+      {
+        "name": "@backstage/core-app-api",
+        "root": "packages/core-app-api",
+        "manifest": "packages/core-app-api/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.20.6-next.0"
+      },
+      {
+        "name": "@backstage/core-compat-api",
+        "root": "packages/core-compat-api",
+        "manifest": "packages/core-compat-api/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.5.16-next.0"
+      },
+      {
+        "name": "@backstage/core-components",
+        "root": "packages/core-components",
+        "manifest": "packages/core-components/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.18.15-next.2"
+      },
+      {
+        "name": "@backstage/core-plugin-api",
+        "root": "packages/core-plugin-api",
+        "manifest": "packages/core-plugin-api/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.12.11-next.0"
+      },
+      {
+        "name": "@backstage/create-app",
+        "root": "packages/create-app",
+        "manifest": "packages/create-app/package.json",
+        "role": "cli",
+        "private": false,
+        "version": "0.9.3-next.2"
+      },
+      {
+        "name": "@backstage/dev-utils",
+        "root": "packages/dev-utils",
+        "manifest": "packages/dev-utils/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.1.28-next.0"
+      },
+      {
+        "name": "e2e-test",
+        "root": "packages/e2e-test",
+        "manifest": "packages/e2e-test/package.json",
+        "role": "cli",
+        "private": true,
+        "version": "0.2.45-next.0"
+      },
+      {
+        "name": "@backstage/e2e-test-utils",
+        "root": "packages/e2e-test-utils",
+        "manifest": "packages/e2e-test-utils/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.1.2"
+      },
+      {
+        "name": "@backstage/errors",
+        "root": "packages/errors",
+        "manifest": "packages/errors/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.3.2-next.0"
+      },
+      {
+        "name": "@backstage/eslint-plugin",
+        "root": "packages/eslint-plugin",
+        "manifest": "packages/eslint-plugin/package.json",
+        "role": null,
+        "private": false,
+        "version": "0.3.2"
+      },
+      {
+        "name": "@backstage/filter-predicates",
+        "root": "packages/filter-predicates",
+        "manifest": "packages/filter-predicates/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.1.6-next.0"
+      },
+      {
+        "name": "@backstage/frontend-app-api",
+        "root": "packages/frontend-app-api",
+        "manifest": "packages/frontend-app-api/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.16.9-next.0"
+      },
+      {
+        "name": "@backstage/frontend-defaults",
+        "root": "packages/frontend-defaults",
+        "manifest": "packages/frontend-defaults/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.5.7-next.0"
+      },
+      {
+        "name": "@backstage/frontend-dev-utils",
+        "root": "packages/frontend-dev-utils",
+        "manifest": "packages/frontend-dev-utils/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.1.7-next.0"
+      },
+      {
+        "name": "@backstage/frontend-dynamic-feature-loader",
+        "root": "packages/frontend-dynamic-feature-loader",
+        "manifest": "packages/frontend-dynamic-feature-loader/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.1.17-next.0"
+      },
+      {
+        "name": "@internal/frontend",
+        "root": "packages/frontend-internal",
+        "manifest": "packages/frontend-internal/package.json",
+        "role": "web-library",
+        "private": true,
+        "version": "0.0.25-next.0"
+      },
+      {
+        "name": "@backstage/frontend-plugin-api",
+        "root": "packages/frontend-plugin-api",
+        "manifest": "packages/frontend-plugin-api/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.18.2-next.0"
+      },
+      {
+        "name": "@backstage/frontend-test-utils",
+        "root": "packages/frontend-test-utils",
+        "manifest": "packages/frontend-test-utils/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.6.5-next.0"
+      },
+      {
+        "name": "@backstage/integration",
+        "root": "packages/integration",
+        "manifest": "packages/integration/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "2.1.3-next.1"
+      },
+      {
+        "name": "@backstage/integration-aws-node",
+        "root": "packages/integration-aws-node",
+        "manifest": "packages/integration-aws-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.2.3-next.0"
+      },
+      {
+        "name": "@backstage/integration-react",
+        "root": "packages/integration-react",
+        "manifest": "packages/integration-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.2.23-next.0"
+      },
+      {
+        "name": "@backstage/module-federation-common",
+        "root": "packages/module-federation-common",
+        "manifest": "packages/module-federation-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.1.6-next.0"
+      },
+      {
+        "name": "@internal/opaque",
+        "root": "packages/opaque-internal",
+        "manifest": "packages/opaque-internal/package.json",
+        "role": "common-library",
+        "private": true,
+        "version": "0.0.1"
+      },
+      {
+        "name": "@backstage/release-manifests",
+        "root": "packages/release-manifests",
+        "manifest": "packages/release-manifests/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.0.15-next.0"
+      },
+      {
+        "name": "@backstage/repo-tools",
+        "root": "packages/repo-tools",
+        "manifest": "packages/repo-tools/package.json",
+        "role": "cli",
+        "private": false,
+        "version": "0.19.2-next.2"
+      },
+      {
+        "name": "@internal/scaffolder",
+        "root": "packages/scaffolder-internal",
+        "manifest": "packages/scaffolder-internal/package.json",
+        "role": "web-library",
+        "private": true,
+        "version": "0.0.26-next.0"
+      },
+      {
+        "name": "@techdocs/cli",
+        "root": "packages/techdocs-cli",
+        "manifest": "packages/techdocs-cli/package.json",
+        "role": "cli",
+        "private": false,
+        "version": "1.12.1-next.0"
+      },
+      {
+        "name": "techdocs-cli-embedded-app",
+        "root": "packages/techdocs-cli-embedded-app",
+        "manifest": "packages/techdocs-cli-embedded-app/package.json",
+        "role": "frontend",
+        "private": true,
+        "version": "0.2.125-next.0"
+      },
+      {
+        "name": "@backstage/test-utils",
+        "root": "packages/test-utils",
+        "manifest": "packages/test-utils/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.7.23-next.0"
+      },
+      {
+        "name": "@backstage/theme",
+        "root": "packages/theme",
+        "manifest": "packages/theme/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.7.3"
+      },
+      {
+        "name": "@backstage/types",
+        "root": "packages/types",
+        "manifest": "packages/types/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.2.2"
+      },
+      {
+        "name": "@backstage/ui",
+        "root": "packages/ui",
+        "manifest": "packages/ui/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.18.0"
+      },
+      {
+        "name": "@backstage/version-bridge",
+        "root": "packages/version-bridge",
+        "manifest": "packages/version-bridge/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.0.12"
+      },
+      {
+        "name": "yarn-plugin-backstage",
+        "root": "packages/yarn-plugin",
+        "manifest": "packages/yarn-plugin/package.json",
+        "role": "node-library",
+        "private": true,
+        "version": "0.0.15-next.1"
+      },
+      {
+        "name": "@backstage/plugin-api-docs",
+        "root": "plugins/api-docs",
+        "manifest": "plugins/api-docs/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.14.6-next.0"
+      },
+      {
+        "name": "@backstage/plugin-api-docs-module-protoc-gen-doc",
+        "root": "plugins/api-docs-module-protoc-gen-doc",
+        "manifest": "plugins/api-docs-module-protoc-gen-doc/package.json",
+        "role": "frontend-plugin-module",
+        "private": false,
+        "version": "0.1.11"
+      },
+      {
+        "name": "@backstage/plugin-app",
+        "root": "plugins/app",
+        "manifest": "plugins/app/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.5.4-next.0"
+      },
+      {
+        "name": "@backstage/plugin-app-backend",
+        "root": "plugins/app-backend",
+        "manifest": "plugins/app-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.5.19-next.2"
+      },
+      {
+        "name": "@backstage/plugin-app-module-user-settings",
+        "root": "plugins/app-module-user-settings",
+        "manifest": "plugins/app-module-user-settings/package.json",
+        "role": "frontend-plugin-module",
+        "private": false,
+        "version": "0.1.3-next.0"
+      },
+      {
+        "name": "@backstage/plugin-app-node",
+        "root": "plugins/app-node",
+        "manifest": "plugins/app-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.1.50-next.1"
+      },
+      {
+        "name": "@backstage/plugin-app-react",
+        "root": "plugins/app-react",
+        "manifest": "plugins/app-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.2.8-next.0"
+      },
+      {
+        "name": "@backstage/plugin-app-visualizer",
+        "root": "plugins/app-visualizer",
+        "manifest": "plugins/app-visualizer/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.2.9-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth",
+        "root": "plugins/auth",
+        "manifest": "plugins/auth/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.1.13-next.0"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend",
+        "root": "plugins/auth-backend",
+        "manifest": "plugins/auth-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.30.2-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-atlassian-provider",
+        "root": "plugins/auth-backend-module-atlassian-provider",
+        "manifest": "plugins/auth-backend-module-atlassian-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-auth0-provider",
+        "root": "plugins/auth-backend-module-auth0-provider",
+        "manifest": "plugins/auth-backend-module-auth0-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.6-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-aws-alb-provider",
+        "root": "plugins/auth-backend-module-aws-alb-provider",
+        "manifest": "plugins/auth-backend-module-aws-alb-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.21-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-azure-easyauth-provider",
+        "root": "plugins/auth-backend-module-azure-easyauth-provider",
+        "manifest": "plugins/auth-backend-module-azure-easyauth-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.25-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-bitbucket-provider",
+        "root": "plugins/auth-backend-module-bitbucket-provider",
+        "manifest": "plugins/auth-backend-module-bitbucket-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-bitbucket-server-provider",
+        "root": "plugins/auth-backend-module-bitbucket-server-provider",
+        "manifest": "plugins/auth-backend-module-bitbucket-server-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-cloudflare-access-provider",
+        "root": "plugins/auth-backend-module-cloudflare-access-provider",
+        "manifest": "plugins/auth-backend-module-cloudflare-access-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-gcp-iap-provider",
+        "root": "plugins/auth-backend-module-gcp-iap-provider",
+        "manifest": "plugins/auth-backend-module-gcp-iap-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-github-provider",
+        "root": "plugins/auth-backend-module-github-provider",
+        "manifest": "plugins/auth-backend-module-github-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.8-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-gitlab-provider",
+        "root": "plugins/auth-backend-module-gitlab-provider",
+        "manifest": "plugins/auth-backend-module-gitlab-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.8-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-google-provider",
+        "root": "plugins/auth-backend-module-google-provider",
+        "manifest": "plugins/auth-backend-module-google-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-guest-provider",
+        "root": "plugins/auth-backend-module-guest-provider",
+        "manifest": "plugins/auth-backend-module-guest-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.24-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-microsoft-provider",
+        "root": "plugins/auth-backend-module-microsoft-provider",
+        "manifest": "plugins/auth-backend-module-microsoft-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-oauth2-provider",
+        "root": "plugins/auth-backend-module-oauth2-provider",
+        "manifest": "plugins/auth-backend-module-oauth2-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-oauth2-proxy-provider",
+        "root": "plugins/auth-backend-module-oauth2-proxy-provider",
+        "manifest": "plugins/auth-backend-module-oauth2-proxy-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.4-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-oidc-provider",
+        "root": "plugins/auth-backend-module-oidc-provider",
+        "manifest": "plugins/auth-backend-module-oidc-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.22-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-okta-provider",
+        "root": "plugins/auth-backend-module-okta-provider",
+        "manifest": "plugins/auth-backend-module-okta-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-onelogin-provider",
+        "root": "plugins/auth-backend-module-onelogin-provider",
+        "manifest": "plugins/auth-backend-module-onelogin-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-openshift-provider",
+        "root": "plugins/auth-backend-module-openshift-provider",
+        "manifest": "plugins/auth-backend-module-openshift-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.12-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-pinniped-provider",
+        "root": "plugins/auth-backend-module-pinniped-provider",
+        "manifest": "plugins/auth-backend-module-pinniped-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-backend-module-vmware-cloud-provider",
+        "root": "plugins/auth-backend-module-vmware-cloud-provider",
+        "manifest": "plugins/auth-backend-module-vmware-cloud-provider/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-node",
+        "root": "plugins/auth-node",
+        "manifest": "plugins/auth-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.7.7-next.1"
+      },
+      {
+        "name": "@backstage/plugin-auth-react",
+        "root": "plugins/auth-react",
+        "manifest": "plugins/auth-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.1.32-next.0"
+      },
+      {
+        "name": "@backstage/plugin-bitbucket-cloud-common",
+        "root": "plugins/bitbucket-cloud-common",
+        "manifest": "plugins/bitbucket-cloud-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.3.14-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog",
+        "root": "plugins/catalog",
+        "manifest": "plugins/catalog/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "2.0.10-next.2"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend",
+        "root": "plugins/catalog-backend",
+        "manifest": "plugins/catalog-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "4.0.1-next.2"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-ai-model",
+        "root": "plugins/catalog-backend-module-ai-model",
+        "manifest": "plugins/catalog-backend-module-ai-model/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.5-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-aws",
+        "root": "plugins/catalog-backend-module-aws",
+        "manifest": "plugins/catalog-backend-module-aws/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.29-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-azure",
+        "root": "plugins/catalog-backend-module-azure",
+        "manifest": "plugins/catalog-backend-module-azure/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.23-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-backstage-openapi",
+        "root": "plugins/catalog-backend-module-backstage-openapi",
+        "manifest": "plugins/catalog-backend-module-backstage-openapi/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-bitbucket-cloud",
+        "root": "plugins/catalog-backend-module-bitbucket-cloud",
+        "manifest": "plugins/catalog-backend-module-bitbucket-cloud/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.16-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-bitbucket-server",
+        "root": "plugins/catalog-backend-module-bitbucket-server",
+        "manifest": "plugins/catalog-backend-module-bitbucket-server/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.16-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-gcp",
+        "root": "plugins/catalog-backend-module-gcp",
+        "manifest": "plugins/catalog-backend-module-gcp/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.24-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-gerrit",
+        "root": "plugins/catalog-backend-module-gerrit",
+        "manifest": "plugins/catalog-backend-module-gerrit/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-gitea",
+        "root": "plugins/catalog-backend-module-gitea",
+        "manifest": "plugins/catalog-backend-module-gitea/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.17-next.2"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-github",
+        "root": "plugins/catalog-backend-module-github",
+        "manifest": "plugins/catalog-backend-module-github/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.14.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-github-org",
+        "root": "plugins/catalog-backend-module-github-org",
+        "manifest": "plugins/catalog-backend-module-github-org/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-gitlab",
+        "root": "plugins/catalog-backend-module-gitlab",
+        "manifest": "plugins/catalog-backend-module-gitlab/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.8.9-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-gitlab-org",
+        "root": "plugins/catalog-backend-module-gitlab-org",
+        "manifest": "plugins/catalog-backend-module-gitlab-org/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.26-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-incremental-ingestion",
+        "root": "plugins/catalog-backend-module-incremental-ingestion",
+        "manifest": "plugins/catalog-backend-module-incremental-ingestion/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.9.0-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-ldap",
+        "root": "plugins/catalog-backend-module-ldap",
+        "manifest": "plugins/catalog-backend-module-ldap/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.12.10-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-logs",
+        "root": "plugins/catalog-backend-module-logs",
+        "manifest": "plugins/catalog-backend-module-logs/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-msgraph",
+        "root": "plugins/catalog-backend-module-msgraph",
+        "manifest": "plugins/catalog-backend-module-msgraph/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.10.7-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-msgraph-incremental",
+        "root": "plugins/catalog-backend-module-msgraph-incremental",
+        "manifest": "plugins/catalog-backend-module-msgraph-incremental/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.5-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-openapi",
+        "root": "plugins/catalog-backend-module-openapi",
+        "manifest": "plugins/catalog-backend-module-openapi/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-puppetdb",
+        "root": "plugins/catalog-backend-module-puppetdb",
+        "manifest": "plugins/catalog-backend-module-puppetdb/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-scaffolder-entity-model",
+        "root": "plugins/catalog-backend-module-scaffolder-entity-model",
+        "manifest": "plugins/catalog-backend-module-scaffolder-entity-model/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.25-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-backend-module-unprocessed",
+        "root": "plugins/catalog-backend-module-unprocessed",
+        "manifest": "plugins/catalog-backend-module-unprocessed/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.6.17-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-common",
+        "root": "plugins/catalog-common",
+        "manifest": "plugins/catalog-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.2.1-next.0"
+      },
+      {
+        "name": "@backstage/plugin-catalog-graph",
+        "root": "plugins/catalog-graph",
+        "manifest": "plugins/catalog-graph/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.6.9-next.0"
+      },
+      {
+        "name": "@backstage/plugin-catalog-import",
+        "root": "plugins/catalog-import",
+        "manifest": "plugins/catalog-import/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.13.19-next.0"
+      },
+      {
+        "name": "@backstage/plugin-catalog-node",
+        "root": "plugins/catalog-node",
+        "manifest": "plugins/catalog-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "2.2.6-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-react",
+        "root": "plugins/catalog-react",
+        "manifest": "plugins/catalog-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "3.2.4-next.1"
+      },
+      {
+        "name": "@backstage/plugin-catalog-unprocessed-entities",
+        "root": "plugins/catalog-unprocessed-entities",
+        "manifest": "plugins/catalog-unprocessed-entities/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.2.36-next.0"
+      },
+      {
+        "name": "@backstage/plugin-catalog-unprocessed-entities-common",
+        "root": "plugins/catalog-unprocessed-entities-common",
+        "manifest": "plugins/catalog-unprocessed-entities-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.0.18-next.0"
+      },
+      {
+        "name": "@backstage/plugin-config-schema",
+        "root": "plugins/config-schema",
+        "manifest": "plugins/config-schema/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.1.85-next.0"
+      },
+      {
+        "name": "@backstage/plugin-connections-example-backend",
+        "root": "plugins/connections-example-backend",
+        "manifest": "plugins/connections-example-backend/package.json",
+        "role": "backend-plugin",
+        "private": true,
+        "version": "0.1.5-next.1"
+      },
+      {
+        "name": "@backstage/plugin-connections-example-backend-module-gitlab",
+        "root": "plugins/connections-example-backend-module-gitlab",
+        "manifest": "plugins/connections-example-backend-module-gitlab/package.json",
+        "role": "backend-plugin-module",
+        "private": true,
+        "version": "0.1.5-next.1"
+      },
+      {
+        "name": "@backstage/plugin-devtools",
+        "root": "plugins/devtools",
+        "manifest": "plugins/devtools/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.1.44-next.0"
+      },
+      {
+        "name": "@backstage/plugin-devtools-backend",
+        "root": "plugins/devtools-backend",
+        "manifest": "plugins/devtools-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.5.22-next.1"
+      },
+      {
+        "name": "@backstage/plugin-devtools-common",
+        "root": "plugins/devtools-common",
+        "manifest": "plugins/devtools-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.1.27-next.0"
+      },
+      {
+        "name": "@backstage/plugin-devtools-react",
+        "root": "plugins/devtools-react",
+        "manifest": "plugins/devtools-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.2.7-next.0"
+      },
+      {
+        "name": "@backstage/plugin-events-backend",
+        "root": "plugins/events-backend",
+        "manifest": "plugins/events-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.6.7-next.2"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-aws-sqs",
+        "root": "plugins/events-backend-module-aws-sqs",
+        "manifest": "plugins/events-backend-module-aws-sqs/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-azure",
+        "root": "plugins/events-backend-module-azure",
+        "manifest": "plugins/events-backend-module-azure/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.36-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-bitbucket-cloud",
+        "root": "plugins/events-backend-module-bitbucket-cloud",
+        "manifest": "plugins/events-backend-module-bitbucket-cloud/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.36-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-bitbucket-server",
+        "root": "plugins/events-backend-module-bitbucket-server",
+        "manifest": "plugins/events-backend-module-bitbucket-server/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.17-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-gerrit",
+        "root": "plugins/events-backend-module-gerrit",
+        "manifest": "plugins/events-backend-module-gerrit/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.36-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-github",
+        "root": "plugins/events-backend-module-github",
+        "manifest": "plugins/events-backend-module-github/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.17-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-gitlab",
+        "root": "plugins/events-backend-module-gitlab",
+        "manifest": "plugins/events-backend-module-gitlab/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.17-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-google-pubsub",
+        "root": "plugins/events-backend-module-google-pubsub",
+        "manifest": "plugins/events-backend-module-google-pubsub/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.8-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-module-kafka",
+        "root": "plugins/events-backend-module-kafka",
+        "manifest": "plugins/events-backend-module-kafka/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.9-next.1"
+      },
+      {
+        "name": "@backstage/plugin-events-backend-test-utils",
+        "root": "plugins/events-backend-test-utils",
+        "manifest": "plugins/events-backend-test-utils/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.1.60-next.0"
+      },
+      {
+        "name": "@backstage/plugin-events-node",
+        "root": "plugins/events-node",
+        "manifest": "plugins/events-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.4.27-next.1"
+      },
+      {
+        "name": "@internal/plugin-todo-list",
+        "root": "plugins/example-todo-list",
+        "manifest": "plugins/example-todo-list/package.json",
+        "role": "frontend-plugin",
+        "private": true,
+        "version": "1.0.56-next.0"
+      },
+      {
+        "name": "@internal/plugin-todo-list-backend",
+        "root": "plugins/example-todo-list-backend",
+        "manifest": "plugins/example-todo-list-backend/package.json",
+        "role": "backend-plugin",
+        "private": true,
+        "version": "1.0.55-next.1"
+      },
+      {
+        "name": "@internal/plugin-todo-list-common",
+        "root": "plugins/example-todo-list-common",
+        "manifest": "plugins/example-todo-list-common/package.json",
+        "role": "common-library",
+        "private": true,
+        "version": "1.0.33-next.0"
+      },
+      {
+        "name": "@backstage/plugin-gateway-backend",
+        "root": "plugins/gateway-backend",
+        "manifest": "plugins/gateway-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "1.1.10-next.1"
+      },
+      {
+        "name": "@backstage/plugin-home",
+        "root": "plugins/home",
+        "manifest": "plugins/home/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.9.11-next.0"
+      },
+      {
+        "name": "@backstage/plugin-home-react",
+        "root": "plugins/home-react",
+        "manifest": "plugins/home-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.1.43-next.0"
+      },
+      {
+        "name": "@backstage/plugin-kubernetes",
+        "root": "plugins/kubernetes",
+        "manifest": "plugins/kubernetes/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.12.24-next.0"
+      },
+      {
+        "name": "@backstage/plugin-kubernetes-backend",
+        "root": "plugins/kubernetes-backend",
+        "manifest": "plugins/kubernetes-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.21.12-next.2"
+      },
+      {
+        "name": "@backstage/plugin-kubernetes-cluster",
+        "root": "plugins/kubernetes-cluster",
+        "manifest": "plugins/kubernetes-cluster/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.0.42-next.0"
+      },
+      {
+        "name": "@backstage/plugin-kubernetes-common",
+        "root": "plugins/kubernetes-common",
+        "manifest": "plugins/kubernetes-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.9.14-next.0"
+      },
+      {
+        "name": "@backstage/plugin-kubernetes-node",
+        "root": "plugins/kubernetes-node",
+        "manifest": "plugins/kubernetes-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.4.9-next.1"
+      },
+      {
+        "name": "@backstage/plugin-kubernetes-react",
+        "root": "plugins/kubernetes-react",
+        "manifest": "plugins/kubernetes-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.6.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-mcp-actions-backend",
+        "root": "plugins/mcp-actions-backend",
+        "manifest": "plugins/mcp-actions-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.2.3-next.1"
+      },
+      {
+        "name": "@backstage/plugin-mui-to-bui",
+        "root": "plugins/mui-to-bui",
+        "manifest": "plugins/mui-to-bui/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.2.12-next.1"
+      },
+      {
+        "name": "@backstage/plugin-notifications",
+        "root": "plugins/notifications",
+        "manifest": "plugins/notifications/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.6.1-next.0"
+      },
+      {
+        "name": "@backstage/plugin-notifications-backend",
+        "root": "plugins/notifications-backend",
+        "manifest": "plugins/notifications-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.6.10-next.1"
+      },
+      {
+        "name": "@backstage/plugin-notifications-backend-module-email",
+        "root": "plugins/notifications-backend-module-email",
+        "manifest": "plugins/notifications-backend-module-email/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.26-next.1"
+      },
+      {
+        "name": "@backstage/plugin-notifications-backend-module-slack",
+        "root": "plugins/notifications-backend-module-slack",
+        "manifest": "plugins/notifications-backend-module-slack/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.7-next.1"
+      },
+      {
+        "name": "@backstage/plugin-notifications-common",
+        "root": "plugins/notifications-common",
+        "manifest": "plugins/notifications-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.2.5-next.0"
+      },
+      {
+        "name": "@backstage/plugin-notifications-node",
+        "root": "plugins/notifications-node",
+        "manifest": "plugins/notifications-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.2.31-next.1"
+      },
+      {
+        "name": "@backstage/plugin-org",
+        "root": "plugins/org",
+        "manifest": "plugins/org/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.8.0-next.1"
+      },
+      {
+        "name": "@backstage/plugin-org-react",
+        "root": "plugins/org-react",
+        "manifest": "plugins/org-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.1.55-next.0"
+      },
+      {
+        "name": "@backstage/plugin-permission-backend",
+        "root": "plugins/permission-backend",
+        "manifest": "plugins/permission-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.7.17-next.1"
+      },
+      {
+        "name": "@backstage/plugin-permission-backend-module-allow-all-policy",
+        "root": "plugins/permission-backend-module-policy-allow-all",
+        "manifest": "plugins/permission-backend-module-policy-allow-all/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.24-next.1"
+      },
+      {
+        "name": "@backstage/plugin-permission-common",
+        "root": "plugins/permission-common",
+        "manifest": "plugins/permission-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.9.12-next.0"
+      },
+      {
+        "name": "@backstage/plugin-permission-node",
+        "root": "plugins/permission-node",
+        "manifest": "plugins/permission-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.11.5-next.1"
+      },
+      {
+        "name": "@backstage/plugin-permission-react",
+        "root": "plugins/permission-react",
+        "manifest": "plugins/permission-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.5.6-next.0"
+      },
+      {
+        "name": "@backstage/plugin-proxy-backend",
+        "root": "plugins/proxy-backend",
+        "manifest": "plugins/proxy-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.6.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-proxy-node",
+        "root": "plugins/proxy-node",
+        "manifest": "plugins/proxy-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.1.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder",
+        "root": "plugins/scaffolder",
+        "manifest": "plugins/scaffolder/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "1.39.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend",
+        "root": "plugins/scaffolder-backend",
+        "manifest": "plugins/scaffolder-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "4.2.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-azure",
+        "root": "plugins/scaffolder-backend-module-azure",
+        "manifest": "plugins/scaffolder-backend-module-azure/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-bitbucket-cloud",
+        "root": "plugins/scaffolder-backend-module-bitbucket-cloud",
+        "manifest": "plugins/scaffolder-backend-module-bitbucket-cloud/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.12-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-bitbucket-server",
+        "root": "plugins/scaffolder-backend-module-bitbucket-server",
+        "manifest": "plugins/scaffolder-backend-module-bitbucket-server/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-confluence-to-markdown",
+        "root": "plugins/scaffolder-backend-module-confluence-to-markdown",
+        "manifest": "plugins/scaffolder-backend-module-confluence-to-markdown/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-cookiecutter",
+        "root": "plugins/scaffolder-backend-module-cookiecutter",
+        "manifest": "plugins/scaffolder-backend-module-cookiecutter/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.28-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gcp",
+        "root": "plugins/scaffolder-backend-module-gcp",
+        "manifest": "plugins/scaffolder-backend-module-gcp/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.26-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gerrit",
+        "root": "plugins/scaffolder-backend-module-gerrit",
+        "manifest": "plugins/scaffolder-backend-module-gerrit/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.26-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gitea",
+        "root": "plugins/scaffolder-backend-module-gitea",
+        "manifest": "plugins/scaffolder-backend-module-gitea/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.2.26-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-github",
+        "root": "plugins/scaffolder-backend-module-github",
+        "manifest": "plugins/scaffolder-backend-module-github/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.10.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gitlab",
+        "root": "plugins/scaffolder-backend-module-gitlab",
+        "manifest": "plugins/scaffolder-backend-module-gitlab/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.12.1-next.2"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-notifications",
+        "root": "plugins/scaffolder-backend-module-notifications",
+        "manifest": "plugins/scaffolder-backend-module-notifications/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-rails",
+        "root": "plugins/scaffolder-backend-module-rails",
+        "manifest": "plugins/scaffolder-backend-module-rails/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.26-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-sentry",
+        "root": "plugins/scaffolder-backend-module-sentry",
+        "manifest": "plugins/scaffolder-backend-module-sentry/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-workspace-database",
+        "root": "plugins/scaffolder-backend-module-workspace-database",
+        "manifest": "plugins/scaffolder-backend-module-workspace-database/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.1.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-yeoman",
+        "root": "plugins/scaffolder-backend-module-yeoman",
+        "manifest": "plugins/scaffolder-backend-module-yeoman/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.27-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-common",
+        "root": "plugins/scaffolder-common",
+        "manifest": "plugins/scaffolder-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "2.3.1-next.0"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-node",
+        "root": "plugins/scaffolder-node",
+        "manifest": "plugins/scaffolder-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.13.8-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-node-test-utils",
+        "root": "plugins/scaffolder-node-test-utils",
+        "manifest": "plugins/scaffolder-node-test-utils/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.3.16-next.1"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-react",
+        "root": "plugins/scaffolder-react",
+        "manifest": "plugins/scaffolder-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "2.1.1-next.0"
+      },
+      {
+        "name": "@backstage/plugin-search",
+        "root": "plugins/search",
+        "manifest": "plugins/search/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "1.7.9-next.0"
+      },
+      {
+        "name": "@backstage/plugin-search-backend",
+        "root": "plugins/search-backend",
+        "manifest": "plugins/search-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "2.1.8-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-module-catalog",
+        "root": "plugins/search-backend-module-catalog",
+        "manifest": "plugins/search-backend-module-catalog/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.20-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-module-elasticsearch",
+        "root": "plugins/search-backend-module-elasticsearch",
+        "manifest": "plugins/search-backend-module-elasticsearch/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "2.0.1-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-module-explore",
+        "root": "plugins/search-backend-module-explore",
+        "manifest": "plugins/search-backend-module-explore/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-module-pg",
+        "root": "plugins/search-backend-module-pg",
+        "manifest": "plugins/search-backend-module-pg/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.5.60-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-module-stack-overflow-collator",
+        "root": "plugins/search-backend-module-stack-overflow-collator",
+        "manifest": "plugins/search-backend-module-stack-overflow-collator/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.3.25-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-module-techdocs",
+        "root": "plugins/search-backend-module-techdocs",
+        "manifest": "plugins/search-backend-module-techdocs/package.json",
+        "role": "backend-plugin-module",
+        "private": false,
+        "version": "0.4.19-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-backend-node",
+        "root": "plugins/search-backend-node",
+        "manifest": "plugins/search-backend-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "1.4.9-next.1"
+      },
+      {
+        "name": "@backstage/plugin-search-common",
+        "root": "plugins/search-common",
+        "manifest": "plugins/search-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "1.2.26-next.0"
+      },
+      {
+        "name": "@backstage/plugin-search-react",
+        "root": "plugins/search-react",
+        "manifest": "plugins/search-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.11.9-next.0"
+      },
+      {
+        "name": "@backstage/plugin-signals",
+        "root": "plugins/signals",
+        "manifest": "plugins/signals/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.0.36-next.1"
+      },
+      {
+        "name": "@backstage/plugin-signals-backend",
+        "root": "plugins/signals-backend",
+        "manifest": "plugins/signals-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.3.20-next.2"
+      },
+      {
+        "name": "@backstage/plugin-signals-node",
+        "root": "plugins/signals-node",
+        "manifest": "plugins/signals-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "0.2.6-next.1"
+      },
+      {
+        "name": "@backstage/plugin-signals-react",
+        "root": "plugins/signals-react",
+        "manifest": "plugins/signals-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "0.0.27-next.0"
+      },
+      {
+        "name": "@backstage/plugin-techdocs",
+        "root": "plugins/techdocs",
+        "manifest": "plugins/techdocs/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "1.19.0-next.1"
+      },
+      {
+        "name": "@backstage/plugin-techdocs-addons-test-utils",
+        "root": "plugins/techdocs-addons-test-utils",
+        "manifest": "plugins/techdocs-addons-test-utils/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "2.0.10-next.0"
+      },
+      {
+        "name": "@backstage/plugin-techdocs-backend",
+        "root": "plugins/techdocs-backend",
+        "manifest": "plugins/techdocs-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "2.4.0-next.2"
+      },
+      {
+        "name": "@backstage/plugin-techdocs-common",
+        "root": "plugins/techdocs-common",
+        "manifest": "plugins/techdocs-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.1.2-next.0"
+      },
+      {
+        "name": "@backstage/plugin-techdocs-module-addons-contrib",
+        "root": "plugins/techdocs-module-addons-contrib",
+        "manifest": "plugins/techdocs-module-addons-contrib/package.json",
+        "role": "frontend-plugin-module",
+        "private": false,
+        "version": "1.1.41-next.0"
+      },
+      {
+        "name": "@backstage/plugin-techdocs-node",
+        "root": "plugins/techdocs-node",
+        "manifest": "plugins/techdocs-node/package.json",
+        "role": "node-library",
+        "private": false,
+        "version": "2.0.3-next.2"
+      },
+      {
+        "name": "@backstage/plugin-techdocs-react",
+        "root": "plugins/techdocs-react",
+        "manifest": "plugins/techdocs-react/package.json",
+        "role": "web-library",
+        "private": false,
+        "version": "1.3.16-next.2"
+      },
+      {
+        "name": "@backstage/plugin-user-settings",
+        "root": "plugins/user-settings",
+        "manifest": "plugins/user-settings/package.json",
+        "role": "frontend-plugin",
+        "private": false,
+        "version": "0.9.8-next.0"
+      },
+      {
+        "name": "@backstage/plugin-user-settings-backend",
+        "root": "plugins/user-settings-backend",
+        "manifest": "plugins/user-settings-backend/package.json",
+        "role": "backend-plugin",
+        "private": false,
+        "version": "0.4.8-next.1"
+      },
+      {
+        "name": "@backstage/plugin-user-settings-common",
+        "root": "plugins/user-settings-common",
+        "manifest": "plugins/user-settings-common/package.json",
+        "role": "common-library",
+        "private": false,
+        "version": "0.1.0"
+      }
+    ]
+  },
+  "submodules": [],
+  "lfs": false,
+  "lfs_patterns": [],
+  "infra_hints": {
+    "dockerfile": true,
+    "dockerfile_paths": [
+      "packages/backend/Dockerfile",
+      ".devcontainer/Dockerfile",
+      "contrib/docker/devops/Dockerfile",
+      "contrib/docker/minimal-hardened-image/Dockerfile"
+    ],
+    "docker_compose": true,
+    "docker_compose_paths": [
+      "docker-compose.deps.yml",
+      "plugins/auth-backend/examples/docker-compose.oauth2-proxy.yaml"
+    ],
+    "terraform": true,
+    "terraform_paths": ["contrib/terraform/"],
+    "github_workflows": true,
+    "github_workflow_count": 49,
+    "gitlab_ci": false,
+    "circleci": false,
+    "jenkins": false,
+    "devcontainer": true
+  },
+  "regulated_repo_signals": [
+    {
+      "kind": "SECURITY.md",
+      "path": "SECURITY.md"
+    }
+  ],
+  "regulated_repo_signals_note": "SECURITY.md is the open-source vulnerability-disclosure policy; no HIPAA/PCI/SOC2/GDPR files or compliance dirs; no security/compliance/privacy/legal teams in .github/CODEOWNERS. Likely a false positive.",
+  "regulated_repo_warning_required": true,
+  "off_limits_proposed": [
+    ".env",
+    ".env.*",
+    ".envrc",
+    ".devcontainer/devcontainer.env",
+    ".claude/**",
+    "AGENTS.md",
+    ".cursor/**",
+    ".github/copilot-instructions.md",
+    ".mcp.json",
+    "node_modules/**",
+    "**/node_modules/**",
+    "dist/**",
+    "**/dist/**",
+    "dist-types/**",
+    "dist-storybook/**",
+    "build/**",
+    ".next/**",
+    "target/**",
+    "vendor/**",
+    "third_party/**",
+    ".yarn/**",
+    "yarn.lock",
+    "**/src/schema/openapi/generated/**",
+    "plugins/events-node/src/generated/**",
+    "docs/releases/**",
+    ".eslintrc.js",
+    "**/.eslintrc.js",
+    ".prettierignore",
+    "tsconfig.json",
+    ".git/**",
+    ".sdlc/**"
+  ],
+  "off_limits_rationale": {
+    "docs/releases/**": "AGENTS.md: never change release notes unless explicitly asked",
+    ".eslintrc.js / .prettierignore / tsconfig.json": "AGENTS.md: never update ESLint, Prettier or TypeScript config unless asked",
+    "**/src/schema/openapi/generated/**": "Generated OpenAPI clients/servers",
+    ".yarn/** and yarn.lock": "Vendored Yarn release, patches and lockfile"
+  },
+  "scope_notes": [
+    "API reports (**/report*.api.md, 314 tracked) are generated by yarn build:api-reports; if a public API changes, they must be regenerated, not hand-edited.",
+    "Published-package changes under packages/ and plugins/ need changeset coverage in .changeset/ (write files directly; never the changeset CLI).",
+    "New .ts/.tsx/.js/.jsx files need an Apache 2.0 header with the current year; do not bump years on existing files."
+  ],
+  "bugfix_orientation": {
+    "hint": "run_id mentions useRouteRef startup",
+    "candidate_files": [
+      "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+      "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+      "packages/frontend-app-api/src/routing/",
+      "packages/core-app-api/src/routing/"
+    ]
+  },
+  "coexistence_notes": [
+    "Cursor rules detected at .cursor/rules/ (backstage-project.mdc symlinks to AGENTS.md); untouched by default.",
+    "Claude Code project config at .claude/ (settings.local.json, skills/, CLAUDE.md symlink to AGENTS.md); untouched by default.",
+    "GitHub Copilot instructions at .github/copilot-instructions.md; untouched by default.",
+    "No .mcp.json, Aider, Continue, Roo, routing-policy.yaml or gemini config detected.",
+    ".gitignore does not cover .sdlc/; run artifacts are visible to git add -A.",
+    "Husky + lint-staged pre-commit hooks run eslint --fix / prettier --write on staged files, and regenerate catalog-info.yaml when package.json or CODEOWNERS is staged."
+  ],
+  "timing": {
+    "tier1_seconds_approx": 15,
+    "sampled": false
+  }
+}

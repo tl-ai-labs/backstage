@@ -1139,6 +1139,67 @@ describe('createSpecializedApp', () => {
       ).resolves.toBeInTheDocument();
     });
 
+    it('should resolve deferred page routes for app root elements during bootstrap', async () => {
+      const fooRouteRef = createRouteRef();
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          createFrontendPlugin({
+            pluginId: 'test',
+            extensions: [
+              createExtension({
+                name: 'foo-page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                  coreExtensionData.reactElement,
+                ],
+                factory: () => [
+                  coreExtensionData.routePath('/foo'),
+                  coreExtensionData.routeRef(fooRouteRef),
+                  coreExtensionData.reactElement(<div>Foo Page</div>),
+                ],
+              }),
+              createExtension({
+                name: 'link-element',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => {
+                  const Component = () => {
+                    const link = useRouteRef(fooRouteRef);
+                    return <div>link: {link?.() ?? 'none'}</div>;
+                  };
+                  return [coreExtensionData.reactElement(<Component />)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const bootstrap = render(preparedApp.getBootstrapApp().element);
+      await expect(
+        screen.findByText('link: /foo'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.queryByText('link: none')).not.toBeInTheDocument();
+      bootstrap.unmount();
+
+      const finalizedApp = preparedApp.finalize();
+      render(finalizedApp.element);
+      await expect(
+        screen.findByText('link: /foo'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.queryByText('link: none')).not.toBeInTheDocument();
+    });
+
     it('should defer conditional api roots without resetting visible api instances', () => {
       const featureFlagsApi = {
         isActive: jest.fn((name: string) => name === 'test-flag'),

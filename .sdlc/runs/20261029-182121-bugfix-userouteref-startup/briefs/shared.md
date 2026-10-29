@@ -1,0 +1,24 @@
+## Conventions
+
+- TypeScript in @backstage/frontend-app-api; match the surrounding file's style exactly: 2-space indent, single quotes, trailing commas, Prettier config @backstage/cli/config/prettier (80 columns).
+- Do not change the copyright year of any existing file; no new source files are added by this change.
+- Import from '@backstage/frontend-plugin-api' by name; types inside a mixed import list use the inline 'type X' form as phaseApis.tsx already does.
+- Relative imports into another monorepo package's src are preceded by the line '// eslint-disable-next-line @backstage/no-relative-monorepo-imports', exactly as phaseApis.tsx and prepareSpecializedApp.tsx do.
+- Keep every change internal: no new exports from the package entry point, no TSDoc release tags added, no report\*.api.md changes.
+- Tests use Jest describe/it with @testing-library/react render + screen; prefer screen.findBy\* via 'await expect(screen.findByText(...)).resolves.toBeInTheDocument()' as the existing prepareSpecializedApp tests do; no test IDs.
+- Comments explain why, one or two short lines, in the tone of the existing comments in the file.
+- Changesets are YAML front matter naming the package and bump, then one plain-language paragraph for adopters with no code symbols.
+
+## Decisions
+
+- How bootstrap route resolution learns about pages under the deferred app/root.children subtree: During bootstrap only (when stopAtAttachment is passed), instantiateAndInitializePhaseTree walks the deferred subtree and, for each enabled node whose extension declares a coreExtensionData.routePath or coreExtensionData.routeRef output, instantiates that node's subtree detached (writeNodeInstances: false, reuseExistingInstances: false) with an empty API holder and a throwaway error collector; the resulting instances are passed to extractRouteInfoFromAppNode as a fallback lookup used only where node.instance is undefined. (not Instantiating the whole deferred subtree in place: runs app/layout and other non-route factories twice and breaks the existing appLayoutFactory call-count test; not Instantiating with the real phase APIs: would materialize APIs during bootstrap and change which deferred API overrides finalization accepts; not Reporting detached failures to the app collector: would surface spurious EXTENSION_FACTORY_ERROR entries in finalized errors; not Changing the bootstrap boundary or useRouteRef: out of scope) — Only route-bearing extensions are run, without side effects on the live tree, APIs or error reporting, and the extracted paths and parents come from the same edge walk the finalized app performs, so the bootstrap result equals the finalized one.
+- Stale route functions held by app/root.elements after finalization: RouteResolutionApiProxy.resolve returns a wrapper RouteFunc that remembers the delegate it was resolved with; when called after the proxy has been re-initialized with a new delegate it re-resolves the same ref and options against the current delegate and uses that result, falling back to the original function when the current delegate cannot resolve the ref. (not Giving the proxy a new identity at finalization: requires changing FrontendApiRegistry caching and AppRouter's getRouteObjects access, both outside the allowlist; not Doing nothing beyond the bootstrap extraction: leaves predicate-dependent routes stale in preserved elements) — useRouteRef memoizes on the proxy object, which never changes identity, so the returned function itself must follow the finalized resolver; while the delegate is unchanged it calls the original function directly, so existing resolution is unchanged.
+- Reproducing test placement and hook choice: One new it() in the existing describe('prepareSpecializedApp') block of createSpecializedApp.test.tsx, inserted after the 'should synchronously finalize feature flag predicates without sign-in' case, using the frontend-plugin-api useRouteRef already imported there and rendering 'link: <path or none>'; the red check runs only that case with jest -t. (not Using the core-plugin-api useRouteRef: needs a type cast between route ref types and a new import; not A new test file: the requirements place the test in createSpecializedApp.test.tsx) — On the current code the element renders 'link: none' during bootstrap, so the case fails before the fix and passes after it, while the -t filter keeps the red check green on the file as it is now.
+
+## Files of this change
+
+- `packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx` (U01, edit)
+- `packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts` (U02, edit)
+  - `function extractRouteInfoFromAppNode(node: AppNode, routeAliasResolver: RouteAliasResolver, fallbackInstances: ReadonlyMap<AppNode, AppNodeInstance> | undefined): RouteInfo`
+- `packages/frontend-app-api/src/wiring/phaseApis.tsx` (U03, edit)
+- `.changeset/frontend-app-api-bootstrap-route-refs.md` (U04, create)

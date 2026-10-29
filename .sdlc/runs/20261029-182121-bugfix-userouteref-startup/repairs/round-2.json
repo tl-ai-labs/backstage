@@ -1,0 +1,51 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261029-182121-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "instruction": "Fix `packages/frontend-app-api/src/wiring/phaseApis.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 442): collectDeferredRouteInstances calls instantiateAppNodeSubtree on each route-bearing node with no skipChild. That runs the factory of every descendant during bootstrap, including non-route content such as entity cards under an entity page. visitDeferred then recurses and instantiates every nested route-bearing descendant (sub-pages, EntityContent) again from scratch, so a node at depth d with route-bearing ancestors runs its factory up to d+1 times before finalization. This contradicts the plan's U03 rule 5 intent ('nodes without such outputs are never instantiated ... other content factories do not run during bootstrap') and adds startup cost that grows with the app's size. Confidence: high on the behaviour, medium on how much it matters in real apps. — fix: Instantiate each route-bearing node on its own (for example, skipChild: () => true) and fall back to the full detached subtree only when that produces no instance, for example when a required input is missing. Or instantiate only the top-most route-bearing node and reuse its detached descendants, not re-instantiating them.\n2. minor (line 379): The wrapper uses two 'as unknown as' casts: one to call cached.func with unknown[] args and one to cast the arrow function to RouteFunc<TParams>. This erases the parameter typing of RouteFunc inside the proxy. It was introduced in the tsc fix round. — fix: Type the wrapper as '(...args: Parameters<RouteFunc<TParams>>) => cached.func(...args)' with a single cast to RouteFunc<TParams> if needed, or add a one-line comment explaining why the double cast is required.\n3. minor (line 376): After finalization, if the finalized resolver can no longer resolve the ref (for example, the page was disabled by a predicate), the wrapper silently falls back to the bootstrap function and keeps producing a link to a route that no longer exists. The plan specifies this behaviour, but it is not documented in the code. — fix: Add a short why-comment at the fallback stating that this is intentional, or return the stale path only while the delegate is unchanged. Leave the behaviour as the plan specifies it.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]
