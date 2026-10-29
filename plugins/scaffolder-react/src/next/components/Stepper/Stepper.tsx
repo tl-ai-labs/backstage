@@ -13,7 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useAnalytics, useApiHolder } from '@backstage/core-plugin-api';
+import {
+  featureFlagsApiRef,
+  useAnalytics,
+  useApi,
+  useApiHolder,
+} from '@backstage/core-plugin-api';
 import { useTranslationRef } from '@backstage/frontend-plugin-api';
 import {
   FieldExtensionOptions,
@@ -57,6 +62,7 @@ import {
 import { ErrorListTemplate } from './ErrorListTemplate';
 import * as FieldOverrides from './FieldOverrides';
 import { hasErrors } from './utils';
+import { pruneUnreachableFormState, resolveStepSchema } from '../../lib';
 
 const validator = customizeValidator();
 ajvErrors(validator.ajv);
@@ -126,6 +132,7 @@ export const Stepper = (stepperProps: StepperProps) => {
     reviewButtonText = t('stepper.reviewButtonText'),
   } = components;
   const analytics = useAnalytics();
+  const featureFlags = useApi(featureFlagsApiRef);
   const { presentation, steps } = useTemplateSchema(props.manifest);
   const apiHolder = useApiHolder();
   const [activeStep, setActiveStep] = useState(0);
@@ -158,21 +165,49 @@ export const Stepper = (stepperProps: StepperProps) => {
 
   const validators = useMemo(() => {
     return Object.fromEntries(
-      props.extensions.map(({ name, validation }) => [name, validation]),
+      props.extensions.map(({ name, validation: val }) => [name, val]),
     );
   }, [props.extensions]);
 
+  const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
+
+  const isPropertyEnabled = useCallback(
+    (name: string) => {
+      const flag = currentStep?.uiSchema?.[name]?.['ui:backstage']?.featureFlag;
+      return flag ? featureFlags.isActive(flag) : true;
+    },
+    [currentStep, featureFlags],
+  );
+
+  const validationSchema = useMemo(() => {
+    return resolveStepSchema(steps[activeStep]?.mergedSchema ?? {}, stepsState);
+  }, [steps, activeStep, stepsState]);
+
   const validation = useMemo(() => {
-    return createAsyncValidators(steps[activeStep]?.mergedSchema, validators, {
+    return createAsyncValidators(validationSchema, validators, {
       apiHolder,
     });
-  }, [steps, activeStep, validators, apiHolder]);
+  }, [validationSchema, validators, apiHolder]);
 
   const handleBack = useCallback(() => {
+    setStepsState(current =>
+      pruneUnreachableFormState(
+        steps.map(step => step.mergedSchema),
+        current,
+      ),
+    );
     setActiveStep(prevActiveStep => prevActiveStep - 1);
-  }, [setActiveStep]);
+  }, [setActiveStep, steps]);
 
-  const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
+  const renderedSchema = useMemo(() => {
+    const resolved = resolveStepSchema(
+      steps[activeStep]?.schema ?? {},
+      stepsState,
+      { isPropertyEnabled },
+    );
+    const { title: _, ...rest } = resolved;
+    return rest;
+  }, [steps, activeStep, stepsState, isPropertyEnabled]);
 
   const {
     formContext: propFormContext,
@@ -185,10 +220,14 @@ export const Stepper = (stepperProps: StepperProps) => {
   const handleChange = useCallback(
     (e: IChangeEvent) => {
       setStepsState(current => {
-        return { ...current, ...e.formData };
+        const merged = { ...current, ...e.formData };
+        return pruneUnreachableFormState(
+          steps.map(step => step.mergedSchema),
+          merged,
+        );
       });
     },
-    [setStepsState],
+    [setStepsState, steps],
   );
 
   const handleNext = useCallback(
@@ -200,10 +239,16 @@ export const Stepper = (stepperProps: StepperProps) => {
 
       const returnedValidation = await validation(formData);
 
-      setStepsState(current => ({
-        ...current,
-        ...formData,
-      }));
+      setStepsState(current => {
+        const merged = {
+          ...current,
+          ...formData,
+        };
+        return pruneUnreachableFormState(
+          steps.map(step => step.mergedSchema),
+          merged,
+        );
+      });
 
       setIsValidating(false);
 
@@ -218,7 +263,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         });
       }
     },
-    [validation, analytics],
+    [validation, analytics, steps],
   );
 
   useEffect(() => {
@@ -295,7 +340,7 @@ export const Stepper = (stepperProps: StepperProps) => {
             extraErrors={errors as unknown as ErrorSchema}
             formData={stepsState}
             formContext={{ ...propFormContext, formData: stepsState }}
-            schema={currentStep.schema}
+            schema={renderedSchema}
             uiSchema={mergedUiSchema}
             onSubmit={handleNext}
             fields={fields}

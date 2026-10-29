@@ -170,4 +170,153 @@ describe('findSchemaForKey', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
   });
+
+  it("should resolve a key governed by an earlier step's answer", () => {
+    const crossStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            mobile: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            repo: {
+              type: 'string',
+            },
+          },
+          dependencies: {
+            mobile: {
+              oneOf: [
+                {
+                  properties: {
+                    mobile: { const: true },
+                    sdkName: { type: 'string' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const state = { mobile: true, repo: 'r', sdkName: 's' };
+    expect(findSchemaForKey('sdkName', crossStepSchemas, state)).toBe(
+      crossStepSchemas[1],
+    );
+    expect(findSchemaForKey('mobile', crossStepSchemas, state)).toBe(
+      crossStepSchemas[0],
+    );
+  });
+
+  it('should not resolve a cross-step conditional key when its condition does not hold', () => {
+    const crossStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            mobile: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            repo: {
+              type: 'string',
+            },
+          },
+          dependencies: {
+            mobile: {
+              oneOf: [
+                {
+                  properties: {
+                    mobile: { const: true },
+                    sdkName: { type: 'string' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const state = { mobile: false, repo: 'r', sdkName: 's' };
+    expect(findSchemaForKey('sdkName', crossStepSchemas, state)).toBeNull();
+    expect(findSchemaForKey('repo', crossStepSchemas, state)).toBe(
+      crossStepSchemas[1],
+    );
+  });
+
+  it('should resolve a key governed by an earlier answer through if/then', () => {
+    const ifThenSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            mobile: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: { mobile: { const: true } },
+            required: ['mobile'],
+          },
+          then: {
+            properties: {
+              sdkName: { type: 'string' },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('sdkName', ifThenSchemas, {
+        mobile: true,
+        sdkName: 's',
+      }),
+    ).toBe(ifThenSchemas[1]);
+
+    expect(
+      findSchemaForKey('sdkName', ifThenSchemas, {
+        mobile: false,
+        sdkName: 's',
+      }),
+    ).toBeNull();
+  });
 });

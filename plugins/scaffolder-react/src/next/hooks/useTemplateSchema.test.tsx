@@ -387,5 +387,59 @@ describe('useTemplateSchema', () => {
         dependencies: secondStepDependencies,
       });
     });
+
+    it('should keep properties that exist only inside a dependencies subschema', () => {
+      const dependencies = {
+        mobile: {
+          oneOf: [
+            {
+              properties: {
+                mobile: { const: true },
+                sdkName: { type: 'string' },
+              },
+            },
+          ],
+        },
+      };
+
+      const manifest: TemplateParameterSchema = {
+        title: 'Test Template',
+        description: 'Test Template Description',
+        steps: [
+          {
+            title: 'Step',
+            schema: {
+              type: 'object',
+              properties: {
+                repo: { type: 'string' },
+              },
+              dependencies,
+            },
+          },
+        ],
+      };
+
+      const { result } = renderHook(() => useTemplateSchema(manifest), {
+        wrapper: ({ children }: PropsWithChildren<{}>) => (
+          <TestApiProvider
+            apis={[
+              mockApis.featureFlags.mock({ isActive: jest.fn(() => false) }),
+            ]}
+          >
+            {children}
+          </TestApiProvider>
+        ),
+      });
+
+      const [first] = result.current.steps;
+
+      expect(first.schema).toEqual({
+        type: 'object',
+        properties: {
+          repo: { type: 'string' },
+        },
+        dependencies,
+      });
+    });
   });
 });

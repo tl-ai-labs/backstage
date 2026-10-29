@@ -14,3 +14,8 @@
  * limitations under the License.
  */
 export { extractSchemaFromStep, createFieldValidation } from './schema';
+export {
+  resolveStepSchema,
+  pruneUnreachableFormState,
+  pickConditionData,
+} from './conditionalSchema';

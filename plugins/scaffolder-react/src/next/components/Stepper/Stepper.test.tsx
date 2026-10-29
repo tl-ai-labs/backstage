@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,547 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditional fields', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/');
+    });
+
+    const mobileSdkManifest: TemplateParameterSchema = {
+      title: 'Mobile SDK Form',
+      steps: [
+        {
+          title: 'Step 1',
+          schema: {
+            type: 'object',
+            properties: {
+              mobile: {
+                type: 'boolean',
+                title: 'Is this a mobile SDK?',
+              },
+            },
+          },
+        },
+        {
+          title: 'Step 2',
+          schema: {
+            type: 'object',
+            properties: {
+              repo: {
+                type: 'string',
+                title: 'Repo',
+              },
+            },
+            dependencies: {
+              mobile: {
+                oneOf: [
+                  {
+                    properties: {
+                      mobile: {
+                        const: true,
+                      },
+                      sdkName: {
+                        type: 'string',
+                        title: 'SDK Name',
+                      },
+                    },
+                    required: ['sdkName'],
+                  },
+                  {
+                    properties: {
+                      mobile: {
+                        const: false,
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    it('should show a step 2 field only when the step 1 flag is set', async () => {
+      const { getByRole, queryByRole } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={mobileSdkManifest}
+            onCreate={jest.fn()}
+            extensions={[]}
+          />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      expect(getByRole('textbox', { name: 'Repo' })).toBeInTheDocument();
+      expect(
+        queryByRole('textbox', { name: 'SDK Name' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      expect(getByRole('textbox', { name: 'Repo' })).toBeInTheDocument();
+      expect(getByRole('textbox', { name: 'SDK Name' })).toBeInTheDocument();
+    });
+
+    it('should apply the conditional required rule only when the flag is set', async () => {
+      const { getByRole, queryByRole } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={mobileSdkManifest}
+            onCreate={jest.fn()}
+            extensions={[]}
+          />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.change(getByRole('textbox', { name: 'Repo' }), {
+          target: { value: 'my-org/my-repo' },
+        });
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(getByRole('button', { name: 'Create' })).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+      expect(getByRole('textbox', { name: 'SDK Name' })).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(getByRole('textbox', { name: 'SDK Name' }), {
+          target: { value: 'MySDK' },
+        });
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(getByRole('button', { name: 'Create' })).toBeInTheDocument();
+    });
+
+    it('should drop the dependent answer from the review step and the payload when the governing answer changes back', async () => {
+      const onCreate = jest.fn();
+
+      const { getByRole, queryByRole } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={mobileSdkManifest}
+            onCreate={onCreate}
+            extensions={[]}
+          />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.change(getByRole('textbox', { name: 'Repo' }), {
+          target: { value: 'my-org/my-repo' },
+        });
+        fireEvent.change(getByRole('textbox', { name: 'SDK Name' }), {
+          target: { value: 'MySDK' },
+        });
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(getByRole('cell', { name: 'MySDK' })).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(queryByRole('cell', { name: 'MySDK' })).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({
+        mobile: false,
+        repo: 'my-org/my-repo',
+      });
+    });
+
+    it('should not render a property whose feature flag is inactive', async () => {
+      const manifestWithFeatureFlag: TemplateParameterSchema = {
+        title: 'Feature Flag Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                flaggedField: {
+                  type: 'string',
+                  title: 'Flagged Field',
+                  'ui:backstage': {
+                    featureFlag: 'test-inactive-flag',
+                  },
+                },
+                unflaggedField: {
+                  type: 'string',
+                  title: 'Unflagged Field',
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const { getByRole, queryByRole } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={manifestWithFeatureFlag}
+            onCreate={jest.fn()}
+            extensions={[]}
+          />
+        </SecretsContextProvider>,
+      );
+
+      expect(
+        getByRole('textbox', { name: 'Unflagged Field' }),
+      ).toBeInTheDocument();
+      expect(
+        queryByRole('textbox', { name: 'Flagged Field' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should retain same-step conditional value across keystrokes and through submission', async () => {
+      const sameStepManifest: TemplateParameterSchema = {
+        title: 'Same Step Conditional Form',
+        steps: [
+          {
+            title: 'Payment Details',
+            schema: {
+              type: 'object',
+              properties: {
+                creditCard: {
+                  type: 'boolean',
+                  title: 'Pay with credit card',
+                },
+              },
+              dependencies: {
+                creditCard: {
+                  properties: {
+                    billingAddress: {
+                      type: 'string',
+                      title: 'Billing address',
+                    },
+                  },
+                  required: ['billingAddress'],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn();
+
+      const { getByRole } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={sameStepManifest}
+            onCreate={onCreate}
+            extensions={[]}
+          />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Pay with credit card' }),
+        );
+      });
+
+      const billingInput = getByRole('textbox', { name: 'Billing address' });
+      expect(billingInput).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(billingInput, {
+          target: { value: '123 Main St' },
+        });
+      });
+
+      expect(billingInput).toHaveValue('123 Main St');
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({
+        creditCard: true,
+        billingAddress: '123 Main St',
+      });
+    });
+
+    it('should invoke field extension validation callback on step progression', async () => {
+      const validateSpy = jest.fn();
+      const FieldExtension = ({
+        formData,
+        onChange,
+      }: FieldExtensionComponentProps<string>) => (
+        <input
+          aria-label="Custom Field"
+          type="text"
+          value={formData ?? ''}
+          onChange={e => onChange(e.target.value)}
+        />
+      );
+
+      const manifest: TemplateParameterSchema = {
+        title: 'Validation Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                custom: {
+                  type: 'string',
+                  title: 'Custom Field',
+                  'ui:field': 'CustomField',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                repo: {
+                  type: 'string',
+                  title: 'Repo',
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={manifest}
+            extensions={[
+              {
+                name: 'CustomField',
+                component: FieldExtension,
+                validation: validateSpy,
+              },
+            ]}
+            onCreate={jest.fn()}
+          />
+        </SecretsContextProvider>,
+      );
+
+      const input = await screen.findByRole('textbox', {
+        name: 'Custom Field',
+      });
+      await act(async () => {
+        fireEvent.change(input, { target: { value: 'some value' } });
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(validateSpy).toHaveBeenCalled();
+    });
+
+    it('should not render a feature-flagged-off property inside a cross-step then branch', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Flagged Then Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                enableFeature: {
+                  type: 'boolean',
+                  title: 'Enable Feature',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {},
+              if: {
+                properties: {
+                  enableFeature: { const: true },
+                },
+              },
+              then: {
+                properties: {
+                  flaggedThenField: {
+                    type: 'string',
+                    title: 'Flagged Then Field',
+                    'ui:backstage': {
+                      featureFlag: 'test-inactive-flag',
+                    },
+                  },
+                  unflaggedThenField: {
+                    type: 'string',
+                    title: 'Unflagged Then Field',
+                  },
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} onCreate={jest.fn()} extensions={[]} />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          await screen.findByRole('checkbox', { name: 'Enable Feature' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        await screen.findByRole('textbox', { name: 'Unflagged Then Field' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Flagged Then Field' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render a feature-flagged-off property inside a dependencies subschema', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Flagged Dep Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                enableFeature: {
+                  type: 'boolean',
+                  title: 'Enable Feature',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {},
+              dependencies: {
+                enableFeature: {
+                  oneOf: [
+                    {
+                      properties: {
+                        enableFeature: { const: true },
+                        flaggedDepField: {
+                          type: 'string',
+                          title: 'Flagged Dep Field',
+                          'ui:backstage': {
+                            featureFlag: 'test-inactive-flag',
+                          },
+                        },
+                        unflaggedDepField: {
+                          type: 'string',
+                          title: 'Unflagged Dep Field',
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} onCreate={jest.fn()} extensions={[]} />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          await screen.findByRole('checkbox', { name: 'Enable Feature' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        await screen.findByRole('textbox', { name: 'Unflagged Dep Field' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Flagged Dep Field' }),
+      ).not.toBeInTheDocument();
     });
   });
 });

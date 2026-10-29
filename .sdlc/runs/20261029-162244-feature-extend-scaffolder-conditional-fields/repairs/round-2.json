@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-162244-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/conditionalSchema.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 8 errors, all at one spot in this file. The `if (hasIf) {` block accesses `stepSchema.if.properties` and `stepSchema.if.required` without narrowing `stepSchema.if` to an object first, so TypeScript reports it as possibly null/undefined and as having no such property on `string | number | boolean | JsonObject | JsonArray`:\n\n  299:18 error TS18049: 'stepSchema.if' is possibly 'null' or 'undefined'.\n  299:32 error TS2339: Property 'properties' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.\n  300:37 error TS18049: 'stepSchema.if' is possibly 'null' or 'undefined'.\n  300:51 error TS2339: Property 'properties' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.\n  304:23 error TS18049: 'stepSchema.if' is possibly 'null' or 'undefined'.\n  304:37 error TS2339: Property 'required' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.\n  305:25 error TS18049: 'stepSchema.if' is possibly 'null' or 'undefined'.\n  305:39 error TS2339: Property 'required' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.\n\nFix it with the narrowing pattern this same file already uses successfully at line 42 (`if (isObject(node.if)) { if (isObject(node.if.properties)) { ... } }`): bind the narrowed value to a local once, e.g. `const ifSchema = isObject(stepSchema.if) ? stepSchema.if : undefined;` and read `ifSchema.properties` / `ifSchema.required` under that guard, or wrap the block in `isObject(stepSchema.if)`.\n\nConstraints: do not change any behaviour, do not use `any`, do not add a `@ts-ignore`/`@ts-expect-error`, and do not weaken the `isObject` type guard. This is a type-narrowing fix only. Every existing test in conditionalSchema.test.ts must keep passing, and `yarn eslint --max-warnings 0` on this file must stay clean.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/conditionalSchema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-162244-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "fmt",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings 0 '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]

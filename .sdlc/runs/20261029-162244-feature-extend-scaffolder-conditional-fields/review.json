@@ -1,0 +1,50 @@
+{
+  "module": "scaffolder cross-step conditional fields",
+  "verdict": "needs_changes",
+  "tool_calls": 25,
+  "findings": [
+    {
+      "severity": "blocker",
+      "file": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+      "line": 467,
+      "issue": "pruneUnreachableFormState's reachability set is computed only from resolveStepSchema(step).properties, but the additive-identity rule makes resolveStepSchema return the step unchanged for every SAME-step condition (governing key in the step's own properties) and for every dependencies-only step (no own `properties` key). For those shapes `resolved.properties` is just the step's own top-level properties (or undefined), so every property declared inside their conditional subschemas lands in conditionalPropertyNames, is absent from topLevelProperties, and is absent from reachableProperties — so it is dropped unconditionally. Concrete case, the classic same-step shape {properties:{creditCard}, dependencies:{creditCard:{properties:{billingAddress}}}}: RJSF renders billingAddress once creditCard is filled, the user types into it, handleChange prunes it out of stepsState on that same keystroke and the field clears. Same for {type:'object', dependencies:{mobile:{properties:{sdkName}}}} with no own properties, which useTemplateSchema.test.tsx already treats as a supported shape, and for any same-step root if/then (ifProbeRan stays false, so the identity branch returns early). This is a silent data-loss regression on templates that work today. It is invisible to the suite because the only active Stepper same-step-conditional test is the pre-existing it.skip at Stepper.test.tsx:173 — every other same-step dependencies fixture (ReviewState.test.tsx:575, createAsyncValidators.test.ts:254) never goes through the Stepper.",
+      "fix": "Make the drop candidates exactly the keys resolveStepSchema is actually able to resolve, instead of every conditionally-declared key. Per step, treat its conditional property names as drop candidates only when that step has an own object `properties` key AND at least one governing key outside it (the same test resolveStepSchema uses to decide it will resolve); for a step resolveStepSchema returns by identity, add its collectConditionalPropertyNames to the reachable/keep set rather than the candidate set, since RJSF resolves those locally and this module cannot see the outcome. Add a Stepper test over the same-step shape from the skipped case (fill the governing field, type into the dependent field, assert the value survives handleChange and reaches onCreate) plus a conditionalSchema.test.ts case asserting pruneUnreachableFormState returns the identical formState reference for the same-step and the dependencies-only-no-properties shapes."
+    },
+    {
+      "severity": "blocker",
+      "file": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "line": 183,
+      "issue": "`renderedSchema` is derived from `resolvedSchema`, which is built from `steps[activeStep]?.mergedSchema` — the RAW manifest step schema — and it replaces `currentStep.schema` at the `<Form schema=...>` call. Because resolveStepSchema returns its input by identity for non-cross-step steps, this changes what RJSF renders for EVERY step, not just conditional ones. useTemplateSchema produces `mergedSchema` as the untouched manifest schema and `schema` as the parsed one, so two things the parsed schema did are now bypassed: (1) the per-property feature-flag filter at useTemplateSchema.ts:76-88 — a property hidden behind an inactive `ui:backstage.featureFlag` is now rendered in the form, which is a user-visible regression of an advertised feature and contradicts FR-3's byte-identical requirement; (2) `extractSchemaFromStep`'s removal of inline `ui:*` keywords, so `ui:field` / `ui:placeholder` and friends now reach RJSF and the ajv validator inside the JSON Schema as well as in uiSchema. There is no Stepper test for feature-flag property stripping (grep finds no `featureFlag` in Stepper.test.tsx), which is why the suite stays green.",
+      "fix": "Render from the parsed step schema, not mergedSchema: compute the rendered schema as resolveStepSchema(steps[activeStep]?.schema ?? {}, stepsState) (step.schema already has the title stripped, already carries `dependencies`/`if`/`then` after U04, and its conditional properties' ui options are already hoisted into step.uiSchema by extractUiSchema). Keep createAsyncValidators on the resolved mergedSchema if the validator must see the unstripped schema, or move both onto the resolved parsed schema to preserve FR-6; either way add a Stepper test with an inactive featureFlag on a step property asserting the field does not render."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+      "line": 147,
+      "issue": "collectConditionalPropertyNames walks `stepSchema.if` and collects the keys of `if.properties` as conditionally-declared property names, and likewise collects a oneOf branch's `properties.mobile` (the branch's own discriminator) — these are condition TESTS, not field declarations. They only escape pruning because the governing key happens to be declared top-level in an earlier step. A governing answer supplied by `initialState`/useFormDataFromQuery, or declared top-level only in a step filtered out by a step-level feature flag, is in formState but in no step's top-level properties, so it is dropped — which also flips its own condition to not-holding.",
+      "fix": "Exclude governing keys from the conditional-property candidate set: subtract collectGoverningKeys(step) (over all steps) from conditionalPropertyNames before computing keysToDrop, and skip `if` when walking for declared property names (walk only then/else/dependencies values/allOf/anyOf/oneOf branch properties). Add a case with a governing key present in formState but declared in no step's properties, asserting it survives."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "line": 73,
+      "issue": "The widened guard is behaviourally identical to the original for every realistic shape, so the edit does not implement any observable part of FR-1. `Boolean(step.schema?.properties)` is already true for an explicitly declared `properties: {}` (an empty object is truthy), so the added `('properties' in step.schema)` clause only differs when `properties` is declared with a falsy non-undefined value (null/false/0/''). The new test 'should keep properties that exist only inside a dependencies subschema' passes on the pre-change code too, since the old branch rewrote only `properties` and always preserved `dependencies` through the spread. Separately, `hasProperties` is not typed boolean — `step.schema && 'properties' in step.schema` widens it to `boolean | undefined`-ish, which is passed straight into the `if`.",
+      "fix": "Either revert this site to the original one-line guard (the real FR-1 behaviour comes from resolveStepSchema, not from here) or, if the falsy-`properties` case is genuinely intended, keep it but make it explicit and typed: `const hasOwnProperties = !!step.schema && Object.prototype.hasOwnProperty.call(step.schema, 'properties');` and drop the redundant truthiness clause. Adjust the U05 test so it actually fails against the pre-change guard, or drop its FR-1 claim."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+      "line": 255,
+      "issue": "Four unjustified `any` casts in a module whose stated convention is JsonObject/JsonValue only: `const probe: any` (lines 255 and 324) and `formState as any` (lines 265 and 341). @rjsf/utils exports the right types for both arguments.",
+      "fix": "Type the probes as `RJSFSchema` from '@rjsf/utils' and the data argument as `FormContextType`/the schema's data generic (or `JsonObject` with a single narrow cast at the retrieveSchema boundary carrying a one-line comment saying why)."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+      "line": 140,
+      "issue": "collectConditionalPropertyNames duplicates its whole traversal twice: lines 140-176 re-implement walkSubtree's dependencies/if/then/else/allOf/anyOf/oneOf dispatch verbatim, purely to avoid collecting the root's own `properties`. Any future edit has to be made in both copies.",
+      "fix": "Give the inner walker a depth or `collectProperties` flag (`walkSubtree(node, isRoot)`) and call it once with isRoot true, collecting `node.properties` only when !isRoot."
+    }
+  ],
+  "refinement_packets": []
+}
