@@ -1,0 +1,57 @@
+{
+  "module": "notifications-home-card (plugins/notifications, plugins/home-react)",
+  "mode": "brownfield",
+  "intent": "feature-new",
+  "verdict": "needs_changes",
+  "tool_calls": 6,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "line": 1654,
+      "issue": "The route fallback never runs. `useRouteRef(rootRouteRef)` is called outside the try block, and in packages/core-plugin-api/src/routing/useRouteRef.tsx it is the hook itself that throws `No path for ...` when the route is not mounted. The returned function does not throw. So the card crashes in any app where the notifications page is not mounted, instead of falling back to '/notifications'. This breaks FR-3 and the 'Deep-link href and route fallback' decision, which calls for `useRouteRef(rootRouteRef)()` inside the try. Every card test passes `mountedRoutes`, so the fallback path is never tested.",
+      "fix": "Put the hook call inside the try: `let root = '/notifications'; try { root = useRouteRef(rootRouteRef)(); } catch { /* page not mounted */ }`. The hook throws only after its own internal hooks have run, so the hook count stays the same. Add a test that renders without `mountedRoutes` and checks that the 'View all notifications' link points to '/notifications'."
+    },
+    {
+      "severity": "minor",
+      "file": ".changeset/home-react-card-without-app-context.md",
+      "issue": "The changeset overstates the fix. `CardExtension` still calls `useTranslationRef` from '@backstage/frontend-plugin-api', and that hook calls `useApi(errorApiRef)` and `useApi(translationApiRef)`. Those calls still fail with no API context, so the card does not render 'outside a Backstage app'. The new test only passes because plugins/home-react/src/extensions.test.tsx mocks `useTranslationRef`.",
+      "fix": "Reword the changeset to say what actually changed: cards no longer require the app's component registry (app context) and fall back to the default progress indicator. Drop the 'outside a Backstage app, for example in tests' wording."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "issue": "The pinned deep-linked notification can go stale. Its fetch depends only on `[highlightedId, missingFromPage]`. If the user marks the pinned row read or saved from the table, `onUpdate` refreshes the page result but not the pinned item, so the pinned row keeps its old read/saved state until `?id` changes.",
+      "fix": "Also refetch the pinned item when the page refreshes, for example by keeping the pinned call's `retry` and calling it in the same effect that calls `retry()` for the page, or by adding a refresh counter to its dependency list."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/README.md",
+      "issue": "The 'New frontend system' paragraph says the widget 'polls every 60 seconds' without qualification. Polling happens only when signals are unavailable. docs/notifications/usage.md states this correctly.",
+      "fix": "Change the sentence to 'It shows 5 items and, when signals are not available, refreshes every 60 seconds.'"
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "issue": "The `notification.id === highlightedNotificationId` comparison is written twice in the same JSX, once for `className` and once for `aria-current`.",
+      "fix": "Compute `const isHighlighted = notification.id === highlightedNotificationId;` once in the render callback and use it for both props."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "issue": "Two test problems. `renderCard` builds the API list as `any[]` and passes it with `as any`, which hides type errors in the mocks. The error-state test asserts `queryAllByRole('listitem')` has length 0, but the card never renders list items, so that assertion can never fail.",
+      "fix": "Type the API list with the `TestApiProvider` `apis` prop type, or build two typed tuple arrays, and remove the casts. Replace the listitem assertion with one that can fail, such as `queryByText('View all notifications')` being absent."
+    }
+  ],
+  "passing_checks": [
+    "Spec conformance: translation block, card props and defaults, polling and signal throttle, mark-as-read with toast on failure, `?id` pinning and highlight, alpha widget id, and `plugin.ts` card extension match change_plan.md (except the route fallback above).",
+    "Type safety: no `any` in production code. TSDoc and release tags are present on the new public exports.",
+    "Sensitive files: plugins/notifications/package.json only adds `@backstage/plugin-home-react` `workspace:^` in alphabetical order. Nothing was removed or rewritten.",
+    "Hooks: all new hooks run unconditionally before any early return, in the card, `NotificationsPage` and `useProgressComponent`.",
+    "Changesets: patch bumps are correct for packages below 1.0.0 (notifications 0.5.x, home-react 0.1.x). New .ts/.tsx files have the 2026 Apache header.",
+    "Authz/PII: no new routes or backend surface. The card only reads the signed-in user's notifications through the existing API.",
+    "Env fixtures: N/A. Frontend plugin change with no validating config module or new required env keys.",
+    "API reports come from the tooling. The reordering of existing translation keys in report*.api.md is extractor output, not a source change."
+  ],
+  "refinement_packets": []
+}

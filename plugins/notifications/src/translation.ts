@@ -103,6 +103,14 @@ export const notificationsTranslationRef = createTranslationRef({
         fetchNotificationFailed: 'Failed to fetch notification',
       },
     },
+    unreadNotificationsCard: {
+      emptyMessage: 'No unread notifications',
+      viewAll: 'View all notifications',
+      markAsRead: 'Mark as read',
+      errors: {
+        markAsReadFailed: 'Failed to mark notification as read',
+      },
+    },
     settings: {
       title: 'Notification settings',
       errorTitle: 'Failed to load settings',

@@ -62,6 +62,8 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  /** Id of a notification to highlight, for example one opened through a deep link. */
+  highlightedNotificationId?: string;
 };
 
 /** @public */
@@ -78,6 +80,7 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedNotificationId,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const notificationsApi = useApi(notificationsApiRef);
@@ -197,9 +200,15 @@ export const NotificationsTable = ({
           true /* Keep sorting&filtering on backend due to pagination. */,
         cellStyle: { paddingLeft: 0 },
         render: (notification: Notification) => {
+          const isHighlighted = notification.id === highlightedNotificationId;
           // Compact content
           return (
-            <Flex gap="4" align="center">
+            <Flex
+              gap="4"
+              align="center"
+              className={isHighlighted ? styles.highlighted : undefined}
+              aria-current={isHighlighted ? 'true' : undefined}
+            >
               <div className={styles.severityItem}>
                 <NotificationIcon notification={notification} />
               </div>
@@ -290,6 +299,7 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    highlightedNotificationId,
   ]);
 
   return (

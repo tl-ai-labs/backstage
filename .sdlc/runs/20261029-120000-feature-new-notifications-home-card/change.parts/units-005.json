@@ -1,0 +1,118 @@
+{
+  "section": "units",
+  "source": "units-005.json",
+  "value": [
+    {
+      "id": "U18",
+      "path": "plugins/notifications/README.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the unread notifications home page card for both frontend systems.",
+      "rules": [
+        "1. A '## Home page card' section that says the card lists the signed-in user's latest unread notifications, newest first, each with a mark-as-read button and a link that opens and highlights the notification on the notifications page.",
+        "2. A '### New frontend system' subsection: the widget home-page-widget:notifications/unread-notifications is enabled by default and provided to the home page widgets when the notifications and home plugins are installed, uses 5 items and a 60-second polling interval, and can be disabled with a yaml example under app.extensions setting that id to false.",
+        "3. A '### Old frontend system' subsection: a tsx example importing UnreadNotificationsCard from '@backstage/plugin-notifications' and rendering <UnreadNotificationsCard limit={10} pollingIntervalMs={30000} /> on the home page, and a short list of the two props with their defaults (limit 5, pollingIntervalMs 60000).",
+        "4. One paragraph on live refresh: with @backstage/plugin-signals installed the card refreshes when notifications change; without signals it refetches every polling interval."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 14,
+          "to": 14,
+          "first_line": "add `@backstage/plugin-signals` package to your installation.",
+          "rule": "After the real-time notifications paragraph, insert a blank line and the section of rules 1-4."
+        }
+      ],
+      "depends_on": ["U14", "U16"],
+      "covers": ["FR-20", "AC-14"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U19",
+      "path": "docs/notifications/usage.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds a home page card section to the notifications usage guide.",
+      "rules": [
+        "1. A '### Home page card' subsection under '## Notifications Frontend', written for the new frontend system like the rest of the page: what the card shows, that its extension id is home-page-widget:notifications/unread-notifications, a yaml example disabling it under app.extensions, and that it uses 5 items and a 60-second polling interval.",
+        "2. One paragraph on live refresh (signals when available, otherwise polling) and on the ?id= deep link: opening an item highlights it on the notifications page, pinned at the top when the current filters would hide it.",
+        "3. One sentence for old frontend system apps: add the UnreadNotificationsCard component from @backstage/plugin-notifications to the home page and set its limit and pollingIntervalMs props."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+          "rule": "After the sidebar item paragraph and before '## Usage', insert a blank line and the subsection of rules 1-3."
+        }
+      ],
+      "depends_on": ["U14", "U16"],
+      "covers": ["FR-20", "AC-14"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U20",
+      "path": ".changeset/notifications-unread-home-card.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for @backstage/plugin-notifications describing the new home page card and deep-link highlighting.",
+      "rules": [
+        "1. Front matter is exactly '@backstage/plugin-notifications': patch between --- lines.",
+        "2. The body says the plugin adds an unread notifications card for the home page, available as UnreadNotificationsCard in the old frontend system and as a home page widget in the new frontend system, that it refreshes through signals or polling, and that opening a notification from it highlights that notification on the notifications page."
+      ],
+      "style_from": {
+        "path": ".changeset/add-logviewer-copy-button.md",
+        "reason": "Changeset front matter and one-paragraph body."
+      },
+      "depends_on": ["U14", "U16"],
+      "covers": ["FR-21", "AC-14"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U21",
+      "path": ".changeset/home-react-card-without-app-context.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for @backstage/plugin-home-react describing that home page cards render without app context.",
+      "rules": [
+        "1. Front matter is exactly '@backstage/plugin-home-react': patch between --- lines.",
+        "2. The body says home page cards created with createCardExtension no longer fail when rendered outside a Backstage app, for example in tests, and show a default progress indicator while their content loads."
+      ],
+      "style_from": {
+        "path": ".changeset/add-logviewer-copy-button.md",
+        "reason": "Changeset front matter and one-paragraph body."
+      },
+      "depends_on": ["U03"],
+      "covers": ["FR-21", "AC-14"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U22",
+      "path": "plugins/notifications/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates the main API report of @backstage/plugin-notifications after the public additions.",
+      "run": "yarn build:api-reports plugins/notifications",
+      "depends_on": ["U02", "U05", "U10", "U13", "U14", "U15", "U16"],
+      "covers": ["NFR-7", "AC-14"]
+    },
+    {
+      "id": "U23",
+      "path": "plugins/notifications/report-alpha.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates the alpha API report of @backstage/plugin-notifications from the type output of the previous step.",
+      "run": "yarn build:api-reports:only plugins/notifications",
+      "depends_on": ["U22"],
+      "covers": ["NFR-7", "AC-14"]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/README.md": "ffc5ea09c2c63e9aec0e6e88afcb34ccf1c7753bdda7950137037ff05e0d4d8f",
+    "docs/notifications/usage.md": "0711ab89e89a57655c9ba1a49d129e8be887d8c56190794b1f7a68f36f11fdf8",
+    ".changeset/add-logviewer-copy-button.md": "9417feecd8eae014da506e9d60140c16af4f5e319bd2f9a3953c1c548f5b1bc6"
+  }
+}

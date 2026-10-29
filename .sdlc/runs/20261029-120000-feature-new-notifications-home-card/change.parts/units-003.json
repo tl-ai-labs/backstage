@@ -1,0 +1,218 @@
+{
+  "section": "units",
+  "source": "units-003.json",
+  "value": [
+    {
+      "id": "U09",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the highlighted class for the deep-linked notification row content.",
+      "rules": [
+        "1. .highlighted sets background-color: var(--bui-bg-info); border-left: 3px solid var(--bui-border-info); padding: var(--bui-space-2); inside the existing @layer components block."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 35,
+          "to": 35,
+          "first_line": "}",
+          "rule": "After the .notificationInfoRow:not(:first-child) rule, insert a blank line and the .highlighted rule at the same indentation."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-13"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "NotificationsTable accepts highlightedNotificationId and marks the matching row as current and highlighted.",
+      "rules": [
+        "1. The new optional prop is highlightedNotificationId?: string with the TSDoc line: Id of a notification to highlight, for example one opened through a deep link.",
+        "2. In the compact-data column, the outer Flex of a row whose notification.id equals highlightedNotificationId gets className={styles.highlighted} and aria-current=\"true\"; other rows get neither attribute (pass undefined).",
+        "3. highlightedNotificationId joins the compactColumns useMemo dependency list."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsTableProps",
+          "kind": "type (adds optional highlightedNotificationId)",
+          "params": [],
+          "returns": "existing props & { highlightedNotificationId?: string }"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 64,
+          "to": 64,
+          "first_line": "pageSize: number;",
+          "rule": "Add the TSDoc comment and highlightedNotificationId?: string; of rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 80,
+          "to": 80,
+          "first_line": "totalCount,",
+          "rule": "Destructure highlightedNotificationId,"
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 202,
+          "to": 202,
+          "first_line": "<Flex gap=\"4\" align=\"center\">",
+          "rule": "Keep gap and align and add the className and aria-current props of rule 2, computed from notification.id === highlightedNotificationId."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 292,
+          "to": 292,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Add highlightedNotificationId, to the dependency list."
+        }
+      ],
+      "depends_on": ["U09"],
+      "covers": ["FR-13"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The notifications page reads ?id=, pins a deep-linked notification missing from the current page at the top, and highlights it.",
+      "rules": [
+        "1. const [searchParams] = useSearchParams(); const highlightedId = searchParams.get('id') ?? undefined; both placed after the existing useNotificationsApi call and before the first early return.",
+        "2. const pageNotifications = value?.[0]?.notifications; const missingFromPage = !!highlightedId && !!pageNotifications && !pageNotifications.some(n => n.id === highlightedId);",
+        "3. const { value: pinnedNotification } = useNotificationsApi<Notification | undefined>(api => missingFromPage && highlightedId ? api.getNotification(highlightedId).catch(() => undefined) : Promise.resolve(undefined), [highlightedId, missingFromPage]);",
+        "4. The notifications passed to the table are [pinnedNotification, ...(pageNotifications ?? [])] when missingFromPage and pinnedNotification are both set, otherwise pageNotifications.",
+        "5. NotificationsTable receives highlightedNotificationId={highlightedId}; filters, paging, title and totalCount stay as they are; without ?id the page behaves exactly as before."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsPage",
+          "kind": "function component (signature unchanged)",
+          "params": [
+            {
+              "name": "props",
+              "type": "NotificationsPageProps | undefined"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { NotificationsPage } from './NotificationsPage';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 25,
+          "to": 25,
+          "first_line": "import { useSignal } from '@backstage/plugin-signals-react';",
+          "rule": "Add import { useSearchParams } from 'react-router-dom';"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 49,
+          "to": 52,
+          "first_line": "import {",
+          "last_line": "} from '@backstage/plugin-notifications-common';",
+          "rule": "Also import Notification from '@backstage/plugin-notifications-common', keeping NotificationSeverity and NotificationStatus."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 141,
+          "to": 141,
+          "first_line": ");",
+          "rule": "After the existing useNotificationsApi call, insert a blank line and rules 1-3."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 169,
+          "to": 169,
+          "first_line": "const notifications = value?.[0]?.notifications;",
+          "rule": "Define notifications per rule 4."
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 224,
+          "to": 224,
+          "first_line": "totalCount={totalCount}",
+          "rule": "Pass highlightedNotificationId={highlightedId} to NotificationsTable."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "lines": [69, 89],
+          "reason": "getNotification(id) signature."
+        }
+      ],
+      "depends_on": ["U10"],
+      "covers": ["FR-12", "FR-13", "FR-14"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "jsdom tests of ?id= deep-link highlighting and pinning on the notifications page.",
+      "rules": [
+        "1. Render <NotificationsPage /> inside TestApiProvider with notificationsApiRef and toastApiRef through renderInTestApp with routeEntries: ['/notifications?id=<id>'].",
+        "2. The API mock resolves getNotifications to { notifications: [n1 'First', n2 'Second'], totalCount: 2 }, getStatus to { unread: 2, read: 0 }, getTopics to { topics: [] }; getNotification is set per test.",
+        "3. Find a row's highlight with (await screen.findByText(title)).closest('[aria-current=\"true\"]'): highlighted rows give an element, others null.",
+        "4. Reset mocks in beforeEach."
+      ],
+      "style_from": {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "reason": "Test file header, renderInTestApp and screen usage in this package."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "lines": [24, 89],
+          "reason": "notificationsApiRef and the NotificationsApi type for the mock."
+        }
+      ],
+      "tests": [
+        {
+          "name": "highlights the deep-linked notification when it is on the current page",
+          "given": "route /notifications?id=n2 and n2 in the getNotifications result",
+          "expect": "'Second' is inside an element with aria-current=\"true\", 'First' is not, and getNotification was not called"
+        },
+        {
+          "name": "pins and highlights a deep-linked notification missing from the current page",
+          "given": "route /notifications?id=n9 and getNotification resolving n9 'Linked'",
+          "expect": "getNotification was called with 'n9'; 'Linked' appears before 'First' in document order and is inside an element with aria-current=\"true\"; 'First' and 'Second' are not highlighted"
+        },
+        {
+          "name": "keeps the page working when the deep-linked notification cannot be loaded",
+          "given": "route /notifications?id=missing and getNotification rejecting",
+          "expect": "'First' and 'Second' are shown, nothing has aria-current=\"true\", and getNotification was called with 'missing'"
+        }
+      ],
+      "depends_on": ["U11"],
+      "covers": ["AC-8", "AC-11", "NFR-3"],
+      "checks": ["prettier", "eslint", "jest"]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css": "6a76ba9b1b187732c563ddae568a12b3522f0eef5615f464d28e4c5640bcc344",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx": "e5c70ee41407f8f1a66ff2bf61c697523e094df60b47c4cb6785daec1fda4584",
+    "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx": "5c82ffcf77e140195480bdc27eca15e49994f5b749d5b856fef28d4a8714d247",
+    "plugins/notifications/src/api/NotificationsApi.ts": "a6e26256a031f43baae212207ee06ad5700c1155a59b43ea1073ce393872ea6b",
+    "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx": "2e6bc2225e74af0543c1a2eac2ad73f195697aa407bae4e086f73f34ecd02566"
+  }
+}

@@ -13,10 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { notificationsPlugin } from './plugin';
+import notificationsAlphaPlugin from './alpha';
+import { notificationsPlugin, UnreadNotificationsCard } from './plugin';
 
 describe('notifications', () => {
   it('should export plugin', () => {
     expect(notificationsPlugin).toBeDefined();
+  });
+
+  it('should export the unread notifications home card for both frontend systems', () => {
+    expect(UnreadNotificationsCard).toBeDefined();
+    expect(
+      notificationsAlphaPlugin.getExtension(
+        'home-page-widget:notifications/unread-notifications',
+      ),
+    ).toBeDefined();
   });
 });

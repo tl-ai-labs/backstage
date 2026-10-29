@@ -1,0 +1,290 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 1654): The route fallback never runs. `useRouteRef(rootRouteRef)` is called outside the try block, and in packages/core-plugin-api/src/routing/useRouteRef.tsx it is the hook itself that throws `No path for ...` when the route is not mounted. The returned function does not throw. So the card crashes in any app where the notifications page is not mounted, instead of falling back to '/notifications'. This breaks FR-3 and the 'Deep-link href and route fallback' decision, which calls for `useRouteRef(rootRouteRef)()` inside the try. Every card test passes `mountedRoutes`, so the fallback path is never tested. — fix: Put the hook call inside the try: `let root = '/notifications'; try { root = useRouteRef(rootRouteRef)(); } catch { /* page not mounted */ }`. The hook throws only after its own internal hooks have run, so the hook count stays the same. Add a test that renders without `mountedRoutes` and checks that the 'View all notifications' link points to '/notifications'.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": ".changeset/home-react-card-without-app-context.md",
+    "instruction": "Fix `.changeset/home-react-card-without-app-context.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: The changeset overstates the fix. `CardExtension` still calls `useTranslationRef` from '@backstage/frontend-plugin-api', and that hook calls `useApi(errorApiRef)` and `useApi(translationApiRef)`. Those calls still fail with no API context, so the card does not render 'outside a Backstage app'. The new test only passes because plugins/home-react/src/extensions.test.tsx mocks `useTranslationRef`. — fix: Reword the changeset to say what actually changed: cards no longer require the app's component registry (app context) and fall back to the default progress indicator. Drop the 'outside a Backstage app, for example in tests' wording.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/home-react-card-without-app-context.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/home-react-card-without-app-context.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U21.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/home-react-card-without-app-context.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: The pinned deep-linked notification can go stale. Its fetch depends only on `[highlightedId, missingFromPage]`. If the user marks the pinned row read or saved from the table, `onUpdate` refreshes the page result but not the pinned item, so the pinned row keeps its old read/saved state until `?id` changes. — fix: Also refetch the pinned item when the page refreshes, for example by keeping the pinned call's `retry` and calling it in the same effect that calls `retry()` for the page, or by adding a refresh counter to its dependency list.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": "plugins/notifications/README.md",
+    "instruction": "Fix `plugins/notifications/README.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: The 'New frontend system' paragraph says the widget 'polls every 60 seconds' without qualification. Polling happens only when signals are unavailable. docs/notifications/usage.md states this correctly. — fix: Change the sentence to 'It shows 5 items and, when signals are not available, refreshes every 60 seconds.'\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/README.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/README.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U18.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/README.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: The `notification.id === highlightedNotificationId` comparison is written twice in the same JSX, once for `className` and once for `aria-current`. — fix: Compute `const isHighlighted = notification.id === highlightedNotificationId;` once in the render callback and use it for both props.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_006",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: Two test problems. `renderCard` builds the API list as `any[]` and passes it with `as any`, which hides type errors in the mocks. The error-state test asserts `queryAllByRole('listitem')` has length 0, but the card never renders list items, so that assertion can never fail. — fix: Type the API list with the `TestApiProvider` `apis` prop type, or build two typed tuple arrays, and remove the casts. Replace the listitem assertion with one that can fail, such as `queryByText('View all notifications')` being absent.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 600,
+      "max_retries": 2
+    }
+  }
+]

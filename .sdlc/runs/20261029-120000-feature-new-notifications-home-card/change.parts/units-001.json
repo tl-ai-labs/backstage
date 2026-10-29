@@ -1,0 +1,147 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/notifications/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds @backstage/plugin-home-react as a workspace runtime dependency of the notifications plugin.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 57,
+          "to": 57,
+          "first_line": "\"@backstage/frontend-plugin-api\": \"workspace:^\",",
+          "rule": "Insert the dependency line \"@backstage/plugin-home-react\": \"workspace:^\", keeping the dependencies object in alphabetical order and the existing 4-space indentation."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["NFR-5"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U02",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Runs the package manager so yarn.lock records the new workspace dependency of @backstage/plugin-notifications.",
+      "run": "yarn install",
+      "depends_on": ["U01"],
+      "covers": ["NFR-5"]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/home-react/src/extensions.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "CardExtension resolves the app's Progress component defensively and falls back to the core-components Progress when no app context is available.",
+      "rules": [
+        "1. useProgressComponent is a module-private function (not exported) placed directly above CardExtension, with a short comment saying it falls back to the default progress indicator when the component is rendered outside an app.",
+        "2. Its body is a try block that returns useApp().getComponents().Progress and a catch block (no binding) that returns DefaultProgress; the hook is called unconditionally on every render, so the rules of hooks hold.",
+        "3. Its return type is ComponentType<{}>.",
+        "4. CardExtension calls const Progress = useProgressComponent(); exactly where it called useApp() before, and every existing <Progress /> fallback stays as it is.",
+        "5. Nothing else in the file changes; useApp stays imported from '@backstage/core-plugin-api'."
+      ],
+      "exports": [
+        {
+          "name": "CardExtension",
+          "kind": "function component (signature unchanged)",
+          "params": [
+            {
+              "name": "props",
+              "type": "CardExtensionComponentProps<T>"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { CardExtension } from './extensions';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useState, Suspense } from 'react';",
+          "rule": "Also import the ComponentType type from 'react': import { ComponentType, useState, Suspense } from 'react';"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { InfoCard } from '@backstage/core-components';",
+          "rule": "Import the core-components Progress under the local name DefaultProgress next to InfoCard."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 124,
+          "to": 124,
+          "first_line": "export function CardExtension<T>(props: CardExtensionComponentProps<T>) {",
+          "rule": "Insert the commented useProgressComponent function of rules 1-3, followed by one blank line."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 135,
+          "to": 136,
+          "first_line": "const app = useApp();",
+          "last_line": "const { Progress } = app.getComponents();",
+          "rule": "Replace both lines with the single line const Progress = useProgressComponent();"
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-18"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/home-react/src/extensions.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Proves CardExtension renders its title and content, and a progress indicator while lazy content loads, with no app context.",
+      "rules": [
+        "1. Imports only react, react-dom/client, @backstage/frontend-plugin-api (inside jest.mock) and ./extensions; no @testing-library or @backstage/test-utils import.",
+        "2. At the top, jest.mock('@backstage/frontend-plugin-api', () => ({ ...jest.requireActual('@backstage/frontend-plugin-api'), useTranslationRef: () => ({ t: (key: string) => key }) })).",
+        "3. Set (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true at module level; each test creates a div appended to document.body, renders with createRoot(container) inside act, and in afterEach unmounts the root inside act and removes the div.",
+        "4. The lazy case builds Content with lazy() from 'react' over a promise whose resolve the test keeps, uses jest.useFakeTimers() and advances 300 ms inside act so the default Progress becomes visible, then resolves the promise inside an async act; restore real timers in afterEach.",
+        "5. Assertions use container.textContent and container.querySelector('[role=\"progressbar\"]'); CardExtension is rendered with title and Content props only."
+      ],
+      "style_from": {
+        "path": "plugins/notifications/src/plugin.test.ts",
+        "reason": "License header and describe/it layout of a small plugin test."
+      },
+      "uses": [
+        {
+          "path": "plugins/home-react/src/extensions.tsx",
+          "lines": [118, 202],
+          "reason": "CardExtension props and render tree under test."
+        }
+      ],
+      "tests": [
+        {
+          "name": "renders the card title and content without app context",
+          "given": "CardExtension with title 'My card' and Content () => <div>Card body</div>, rendered with no app, API or router context",
+          "expect": "rendering does not throw and container.textContent contains 'My card' and 'Card body'"
+        },
+        {
+          "name": "shows the default progress indicator while lazy content loads without app context",
+          "given": "CardExtension with title 'My card' and a lazy Content whose import promise is still pending, fake timers advanced 300 ms",
+          "expect": "an element with role progressbar is present and 'Lazy body' is absent; after the promise resolves with a component rendering 'Lazy body', the text is present and no progressbar remains"
+        }
+      ],
+      "depends_on": ["U03"],
+      "covers": ["AC-9", "AC-11", "NFR-3"],
+      "checks": ["prettier", "eslint", "jest"]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/package.json": "e8133c1f0084eaeea3136ac5b2487465e9488c1e2b5801d4c400b0c4503aef37",
+    "plugins/home-react/src/extensions.tsx": "1db19509d660bad4dc6e3b5a2186e7a85b6a438bc693e166231452c28fc60ff2",
+    "plugins/notifications/src/plugin.test.ts": "9b2af92fcc488f50454ae00ddc5cdfd8a4634f9752c6fcc3184ffbadf51d6903"
+  }
+}

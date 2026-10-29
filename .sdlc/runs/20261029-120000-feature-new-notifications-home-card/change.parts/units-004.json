@@ -1,0 +1,202 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U13",
+      "path": "plugins/notifications/src/components/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Re-exports the public card props type from the components barrel.",
+      "exports": [
+        {
+          "name": "UnreadNotificationsCardProps",
+          "kind": "type (re-export)",
+          "params": [],
+          "returns": "{ limit?: number; pollingIntervalMs?: number }"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 19,
+          "to": 19,
+          "first_line": "export type { NotificationsPageProps } from './NotificationsPage';",
+          "rule": "Add export type { UnreadNotificationsCardProps } from './UnreadNotificationsCard'; (type only, the content component stays internal)."
+        }
+      ],
+      "depends_on": ["U07"],
+      "covers": ["FR-15", "FR-17"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/notifications/src/plugin.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Provides the old-system home card UnreadNotificationsCard through createCardExtension with lazily loaded content.",
+      "rules": [
+        "1. export const UnreadNotificationsCard = notificationsPlugin.provide(createCardExtension<UnreadNotificationsCardProps>({ name: 'UnreadNotificationsCard', title, description, layout, components })) with title, description and layout exactly as in the 'Card title and description strings' decision.",
+        "2. components is () => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent })).",
+        "3. TSDoc above the export: one sentence saying it is a home page card listing the signed-in user's latest unread notifications, then @public.",
+        "4. createCardExtension is imported from '@backstage/plugin-home-react'; UnreadNotificationsCardProps with import type, so the card content stays out of the main bundle."
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCard",
+          "kind": "const (card extension component)",
+          "params": [
+            {
+              "name": "props",
+              "type": "CardExtensionProps<UnreadNotificationsCardProps>"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { UnreadNotificationsCard } from './plugin';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { NotificationsClient } from './api';",
+          "rule": "Add import { createCardExtension } from '@backstage/plugin-home-react'; and import type { UnreadNotificationsCardProps } from './components/UnreadNotificationsCard';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52,
+          "first_line": ");",
+          "rule": "After NotificationsPage, insert a blank line and the documented UnreadNotificationsCard export of rules 1-3."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/home-react/src/extensions.tsx",
+          "lines": [80, 116],
+          "reason": "createCardExtension options and generic props parameter."
+        }
+      ],
+      "depends_on": ["U02", "U07"],
+      "covers": ["FR-15", "FR-17"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U15",
+      "path": "plugins/notifications/src/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Exports UnreadNotificationsCard from the package's public entry.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "export { notificationsPlugin, NotificationsPage } from './plugin';",
+          "rule": "Export notificationsPlugin, NotificationsPage and UnreadNotificationsCard from './plugin'."
+        }
+      ],
+      "depends_on": ["U14"],
+      "covers": ["FR-15", "AC-10"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U16",
+      "path": "plugins/notifications/src/alpha.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Registers the unread notifications home page widget in the new frontend system plugin.",
+      "rules": [
+        "1. const unreadNotificationsWidget = HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: { name: 'UnreadNotificationsCard', title, description, layout, components } }), with title, description and layout exactly as in the 'Card title and description strings' decision and components () => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent })).",
+        "2. The widget is not exported; page and api stay unchanged and keep their order in extensions, with the widget appended last."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 24,
+          "to": 24,
+          "first_line": "import { RiNotification3Line } from '@remixicon/react';",
+          "rule": "Add import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 47,
+          "to": 47,
+          "first_line": "});",
+          "rule": "After the api extension, insert a blank line and the unreadNotificationsWidget const of rule 1."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "extensions: [page, api],",
+          "rule": "extensions: [page, api, unreadNotificationsWidget],"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/search/src/alpha.tsx",
+        "lines": [96, 107],
+        "reason": "HomePageWidgetBlueprint.make shape with lazily imported Content (its componentProps Renderer is search-specific and not copied)."
+      },
+      "depends_on": ["U02", "U07"],
+      "covers": ["FR-16", "FR-17"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U17",
+      "path": "plugins/notifications/src/plugin.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Asserts the old-system card export and the new-system widget registration exist.",
+      "rules": [
+        "1. Import notificationsPlugin and UnreadNotificationsCard from './plugin' and the default export of './alpha' as notificationsAlphaPlugin.",
+        "2. The new case asserts UnreadNotificationsCard is defined and notificationsAlphaPlugin.getExtension('home-page-widget:notifications/unread-notifications') is defined; the existing case stays as it is."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "import { notificationsPlugin } from './plugin';",
+          "rule": "Imports of rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 21,
+          "to": 21,
+          "first_line": "});",
+          "rule": "After the existing it case, insert a blank line and the new it case of rule 2."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should export the unread notifications home card for both frontend systems",
+          "given": "the package's old-system plugin module and new-system alpha plugin",
+          "expect": "UnreadNotificationsCard is defined and getExtension('home-page-widget:notifications/unread-notifications') returns a defined extension"
+        }
+      ],
+      "depends_on": ["U14", "U16"],
+      "covers": ["AC-10", "AC-11", "AC-12", "NFR-6"],
+      "checks": ["prettier", "eslint", "jest"]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/src/components/index.ts": "8c016dfe00e4d70b1c23e525dea396cdca7d1d7758c9c3f627eeb59d5394c4b2",
+    "plugins/notifications/src/plugin.ts": "a93db6193eb555fc4a78699c39c71fe558c09678ecaf4f2425238be3499efaf2",
+    "plugins/home-react/src/extensions.tsx": "1db19509d660bad4dc6e3b5a2186e7a85b6a438bc693e166231452c28fc60ff2",
+    "plugins/notifications/src/index.ts": "61da4b6d395a2896f914914ffd2219d73ec1c6f10cec2672a6032e33c93a4c0d",
+    "plugins/notifications/src/alpha.tsx": "e4a38d69ca6209bf2f1625ca9681591341f07652f87fe29c19eb2d621e2b314c",
+    "plugins/search/src/alpha.tsx": "788e5924557108e8ae1458edf32e2e2847388b6680aa9ba63055bd78e8badc6d",
+    "plugins/notifications/src/plugin.test.ts": "9b2af92fcc488f50454ae00ddc5cdfd8a4634f9752c6fcc3184ffbadf51d6903"
+  }
+}

@@ -23,6 +23,7 @@ import {
 } from '@backstage/core-components';
 import { Grid } from '@backstage/ui';
 import { useSignal } from '@backstage/plugin-signals-react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { notificationsTranslationRef } from '../../translation';
 
@@ -47,6 +48,7 @@ import {
   GetTopicsResponse,
 } from '../../api';
 import {
+  Notification,
   NotificationSeverity,
   NotificationStatus,
 } from '@backstage/plugin-notifications-common';
@@ -140,6 +142,25 @@ function NotificationsPageContent(
     ],
   );
 
+  const [searchParams] = useSearchParams();
+  const highlightedId = searchParams.get('id') ?? undefined;
+
+  const pageNotifications = value?.[0]?.notifications;
+  const missingFromPage =
+    !!highlightedId &&
+    !!pageNotifications &&
+    !pageNotifications.some(n => n.id === highlightedId);
+
+  const { value: pinnedNotification, retry: retryPinned } = useNotificationsApi<
+    Notification | undefined
+  >(
+    api =>
+      missingFromPage && highlightedId
+        ? api.getNotification(highlightedId).catch(() => undefined)
+        : Promise.resolve(undefined),
+    [highlightedId, missingFromPage],
+  );
+
   const throttledSetRefresh = useMemo(
     () => throttle(setRefresh, ThrottleDelayMs),
     [setRefresh],
@@ -148,9 +169,10 @@ function NotificationsPageContent(
   useEffect(() => {
     if (refresh && !loading) {
       retry();
+      retryPinned();
       setRefresh(false);
     }
-  }, [refresh, setRefresh, retry, loading]);
+  }, [refresh, setRefresh, retry, retryPinned, loading]);
 
   useEffect(() => {
     if (lastSignal && lastSignal.action) {
@@ -166,7 +188,10 @@ function NotificationsPageContent(
     return <ResponseErrorPanel error={error} />;
   }
 
-  const notifications = value?.[0]?.notifications;
+  const notifications =
+    missingFromPage && pinnedNotification
+      ? [pinnedNotification, ...(pageNotifications ?? [])]
+      : pageNotifications;
   const totalCount = value?.[0]?.totalCount;
   const isUnread = !!value?.[1]?.unread;
   const allTopics = value?.[2]?.topics;
@@ -222,6 +247,7 @@ function NotificationsPageContent(
             page={pageNumber}
             pageSize={pageSize}
             totalCount={totalCount}
+            highlightedNotificationId={highlightedId}
           />
         </Grid.Item>
       </Grid.Root>

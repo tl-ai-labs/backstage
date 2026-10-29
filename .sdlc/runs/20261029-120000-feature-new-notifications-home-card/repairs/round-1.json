@@ -1,0 +1,59 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-120000-feature-new-notifications-home-card",
+    "artifact_path": "plugins/home-react/src/extensions.test.tsx",
+    "instruction": "Fix `plugins/home-react/src/extensions.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc (repo root) fails with:\nplugins/home-react/src/extensions.test.tsx:68:50 - error TS2322: Type 'LazyExoticComponent<() => Element>' is not assignable to type 'LazyExoticComponent<() => Element> & ((props?: any) => Element)'.\n  Type 'LazyExoticComponent<() => Element>' is not assignable to type '(props?: any) => Element'.\n    Type 'ReactNode' is not assignable to type 'Element'.\n      Type 'undefined' is not assignable to type 'ReactElement<any, any>'.\n\n68       root.render(<CardExtension title=\"My card\" Content={Content} />);\n                                                    ~~~~~~~\n\n  plugins/home-react/src/extensions.test.tsx:68:50\n    68       root.render(<CardExtension title=\"My card\" Content={Content} />);\n                                                        ~~~~~~~~~~~~~~~~~\n    The expected type comes from property 'Content' which is declared here on type 'IntrinsicAttributes & ComponentRenderer & { title?: string | undefined; } & { title: string; Content: LazyExoticComponent<() => Element>; } & ComponentParts & { ...; }'\nThe test passes a React.lazy component as Content, but ComponentParts.Content is typed as (props?: any) => JSX.Element. Fix the test so it type-checks (for example, render the lazy component inside a plain function component, or type the fixture to match ComponentParts) without changing extensions.tsx; the test must still prove CardExtension renders without app context and shows a progress indicator while lazy content loads.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/home-react/src/extensions.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/home-react/src/extensions.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-120000-feature-new-notifications-home-card/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/home-react/src/extensions.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 600,
+      "max_retries": 2
+    }
+  }
+]

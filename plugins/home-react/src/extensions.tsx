@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
-import { useState, Suspense } from 'react';
+import { ComponentType, useState, Suspense } from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import SettingsIcon from '@material-ui/icons/Settings';
-import { InfoCard } from '@backstage/core-components';
+import {
+  InfoCard,
+  Progress as DefaultProgress,
+} from '@backstage/core-components';
 import { SettingsModal } from './components';
 import { createReactExtension, useApp } from '@backstage/core-plugin-api';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
@@ -121,6 +124,16 @@ type CardExtensionComponentProps<T> = CardExtensionProps<T> &
     overrideTitle?: string;
   };
 
+// Falls back to the default progress indicator when the component is rendered
+// outside an app.
+function useProgressComponent(): ComponentType<{}> {
+  try {
+    return useApp().getComponents().Progress;
+  } catch {
+    return DefaultProgress;
+  }
+}
+
 export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
   const {
     Renderer,
@@ -132,8 +145,7 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
     title,
     ...childProps
   } = props;
-  const app = useApp();
-  const { Progress } = app.getComponents();
+  const Progress = useProgressComponent();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { t } = useTranslationRef(homeReactTranslationRef);
 
