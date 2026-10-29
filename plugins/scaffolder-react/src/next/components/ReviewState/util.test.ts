@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { isJsonObject, formatKey, findSchemaForKey } from './util';
+import {
+  isJsonObject,
+  formatKey,
+  findSchemaForKey,
+  isDeclaredInConditionalBranch,
+} from './util';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('isJsonObject', () => {
@@ -169,5 +174,99 @@ describe('findSchemaForKey', () => {
   it('should return the schema for an object key', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
+  });
+});
+
+describe('cross-step conditions', () => {
+  const schemas: ParsedTemplateSchema[] = [
+    {
+      mergedSchema: {
+        type: 'object',
+        properties: {
+          isSdk: { type: 'boolean' },
+        },
+      },
+      schema: {},
+      title: 'Schema 1',
+      uiSchema: {},
+    },
+    {
+      mergedSchema: {
+        type: 'object',
+        properties: {
+          projectName: { type: 'string' },
+        },
+        if: {
+          properties: { isSdk: { const: true } },
+          required: ['isSdk'],
+        },
+        then: {
+          properties: {
+            sdkLanguage: { type: 'string', title: 'SDK language' },
+          },
+        },
+      },
+      schema: {},
+      title: 'Schema 2',
+      uiSchema: {},
+    },
+    {
+      mergedSchema: {
+        type: 'object',
+        properties: {
+          hasDocs: { type: 'boolean' },
+        },
+        dependencies: {
+          hasDocs: {
+            oneOf: [
+              {
+                properties: {
+                  hasDocs: { const: true },
+                  docsUrl: { type: 'string' },
+                },
+              },
+              {
+                properties: {
+                  hasDocs: { const: false },
+                },
+              },
+            ],
+          },
+        },
+      },
+      schema: {},
+      title: 'Schema 3',
+      uiSchema: {},
+    },
+  ];
+
+  it('should resolve conditional keys against the whole form state', () => {
+    const active = {
+      isSdk: true,
+      projectName: 'p',
+      sdkLanguage: 'kotlin',
+      hasDocs: true,
+      docsUrl: 'u',
+    };
+    expect(findSchemaForKey('sdkLanguage', schemas, active)).toBe(schemas[1]);
+    expect(findSchemaForKey('docsUrl', schemas, active)).toBe(schemas[2]);
+    expect(findSchemaForKey('isSdk', schemas, active)).toBe(schemas[0]);
+    expect(findSchemaForKey('projectName', schemas, active)).toBe(schemas[1]);
+    expect(findSchemaForKey('fromQuery', schemas, active)).toBeNull();
+
+    const cleared = { ...active, isSdk: false, hasDocs: false };
+    expect(findSchemaForKey('sdkLanguage', schemas, cleared)).toBeNull();
+    expect(findSchemaForKey('docsUrl', schemas, cleared)).toBeNull();
+    expect(findSchemaForKey('isSdk', schemas, cleared)).toBe(schemas[0]);
+    expect(findSchemaForKey('projectName', schemas, cleared)).toBe(schemas[1]);
+    expect(findSchemaForKey('fromQuery', schemas, cleared)).toBeNull();
+  });
+
+  it('should tell whether a key is declared only inside a conditional branch', () => {
+    expect(isDeclaredInConditionalBranch('sdkLanguage', schemas)).toBe(true);
+    expect(isDeclaredInConditionalBranch('docsUrl', schemas)).toBe(true);
+    expect(isDeclaredInConditionalBranch('isSdk', schemas)).toBe(false);
+    expect(isDeclaredInConditionalBranch('projectName', schemas)).toBe(false);
+    expect(isDeclaredInConditionalBranch('fromQuery', schemas)).toBe(false);
   });
 });

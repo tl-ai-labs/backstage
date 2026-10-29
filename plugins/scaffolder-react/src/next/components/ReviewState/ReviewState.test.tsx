@@ -15,7 +15,7 @@
  */
 
 import { ReviewState } from './ReviewState';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('ReviewState', () => {
@@ -612,5 +612,233 @@ describe('ReviewState', () => {
 
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
+  });
+
+  it('should show cross-step conditional fields only when their branch is active', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isSdk: { type: 'boolean', title: 'Mobile SDK' },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            projectName: { type: 'string', title: 'Project name' },
+          },
+          if: {
+            properties: { isSdk: { const: true } },
+            required: ['isSdk'],
+          },
+          then: {
+            properties: {
+              sdkLanguage: { type: 'string', title: 'SDK language' },
+              sdkToken: {
+                type: 'string',
+                title: 'SDK token',
+                'ui:widget': 'password',
+              },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const active = render(
+      <ReviewState
+        formState={{
+          isSdk: true,
+          projectName: 'demo',
+          sdkLanguage: 'kotlin',
+          sdkToken: 'abc',
+          fromQuery: 'q',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'SDK language kotlin' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'SDK token ******' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'Project name demo' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'From Query q' }),
+    ).toBeInTheDocument();
+
+    active.unmount();
+
+    render(
+      <ReviewState
+        formState={{
+          isSdk: false,
+          projectName: 'demo',
+          sdkLanguage: 'kotlin',
+          sdkToken: 'abc',
+          fromQuery: 'q',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Project name demo' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'From Query q' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'SDK language kotlin' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'SDK token ******' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'Sdk Language kotlin' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should leave out values of an inactive same-step branch', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            includeName: { type: 'boolean', title: 'Include name' },
+          },
+          dependencies: {
+            includeName: {
+              allOf: [
+                {
+                  if: { properties: { includeName: { const: true } } },
+                  then: {
+                    properties: {
+                      lastName: { type: 'string', title: 'Last name' },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+    ];
+
+    render(
+      <ReviewState
+        formState={{ includeName: false, lastName: 'Doe' }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(screen.getAllByRole('row')).toHaveLength(1);
+    expect(
+      screen.queryByRole('row', { name: 'Last name Doe' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'Last Name Doe' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should show cross-step dependencies oneOf fields only when their branch is active', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isSdk: { type: 'boolean', title: 'Mobile SDK' },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            projectName: { type: 'string', title: 'Project name' },
+          },
+          dependencies: {
+            isSdk: {
+              oneOf: [
+                {
+                  properties: {
+                    isSdk: { const: true },
+                    sdkLanguage: { type: 'string', title: 'SDK language' },
+                  },
+                },
+                {
+                  properties: {
+                    isSdk: { const: false },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const active = render(
+      <ReviewState
+        formState={{
+          isSdk: true,
+          projectName: 'demo',
+          sdkLanguage: 'kotlin',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'SDK language kotlin' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'Project name demo' }),
+    ).toBeInTheDocument();
+
+    active.unmount();
+
+    render(
+      <ReviewState
+        formState={{
+          isSdk: false,
+          projectName: 'demo',
+          sdkLanguage: 'kotlin',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Project name demo' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'SDK language kotlin' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'Sdk Language kotlin' }),
+    ).not.toBeInTheDocument();
   });
 });

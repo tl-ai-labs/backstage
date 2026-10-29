@@ -1,0 +1,233 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds liftCrossStepDependencies, which rewrites a step's top-level dependencies keyed on a field the step does not declare into allOf if/then entries that rjsf and ajv resolve against the whole form state.",
+      "rules": [
+        "1. Signature `export const liftCrossStepDependencies = (schema: JsonObject): JsonObject => { ... }`, an arrow-function const like extractSchemaFromStep, with a short TSDoc comment (no release tag: it is not exported from the lib barrel).",
+        "2. If `schema.properties` or `schema.dependencies` is not an object (use the file's existing `isObject` helper), return `schema` itself (same reference).",
+        "3. Walk `Object.entries(schema.dependencies)` in order. Keep an entry in a new `remaining` object when its key is an own key of `schema.properties`, or when its value is neither an array nor an object (boolean dependencies stay as they are). Every other entry is lifted.",
+        "4. If no entry was lifted, return `schema` itself (same reference), so steps whose dependencies all name their own properties keep a byte-identical schema.",
+        "5. An array value D for key K lifts to `{ if: { required: [K] }, then: { required: D } }`.",
+        "6. An object value without an array `oneOf` lifts to `{ if: { required: [K] }, then: value }` with value unchanged.",
+        "7. An object value with an array `oneOf`: split it into `{ oneOf, ...rest }`; keep only the `oneOf` entries that are objects whose `properties` is an object with own key K; map each kept branch to `{ if: { properties: { [K]: branch.properties[K] }, required: [K] }, then: { ...branch, properties: <branch.properties without K> } }`; the lifted entry is `{ if: { required: [K] }, then: { ...rest, allOf: [...(rest.allOf if it is an array, else []), ...mappedBranches] } }`.",
+        "8. Return `{ ...schema, allOf: [...(schema.allOf if it is an array, else []), ...liftedEntries] }` with `dependencies` set to `remaining`, or with the `dependencies` key left out entirely when `remaining` has no keys.",
+        "9. Never mutate `schema`, its `properties`, its `dependencies` or any branch: build new objects and arrays only.",
+        "10. Put any inner helper (for example one that lifts a single entry) above the export as a plain `function`, matching extractUiSchema's style; add no new import (JsonObject and isObject are already in the file)."
+      ],
+      "exports": [
+        {
+          "name": "liftCrossStepDependencies",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        }
+      ],
+      "import_line": "import { liftCrossStepDependencies } from '../lib/schema';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 149,
+          "to": 149,
+          "first_line": "};",
+          "rule": "Append the new helper(s) and the exported liftCrossStepDependencies after createFieldValidation, separated by one blank line."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [16, 134],
+        "reason": "isObject guard, plain inner functions and the exported arrow-function const with explicit return type."
+      },
+      "depends_on": [],
+      "covers": ["FR-2", "FR-3", "FR-7", "NFR-2", "NFR-3"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useTemplateSchema passes each step's extracted rjsf schema through liftCrossStepDependencies before stripping the title and filtering feature-flagged properties, so every Stepper (wizard page and template editor preview) renders and validates cross-step dependencies.",
+      "rules": [
+        "1. Import liftCrossStepDependencies from '../lib/schema' on its own line directly after the existing `import { extractSchemaFromStep } from '../lib';` line; do not touch the lib barrel.",
+        "2. Lift `step.schema` (the extracted schema, so ui:* keys are already moved out) and destructure `title` from the lifted schema instead of from `step.schema`.",
+        "3. Leave the feature-flag filters exactly as they are: the property filter keeps reading `step.schema?.properties` and `step.schema?.dependencies`, so lifting decides own keys from the unfiltered properties.",
+        "4. `mergedSchema`, `uiSchema`, the return shape and the hook's signature stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 21,
+          "to": 21,
+          "first_line": "import { extractSchemaFromStep } from '../lib';",
+          "rule": "Add `import { liftCrossStepDependencies } from '../lib/schema';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 64,
+          "to": 64,
+          "first_line": "const { title, ...stepSchema } = step.schema;",
+          "rule": "Becomes `const { title, ...stepSchema } = liftCrossStepDependencies(step.schema);`."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.tsx",
+          "lines": [180, 200],
+          "reason": "Shows the template editor preview renders the same Stepper, so no plugins/scaffolder edit is needed (FR-12)."
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "FR-6",
+        "FR-12",
+        "NFR-5",
+        "AC-7"
+      ],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "findSchemaForKey resolves a key against each step's schema with the whole form state and extra properties forbidden; new isDeclaredInConditionalBranch tells whether some step declares a key only inside a conditional subschema.",
+      "rules": [
+        "1. findSchemaForKey keeps its signature and returns the first step, in order, whose schema resolves `#/<key>`, else null.",
+        "2. Per step: `lookupSchema` is `step.mergedSchema` when its `additionalProperties` is a JSON object, otherwise `{ ...step.mergedSchema, additionalProperties: false }`; resolve with `new JSONSchema(lookupSchema).getSchema({ pointer: `#/${key}`, data: formState })`.",
+        "3. The key is found only when the result is truthy, `isJsonError(result)` is false and it is not an `instanceof Error`.",
+        "4. Remove the dependencies-only data subset and replace the old comment with one explaining that the whole form state lets dependencies and if/then/else resolve as in the form, and that forbidding extra properties stops the library inventing a schema for an undeclared key.",
+        "5. New `export function isDeclaredInConditionalBranch(key: string, schemas: ParsedTemplateSchema[]): boolean` returns true when any step's `mergedSchema` declares `key` inside a conditional subschema.",
+        "6. Conditional subschemas of a node are: each object value of `node.dependencies`, `node.then` and `node.else` when objects, and every object entry of the `node.allOf`, `node.anyOf` and `node.oneOf` arrays; the top-level `properties` of mergedSchema are not conditional.",
+        "7. A conditional subschema declares the key when its `properties` is a JSON object with own property `key`; otherwise recurse into that subschema's own conditional subschemas. Never descend into `properties` or `if`.",
+        "8. The recursive walker is a plain non-exported `function` using the file's isJsonObject guard.",
+        "9. Import `isJsonError` alongside `Draft07 as JSONSchema` from 'json-schema-library'."
+      ],
+      "exports": [
+        {
+          "name": "findSchemaForKey",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "ParsedTemplateSchema | null"
+        },
+        {
+          "name": "isDeclaredInConditionalBranch",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            }
+          ],
+          "returns": "boolean"
+        }
+      ],
+      "import_line": "import { isJsonObject, formatKey, findSchemaForKey, isDeclaredInConditionalBranch } from './util';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Becomes `import { Draft07 as JSONSchema, isJsonError } from 'json-schema-library';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 35,
+          "to": 76,
+          "first_line": "export function findSchemaForKey(",
+          "last_line": "}",
+          "rule": "Rewrite findSchemaForKey per rules 1-4, then add the private walker and isDeclaredInConditionalBranch per rules 5-8 after it."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-8", "FR-9", "FR-10", "NFR-1"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "ReviewState leaves out a form-state key that no step resolves when some step declares it only inside a conditional branch, and keeps showing keys declared nowhere under their formatted name.",
+      "rules": [
+        "1. Import isDeclaredInConditionalBranch from './util' in the existing util import.",
+        "2. Give the flatMap callback the explicit return type `[string, JsonValue | undefined][]`.",
+        "3. Inside it: if findSchemaForKey returns a step, return processSchema(key, value, schema, props.formState); else if isDeclaredInConditionalBranch(key, props.schemas) return []; else return [[formatKey(key), value]].",
+        "4. processSchema, masking, enumNames, explode handling, the filter and the StructuredMetadataTable rendering stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Add isDeclaredInConditionalBranch to the named imports (Prettier may wrap the line)."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 95,
+          "to": 100,
+          "first_line": ".flatMap(([key, value]) => {",
+          "last_line": "})",
+          "rule": "Rewrite the flatMap callback per rules 2-3."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+          "lines": [17, 40],
+          "reason": "Existing helper names and types the component imports."
+        }
+      ],
+      "depends_on": ["U03"],
+      "covers": ["FR-9", "FR-10", "FR-11", "NFR-1"],
+      "checks": ["prettier", "eslint"]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.ts": "1dd5faea67e4b4b4fba22f446ff8765efcac6c7bb60529ca1868f1c38be82d88",
+    "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts": "156eda16f208e855f6227da053f4e93e3364f23abe095f86acbf1f2ed52d4d54",
+    "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.tsx": "05ae2cf5b0fedf1e00e1181ed4affb1e454d7af53907a49218a4cfcd2a3dec25",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.ts": "f189db9a2fe73997bc229936fccca5e15dd296098f624c17cf2ecaa6218384aa",
+    "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx": "e5fc61cbd0724835ab12912a10cba89446923eb0467feb83ba70aa7575943343"
+  }
+}

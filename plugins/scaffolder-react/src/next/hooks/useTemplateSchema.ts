@@ -19,6 +19,7 @@ import { JsonObject } from '@backstage/types';
 import { UiSchema } from '@rjsf/utils';
 import { TemplateParameterSchema } from '@backstage/plugin-scaffolder-react';
 import { extractSchemaFromStep } from '../lib';
+import { liftCrossStepDependencies } from '../lib/schema';
 
 /**
  * This is the parsed template schema that is returned from the {@link useTemplateSchema} hook.
@@ -61,7 +62,7 @@ export const useTemplateSchema = (
     // Then filter out the properties that are not enabled with feature flag
     .map(step => {
       // Title is rendered at the top of the page, so let's ignore this from jsonschemaform
-      const { title, ...stepSchema } = step.schema;
+      const { title, ...stepSchema } = liftCrossStepDependencies(step.schema);
 
       const strippedSchema = {
         ...step,

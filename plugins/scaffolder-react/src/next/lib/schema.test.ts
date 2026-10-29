@@ -15,7 +15,7 @@
  */
 
 import { JsonObject } from '@backstage/types';
-import { extractSchemaFromStep } from './schema';
+import { extractSchemaFromStep, liftCrossStepDependencies } from './schema';
 
 describe('extractSchemaFromStep', () => {
   it('transforms deep schema', () => {
@@ -597,5 +597,118 @@ describe('extractSchemaFromStep', () => {
       schema: expectedSchema,
       uiSchema: expectedUiSchema,
     });
+  });
+});
+
+describe('liftCrossStepDependencies', () => {
+  it('should return the same schema when nothing needs lifting', () => {
+    const withoutDependencies: JsonObject = {
+      type: 'object',
+      properties: { projectName: { type: 'string' } },
+    };
+    const withoutProperties: JsonObject = {
+      type: 'object',
+      dependencies: { isSdk: ['sdkLanguage'] },
+    };
+    const ownKeyOnly: JsonObject = {
+      type: 'object',
+      properties: { projectName: { type: 'string' } },
+      dependencies: { projectName: ['sdkLanguage'] },
+    };
+
+    expect(liftCrossStepDependencies(withoutDependencies)).toBe(
+      withoutDependencies,
+    );
+    expect(liftCrossStepDependencies(withoutProperties)).toBe(
+      withoutProperties,
+    );
+    expect(liftCrossStepDependencies(ownKeyOnly)).toBe(ownKeyOnly);
+  });
+
+  it('should lift a oneOf dependency keyed on a field from an earlier step', () => {
+    const input: JsonObject = {
+      type: 'object',
+      properties: { projectName: { type: 'string' } },
+      allOf: [{ required: ['projectName'] }],
+      dependencies: {
+        projectName: ['x'],
+        isSdk: {
+          oneOf: [
+            {
+              properties: {
+                isSdk: { const: true },
+                sdkLanguage: { type: 'string' },
+              },
+              required: ['sdkLanguage'],
+            },
+            {
+              properties: { isSdk: { const: false } },
+            },
+          ],
+        },
+      },
+    };
+    const copy = JSON.parse(JSON.stringify(input));
+
+    const result = liftCrossStepDependencies(input);
+
+    expect(result.dependencies).toEqual({ projectName: ['x'] });
+    expect(result.allOf).toEqual([
+      { required: ['projectName'] },
+      {
+        if: { required: ['isSdk'] },
+        then: {
+          allOf: [
+            {
+              if: {
+                properties: { isSdk: { const: true } },
+                required: ['isSdk'],
+              },
+              then: {
+                properties: { sdkLanguage: { type: 'string' } },
+                required: ['sdkLanguage'],
+              },
+            },
+            {
+              if: {
+                properties: { isSdk: { const: false } },
+                required: ['isSdk'],
+              },
+              then: { properties: {} },
+            },
+          ],
+        },
+      },
+    ]);
+    expect(input).toEqual(copy);
+  });
+
+  it('should lift array and plain schema dependencies and drop the emptied dependencies key', () => {
+    const hasDocs: JsonObject = {
+      allOf: [
+        {
+          if: { properties: { hasDocs: { const: true } } },
+          then: { properties: { docsUrl: { type: 'string' } } },
+        },
+      ],
+    };
+    const input: JsonObject = {
+      type: 'object',
+      properties: { projectName: { type: 'string' } },
+      dependencies: {
+        isSdk: ['sdkLanguage'],
+        hasDocs,
+      },
+    };
+    const copy = JSON.parse(JSON.stringify(input));
+
+    const result = liftCrossStepDependencies(input);
+
+    expect(result).not.toHaveProperty('dependencies');
+    expect(result.allOf).toEqual([
+      { if: { required: ['isSdk'] }, then: { required: ['sdkLanguage'] } },
+      { if: { required: ['hasDocs'] }, then: hasDocs },
+    ]);
+    expect(input).toEqual(copy);
   });
 });

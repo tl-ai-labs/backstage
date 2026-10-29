@@ -1,0 +1,140 @@
+{
+  "section": "units",
+  "source": "units-003.json",
+  "value": [
+    {
+      "id": "U10",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "RTL tests on Stepper with two-step manifests showing that a step-2 field driven by a step-1 flag appears, is required, and is reviewed only when the flag is set, for both root if/then and dependencies oneOf, including going back and changing the answer.",
+      "rules": [
+        "1. Import `screen` alongside the existing act, fireEvent and waitFor import from '@testing-library/react'; new tests query only through `screen`.",
+        "2. Add `describe('cross-step conditions', ...)` as the last block inside describe('Stepper') with one `it.each` over two cases: ['if/then', manifest A] and ['dependencies', manifest B], titled `should show, require and review a later-step field based on an earlier answer using %s`.",
+        "3. Both manifests: step 1 'Basics' with properties { isSdk: { type: 'boolean', title: 'Mobile SDK' } }; step 2 'SDK details' with properties { projectName: { type: 'string', title: 'Project name' } }. Manifest A's step 2 adds if { properties: { isSdk: { const: true } }, required: ['isSdk'] } and then { properties: { sdkLanguage: { type: 'string', title: 'SDK language' } }, required: ['sdkLanguage'] }. Manifest B's step 2 adds dependencies { isSdk: { oneOf: [ { properties: { isSdk: { const: true }, sdkLanguage: { type: 'string', title: 'SDK language' } }, required: ['sdkLanguage'] }, { properties: { isSdk: { const: false } } } ] } }.",
+        "4. Render `<SecretsContextProvider><Stepper manifest={manifest} extensions={[]} onCreate={onCreate} /></SecretsContextProvider>` with renderInTestApp and `const onCreate = jest.fn()`.",
+        "5. Wrap each click or change in `await act(async () => { ... })`; find step-2 fields with `{ name: /SDK language/ }` because a required field's label gains an asterisk; find the flag with screen.getByRole('checkbox', { name: 'Mobile SDK' }).",
+        "6. Do not edit or un-skip the existing skipped test 'should omit properties that are no longer pertinent to the current step'."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19,
+          "first_line": "import { act, fireEvent, waitFor } from '@testing-library/react';",
+          "rule": "Becomes `import { act, fireEvent, screen, waitFor } from '@testing-library/react';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 924,
+          "to": 924,
+          "first_line": "});",
+          "rule": "Insert the new describe block, preceded by a blank line, before the closing of describe('Stepper')."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should show, require and review a later-step field based on an earlier answer using %s (flag never set)",
+          "given": "step 1 submitted with Next without touching Mobile SDK",
+          "expect": "on step 2 `screen.queryByRole('textbox', { name: /SDK language/ })` is absent and the Project name textbox is present; clicking Review reaches the review step (`await screen.findByRole('button', { name: 'Create' })`) and no row matches /SDK language/"
+        },
+        {
+          "name": "same test, flag set: required and shown",
+          "given": "Back twice to step 1, check Mobile SDK, Next",
+          "expect": "`await screen.findByRole('textbox', { name: /SDK language/ })` is present; clicking Review with it empty keeps step 2 (the SDK language textbox is still there and no Create button exists); after typing 'kotlin' and clicking Review, `await screen.findByRole('row', { name: 'SDK language kotlin' })` is present"
+        },
+        {
+          "name": "same test, flag cleared after answering: hidden from review but still submitted",
+          "given": "Back twice to step 1, uncheck Mobile SDK, Next, Review, then Create",
+          "expect": "on step 2 the SDK language textbox is absent; on the review step no row matches /kotlin/; onCreate is called once with `expect.objectContaining({ isSdk: false, sdkLanguage: 'kotlin' })`"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "lines": [73, 121],
+        "reason": "Manifest fixture, renderInTestApp with SecretsContextProvider, and act-wrapped navigation."
+      },
+      "depends_on": ["U02", "U04"],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "FR-9",
+        "FR-12",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6",
+        "NFR-4",
+        "NFR-6"
+      ],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U11",
+      "path": "docs/features/software-templates/input-examples.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds a section explaining how a field in a later step depends on an earlier step's answer, with a two-step mobile SDK YAML example, and how the review step and submitted values treat hidden fields.",
+      "rules": [
+        "1. New heading `### Conditional fields based on an earlier step` (a subsection of 'Use parameters as conditional for fields'), inserted after the closing fence of the 'Multiple conditional fields with custom ordering' example and before '## Conditionally set parameters', with blank lines around it.",
+        "2. Opening paragraph: all steps of the form share the answers given so far, so a later step's `dependencies` or `if`/`then`/`else` can name a field from an earlier step; answers from later steps are not available.",
+        "3. A `yaml` example under `parameters:` with two steps: step 1 titled 'Project type' asks `isMobileSdk` (title 'Is this a mobile SDK?', type boolean); step 2 titled 'SDK details' has `name` (string, required) and a root-level `if` with `properties: { isMobileSdk: { const: true } }` and `required: [isMobileSdk]`, `then` adding `sdkLanguage` (string, enum [kotlin, swift]) and `minOsVersion` (string) with `required: [sdkLanguage, minOsVersion]`.",
+        "4. One sentence plus a short `yaml` snippet showing the same step-2 condition written with `dependencies` and `oneOf`, keyed on `isMobileSdk`.",
+        "5. A `:::tip` advising authors to list the earlier field under the `if` block's `required`, because a condition on a field with no answer otherwise passes and shows the branch too early.",
+        "6. A `:::note` stating in plain language that the review step only lists a conditional field while its condition holds, for conditions in the same step or an earlier step, so a value entered before the user changed their answer no longer appears in the review step (this changes what some existing templates show).",
+        "7. In the same note or a second sentence: hidden values are still sent with the other parameters when the user creates the project, so template actions must not assume a hidden field is empty.",
+        "8. Follow docs/contribute/doc-style-guide.md: second person, present tense, code style for keys, no statements about the future."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 341,
+          "to": 341,
+          "first_line": "```",
+          "rule": "Insert a blank line and the new subsection per rules 1-8; the following '## Conditionally set parameters' heading keeps one blank line before it."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-templates/input-examples.md",
+        "lines": [262, 345],
+        "reason": "Neighbouring conditional-field sections: heading level, prose length and YAML layout."
+      },
+      "depends_on": ["U02", "U04"],
+      "covers": ["FR-13", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U12",
+      "path": ".changeset/scaffolder-cross-step-conditions.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset releasing the cross-step conditional fields feature as a minor change of @backstage/plugin-scaffolder-react.",
+      "rules": [
+        "1. Frontmatter is exactly `---`, `'@backstage/plugin-scaffolder-react': minor`, `---`, followed by one blank line and the body; no other package.",
+        "2. Body sentence 1: fields in a later step of the template form can now be shown, hidden and required based on answers given in an earlier step, using the same conditions already supported within a single step.",
+        "3. Body sentence 2: the review step now leaves out a value whose field is hidden because its condition no longer holds, whether the condition is in the same step or an earlier one, so some existing templates show fewer entries in the review step.",
+        "4. Body sentence 3: these hidden values are still submitted with the rest of the form.",
+        "5. Plain language for adopters: no code style, no function, hook, component or schema keyword names."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/four-dingos-filter.md",
+        "reason": "Changeset frontmatter and single-paragraph body format."
+      },
+      "depends_on": ["U02", "U04"],
+      "covers": ["FR-14", "AC-9"],
+      "checks": ["prettier"]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx": "f6ac8fab0b1d752dc590c1196ac007bee0e9821a7a561d19d0ba3123b9a4ce38",
+    "docs/features/software-templates/input-examples.md": "1df6aad39f5be4af5fcfe76ab451a3e7476230539f11ab74ec4627bcb7695a42",
+    ".changeset/four-dingos-filter.md": "8f1bbe88512474bb40969303a7a6b604d96c238e16348a98a8fb5a6d5b2d6b62"
+  }
+}

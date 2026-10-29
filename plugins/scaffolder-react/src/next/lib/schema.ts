@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { JsonObject } from '@backstage/types';
+import { JsonObject, JsonValue } from '@backstage/types';
 import { stringify, parse } from 'flatted';
 import { FieldValidation, UiSchema } from '@rjsf/utils';
 
@@ -146,4 +146,121 @@ export const createFieldValidation = (): FieldValidation => {
   };
 
   return fieldValidation;
+};
+
+function childSchemas(
+  node: JsonObject,
+  skipDependency?: string,
+): (JsonValue | undefined)[] {
+  const children: (JsonValue | undefined)[] = [node.then, node.else];
+  for (const name of ['allOf', 'anyOf', 'oneOf']) {
+    const list = node[name];
+    if (Array.isArray(list)) {
+      children.push(...list);
+    }
+  }
+  if (isObject(node.dependencies)) {
+    for (const [name, dependency] of Object.entries(node.dependencies)) {
+      if (name !== skipDependency) {
+        children.push(dependency);
+      }
+    }
+  }
+  return children;
+}
+
+function declaresKey(node: JsonValue | undefined, key: string): boolean {
+  if (!isObject(node)) {
+    return false;
+  }
+  if (
+    isObject(node.properties) &&
+    Object.prototype.hasOwnProperty.call(node.properties, key)
+  ) {
+    return true;
+  }
+  return childSchemas(node).some(child => declaresKey(child, key));
+}
+
+function liftDependency(key: string, value: JsonValue): JsonObject {
+  const condition = { required: [key] };
+
+  if (Array.isArray(value)) {
+    return { if: condition, then: { required: value } };
+  }
+
+  if (!isObject(value)) {
+    return { if: condition, then: value };
+  }
+
+  const { oneOf, ...rest } = value;
+  if (!Array.isArray(oneOf)) {
+    return { if: condition, then: value };
+  }
+
+  const branches: JsonObject[] = [];
+  for (const branch of oneOf) {
+    if (
+      !isObject(branch) ||
+      !isObject(branch.properties) ||
+      !Object.prototype.hasOwnProperty.call(branch.properties, key)
+    ) {
+      continue;
+    }
+
+    const { [key]: keyProperty, ...otherProperties } = branch.properties;
+    branches.push({
+      if: { properties: { [key]: keyProperty }, required: [key] },
+      then: { ...branch, properties: otherProperties },
+    });
+  }
+
+  return {
+    if: condition,
+    then: {
+      ...rest,
+      allOf: [...(Array.isArray(rest.allOf) ? rest.allOf : []), ...branches],
+    },
+  };
+}
+
+/**
+ * Rewrites top-level dependencies that are keyed on a field the step does not
+ * declare into allOf if/then entries, so that they resolve against the whole
+ * form state instead of being skipped by rjsf.
+ */
+export const liftCrossStepDependencies = (schema: JsonObject): JsonObject => {
+  const { properties, dependencies } = schema;
+  if (!isObject(properties) || !isObject(dependencies)) {
+    return schema;
+  }
+
+  const remaining: JsonObject = {};
+  const lifted: JsonObject[] = [];
+  for (const [key, value] of Object.entries(dependencies)) {
+    const isOwnKey =
+      Object.prototype.hasOwnProperty.call(properties, key) ||
+      childSchemas(schema, key).some(child => declaresKey(child, key));
+    if (isOwnKey || (!Array.isArray(value) && !isObject(value))) {
+      remaining[key] = value;
+    } else {
+      lifted.push(liftDependency(key, value));
+    }
+  }
+
+  if (lifted.length === 0) {
+    return schema;
+  }
+
+  const result: JsonObject = {
+    ...schema,
+    allOf: [...(Array.isArray(schema.allOf) ? schema.allOf : []), ...lifted],
+  };
+  if (Object.keys(remaining).length > 0) {
+    result.dependencies = remaining;
+  } else {
+    delete result.dependencies;
+  }
+
+  return result;
 };

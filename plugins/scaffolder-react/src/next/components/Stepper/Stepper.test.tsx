@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -920,5 +920,194 @@ describe('Stepper', () => {
         }),
       );
     });
+  });
+
+  describe('cross-step conditions', () => {
+    const basics = {
+      title: 'Basics',
+      schema: {
+        properties: {
+          isSdk: { type: 'boolean', title: 'Mobile SDK' },
+        },
+      },
+    };
+
+    const manifestWithIfThen: TemplateParameterSchema = {
+      title: 'Cross step conditions',
+      steps: [
+        basics,
+        {
+          title: 'SDK details',
+          schema: {
+            properties: {
+              projectName: { type: 'string', title: 'Project name' },
+            },
+            if: {
+              properties: { isSdk: { const: true } },
+              required: ['isSdk'],
+            },
+            then: {
+              properties: {
+                sdkLanguage: { type: 'string', title: 'SDK language' },
+              },
+              required: ['sdkLanguage'],
+            },
+          },
+        },
+      ],
+    };
+
+    const manifestWithDependencies: TemplateParameterSchema = {
+      title: 'Cross step conditions',
+      steps: [
+        basics,
+        {
+          title: 'SDK details',
+          schema: {
+            properties: {
+              projectName: { type: 'string', title: 'Project name' },
+            },
+            dependencies: {
+              isSdk: {
+                oneOf: [
+                  {
+                    properties: {
+                      isSdk: { const: true },
+                      sdkLanguage: { type: 'string', title: 'SDK language' },
+                    },
+                    required: ['sdkLanguage'],
+                  },
+                  {
+                    properties: { isSdk: { const: false } },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    it.each([
+      ['if/then', manifestWithIfThen],
+      ['dependencies', manifestWithDependencies],
+    ])(
+      'should show, require and review a later-step field based on an earlier answer using %s',
+      async (_name, manifest) => {
+        const onCreate = jest.fn();
+
+        await renderInTestApp(
+          <SecretsContextProvider>
+            <Stepper manifest={manifest} extensions={[]} onCreate={onCreate} />
+          </SecretsContextProvider>,
+        );
+
+        // Flag never set
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        });
+
+        expect(
+          screen.queryByRole('textbox', { name: /SDK language/ }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByRole('textbox', { name: /Project name/ }),
+        ).toBeInTheDocument();
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        });
+
+        expect(
+          await screen.findByRole('button', { name: 'Create' }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByRole('row', { name: /SDK language/ }),
+        ).not.toBeInTheDocument();
+
+        // Flag set: the field is shown and required
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('checkbox', { name: 'Mobile SDK' }));
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        });
+
+        expect(
+          await screen.findByRole('textbox', { name: /SDK language/ }),
+        ).toBeInTheDocument();
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        });
+
+        expect(
+          screen.getByRole('textbox', { name: /SDK language/ }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: 'Create' }),
+        ).not.toBeInTheDocument();
+
+        await act(async () => {
+          fireEvent.change(
+            screen.getByRole('textbox', { name: /SDK language/ }),
+            {
+              target: { value: 'kotlin' },
+            },
+          );
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        });
+
+        expect(
+          await screen.findByRole('row', { name: 'SDK language kotlin' }),
+        ).toBeInTheDocument();
+
+        // Flag cleared after answering: hidden from review but still submitted
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('checkbox', { name: 'Mobile SDK' }));
+        });
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        });
+
+        expect(
+          screen.queryByRole('textbox', { name: /SDK language/ }),
+        ).not.toBeInTheDocument();
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        });
+
+        expect(
+          await screen.findByRole('button', { name: 'Create' }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByRole('row', { name: /kotlin/ }),
+        ).not.toBeInTheDocument();
+
+        await act(async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+        });
+
+        expect(onCreate).toHaveBeenCalledTimes(1);
+        expect(onCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ isSdk: false, sdkLanguage: 'kotlin' }),
+        );
+      },
+    );
   });
 });
