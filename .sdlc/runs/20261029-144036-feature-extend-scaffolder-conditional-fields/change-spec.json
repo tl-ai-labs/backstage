@@ -1,0 +1,703 @@
+{
+  "header": {
+    "conventions": [
+      "Formatting is Prettier with the Backstage config (@backstage/cli/config/prettier): 2-space indent, single quotes, trailing commas, 80-column wrap, semicolons; every changed file must pass `yarn prettier --check` unchanged.",
+      "Existing files keep their Apache 2.0 header and its original year; never touch a header line.",
+      "Match each file's own style: lib/schema.ts exports arrow-function consts with explicit return types and keeps inner helpers as plain `function`s; ReviewState/util.ts uses exported plain `function` declarations.",
+      "Use `JsonObject` / `JsonValue` from '@backstage/types' for schema and form data; add no new `any`.",
+      "Never mutate an input schema, manifest or form state: build new objects and arrays (spread or copy) and return them.",
+      "Add imports next to the file's existing imports of the same source, keeping the file's current import order; import json-schema-library as `Draft07 as JSONSchema` like the rest of the package.",
+      "Add no export to any barrel (`next/lib/index.ts`, `next/components/ReviewState/index.ts`, `next/hooks/index.ts`, `next/index.ts`): new helpers are module-internal and the package's public API is unchanged.",
+      "Tests run under Jest via backstage-cli: `describe` / `it('should ...')` with `expect`; prefer fewer, thorough tests with several assertions each.",
+      "New React Testing Library assertions query through `screen`: `await screen.findBy*` for things that appear after an interaction, `screen.getBy*` for content of a synchronous render, `screen.queryBy*` with `.not.toBeInTheDocument()` for things that must be absent; avoid `waitFor`; add no test ids to implementation code.",
+      "Wrap user interactions in existing Stepper tests' style: `await act(async () => { fireEvent.click(...) })`; match form fields by accessible name with a regular expression on their title (a required field's label gains an asterisk).",
+      "Docs follow docs/contribute/doc-style-guide.md: address the reader as you, present tense, active voice, code style for keys and file names, `yaml` fenced examples, Docusaurus `:::note` admonitions.",
+      "The changeset is written for adopters in plain language and names no code symbol, function, hook, component or schema keyword in code style."
+    ],
+    "decisions": [
+      {
+        "topic": "Where cross-step dependencies get fixed for rendering and validation",
+        "choice": "useTemplateSchema passes each step's extracted rjsf schema through a new module-internal helper `liftCrossStepDependencies` in next/lib/schema.ts; `mergedSchema` stays the raw step schema and Stepper.tsx is not edited.",
+        "rejected": [
+          "Merging earlier steps' schemas into the current step's schema in Stepper",
+          "Rewriting mergedSchema as well",
+          "A new public hook or option on Stepper"
+        ],
+        "reason": "rjsf already receives the whole form state; it only skips a dependency whose key is not one of the step's own properties, so rewriting the rjsf schema alone fixes render and ajv validation while mergedSchema keeps feeding the review and custom validators unchanged."
+      },
+      {
+        "topic": "Which dependency keys are lifted",
+        "choice": "Only top-level `dependencies` entries whose key is absent from the step's top-level `properties`, and only when `properties` is an object; boolean dependency values are left in place.",
+        "rejected": [
+          "Lifting every dependency",
+          "Also lifting dependencies nested inside properties"
+        ],
+        "reason": "These are exactly the keys rjsf's processDependencies skips; same-step dependencies and steps without properties keep a byte-identical schema, so existing tests and templates behave as today (NFR-1)."
+      },
+      {
+        "topic": "Shape of a lifted dependency",
+        "choice": "Each lifted key K becomes one entry `{ if: { required: [K] }, then: X }` appended after the schema's existing `allOf` entries; array value D gives X = `{ required: D }`; object value gives X = the value without `oneOf`, and each `oneOf` branch whose properties declare K becomes `{ if: { properties: { K: branch.properties[K] }, required: [K] }, then: branch without properties[K] }` appended to X's `allOf`.",
+        "rejected": [
+          "Keeping `oneOf` inside `then` (rjsf renders a top-level oneOf as a branch selector)",
+          "Emitting `if` without `required` (passes vacuously before the earlier answer exists)"
+        ],
+        "reason": "Verified against @rjsf/utils 5.24.13 retrieveSchema and the ajv8 validator: active branch fields render and their `required` is enforced, inactive or unanswered branches add nothing."
+      },
+      {
+        "topic": "Root-level if/then/else and allOf conditions",
+        "choice": "No code change: rjsf, ajv and json-schema-library already resolve them against the whole form state that Stepper passes to each step; new tests pin the behaviour.",
+        "reason": "Probed: a step-2 root `if` naming a step-1 field renders and validates correctly today; only tests and docs were missing."
+      },
+      {
+        "topic": "Custom field validators",
+        "choice": "createAsyncValidators.ts is not edited; it resolves the step's raw mergedSchema with the full form data through json-schema-library, which runs a ui:field validator only when its branch is active; a new unit test pins FR-4.",
+        "reason": "An inactive branch's key resolves to a plain inferred schema without `ui:field`, so its validator is skipped already."
+      },
+      {
+        "topic": "Review step lookup",
+        "choice": "findSchemaForKey resolves `#/<key>` against each step's mergedSchema with the whole form state as data and `additionalProperties: false` added to a copy of the schema (left untouched when the author's `additionalProperties` is an object); a JsonError or undefined result means not found.",
+        "rejected": [
+          "Keeping the dependencies-only data subset",
+          "Comparing against rjsf's retrieveSchema"
+        ],
+        "reason": "With full data json-schema-library resolves dependencies and if/then/else exactly as the form does, and forbidding extra properties stops it inventing a schema for an undeclared key."
+      },
+      {
+        "topic": "Review step keys that resolve in no step (Gate 1 decision 1)",
+        "choice": "ReviewState omits a key that no step resolves when some step's mergedSchema declares it inside a conditional subschema (`dependencies` values, `then`, `else`, `allOf`/`anyOf`/`oneOf` entries, recursively); a key declared nowhere is still shown under its formatted key name.",
+        "reason": "Applies uniformly to same-step and cross-step conditions as decided at Gate 1, while query-string values keep today's display (FR-10)."
+      },
+      {
+        "topic": "Submitted data (Gate 1 decision 2)",
+        "choice": "Stepper's onCreate keeps sending the whole form state, including values of fields whose branch is inactive.",
+        "reason": "Stripping them changes what existing templates submit; docs tell authors that hidden values are still sent."
+      },
+      {
+        "topic": "Public API and the scaffolder plugin",
+        "choice": "No new or changed export from @backstage/plugin-scaffolder-react; no edit under plugins/scaffolder (TemplateWizardPage goes through Workflow and TemplateEditorForm renders Stepper, both of which call useTemplateSchema).",
+        "reason": "FR-7, FR-12 and NFR-2; no report*.api.md change is needed."
+      },
+      {
+        "topic": "Docs placement",
+        "choice": "A new section in docs/features/software-templates/input-examples.md directly after 'Multiple conditional fields with custom ordering'; writing-templates.md is not edited.",
+        "reason": "input-examples.md is where conditional fields are already documented, so the cross-step example sits beside the same-step ones."
+      },
+      {
+        "topic": "Release notes and environment",
+        "choice": "One new changeset .changeset/scaffolder-cross-step-conditions.md bumping only '@backstage/plugin-scaffolder-react' as minor; no environment variable is added or read.",
+        "reason": "Only scaffolder-react source changes; the feature is pure frontend schema handling."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 30
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 90
+      },
+      {
+        "id": "jest",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 240
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test-next",
+        "run": "CI=1 yarn test plugins/scaffolder-react/src/next"
+      },
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint --fix"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds liftCrossStepDependencies, which rewrites a step's top-level dependencies keyed on a field the step does not declare into allOf if/then entries that rjsf and ajv resolve against the whole form state.",
+      "rules": [
+        "1. Signature `export const liftCrossStepDependencies = (schema: JsonObject): JsonObject => { ... }`, an arrow-function const like extractSchemaFromStep, with a short TSDoc comment (no release tag: it is not exported from the lib barrel).",
+        "2. If `schema.properties` or `schema.dependencies` is not an object (use the file's existing `isObject` helper), return `schema` itself (same reference).",
+        "3. Walk `Object.entries(schema.dependencies)` in order. Keep an entry in a new `remaining` object when its key is an own key of `schema.properties`, or when its value is neither an array nor an object (boolean dependencies stay as they are). Every other entry is lifted.",
+        "4. If no entry was lifted, return `schema` itself (same reference), so steps whose dependencies all name their own properties keep a byte-identical schema.",
+        "5. An array value D for key K lifts to `{ if: { required: [K] }, then: { required: D } }`.",
+        "6. An object value without an array `oneOf` lifts to `{ if: { required: [K] }, then: value }` with value unchanged.",
+        "7. An object value with an array `oneOf`: split it into `{ oneOf, ...rest }`; keep only the `oneOf` entries that are objects whose `properties` is an object with own key K; map each kept branch to `{ if: { properties: { [K]: branch.properties[K] }, required: [K] }, then: { ...branch, properties: <branch.properties without K> } }`; the lifted entry is `{ if: { required: [K] }, then: { ...rest, allOf: [...(rest.allOf if it is an array, else []), ...mappedBranches] } }`.",
+        "8. Return `{ ...schema, allOf: [...(schema.allOf if it is an array, else []), ...liftedEntries] }` with `dependencies` set to `remaining`, or with the `dependencies` key left out entirely when `remaining` has no keys.",
+        "9. Never mutate `schema`, its `properties`, its `dependencies` or any branch: build new objects and arrays only.",
+        "10. Put any inner helper (for example one that lifts a single entry) above the export as a plain `function`, matching extractUiSchema's style; add no new import (JsonObject and isObject are already in the file)."
+      ],
+      "exports": [
+        {
+          "name": "liftCrossStepDependencies",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        }
+      ],
+      "import_line": "import { liftCrossStepDependencies } from '../lib/schema';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 149,
+          "to": 149,
+          "first_line": "};",
+          "rule": "Append the new helper(s) and the exported liftCrossStepDependencies after createFieldValidation, separated by one blank line."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [16, 134],
+        "reason": "isObject guard, plain inner functions and the exported arrow-function const with explicit return type."
+      },
+      "depends_on": [],
+      "covers": ["FR-2", "FR-3", "FR-7", "NFR-2", "NFR-3"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useTemplateSchema passes each step's extracted rjsf schema through liftCrossStepDependencies before stripping the title and filtering feature-flagged properties, so every Stepper (wizard page and template editor preview) renders and validates cross-step dependencies.",
+      "rules": [
+        "1. Import liftCrossStepDependencies from '../lib/schema' on its own line directly after the existing `import { extractSchemaFromStep } from '../lib';` line; do not touch the lib barrel.",
+        "2. Lift `step.schema` (the extracted schema, so ui:* keys are already moved out) and destructure `title` from the lifted schema instead of from `step.schema`.",
+        "3. Leave the feature-flag filters exactly as they are: the property filter keeps reading `step.schema?.properties` and `step.schema?.dependencies`, so lifting decides own keys from the unfiltered properties.",
+        "4. `mergedSchema`, `uiSchema`, the return shape and the hook's signature stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 21,
+          "to": 21,
+          "first_line": "import { extractSchemaFromStep } from '../lib';",
+          "rule": "Add `import { liftCrossStepDependencies } from '../lib/schema';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 64,
+          "to": 64,
+          "first_line": "const { title, ...stepSchema } = step.schema;",
+          "rule": "Becomes `const { title, ...stepSchema } = liftCrossStepDependencies(step.schema);`."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.tsx",
+          "lines": [180, 200],
+          "reason": "Shows the template editor preview renders the same Stepper, so no plugins/scaffolder edit is needed (FR-12)."
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "FR-6",
+        "FR-12",
+        "NFR-5",
+        "AC-7"
+      ],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "findSchemaForKey resolves a key against each step's schema with the whole form state and extra properties forbidden; new isDeclaredInConditionalBranch tells whether some step declares a key only inside a conditional subschema.",
+      "rules": [
+        "1. findSchemaForKey keeps its signature and returns the first step, in order, whose schema resolves `#/<key>`, else null.",
+        "2. Per step: `lookupSchema` is `step.mergedSchema` when its `additionalProperties` is a JSON object, otherwise `{ ...step.mergedSchema, additionalProperties: false }`; resolve with `new JSONSchema(lookupSchema).getSchema({ pointer: `#/${key}`, data: formState })`.",
+        "3. The key is found only when the result is truthy, `isJsonError(result)` is false and it is not an `instanceof Error`.",
+        "4. Remove the dependencies-only data subset and replace the old comment with one explaining that the whole form state lets dependencies and if/then/else resolve as in the form, and that forbidding extra properties stops the library inventing a schema for an undeclared key.",
+        "5. New `export function isDeclaredInConditionalBranch(key: string, schemas: ParsedTemplateSchema[]): boolean` returns true when any step's `mergedSchema` declares `key` inside a conditional subschema.",
+        "6. Conditional subschemas of a node are: each object value of `node.dependencies`, `node.then` and `node.else` when objects, and every object entry of the `node.allOf`, `node.anyOf` and `node.oneOf` arrays; the top-level `properties` of mergedSchema are not conditional.",
+        "7. A conditional subschema declares the key when its `properties` is a JSON object with own property `key`; otherwise recurse into that subschema's own conditional subschemas. Never descend into `properties` or `if`.",
+        "8. The recursive walker is a plain non-exported `function` using the file's isJsonObject guard.",
+        "9. Import `isJsonError` alongside `Draft07 as JSONSchema` from 'json-schema-library'."
+      ],
+      "exports": [
+        {
+          "name": "findSchemaForKey",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "ParsedTemplateSchema | null"
+        },
+        {
+          "name": "isDeclaredInConditionalBranch",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            }
+          ],
+          "returns": "boolean"
+        }
+      ],
+      "import_line": "import { isJsonObject, formatKey, findSchemaForKey, isDeclaredInConditionalBranch } from './util';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Becomes `import { Draft07 as JSONSchema, isJsonError } from 'json-schema-library';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 35,
+          "to": 76,
+          "first_line": "export function findSchemaForKey(",
+          "last_line": "}",
+          "rule": "Rewrite findSchemaForKey per rules 1-4, then add the private walker and isDeclaredInConditionalBranch per rules 5-8 after it."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-8", "FR-9", "FR-10", "NFR-1"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "ReviewState leaves out a form-state key that no step resolves when some step declares it only inside a conditional branch, and keeps showing keys declared nowhere under their formatted name.",
+      "rules": [
+        "1. Import isDeclaredInConditionalBranch from './util' in the existing util import.",
+        "2. Give the flatMap callback the explicit return type `[string, JsonValue | undefined][]`.",
+        "3. Inside it: if findSchemaForKey returns a step, return processSchema(key, value, schema, props.formState); else if isDeclaredInConditionalBranch(key, props.schemas) return []; else return [[formatKey(key), value]].",
+        "4. processSchema, masking, enumNames, explode handling, the filter and the StructuredMetadataTable rendering stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Add isDeclaredInConditionalBranch to the named imports (Prettier may wrap the line)."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 95,
+          "to": 100,
+          "first_line": ".flatMap(([key, value]) => {",
+          "last_line": "})",
+          "rule": "Rewrite the flatMap callback per rules 2-3."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+          "lines": [17, 40],
+          "reason": "Existing helper names and types the component imports."
+        }
+      ],
+      "depends_on": ["U03"],
+      "covers": ["FR-9", "FR-10", "FR-11", "NFR-1"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Unit tests for liftCrossStepDependencies: untouched schemas keep their reference, and each dependency form keyed on an undeclared field becomes allOf if/then entries without mutating the input.",
+      "rules": [
+        "1. Import liftCrossStepDependencies next to extractSchemaFromStep from './schema'.",
+        "2. Add one `describe('liftCrossStepDependencies', ...)` after the extractSchemaFromStep describe, with plain JsonObject fixtures and `toBe` / `toEqual` assertions.",
+        "3. Use the field names `isSdk` (the earlier step's field), `projectName` (a field of the step) and `sdkLanguage` (the conditional field) in fixtures.",
+        "4. Before calling the helper, deep-copy each input fixture with `JSON.parse(JSON.stringify(...))` and assert afterwards that the input still `toEqual`s the copy."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { extractSchemaFromStep } from './schema';",
+          "rule": "Becomes `import { extractSchemaFromStep, liftCrossStepDependencies } from './schema';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 601,
+          "to": 601,
+          "first_line": "});",
+          "rule": "Append the new describe block after a blank line."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should return the same schema when nothing needs lifting",
+          "given": "a schema without dependencies, a schema with dependencies but no properties object, and a schema whose only dependency key is one of its own properties",
+          "expect": "each call returns the very same object (`toBe`)"
+        },
+        {
+          "name": "should lift a oneOf dependency keyed on a field from an earlier step",
+          "given": "properties { projectName }, an existing allOf with one entry, dependencies { projectName: ['x'] (own key), isSdk: { oneOf: [ branch with isSdk const true, sdkLanguage string and required ['sdkLanguage'], branch with isSdk const false ] } }",
+          "expect": "result.dependencies equals { projectName: ['x'] }; result.allOf keeps the existing entry first, then { if: { required: ['isSdk'] }, then: { allOf: [ { if: { properties: { isSdk: { const: true } }, required: ['isSdk'] }, then: { properties: { sdkLanguage }, required: ['sdkLanguage'] } }, { if: { properties: { isSdk: { const: false } }, required: ['isSdk'] }, then: { properties: {} } } ] } }; the input is unchanged"
+        },
+        {
+          "name": "should lift array and plain schema dependencies and drop the emptied dependencies key",
+          "given": "properties { projectName }, dependencies { isSdk: ['sdkLanguage'], hasDocs: { allOf: [ { if: { properties: { hasDocs: { const: true } } }, then: { properties: { docsUrl: { type: 'string' } } } } ] } }",
+          "expect": "result has no `dependencies` key; result.allOf equals [ { if: { required: ['isSdk'] }, then: { required: ['sdkLanguage'] } }, { if: { required: ['hasDocs'] }, then: <the hasDocs value unchanged> } ]; the input is unchanged"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "lines": [16, 60],
+        "reason": "Fixture and assertion style of the existing extractSchemaFromStep tests."
+      },
+      "depends_on": ["U01"],
+      "covers": ["FR-2", "FR-3", "AC-4", "AC-6"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Adds a hook test showing that a later step's dependency on an earlier step's field is lifted in `schema`, while `mergedSchema`, ui:* extraction and feature-flag filtering behave as before.",
+      "rules": [
+        "1. Add one `it` inside the top-level describe('useTemplateSchema'), after the FeatureFlags describe, using the renderHook + TestApiProvider + mockApis.featureFlags wrapper the file already uses, with isActive returning false.",
+        "2. Assert on `result.current.steps[1]` with `toEqual` and `expect.objectContaining` where only part of the shape matters."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 391,
+          "to": 391,
+          "first_line": "});",
+          "rule": "Insert the new `it` block, preceded by a blank line, before the closing of describe('useTemplateSchema')."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should resolve dependencies on fields from earlier steps",
+          "given": "step 1 declares boolean `isSdk`; step 2 declares `projectName` (string) and `secretFlag` (string with 'ui:backstage': { featureFlag: 'off-flag' }) plus dependencies { isSdk: { oneOf: [ { properties: { isSdk: { const: true }, sdkLanguage: { type: 'string', 'ui:field': 'LanguagePicker' } }, required: ['sdkLanguage'] }, { properties: { isSdk: { const: false } } } ] } }",
+          "expect": "steps[1].schema has no `dependencies`, has an `allOf` whose single entry has `if: { required: ['isSdk'] }`, and its properties keep `projectName` but not `secretFlag`; steps[1].uiSchema.sdkLanguage equals { 'ui:field': 'LanguagePicker' }; steps[1].mergedSchema is the step's raw schema object (`toBe`)"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "lines": [280, 391],
+        "reason": "The existing dependencies test: manifest fixture, wrapper and assertions."
+      },
+      "depends_on": ["U02"],
+      "covers": ["FR-6", "AC-6"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Pins that a custom field validator for a field inside a conditional branch runs only when the branch is active for the whole form state, for both a root if/then and a dependencies oneOf keyed on an earlier step's field.",
+      "rules": [
+        "1. Add one `it` before the closing of describe('createAsyncValidators'), building validators with jest.fn() and `apiHolder: { get: jest.fn() }` like the existing tests.",
+        "2. Reset or recreate the jest.fn() validators between the active and inactive calls so each expectation counts calls for one validate run."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 541,
+          "to": 541,
+          "first_line": "});",
+          "rule": "Insert the new `it` block, preceded by a blank line."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should only validate conditional fields whose branch is active for the whole form state",
+          "given": "schema A: properties { projectName with 'ui:field': 'NameField' }, if { properties: { isSdk: { const: true } }, required: ['isSdk'] }, then { properties: { sdkLanguage: { type: 'string', 'ui:field': 'LanguageField' } } }; schema B: same projectName plus dependencies { isSdk: { oneOf: [ branch with isSdk const true and sdkLanguage 'ui:field' LanguageField, branch with isSdk const false ] } }; each validated with { isSdk: true, projectName: 'p', sdkLanguage: 'kotlin' } and then with isSdk false",
+          "expect": "for both schemas LanguageField is called once when isSdk is true and not at all when isSdk is false, while NameField is called on every run"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+        "lines": [26, 63],
+        "reason": "Validator mocks, createAsyncValidators call and expectations."
+      },
+      "depends_on": [],
+      "covers": ["FR-4", "AC-6"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests findSchemaForKey on cross-step and same-step conditions with the whole form state, and isDeclaredInConditionalBranch.",
+      "rules": [
+        "1. Import isDeclaredInConditionalBranch in the existing './util' import.",
+        "2. Add one new `describe('cross-step conditions', ...)` after the findSchemaForKey describe, with its own ParsedTemplateSchema[] fixture: step 1 mergedSchema { type: 'object', properties: { isSdk: { type: 'boolean' } } }; step 2 mergedSchema { type: 'object', properties: { projectName: { type: 'string' } }, if: { properties: { isSdk: { const: true } }, required: ['isSdk'] }, then: { properties: { sdkLanguage: { type: 'string', title: 'SDK language' } } } }; step 3 mergedSchema { type: 'object', properties: { hasDocs: { type: 'boolean' } }, dependencies: { hasDocs: { oneOf: [ { properties: { hasDocs: { const: true }, docsUrl: { type: 'string' } } }, { properties: { hasDocs: { const: false } } } ] } } }; each with schema {}, uiSchema {} and a title."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Add isDeclaredInConditionalBranch to the named imports (Prettier may wrap the line)."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 173,
+          "to": 173,
+          "first_line": "});",
+          "rule": "Append the new describe block after a blank line."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should resolve conditional keys against the whole form state",
+          "given": "the three-step fixture with form state { isSdk: true, projectName: 'p', sdkLanguage: 'kotlin', hasDocs: true, docsUrl: 'u' }, then with isSdk false and hasDocs false",
+          "expect": "with the flags set, sdkLanguage resolves to step 2, docsUrl to step 3, isSdk to step 1 and projectName to step 2; with the flags cleared, sdkLanguage and docsUrl resolve to null while isSdk and projectName still resolve; a key `fromQuery` resolves to null in both cases"
+        },
+        {
+          "name": "should tell whether a key is declared only inside a conditional branch",
+          "given": "the same three-step fixture",
+          "expect": "isDeclaredInConditionalBranch is true for sdkLanguage and docsUrl, false for isSdk and projectName (top-level properties) and false for fromQuery"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "lines": [83, 173],
+        "reason": "Existing findSchemaForKey fixture and assertions."
+      },
+      "depends_on": ["U03"],
+      "covers": ["FR-8", "FR-9", "FR-10", "AC-5", "AC-6"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests that the review step shows an active cross-step conditional field with its title and masking, omits inactive branches for cross-step and same-step conditions, and still lists keys declared nowhere.",
+      "rules": [
+        "1. Import `screen` alongside `render` from '@testing-library/react' and query through `screen` in the new tests; leave existing tests untouched.",
+        "2. Add the new `it` blocks before the closing of describe('ReviewState'); match rows with `screen.getByRole('row', { name: '...' })` / `screen.queryByRole('row', { name: '...' })` as the file does.",
+        "3. The cross-step fixture: step 1 mergedSchema properties { isSdk: { type: 'boolean', title: 'Mobile SDK' } }; step 2 mergedSchema properties { projectName: { type: 'string', title: 'Project name' } }, if { properties: { isSdk: { const: true } }, required: ['isSdk'] }, then { properties: { sdkLanguage: { type: 'string', title: 'SDK language' }, sdkToken: { type: 'string', title: 'SDK token', 'ui:widget': 'password' } } }."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { render } from '@testing-library/react';",
+          "rule": "Becomes `import { render, screen } from '@testing-library/react';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 616,
+          "to": 616,
+          "first_line": "});",
+          "rule": "Insert the new `it` blocks, each preceded by a blank line."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should show cross-step conditional fields only when their branch is active",
+          "given": "the cross-step fixture rendered with { isSdk: true, projectName: 'demo', sdkLanguage: 'kotlin', sdkToken: 'abc', fromQuery: 'q' }, then re-rendered (separate render) with isSdk false and the same other values",
+          "expect": "first render has rows 'SDK language kotlin', 'SDK token ******', 'Project name demo' and 'From Query q'; second render has 'Project name demo' and 'From Query q' but no row named 'SDK language kotlin', 'SDK token ******' or 'Sdk Language kotlin'"
+        },
+        {
+          "name": "should leave out values of an inactive same-step branch",
+          "given": "one step whose mergedSchema has properties { includeName: { type: 'boolean', title: 'Include name' } } and dependencies { includeName: { allOf: [ { if: { properties: { includeName: { const: true } } }, then: { properties: { lastName: { type: 'string', title: 'Last name' } } } } ] } }, rendered with { includeName: false, lastName: 'Doe' }",
+          "expect": "exactly one row is rendered (`screen.getAllByRole('row')` has length 1, the include-name row; booleans render as an icon, so do not match its text) and no row named 'Last name Doe' or 'Last Name Doe' exists"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "lines": [512, 616],
+        "reason": "Multi-schema fixture and row assertions."
+      },
+      "depends_on": ["U04"],
+      "covers": ["FR-11", "AC-5", "AC-6", "NFR-1", "NFR-4"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "RTL tests on Stepper with two-step manifests showing that a step-2 field driven by a step-1 flag appears, is required, and is reviewed only when the flag is set, for both root if/then and dependencies oneOf, including going back and changing the answer.",
+      "rules": [
+        "1. Import `screen` alongside the existing act, fireEvent and waitFor import from '@testing-library/react'; new tests query only through `screen`.",
+        "2. Add `describe('cross-step conditions', ...)` as the last block inside describe('Stepper') with one `it.each` over two cases: ['if/then', manifest A] and ['dependencies', manifest B], titled `should show, require and review a later-step field based on an earlier answer using %s`.",
+        "3. Both manifests: step 1 'Basics' with properties { isSdk: { type: 'boolean', title: 'Mobile SDK' } }; step 2 'SDK details' with properties { projectName: { type: 'string', title: 'Project name' } }. Manifest A's step 2 adds if { properties: { isSdk: { const: true } }, required: ['isSdk'] } and then { properties: { sdkLanguage: { type: 'string', title: 'SDK language' } }, required: ['sdkLanguage'] }. Manifest B's step 2 adds dependencies { isSdk: { oneOf: [ { properties: { isSdk: { const: true }, sdkLanguage: { type: 'string', title: 'SDK language' } }, required: ['sdkLanguage'] }, { properties: { isSdk: { const: false } } } ] } }.",
+        "4. Render `<SecretsContextProvider><Stepper manifest={manifest} extensions={[]} onCreate={onCreate} /></SecretsContextProvider>` with renderInTestApp and `const onCreate = jest.fn()`.",
+        "5. Wrap each click or change in `await act(async () => { ... })`; find step-2 fields with `{ name: /SDK language/ }` because a required field's label gains an asterisk; find the flag with screen.getByRole('checkbox', { name: 'Mobile SDK' }).",
+        "6. Do not edit or un-skip the existing skipped test 'should omit properties that are no longer pertinent to the current step'."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19,
+          "first_line": "import { act, fireEvent, waitFor } from '@testing-library/react';",
+          "rule": "Becomes `import { act, fireEvent, screen, waitFor } from '@testing-library/react';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 924,
+          "to": 924,
+          "first_line": "});",
+          "rule": "Insert the new describe block, preceded by a blank line, before the closing of describe('Stepper')."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should show, require and review a later-step field based on an earlier answer using %s (flag never set)",
+          "given": "step 1 submitted with Next without touching Mobile SDK",
+          "expect": "on step 2 `screen.queryByRole('textbox', { name: /SDK language/ })` is absent and the Project name textbox is present; clicking Review reaches the review step (`await screen.findByRole('button', { name: 'Create' })`) and no row matches /SDK language/"
+        },
+        {
+          "name": "same test, flag set: required and shown",
+          "given": "Back twice to step 1, check Mobile SDK, Next",
+          "expect": "`await screen.findByRole('textbox', { name: /SDK language/ })` is present; clicking Review with it empty keeps step 2 (the SDK language textbox is still there and no Create button exists); after typing 'kotlin' and clicking Review, `await screen.findByRole('row', { name: 'SDK language kotlin' })` is present"
+        },
+        {
+          "name": "same test, flag cleared after answering: hidden from review but still submitted",
+          "given": "Back twice to step 1, uncheck Mobile SDK, Next, Review, then Create",
+          "expect": "on step 2 the SDK language textbox is absent; on the review step no row matches /kotlin/; onCreate is called once with `expect.objectContaining({ isSdk: false, sdkLanguage: 'kotlin' })`"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "lines": [73, 121],
+        "reason": "Manifest fixture, renderInTestApp with SecretsContextProvider, and act-wrapped navigation."
+      },
+      "depends_on": ["U02", "U04"],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "FR-9",
+        "FR-12",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6",
+        "NFR-4",
+        "NFR-6"
+      ],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U11",
+      "path": "docs/features/software-templates/input-examples.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds a section explaining how a field in a later step depends on an earlier step's answer, with a two-step mobile SDK YAML example, and how the review step and submitted values treat hidden fields.",
+      "rules": [
+        "1. New heading `### Conditional fields based on an earlier step` (a subsection of 'Use parameters as conditional for fields'), inserted after the closing fence of the 'Multiple conditional fields with custom ordering' example and before '## Conditionally set parameters', with blank lines around it.",
+        "2. Opening paragraph: all steps of the form share the answers given so far, so a later step's `dependencies` or `if`/`then`/`else` can name a field from an earlier step; answers from later steps are not available.",
+        "3. A `yaml` example under `parameters:` with two steps: step 1 titled 'Project type' asks `isMobileSdk` (title 'Is this a mobile SDK?', type boolean); step 2 titled 'SDK details' has `name` (string, required) and a root-level `if` with `properties: { isMobileSdk: { const: true } }` and `required: [isMobileSdk]`, `then` adding `sdkLanguage` (string, enum [kotlin, swift]) and `minOsVersion` (string) with `required: [sdkLanguage, minOsVersion]`.",
+        "4. One sentence plus a short `yaml` snippet showing the same step-2 condition written with `dependencies` and `oneOf`, keyed on `isMobileSdk`.",
+        "5. A `:::tip` advising authors to list the earlier field under the `if` block's `required`, because a condition on a field with no answer otherwise passes and shows the branch too early.",
+        "6. A `:::note` stating in plain language that the review step only lists a conditional field while its condition holds, for conditions in the same step or an earlier step, so a value entered before the user changed their answer no longer appears in the review step (this changes what some existing templates show).",
+        "7. In the same note or a second sentence: hidden values are still sent with the other parameters when the user creates the project, so template actions must not assume a hidden field is empty.",
+        "8. Follow docs/contribute/doc-style-guide.md: second person, present tense, code style for keys, no statements about the future."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 341,
+          "to": 341,
+          "first_line": "```",
+          "rule": "Insert a blank line and the new subsection per rules 1-8; the following '## Conditionally set parameters' heading keeps one blank line before it."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-templates/input-examples.md",
+        "lines": [262, 345],
+        "reason": "Neighbouring conditional-field sections: heading level, prose length and YAML layout."
+      },
+      "depends_on": ["U02", "U04"],
+      "covers": ["FR-13", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U12",
+      "path": ".changeset/scaffolder-cross-step-conditions.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset releasing the cross-step conditional fields feature as a minor change of @backstage/plugin-scaffolder-react.",
+      "rules": [
+        "1. Frontmatter is exactly `---`, `'@backstage/plugin-scaffolder-react': minor`, `---`, followed by one blank line and the body; no other package.",
+        "2. Body sentence 1: fields in a later step of the template form can now be shown, hidden and required based on answers given in an earlier step, using the same conditions already supported within a single step.",
+        "3. Body sentence 2: the review step now leaves out a value whose field is hidden because its condition no longer holds, whether the condition is in the same step or an earlier one, so some existing templates show fewer entries in the review step.",
+        "4. Body sentence 3: these hidden values are still submitted with the rest of the form.",
+        "5. Plain language for adopters: no code style, no function, hook, component or schema keyword names."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/four-dingos-filter.md",
+        "reason": "Changeset frontmatter and single-paragraph body format."
+      },
+      "depends_on": ["U02", "U04"],
+      "covers": ["FR-14", "AC-9"],
+      "checks": ["prettier"]
+    }
+  ]
+}

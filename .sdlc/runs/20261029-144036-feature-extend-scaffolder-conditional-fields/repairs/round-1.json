@@ -1,0 +1,148 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-144036-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "docs/features/software-templates/input-examples.md",
+    "instruction": "Fix `docs/features/software-templates/input-examples.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 415): The `dependencies`/`oneOf` snippet has only the `isMobileSdk: const: true` branch. Suppose a user ticks the checkbox and then unticks it, so `isMobileSdk: false` is submitted. The frontend accepts this, because the lifted if/then entries have no oneOf exclusivity. The scaffolder backend does not: it validates the submitted values against the raw step schema (plugins/scaffolder-backend/src/service/router.ts:589-590). There no oneOf branch matches, so creating the project fails with a 400 that the form never showed. The snippet also leaves out `minOsVersion`, although the text calls it 'the same condition'. Confidence: high (standard JSON Schema `dependencies` + `oneOf` semantics). — fix: Add a second branch `- properties: { isMobileSdk: { const: false } }` to the `oneOf` list, as the nearby same-step examples do. Either add `minOsVersion` to the true branch and its `required`, or change the sentence so it does not say the condition is identical.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-templates/input-examples.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-templates/input-examples.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-144036-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-144036-feature-extend-scaffolder-conditional-fields/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 30,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-144036-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/schema.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 1428): `liftDependency(key, value: unknown)` has a dead branch, `if (!isObject(value)) return { if: condition, then: value as JsonObject }`. The caller only lifts arrays and objects, and the `as JsonObject` cast quietly drops type checking there. This is the change's only new cast. — fix: Type the parameter as `JsonValue`. Then either remove the unreachable branch or narrow it without a cast, for example by throwing or returning the value only after an `isObject` check.\n2. minor (line 1475): A key counts as 'own' only if it is in the step's top-level `properties`. A same-step chained dependency is therefore lifted too: a top-level `dependencies` entry keyed on a field that only another same-step dependency branch or `then` declares. Its oneOf becomes if/then, which removes oneOf exclusivity, so such same-step schemas are no longer byte-identical. That goes against the NFR-1 rationale in change_plan.md, although it follows rule U01.3 literally. Confidence: medium. rjsf handles this pattern only partly, so in practice the effect is probably small. — fix: Either also treat as own any key declared in the step's conditional subschemas (a walker like `isDeclaredInConditionalBranch` against the step's own schema), or add a test that records the current behaviour for chained same-step dependencies, so the change is intentional and visible.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-144036-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-144036-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261029-144036-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 474): The new ReviewState tests use a root `if`/`then` for the cross-step case and a same-step `dependencies` for the second case. No component-level test covers a cross-step `dependencies`/`oneOf` key whose branch is inactive, which is the path that relies on `isDeclaredInConditionalBranch` walking `dependencies` -> `oneOf` entries. Stepper.test.tsx covers it end to end, and util.test.ts only covers it with an own-key dependency. — fix: Add a second step that uses `dependencies: { isSdk: { oneOf: [...] } }` to the cross-step fixture (or add a third case). Assert that the row is present when `isSdk: true` and absent when `isSdk: false`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-144036-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-144036-feature-extend-scaffolder-conditional-fields/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 240,
+      "max_retries": 2
+    }
+  }
+]

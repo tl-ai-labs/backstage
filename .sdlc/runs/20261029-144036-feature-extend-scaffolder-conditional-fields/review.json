@@ -1,0 +1,49 @@
+{
+  "module": "plugins/scaffolder-react/src/next (cross-step conditional fields)",
+  "mode": "brownfield",
+  "intent": "feature-extend",
+  "verdict": "needs_changes",
+  "tool_calls": 8,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "docs/features/software-templates/input-examples.md",
+      "line": 415,
+      "issue": "The `dependencies`/`oneOf` snippet has only the `isMobileSdk: const: true` branch. Suppose a user ticks the checkbox and then unticks it, so `isMobileSdk: false` is submitted. The frontend accepts this, because the lifted if/then entries have no oneOf exclusivity. The scaffolder backend does not: it validates the submitted values against the raw step schema (plugins/scaffolder-backend/src/service/router.ts:589-590). There no oneOf branch matches, so creating the project fails with a 400 that the form never showed. The snippet also leaves out `minOsVersion`, although the text calls it 'the same condition'. Confidence: high (standard JSON Schema `dependencies` + `oneOf` semantics).",
+      "fix": "Add a second branch `- properties: { isMobileSdk: { const: false } }` to the `oneOf` list, as the nearby same-step examples do. Either add `minOsVersion` to the true branch and its `required`, or change the sentence so it does not say the condition is identical."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "line": 1428,
+      "issue": "`liftDependency(key, value: unknown)` has a dead branch, `if (!isObject(value)) return { if: condition, then: value as JsonObject }`. The caller only lifts arrays and objects, and the `as JsonObject` cast quietly drops type checking there. This is the change's only new cast.",
+      "fix": "Type the parameter as `JsonValue`. Then either remove the unreachable branch or narrow it without a cast, for example by throwing or returning the value only after an `isObject` check."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "line": 1475,
+      "issue": "A key counts as 'own' only if it is in the step's top-level `properties`. A same-step chained dependency is therefore lifted too: a top-level `dependencies` entry keyed on a field that only another same-step dependency branch or `then` declares. Its oneOf becomes if/then, which removes oneOf exclusivity, so such same-step schemas are no longer byte-identical. That goes against the NFR-1 rationale in change_plan.md, although it follows rule U01.3 literally. Confidence: medium. rjsf handles this pattern only partly, so in practice the effect is probably small.",
+      "fix": "Either also treat as own any key declared in the step's conditional subschemas (a walker like `isDeclaredInConditionalBranch` against the step's own schema), or add a test that records the current behaviour for chained same-step dependencies, so the change is intentional and visible."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+      "line": 474,
+      "issue": "The new ReviewState tests use a root `if`/`then` for the cross-step case and a same-step `dependencies` for the second case. No component-level test covers a cross-step `dependencies`/`oneOf` key whose branch is inactive, which is the path that relies on `isDeclaredInConditionalBranch` walking `dependencies` -> `oneOf` entries. Stepper.test.tsx covers it end to end, and util.test.ts only covers it with an own-key dependency.",
+      "fix": "Add a second step that uses `dependencies: { isSdk: { oneOf: [...] } }` to the cross-step fixture (or add a third case). Assert that the row is present when `isSdk: true` and absent when `isSdk: false`."
+    }
+  ],
+  "passing": [
+    "Correctness vs change_plan: U01-U12 implemented as specified; mergedSchema untouched; Stepper.tsx and createAsyncValidators.ts not edited.",
+    "Public API: liftCrossStepDependencies and isDeclaredInConditionalBranch are not exported from any barrel (lib/index.ts exports only extractSchemaFromStep, createFieldValidation).",
+    "Immutability: lift builds new objects; `delete result.dependencies` acts on a fresh spread copy; tests assert input unchanged.",
+    "Error handling: findSchemaForKey now treats JsonError/Error results as not found instead of truthy.",
+    "PII/masking: password masking preserved for active conditional fields (ReviewState test asserts 'SDK token ******').",
+    "Authz: no routes touched.",
+    "Changeset: only @backstage/plugin-scaffolder-react, minor (package is 3.0.0-next.0, new feature), plain language, no code symbols.",
+    "Env fixtures: N/A (pure frontend schema handling, no config schema or env vars introduced).",
+    "Tests: happy path, inactive branch, flag-cleared-after-answer and submitted-data cases covered; suite 165 passed per orchestrator."
+  ],
+  "refinement_packets": []
+}

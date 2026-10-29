@@ -538,4 +538,81 @@ describe('createAsyncValidators', () => {
 
     expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();
   });
+
+  it('should only validate conditional fields whose branch is active for the whole form state', async () => {
+    const projectName = { type: 'string', 'ui:field': 'NameField' };
+    const sdkLanguage = { type: 'string', 'ui:field': 'LanguageField' };
+
+    const rootCondition: JsonObject = {
+      type: 'object',
+      properties: { projectName },
+      if: {
+        properties: { isSdk: { const: true } },
+        required: ['isSdk'],
+      },
+      then: {
+        properties: { sdkLanguage },
+      },
+    };
+
+    const dependencyCondition: JsonObject = {
+      type: 'object',
+      properties: { projectName },
+      dependencies: {
+        isSdk: {
+          oneOf: [
+            {
+              properties: {
+                isSdk: { const: true },
+                sdkLanguage,
+              },
+            },
+            {
+              properties: {
+                isSdk: { const: false },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    for (const schema of [rootCondition, dependencyCondition]) {
+      const activeValidators = {
+        NameField: jest.fn(),
+        LanguageField: jest.fn(),
+      };
+      const validateActive = createAsyncValidators(schema, activeValidators, {
+        apiHolder: { get: jest.fn() },
+      });
+
+      await validateActive({
+        isSdk: true,
+        projectName: 'p',
+        sdkLanguage: 'kotlin',
+      });
+
+      expect(activeValidators.LanguageField).toHaveBeenCalledTimes(1);
+      expect(activeValidators.NameField).toHaveBeenCalledTimes(1);
+
+      const inactiveValidators = {
+        NameField: jest.fn(),
+        LanguageField: jest.fn(),
+      };
+      const validateInactive = createAsyncValidators(
+        schema,
+        inactiveValidators,
+        { apiHolder: { get: jest.fn() } },
+      );
+
+      await validateInactive({
+        isSdk: false,
+        projectName: 'p',
+        sdkLanguage: 'kotlin',
+      });
+
+      expect(inactiveValidators.LanguageField).not.toHaveBeenCalled();
+      expect(inactiveValidators.NameField).toHaveBeenCalledTimes(1);
+    }
+  });
 });

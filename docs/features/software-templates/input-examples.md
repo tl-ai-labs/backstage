@@ -340,6 +340,93 @@ parameters:
                 - address
 ```
 
+### Conditional fields based on an earlier step
+
+All steps of the form share the answers given so far. A later step can use `dependencies` or `if`/`then`/`else` to name a field from an earlier step. Answers from later steps are not available yet, so a condition can only refer to the current step or to steps before it.
+
+In the example below, the second step shows the `sdkLanguage` and `minOsVersion` fields only if the user answered `true` to `isMobileSdk` in the first step.
+
+```yaml
+parameters:
+  - title: Project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+  - title: SDK details
+    required:
+      - name
+    properties:
+      name:
+        title: Name
+        type: string
+    if:
+      properties:
+        isMobileSdk:
+          const: true
+      required:
+        - isMobileSdk
+    then:
+      properties:
+        sdkLanguage:
+          title: SDK language
+          type: string
+          enum:
+            - kotlin
+            - swift
+        minOsVersion:
+          title: Minimum OS version
+          type: string
+      required:
+        - sdkLanguage
+        - minOsVersion
+```
+
+You can write the same condition for the second step with `dependencies` and `oneOf`, keyed on `isMobileSdk`.
+
+```yaml
+- title: SDK details
+  properties:
+    name:
+      title: Name
+      type: string
+  dependencies:
+    isMobileSdk:
+      oneOf:
+        - properties:
+            isMobileSdk:
+              const: true
+            sdkLanguage:
+              title: SDK language
+              type: string
+              enum:
+                - kotlin
+                - swift
+            minOsVersion:
+              title: Minimum OS version
+              type: string
+          required:
+            - sdkLanguage
+            - minOsVersion
+        - properties:
+            isMobileSdk:
+              const: false
+```
+
+:::tip
+
+List the earlier field under the `required` key of the `if` block, as the example above does. A condition on a field that has no answer yet passes, so without `required` the form shows the conditional fields too early.
+
+:::
+
+:::note
+
+The review step lists a conditional field only while its condition holds, whether the condition is in the same step or in an earlier step. If a user enters a value and then changes an answer so that the condition no longer holds, the value no longer appears in the review step. This can change what some existing templates show.
+
+Hidden values are still sent with the other parameters when the user creates the project, so your template actions must not assume that a hidden field is empty.
+
+:::
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

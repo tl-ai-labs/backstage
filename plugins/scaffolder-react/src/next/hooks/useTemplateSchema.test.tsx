@@ -388,4 +388,90 @@ describe('useTemplateSchema', () => {
       });
     });
   });
+
+  it('should resolve dependencies on fields from earlier steps', () => {
+    const secondStepSchema = {
+      type: 'object',
+      properties: {
+        projectName: { type: 'string' },
+        secretFlag: {
+          type: 'string',
+          'ui:backstage': { featureFlag: 'off-flag' },
+        },
+      },
+      dependencies: {
+        isSdk: {
+          oneOf: [
+            {
+              properties: {
+                isSdk: { const: true },
+                sdkLanguage: { type: 'string', 'ui:field': 'LanguagePicker' },
+              },
+              required: ['sdkLanguage'],
+            },
+            {
+              properties: {
+                isSdk: { const: false },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const manifest: TemplateParameterSchema = {
+      title: 'Test Template',
+      description: 'Test Template Description',
+      steps: [
+        {
+          title: 'Step 1',
+          description: 'Step 1 Description',
+          schema: {
+            type: 'object',
+            properties: {
+              isSdk: { type: 'boolean' },
+            },
+          },
+        },
+        {
+          title: 'Step 2',
+          description: 'Step 2 Description',
+          schema: secondStepSchema,
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTemplateSchema(manifest), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider
+          apis={[
+            mockApis.featureFlags.mock({ isActive: jest.fn(() => false) }),
+          ]}
+        >
+          {children}
+        </TestApiProvider>
+      ),
+    });
+
+    const second = result.current.steps[1];
+
+    expect(second.schema).not.toHaveProperty('dependencies');
+    expect(second.schema).toEqual(
+      expect.objectContaining({
+        allOf: [
+          expect.objectContaining({
+            if: { required: ['isSdk'] },
+          }),
+        ],
+      }),
+    );
+    expect(second.schema.properties).toHaveProperty('projectName');
+    expect(second.schema.properties).not.toHaveProperty('secretFlag');
+
+    expect(second.uiSchema.sdkLanguage).toEqual({
+      'ui:field': 'LanguagePicker',
+    });
+
+    expect(second.mergedSchema).toBe(secondStepSchema);
+  });
 });
