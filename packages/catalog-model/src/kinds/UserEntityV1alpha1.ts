@@ -25,8 +25,24 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface UserEntityV1alpha1 extends Entity {
+  /**
+   * The API version of the entity, either `backstage.io/v1alpha1` or
+   * `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `User`.
+   */
   kind: 'User';
+  /**
+   * The specification of the user.
+   *
+   * @remarks
+   *
+   * The `profile` field is optional and holds the optional `displayName`,
+   * `email` and `picture` display fields. The `memberOf` field lists entity
+   * references to the groups the user is a direct member of.
+   */
   spec: {
     profile?: {
       displayName?: string;

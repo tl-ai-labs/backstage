@@ -29,8 +29,26 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ApiEntityV1alpha1 extends Entity {
+  /**
+   * The API version of the entity, either `backstage.io/v1alpha1` or
+   * `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `API`.
+   */
   kind: 'API';
+  /**
+   * The specification of the API.
+   *
+   * @remarks
+   *
+   * The fields `type`, `lifecycle`, `owner` and `definition` are required, and
+   * `system` is optional. The `type` field is the type of the API definition,
+   * `lifecycle` is its lifecycle state, `owner` is an entity reference to the
+   * owner, `definition` is the API definition in the format given by `type`,
+   * and `system` is an entity reference to the system the API belongs to.
+   */
   spec: {
     type: string;
     lifecycle: string;

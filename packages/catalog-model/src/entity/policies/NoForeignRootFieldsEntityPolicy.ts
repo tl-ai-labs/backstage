@@ -31,6 +31,21 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
     this.knownFields = knownFields;
   }
 
+  /**
+   * Checks that every top-level field of the entity is in the list of known
+   * fields given to the constructor, which defaults to `apiVersion`, `kind`,
+   * `metadata` and `spec`.
+   *
+   * @remarks
+   *
+   * With the default list, an entity that has `relations` or `status` at the
+   * top level is rejected.
+   *
+   * @param entity - The entity to check
+   * @returns The same entity object, unchanged
+   * @throws An `Error` with the message `Unknown field <name>` for the first
+   *         top-level field that is not in the list
+   */
   async enforce(entity: Entity): Promise<Entity> {
     for (const field of Object.keys(entity)) {
       if (!this.knownFields.includes(field)) {

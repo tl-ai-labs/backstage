@@ -48,6 +48,24 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * Sets `spec.parent` of a `Group` entity that has none to the parent group
+   * reference given to the constructor, stored in lowercase
+   * `group:<namespace>/<name>` form.
+   *
+   * @remarks
+   *
+   * Only entities whose `kind` is exactly `Group` (case-sensitive) are
+   * affected. A group that already has a `spec.parent` is left as is, and the
+   * configured parent group itself is never given itself as parent. The entity
+   * is modified in place.
+   *
+   * @param entity - The entity to process
+   * @returns The same entity object that was passed in, with `spec.parent` set
+   *          where the rules above apply
+   * @throws A `TypeError` if a `Group` entity has no `spec` object; the method
+   *         throws no error of its own
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;

@@ -26,6 +26,21 @@ import { CommonValidatorFunctions } from './CommonValidatorFunctions';
  * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
  */
 export class KubernetesValidatorFunctions {
+  /**
+   * Checks that the value is a valid Kubernetes API version.
+   *
+   * @remarks
+   *
+   * The value is either `<version>` or `<group>/<version>`. The `<group>` must
+   * pass {@link CommonValidatorFunctions.isValidDnsSubdomain}, which allows at
+   * most 253 characters of dot-separated lowercase DNS labels. The `<version>`
+   * is 1 to 63 ASCII letters or digits. A value with more than one `/` is
+   * invalid.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid API version, and `false` otherwise,
+   *   including for any non-string value
+   */
   static isValidApiVersion(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -35,6 +50,18 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes kind.
+   *
+   * @remarks
+   *
+   * The value is 1 to 63 characters, starting with an ASCII letter followed
+   * only by ASCII letters or digits, for example `Component`.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid kind, and `false` otherwise,
+   *   including for any non-string value
+   */
   static isValidKind(value: unknown): boolean {
     return (
       typeof value === 'string' &&
@@ -44,6 +71,18 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes object name.
+   *
+   * @remarks
+   *
+   * The value is 1 to 63 characters of ASCII letters, digits, `-`, `_` and `.`,
+   * starting and ending with a letter or digit.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid object name, and `false` otherwise,
+   *   including for any non-string value
+   */
   static isValidObjectName(value: unknown): boolean {
     return (
       typeof value === 'string' &&
@@ -53,10 +92,37 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes namespace.
+   *
+   * @remarks
+   *
+   * This delegates to {@link CommonValidatorFunctions.isValidDnsLabel}. The
+   * value is 1 to 63 characters of lowercase letters and digits, where hyphens
+   * may appear only between them, not first or last.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid namespace, and `false` otherwise,
+   *   including for any non-string value
+   */
   static isValidNamespace(value: unknown): boolean {
     return CommonValidatorFunctions.isValidDnsLabel(value);
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes label key.
+   *
+   * @remarks
+   *
+   * The value is `<name>` or `<prefix>/<name>`. The `<prefix>` must pass
+   * {@link CommonValidatorFunctions.isValidDnsSubdomain} and the `<name>` must
+   * pass {@link KubernetesValidatorFunctions.isValidObjectName}. A value with
+   * more than one `/` is invalid.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid label key, and `false` otherwise,
+   *   including for any non-string value
+   */
   static isValidLabelKey(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -66,12 +132,38 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes label value.
+   *
+   * @remarks
+   *
+   * The value is the empty string, or a value that passes
+   * {@link KubernetesValidatorFunctions.isValidObjectName}.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid label value, and `false` otherwise,
+   *   including for any non-string value
+   */
   static isValidLabelValue(value: unknown): boolean {
     return (
       value === '' || KubernetesValidatorFunctions.isValidObjectName(value)
     );
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes annotation key.
+   *
+   * @remarks
+   *
+   * The value is `<name>` or `<prefix>/<name>`. The `<prefix>` must pass
+   * {@link CommonValidatorFunctions.isValidDnsSubdomain} and the `<name>` must
+   * pass {@link KubernetesValidatorFunctions.isValidObjectName}. A value with
+   * more than one `/` is invalid.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a valid annotation key, and `false`
+   *   otherwise, including for any non-string value
+   */
   static isValidAnnotationKey(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -81,6 +173,18 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid Kubernetes annotation value.
+   *
+   * @remarks
+   *
+   * Any string is accepted, including the empty string. There is no length or
+   * character limit.
+   *
+   * @param value - The value to check
+   * @returns `true` if the value is a string, and `false` for any non-string
+   *   value
+   */
   static isValidAnnotationValue(value: unknown): boolean {
     return typeof value === 'string';
   }

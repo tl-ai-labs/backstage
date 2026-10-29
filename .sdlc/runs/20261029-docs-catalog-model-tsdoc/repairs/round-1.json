@@ -1,0 +1,106 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261029-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 44): The summary says the method checks the envelope fields 'with the validators given to the constructor'. The @remarks list then includes the `metadata.links` checks. The implementation does not do this for links: it always checks `url`, `title` and `icon` with the fixed CommonValidatorFunctions.isValidUrl and isNonEmptyString, whatever validators are passed to the constructor. A reader would wrongly expect custom validators to change how links are checked. Confidence: high (enforce body, links loop). — fix: Say the constructor validators (by default those of {@link makeValidator}) apply to `apiVersion`, `kind`, `metadata.name`, `metadata.namespace`, labels, annotations and tags. Add to the links bullet that links are always checked with the built-in URL and non-empty-string checks.\n2. minor (line 60): The @throws text is imprecise in two places. (1) It says it throws 'when a required field is `undefined` or `null`'. Optional fields set to `null` also throw a 'must have a value' error, for example `metadata.namespace: null` or a link `title: null`, because the optional check skips only `undefined`. (2) 'For a known validator the message describes the expected format and links to the catalog file format documentation' implies the link appears only for known validators. In fact, every failed validation includes the documentation link, and only the expected-format part depends on the validator being known. — fix: Reword to: throws when a required field is `undefined` or `null`, when any checked field is `null`, when a validator throws, or when a value fails its validator. A failed validation names the field and links to the catalog file format documentation, and for a known validator it also describes the expected format.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-docs-catalog-model-tsdoc/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "comment-only",
+          "run": "! git diff -U0 --no-color -- '{path}' | grep -E '^[-+]' | grep -Ev '^(\\+\\+\\+|---) ' | grep -Ev '^\\+ *(/\\*\\*|\\*)'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261029-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 66): Change plan U13 rule 5 asks for the @throws text to also state that the method throws no error of its own. The diff drops that clause. As written, '@throws A `TypeError` if a `Group` entity has no `spec` object' reads like a deliberate validation contract. It is actually an incidental property-access failure on `group.spec.parent`. — fix: Append the missing clause to the @throws line, for example: 'A `TypeError` if a `Group` entity has no `spec` object; the method throws no error of its own'.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-docs-catalog-model-tsdoc/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "comment-only",
+          "run": "! git diff -U0 --no-color -- '{path}' | grep -E '^[-+]' | grep -Ev '^(\\+\\+\\+|---) ' | grep -Ev '^\\+ *(/\\*\\*|\\*)'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]
