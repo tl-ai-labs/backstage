@@ -1,0 +1,228 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds a reproducing case to describe('prepareSpecializedApp'): an app/root.elements extension calling useRouteRef for a page route mounted under app/root.children renders the link during bootstrap and after finalize().",
+    "rules": [
+      "1. The new it() is named exactly 'should resolve deferred page routes for app root elements during bootstrap' and is async; it sits inside describe('prepareSpecializedApp') right after the 'should synchronously finalize feature flag predicates without sign-in' case, with one blank line before it.",
+      "2. Build the app plugin as that neighbouring case does: appPluginOriginal.withOverrides with appPluginOriginal.getExtension('sign-in-page:app').override({ disabled: true }), so the bootstrap does not require sign-in and finalize() is synchronous.",
+      "3. Declare const fooRouteRef = createRouteRef(); and a createFrontendPlugin({ pluginId: 'test', extensions: [...] }) with two createExtension calls: name 'foo-page' attached to { id: 'app/routes', input: 'routes' } with output [coreExtensionData.routePath, coreExtensionData.routeRef, coreExtensionData.reactElement] yielding routePath('/foo'), routeRef(fooRouteRef) and reactElement(<div>Foo Page</div>); name 'link-element' attached to { id: 'app/root', input: 'elements' } with output [coreExtensionData.reactElement] whose factory defines a Component that calls useRouteRef(fooRouteRef) and renders <div>link: {link?.() ?? 'none'}</div>, as the 'should support route bindings' case does.",
+      "4. Render the bootstrap with const bootstrap = render(preparedApp.getBootstrapApp().element); then await expect(screen.findByText('link: /foo')).resolves.toBeInTheDocument(); and expect(screen.queryByText('link: none')).not.toBeInTheDocument(); then bootstrap.unmount().",
+      "5. Then const finalizedApp = preparedApp.finalize(); render(finalizedApp.element); and assert again with await expect(screen.findByText('link: /foo')).resolves.toBeInTheDocument(); and expect(screen.queryByText('link: none')).not.toBeInTheDocument().",
+      "6. Use only identifiers the file already imports (createRouteRef, createExtension, createFrontendPlugin, coreExtensionData, useRouteRef, render, screen, prepareSpecializedApp, appPluginOriginal); do not change the import block or any other test."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 1140,
+        "to": 1140,
+        "first_line": "});",
+        "rule": "Insert a blank line and the new it() case described by rules 1-6, indented to match the sibling cases in describe('prepareSpecializedApp')."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "lines": [1068, 1140],
+      "reason": "Neighbouring prepareSpecializedApp case: no-sign-in app plugin override, bootstrap render, synchronous finalize() and findByText assertions."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "lines": [670, 752],
+        "reason": "Shows the extension shapes for a route-bearing extension and a component that renders 'link: ...' from useRouteRef."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["AC-1", "AC-2"],
+    "tests": [
+      {
+        "name": "should resolve deferred page routes for app root elements during bootstrap",
+        "given": "a no-sign-in app with a page at /foo for fooRouteRef under app/routes and an app/root.elements extension rendering 'link: ' plus useRouteRef(fooRouteRef)?.() or 'none'",
+        "expect": "the bootstrap render shows 'link: /foo' and no 'link: none'; after unmounting it and rendering finalize().element, 'link: /foo' is shown and 'link: none' is not"
+      }
+    ],
+    "checks": ["format", "lint"],
+    "red_checks": ["red-bootstrap-route"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "extractRouteInfoFromAppNode accepts an optional map of fallback instances that supplies route data for nodes that have no instance of their own.",
+    "rules": [
+      "1. Add a third optional parameter fallbackInstances?: ReadonlyMap<AppNode, AppNodeInstance> after routeAliasResolver; the existing two-argument callers and tests keep working unchanged.",
+      "2. In visit, read const instance = current.instance ?? fallbackInstances?.get(current); and take both routePath and foundRouteRef from instance instead of current.instance; every other line of the walk stays as it is.",
+      "3. A node's own instance always wins over a fallback instance, so a call without the third argument produces exactly the RouteInfo it produces today."
+    ],
+    "exports": [
+      {
+        "name": "extractRouteInfoFromAppNode",
+        "kind": "function",
+        "params": [
+          { "name": "node", "type": "AppNode" },
+          { "name": "routeAliasResolver", "type": "RouteAliasResolver" },
+          {
+            "name": "fallbackInstances",
+            "type": "ReadonlyMap<AppNode, AppNodeInstance> | undefined"
+          }
+        ],
+        "returns": "RouteInfo"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 19,
+        "to": 19,
+        "first_line": "import { AppNode } from '@backstage/frontend-plugin-api';",
+        "rule": "Import AppNodeInstance alongside AppNode from '@backstage/frontend-plugin-api'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 45,
+        "to": 48,
+        "first_line": "export function extractRouteInfoFromAppNode(",
+        "last_line": "): RouteInfo {",
+        "rule": "Add the optional fallbackInstances parameter per rule 1, with a one-line comment above the function saying it supplies route data for nodes that are not instantiated yet, such as the deferred app/root.children subtree during bootstrap."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 69,
+        "to": 73,
+        "first_line": "const routePath = current.instance",
+        "last_line": "const foundRouteRef = current.instance?.getData(coreExtensionData.routeRef);",
+        "rule": "Introduce the instance local per rule 2 and read routePath (with the same leading-slash strip) and foundRouteRef from it."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": ["FR-1", "FR-3"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Bootstrap route resolution includes route paths and refs from the deferred app/root.children subtree, and route functions handed out before finalization follow the finalized resolver.",
+    "rules": [
+      "1. Add a module-level const EMPTY_API_HOLDER: ApiHolder = { get() { return undefined; } }; and a non-exported function collectDeferredRouteInstances(options: { tree: AppTree; extensionFactoryMiddleware?: ExtensionFactoryMiddleware; stopAtAttachment(ctx: { node: AppNode; input: string }): boolean }): Map<AppNode, AppNodeInstance>, both placed between instantiateAndInitializePhaseTree and setIdentityApiTarget.",
+      "2. collectDeferredRouteInstances walks from options.tree.root over node.edges.attachments with a visited Set; for each input where options.stopAtAttachment({ node, input }) is true, every child of that input is handed to the deferred visit instead of the normal walk.",
+      "3. The deferred visit, with its own visited Set, skips a node and its whole subtree when node.spec.disabled is true or node.spec.if !== undefined (predicate-gated pages are only resolvable after finalization).",
+      "4. For any other deferred node that has no instance and whose extension declares a coreExtensionData.routePath or coreExtensionData.routeRef output, call instantiateAppNodeSubtree({ rootNode: node, apis: EMPTY_API_HOLDER, collector: createErrorCollector(), extensionFactoryMiddleware: options.extensionFactoryMiddleware, writeNodeInstances: false, reuseExistingInstances: false }) and, when the result has an instance, store it in the map under the original node; a failed instantiation is ignored and leaves the node out.",
+      "5. Detect declared outputs with toInternalExtension(node.spec.extension): for version 'v1' look at Object.values(internal.output), for 'v2' at internal.output, comparing each ref.id with coreExtensionData.routePath.id and coreExtensionData.routeRef.id; nodes without such outputs are never instantiated, so app/layout, app/routes and other content factories do not run during bootstrap.",
+      "6. The deferred visit then continues into every child of every input of the node, so nested pages and sub-pages are collected too.",
+      "7. In instantiateAndInitializePhaseTree pass the result of collectDeferredRouteInstances({ tree, extensionFactoryMiddleware, stopAtAttachment }) as the third argument of extractRouteInfoFromAppNode only when options.stopAtAttachment is set, and undefined otherwise, so finalization extracts route info exactly as before.",
+      "8. RouteResolutionApiProxy.resolve keeps its existing throw when #delegate is unset; otherwise it captures const delegate = this.#delegate, calls delegate.resolve(anyRouteRef, options), and returns undefined when that is undefined.",
+      "9. Otherwise resolve returns a new RouteFunc<TParams> that calls the captured function while this.#delegate is still the captured delegate; once the proxy has been re-initialized it resolves the same anyRouteRef and options against the current delegate, caches that result together with the delegate it came from inside the closure, and calls it, falling back to the captured function when the current delegate returns undefined.",
+      "10. Add one or two short why-comments: one at the deferred-route collection explaining bootstrap stops at the session boundary while app root elements still need those routes, one at the resolve wrapper explaining useRouteRef memoizes on the proxy instance, which keeps its identity across finalization."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 24,
+        "to": 24,
+        "first_line": "configApiRef,",
+        "rule": "Add coreExtensionData to the '@backstage/frontend-plugin-api' import list."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 34,
+        "to": 34,
+        "first_line": "type AppNode,",
+        "rule": "Add type AppNodeInstance to the '@backstage/frontend-plugin-api' import list."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 49,
+        "to": 49,
+        "first_line": "import { instantiateAppNodeTree } from '../tree/instantiateAppNodeTree';",
+        "rule": "Import instantiateAppNodeSubtree and instantiateAppNodeTree from '../tree/instantiateAppNodeTree' (Prettier will wrap it), followed by the line '// eslint-disable-next-line @backstage/no-relative-monorepo-imports' and import { toInternalExtension } from '../../../frontend-plugin-api/src/wiring/resolveExtensionDefinition';"
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 55,
+        "to": 55,
+        "first_line": "import { type ErrorCollector } from './createErrorCollector';",
+        "rule": "Import createErrorCollector alongside type ErrorCollector from './createErrorCollector'."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 128,
+        "to": 142,
+        "first_line": "resolve<TParams extends AnyRouteRefParams>(",
+        "last_line": "}",
+        "rule": "Rewrite RouteResolutionApiProxy.resolve per rules 8-9, keeping its signature and error message unchanged."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 269,
+        "to": 272,
+        "first_line": "const routeInfo = extractRouteInfoFromAppNode(",
+        "last_line": ");",
+        "rule": "Pass the deferred route instances as the third argument per rule 7."
+      },
+      {
+        "id": "S7",
+        "at": "insert_before",
+        "from": 281,
+        "to": 281,
+        "first_line": "export function setIdentityApiTarget(options: {",
+        "rule": "Insert EMPTY_API_HOLDER and collectDeferredRouteInstances per rules 1-6 and 10, followed by a blank line."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/frontend-app-api/src/tree/instantiateAppNodeTree.ts",
+        "lines": [68, 79],
+        "reason": "Option names of instantiateAppNodeSubtree, including writeNodeInstances and reuseExistingInstances."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/apiFactories.ts",
+        "lines": [174, 249],
+        "reason": "Existing detached instantiation with an empty API holder to mirror."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/wiring/resolveExtensionDefinition.ts",
+        "lines": [45, 107],
+        "reason": "InternalExtension v1 and v2 output shapes and toInternalExtension."
+      }
+    ],
+    "depends_on": ["U01", "U02"],
+    "covers": ["FR-1", "FR-2", "FR-3", "NFR-1", "NFR-2", "AC-3"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U04",
+    "path": ".changeset/frontend-app-api-bootstrap-route-refs.md",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Patch changeset for @backstage/frontend-app-api describing the startup route resolution fix in adopter terms.",
+    "rules": [
+      "1. Front matter is exactly one entry: '@backstage/frontend-app-api': patch, between --- lines, followed by a blank line.",
+      "2. The body is one paragraph saying that app root elements which link to a page route no longer fail with a 'No path for routeRef' error while the app is starting up, and that those links keep pointing to the right place once the app has finished loading, including after sign-in.",
+      "3. Mention no function, class, variable or file names."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-instances-specialize.md",
+      "reason": "Changeset front matter and single-paragraph shape."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-4", "AC-4", "NFR-3"],
+    "checks": ["format"]
+  }
+]

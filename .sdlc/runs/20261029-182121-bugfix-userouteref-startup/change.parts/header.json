@@ -1,0 +1,86 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "TypeScript in @backstage/frontend-app-api; match the surrounding file's style exactly: 2-space indent, single quotes, trailing commas, Prettier config @backstage/cli/config/prettier (80 columns).",
+      "Do not change the copyright year of any existing file; no new source files are added by this change.",
+      "Import from '@backstage/frontend-plugin-api' by name; types inside a mixed import list use the inline 'type X' form as phaseApis.tsx already does.",
+      "Relative imports into another monorepo package's src are preceded by the line '// eslint-disable-next-line @backstage/no-relative-monorepo-imports', exactly as phaseApis.tsx and prepareSpecializedApp.tsx do.",
+      "Keep every change internal: no new exports from the package entry point, no TSDoc release tags added, no report*.api.md changes.",
+      "Tests use Jest describe/it with @testing-library/react render + screen; prefer screen.findBy* via 'await expect(screen.findByText(...)).resolves.toBeInTheDocument()' as the existing prepareSpecializedApp tests do; no test IDs.",
+      "Comments explain why, one or two short lines, in the tone of the existing comments in the file.",
+      "Changesets are YAML front matter naming the package and bump, then one plain-language paragraph for adopters with no code symbols."
+    ],
+    "decisions": [
+      {
+        "topic": "How bootstrap route resolution learns about pages under the deferred app/root.children subtree",
+        "choice": "During bootstrap only (when stopAtAttachment is passed), instantiateAndInitializePhaseTree walks the deferred subtree and, for each enabled node whose extension declares a coreExtensionData.routePath or coreExtensionData.routeRef output, instantiates that node's subtree detached (writeNodeInstances: false, reuseExistingInstances: false) with an empty API holder and a throwaway error collector; the resulting instances are passed to extractRouteInfoFromAppNode as a fallback lookup used only where node.instance is undefined.",
+        "rejected": [
+          "Instantiating the whole deferred subtree in place: runs app/layout and other non-route factories twice and breaks the existing appLayoutFactory call-count test",
+          "Instantiating with the real phase APIs: would materialize APIs during bootstrap and change which deferred API overrides finalization accepts",
+          "Reporting detached failures to the app collector: would surface spurious EXTENSION_FACTORY_ERROR entries in finalized errors",
+          "Changing the bootstrap boundary or useRouteRef: out of scope"
+        ],
+        "reason": "Only route-bearing extensions are run, without side effects on the live tree, APIs or error reporting, and the extracted paths and parents come from the same edge walk the finalized app performs, so the bootstrap result equals the finalized one."
+      },
+      {
+        "topic": "Stale route functions held by app/root.elements after finalization",
+        "choice": "RouteResolutionApiProxy.resolve returns a wrapper RouteFunc that remembers the delegate it was resolved with; when called after the proxy has been re-initialized with a new delegate it re-resolves the same ref and options against the current delegate and uses that result, falling back to the original function when the current delegate cannot resolve the ref.",
+        "rejected": [
+          "Giving the proxy a new identity at finalization: requires changing FrontendApiRegistry caching and AppRouter's getRouteObjects access, both outside the allowlist",
+          "Doing nothing beyond the bootstrap extraction: leaves predicate-dependent routes stale in preserved elements"
+        ],
+        "reason": "useRouteRef memoizes on the proxy object, which never changes identity, so the returned function itself must follow the finalized resolver; while the delegate is unchanged it calls the original function directly, so existing resolution is unchanged."
+      },
+      {
+        "topic": "Reproducing test placement and hook choice",
+        "choice": "One new it() in the existing describe('prepareSpecializedApp') block of createSpecializedApp.test.tsx, inserted after the 'should synchronously finalize feature flag predicates without sign-in' case, using the frontend-plugin-api useRouteRef already imported there and rendering 'link: <path or none>'; the red check runs only that case with jest -t.",
+        "rejected": [
+          "Using the core-plugin-api useRouteRef: needs a type cast between route ref types and a new import",
+          "A new test file: the requirements place the test in createSpecializedApp.test.tsx"
+        ],
+        "reason": "On the current code the element renders 'link: none' during bootstrap, so the case fails before the fix and passes after it, while the -t filter keeps the red check green on the file as it is now."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "format",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "lint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "test-file",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 300
+      },
+      {
+        "id": "red-bootstrap-route",
+        "run": "CI=1 yarn test {path} -t 'should resolve deferred page routes for app root elements during bootstrap'",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test-wiring",
+        "run": "CI=1 yarn test packages/frontend-app-api/src/wiring"
+      },
+      {
+        "id": "test-routing",
+        "run": "CI=1 yarn test packages/frontend-app-api/src/routing"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      }
+    ]
+  },
+  "hashes": {}
+}

@@ -1,0 +1,302 @@
+[
+  {
+    "id": "tp_tests_U01",
+    "unit": "U01",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261029-182121-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "depends_on": [],
+    "subtype": "bug_reproduce",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx` (unit U01) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 1140 (line 1140 reads `});`) — Insert a blank line and the new it() case described by rules 1-6, indented to match the sibling cases in describe('prepareSpecializedApp').\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should resolve deferred page routes for app root elements during bootstrap: given a no-sign-in app with a page at /foo for fooRouteRef under app/routes and an app/root.elements extension rendering 'link: ' plus useRouteRef(fooRouteRef)?.() or 'none', expect the bootstrap render shows 'link: /foo' and no 'link: none'; after unmounting it and rendering finalize().element, 'link: /foo' is shown and 'link: none' is not"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "red-bootstrap-route",
+          "run": "CI=1 yarn test '{path}' -t 'should resolve deferred page routes for app root elements during bootstrap'",
+          "expect": "fail"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 1140,
+          "to": 1140
+        }
+      ],
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U02",
+    "unit": "U02",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261029-182121-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts",
+    "depends_on": ["tp_tests_U01"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts` (unit U02) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 19 (line 19 reads `import { AppNode } from '@backstage/frontend-plugin-api';`) — Import AppNodeInstance alongside AppNode from '@backstage/frontend-plugin-api'.\n- S2: replace lines 45-48 (line 45 reads `export function extractRouteInfoFromAppNode(`, line 48 reads `): RouteInfo {`) — Add the optional fallbackInstances parameter per rule 1, with a one-line comment above the function saying it supplies route data for nodes that are not instantiated yet, such as the deferred app/root.children subtree during bootstrap.\n- S3: replace lines 69-73 (line 69 reads `const routePath = current.instance`, line 73 reads `const foundRouteRef = current.instance?.getData(coreExtensionData.routeRef);`) — Introduce the instance local per rule 2 and read routePath (with the same leading-slash strip) and foundRouteRef from it.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/routing/extractRouteInfoFromAppNode.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 45,
+          "to": 48
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 69,
+          "to": 73
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U03",
+    "unit": "U03",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261029-182121-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "depends_on": ["tp_tests_U01", "tp_codegen_U02"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/phaseApis.tsx` (unit U03) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 24 (line 24 reads `configApiRef,`) — Add coreExtensionData to the '@backstage/frontend-plugin-api' import list.\n- S2: insert after line 34 (line 34 reads `type AppNode,`) — Add type AppNodeInstance to the '@backstage/frontend-plugin-api' import list.\n- S3: replace line 49 (line 49 reads `import { instantiateAppNodeTree } from '../tree/instantiateAppNodeTree';`) — Import instantiateAppNodeSubtree and instantiateAppNodeTree from '../tree/instantiateAppNodeTree' (Prettier will wrap it), followed by the line '// eslint-disable-next-line @backstage/no-relative-monorepo-imports' and import { toInternalExtension } from '../../../frontend-plugin-api/src/wiring/resolveExtensionDefinition';\n- S4: replace line 55 (line 55 reads `import { type ErrorCollector } from './createErrorCollector';`) — Import createErrorCollector alongside type ErrorCollector from './createErrorCollector'.\n- S5: replace lines 128-142 (line 128 reads `resolve<TParams extends AnyRouteRefParams>(`, line 142 reads `}`) — Rewrite RouteResolutionApiProxy.resolve per rules 8-9, keeping its signature and error message unchanged.\n- S6: replace lines 269-272 (line 269 reads `const routeInfo = extractRouteInfoFromAppNode(`, line 272 reads `);`) — Pass the deferred route instances as the third argument per rule 7.\n- S7: insert before line 281 (line 281 reads `export function setIdentityApiTarget(options: {`) — Insert EMPTY_API_HOLDER and collectDeferredRouteInstances per rules 1-6 and 10, followed by a blank line.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/tree/instantiateAppNodeTree.ts",
+        "lines": [68, 79],
+        "reason": "uses: Option names of instantiateAppNodeSubtree, including writeNodeInstances and reuseExistingInstances."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/apiFactories.ts",
+        "lines": [174, 249],
+        "reason": "uses: Existing detached instantiation with an empty API holder to mirror."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/wiring/resolveExtensionDefinition.ts",
+        "lines": [45, 107],
+        "reason": "uses: InternalExtension v1 and v2 output shapes and toInternalExtension."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 24,
+          "to": 24
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 34,
+          "to": 34
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 49,
+          "to": 49
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 55,
+          "to": 55
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 128,
+          "to": 142
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 269,
+          "to": 272
+        },
+        {
+          "id": "S7",
+          "at": "insert_before",
+          "from": 281,
+          "to": 281
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U04",
+    "unit": "U04",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261029-182121-bugfix-userouteref-startup",
+    "artifact_path": ".changeset/frontend-app-api-bootstrap-route-refs.md",
+    "depends_on": ["tp_tests_U01"],
+    "subtype": "new_file_add",
+    "instruction": "Write `.changeset/frontend-app-api-bootstrap-route-refs.md` (unit U04) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-182121-bugfix-userouteref-startup/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/calm-instances-specialize.md",
+        "reason": "style file: Changeset front matter and single-paragraph shape."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/calm-instances-specialize.md",
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    },
+    "verify_deferred": [
+      "CI=1 yarn test 'packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx' -t 'should resolve deferred page routes for app root elements during bootstrap'",
+      "CI=1 yarn test packages/frontend-app-api/src/wiring",
+      "CI=1 yarn test packages/frontend-app-api/src/routing",
+      "yarn tsc"
+    ]
+  }
+]

@@ -1,0 +1,45 @@
+{
+  "module": "@backstage/frontend-app-api (bugfix: useRouteRef for deferred page routes during bootstrap)",
+  "verdict": "needs_changes",
+  "tool_calls": 8,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "line": 442,
+      "issue": "collectDeferredRouteInstances calls instantiateAppNodeSubtree on each route-bearing node with no skipChild. That runs the factory of every descendant during bootstrap, including non-route content such as entity cards under an entity page. visitDeferred then recurses and instantiates every nested route-bearing descendant (sub-pages, EntityContent) again from scratch, so a node at depth d with route-bearing ancestors runs its factory up to d+1 times before finalization. This contradicts the plan's U03 rule 5 intent ('nodes without such outputs are never instantiated ... other content factories do not run during bootstrap') and adds startup cost that grows with the app's size. Confidence: high on the behaviour, medium on how much it matters in real apps.",
+      "fix": "Instantiate each route-bearing node on its own (for example, skipChild: () => true) and fall back to the full detached subtree only when that produces no instance, for example when a required input is missing. Or instantiate only the top-most route-bearing node and reuse its detached descendants, not re-instantiating them."
+    },
+    {
+      "severity": "major",
+      "file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "line": 1142,
+      "issue": "No test covers the new RouteResolutionApiProxy.resolve wrapper (plan U03 rules 8-9). The new case unmounts the bootstrap render and mounts finalize().element fresh, so useRouteRef resolves against the finalized delegate directly. The re-resolve-on-new-delegate branch and the fallback to the original function never run. A regression in the stale-route-function fix for preserved app/root.elements would not be caught.",
+      "fix": "Add assertions in the existing case, or a short unit test on RouteResolutionApiProxy. Resolve a ref, re-initialize the proxy with routeInfo where the ref maps to a different path, and assert that the previously returned function yields the new path. Also assert that it falls back to the original function when the new delegate cannot resolve the ref."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "line": 379,
+      "issue": "The wrapper uses two 'as unknown as' casts: one to call cached.func with unknown[] args and one to cast the arrow function to RouteFunc<TParams>. This erases the parameter typing of RouteFunc inside the proxy. It was introduced in the tsc fix round.",
+      "fix": "Type the wrapper as '(...args: Parameters<RouteFunc<TParams>>) => cached.func(...args)' with a single cast to RouteFunc<TParams> if needed, or add a one-line comment explaining why the double cast is required."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "line": 376,
+      "issue": "After finalization, if the finalized resolver can no longer resolve the ref (for example, the page was disabled by a predicate), the wrapper silently falls back to the bootstrap function and keeps producing a link to a route that no longer exists. The plan specifies this behaviour, but it is not documented in the code.",
+      "fix": "Add a short why-comment at the fallback stating that this is intentional, or return the stale path only while the delegate is unchanged. Leave the behaviour as the plan specifies it."
+    }
+  ],
+  "passing_checks": [
+    "extractRouteInfoFromAppNode: optional fallbackInstances matches plan U02; own instance wins; two-arg callers unchanged; route objects still reference the original AppNode.",
+    "instantiateAndInitializePhaseTree passes fallback instances only when stopAtAttachment is set, so finalization extraction is unchanged.",
+    "Detached instantiation errors go to a throwaway collector per the plan decision; no stack traces leak and no spurious EXTENSION_FACTORY_ERROR reaches the app collector.",
+    "Reproducing test matches plan U01 (name, placement, assertions, imports unchanged); red before the fix, green after.",
+    "Changeset: single patch entry for @backstage/frontend-app-api, adopter-facing, no code symbols.",
+    "Copyright headers untouched; no new source files; no public API/export changes; eslint-disable for relative monorepo import present.",
+    "Authz/PII/env-fixture: not applicable (bugfix intent, no routes/config)."
+  ],
+  "refinement_packets": []
+}

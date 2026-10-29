@@ -16,7 +16,7 @@
 
 import { RouteRef, coreExtensionData } from '@backstage/frontend-plugin-api';
 import { BackstageRouteObject } from './types';
-import { AppNode } from '@backstage/frontend-plugin-api';
+import { AppNode, AppNodeInstance } from '@backstage/frontend-plugin-api';
 import {
   createExactRouteAliasResolver,
   RouteAliasResolver,
@@ -42,9 +42,12 @@ export const MATCH_ALL_ROUTE: BackstageRouteObject = {
   routeRefs: new Set(),
 };
 
+// The fallback instances supply route data for nodes that are not instantiated yet, such as
+// the deferred app/root.children subtree during bootstrap.
 export function extractRouteInfoFromAppNode(
   node: AppNode,
   routeAliasResolver: RouteAliasResolver,
+  fallbackInstances?: ReadonlyMap<AppNode, AppNodeInstance>,
 ): RouteInfo {
   // This tracks the route path for each route ref, the value is the route path relative to the parent ref
   const routePaths = new Map<RouteRef, string>();
@@ -66,11 +69,12 @@ export function extractRouteInfoFromAppNode(
     candidateParentRef?: RouteRef,
     parentObj?: BackstageRouteObject,
   ) {
-    const routePath = current.instance
+    const instance = current.instance ?? fallbackInstances?.get(current);
+    const routePath = instance
       ?.getData(coreExtensionData.routePath)
       ?.replace(/^\//, '');
 
-    const foundRouteRef = current.instance?.getData(coreExtensionData.routeRef);
+    const foundRouteRef = instance?.getData(coreExtensionData.routeRef);
     const routeRef = routeAliasResolver(foundRouteRef, current.spec.plugin?.id);
     if (foundRouteRef && routeRef !== foundRouteRef) {
       routeAliases.set(foundRouteRef, routeRef);

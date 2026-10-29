@@ -24,6 +24,7 @@ import {
   appTreeApiRef,
   ConfigApi,
   configApiRef,
+  coreExtensionData,
   createApiFactory,
   ExternalRouteRef,
   identityApiRef,
@@ -34,6 +35,7 @@ import {
   SubRouteRef,
   type AnyRouteRefParams,
   type AppNode,
+  type AppNodeInstance,
   type ExtensionFactoryMiddleware,
   type IdentityApi,
 } from '@backstage/frontend-plugin-api';
@@ -48,13 +50,21 @@ import {
   type RouteInfo,
 } from '../routing/extractRouteInfoFromAppNode';
 import { type BackstageRouteObject } from '../routing/types';
-import { instantiateAppNodeTree } from '../tree/instantiateAppNodeTree';
+import {
+  instantiateAppNodeSubtree,
+  instantiateAppNodeTree,
+} from '../tree/instantiateAppNodeTree';
+// eslint-disable-next-line @backstage/no-relative-monorepo-imports
+import { toInternalExtension } from '../../../frontend-plugin-api/src/wiring/resolveExtensionDefinition';
 import {
   FrontendApiRegistry,
   FrontendApiResolver,
 } from './FrontendApiRegistry';
 import { type ExtensionPredicateContext } from './predicates';
-import { type ErrorCollector } from './createErrorCollector';
+import {
+  createErrorCollector,
+  type ErrorCollector,
+} from './createErrorCollector';
 
 // Helps delay callers from reaching out to the API before the app tree has been materialized
 export class AppTreeApiProxy implements AppTreeApi {
@@ -140,7 +150,32 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       );
     }
 
-    return this.#delegate.resolve(anyRouteRef, options);
+    const delegate = this.#delegate;
+    const resolved = delegate.resolve(anyRouteRef, options);
+    if (!resolved) {
+      return undefined;
+    }
+
+    // useRouteRef memoizes on this proxy, which keeps its identity across
+    // finalization, so the returned function has to follow the new resolver.
+    let cached: { delegate: RouteResolutionApi; func: RouteFunc<TParams> } = {
+      delegate,
+      func: resolved,
+    };
+    return ((...args: unknown[]) => {
+      const current = this.#delegate;
+      if (current && current !== cached.delegate) {
+        cached = {
+          delegate: current,
+          // Intentionally keep the bootstrap function if the finalized
+          // resolver can't resolve the ref, rather than throwing mid-render.
+          func: current.resolve(anyRouteRef, options) ?? resolved,
+        };
+      }
+      // RouteFunc's params are conditional on TParams, so tsc can't relate them
+      // to a plain rest array; hence the casts on the call and the wrapper.
+      return (cached.func as unknown as (...a: unknown[]) => string)(...args);
+    }) as unknown as RouteFunc<TParams>;
   }
 
   initialize(
@@ -297,6 +332,13 @@ export function instantiateAndInitializePhaseTree(options: {
   const routeInfo = extractRouteInfoFromAppNode(
     options.tree.root,
     createRouteAliasResolver(options.routeRefsById),
+    options.stopAtAttachment
+      ? collectDeferredRouteInstances({
+          tree: options.tree,
+          extensionFactoryMiddleware: options.extensionFactoryMiddleware,
+          stopAtAttachment: options.stopAtAttachment,
+        })
+      : undefined,
   );
 
   options.routeResolutionApi.initialize(
@@ -304,6 +346,97 @@ export function instantiateAndInitializePhaseTree(options: {
     options.routeRefsById.routes,
   );
   options.appTreeApi.initialize(routeInfo);
+}
+
+const EMPTY_API_HOLDER: ApiHolder = {
+  get() {
+    return undefined;
+  },
+};
+
+// Bootstrap stops at the session boundary, but app root elements still need
+// the routes of pages mounted behind it, so those are instantiated detached.
+function collectDeferredRouteInstances(options: {
+  tree: AppTree;
+  extensionFactoryMiddleware?: ExtensionFactoryMiddleware;
+  stopAtAttachment(ctx: { node: AppNode; input: string }): boolean;
+}): Map<AppNode, AppNodeInstance> {
+  const instances = new Map<AppNode, AppNodeInstance>();
+  const routeDataIds = new Set<string>([
+    coreExtensionData.routePath.id,
+    coreExtensionData.routeRef.id,
+  ]);
+
+  const declaresRouteOutput = (node: AppNode) => {
+    const internal = toInternalExtension(node.spec.extension);
+    const refs =
+      internal.version === 'v1'
+        ? Object.values(internal.output)
+        : internal.output;
+    return refs.some(ref => routeDataIds.has(ref.id));
+  };
+
+  const deferredVisited = new Set<AppNode>();
+  const visitDeferred = (node: AppNode) => {
+    if (deferredVisited.has(node)) {
+      return;
+    }
+    deferredVisited.add(node);
+    // Predicate-gated pages are only resolvable after finalization
+    if (node.spec.disabled || node.spec.if !== undefined) {
+      return;
+    }
+
+    if (!node.instance && declaresRouteOutput(node)) {
+      // Instantiate only this node first so descendant factories don't run
+      // here and again when they are visited; fall back to the full subtree
+      // if that fails, e.g. when a required input is missing.
+      const instantiate = (skipChildren: boolean) =>
+        instantiateAppNodeSubtree({
+          rootNode: node,
+          apis: EMPTY_API_HOLDER,
+          collector: createErrorCollector(),
+          extensionFactoryMiddleware: options.extensionFactoryMiddleware,
+          writeNodeInstances: false,
+          reuseExistingInstances: false,
+          ...(skipChildren ? { skipChild: () => true } : {}),
+        });
+      let detached = instantiate(true);
+      if (!detached?.instance) {
+        detached = instantiate(false);
+      }
+      if (detached?.instance) {
+        instances.set(node, detached.instance);
+      }
+    }
+
+    for (const children of node.edges.attachments.values()) {
+      for (const child of children) {
+        visitDeferred(child);
+      }
+    }
+  };
+
+  const visited = new Set<AppNode>();
+  const walk = (node: AppNode) => {
+    if (visited.has(node)) {
+      return;
+    }
+    visited.add(node);
+    for (const [input, children] of node.edges.attachments) {
+      const deferred = options.stopAtAttachment({ node, input });
+      for (const child of children) {
+        if (deferred) {
+          visitDeferred(child);
+        } else {
+          walk(child);
+        }
+      }
+    }
+  };
+  walk(options.tree.root);
+
+  return instances;
 }
 
 export function setIdentityApiTarget(options: {
