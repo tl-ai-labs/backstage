@@ -1,0 +1,250 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "A single `peerDependencies` constant holding React-18-only ranges governs every package; the React-18-only exception table and its per-package lookup are gone.",
+    "rules": [
+      "This file is the authoritative source for the 56 generated peer-range manifests; a tooling unit later in this spec propagates it. Change only the constants and the lookup, never the command's control flow or its console.error wording.",
+      "S1: the merged constant keeps the same key order, quoting and trailing comma as now, with '@types/react': '^18.0.0', react: '^18.0.0', 'react-dom': '^18.0.0', 'react-router-dom': '^6.30.2'.",
+      "S1: the `// Packages that have dropped React 17 support and only support React 18+` comment, `peerDependenciesReact18Only` and `react18OnlyPackages` all go — React 18-only is now the default for every package, so the exception is redundant.",
+      "S1: leave `desiredLocalVersionsOfDependencies` (lines 28-33) untouched; it governs devDependencies, is already React-18-only, and is a separate table.",
+      "S2: delete `getExpectedPeerDependencies` entirely. Do not replace it with a one-line passthrough.",
+      "S3: `matchesPeerDependency` compares against the module-level `peerDependencies` constant directly, with no local `expected` binding: `packageJson.peerDependencies[dep] === peerDependencies[dep as keyof typeof peerDependencies]`.",
+      "S4: delete the `expectedPeerDeps` local. S5, S6 and S7 are its three read sites, each of which becomes `peerDependencies[<key> as keyof typeof peerDependencies]` with the same key expression it has now (`groupDep` at S5, `dep` at S6 and S7).",
+      "Prettier owns the wrapping of the rewritten expressions; write the statement and let the check's write form format it."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 35,
+        "to": 50,
+        "first_line": "const peerDependencies = {",
+        "last_line": "const react18OnlyPackages = new Set(['@backstage/ui']);",
+        "rule": "One `peerDependencies` constant with React-18-only ranges, replacing the React-17-inclusive table, the React-18-only table and the package set."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 92,
+        "to": 98,
+        "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+        "last_line": "",
+        "rule": "Remove the per-package lookup and the blank line after it, leaving one blank line between `matchesDependency` and `matchesPeerDependency`."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 103,
+        "to": 107,
+        "first_line": "const expected = getExpectedPeerDependencies(packageJson);",
+        "last_line": ");",
+        "rule": "Drop the `expected` local and compare the manifest's peer range against the `peerDependencies` constant directly."
+      },
+      {
+        "id": "S4",
+        "at": "delete",
+        "from": 145,
+        "to": 145,
+        "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+        "rule": "Remove the per-package expected-table local from the fix loop."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 218,
+        "to": 218,
+        "first_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];",
+        "rule": "Read the group member's range from the `peerDependencies` constant."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 245,
+        "to": 245,
+        "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+        "rule": "Read the corrected range from the `peerDependencies` constant."
+      },
+      {
+        "id": "S7",
+        "at": "replace",
+        "from": 255,
+        "to": 255,
+        "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+        "rule": "Read the added range from the `peerDependencies` constant."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "AC-2", "AC-9"],
+    "checks": ["eslint", "prettier"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/ui/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "No direct `use-sync-external-store` dependency and no `@types/use-sync-external-store` devDependency; React's native hook replaces the shim in this package's source.",
+    "rules": [
+      "S1: the `use-sync-external-store` entry goes and `react-stately` becomes the last key of `dependencies`, so its trailing comma goes with it.",
+      "S2: delete the `@types/use-sync-external-store` devDependency line; the surrounding devDependencies keep their commas.",
+      "Touch nothing else: the `peerDependencies` block of this manifest is already React-18-only and is tool-maintained, and the pre-commit hook re-sorts keys.",
+      "Leave the manifest's 2-space indent and trailing newline as they are."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 59,
+        "first_line": "\"react-stately\": \"~3.51.0\",",
+        "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+        "rule": "Drop the `use-sync-external-store` dependency, leaving `react-stately` as the final key with no trailing comma."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 70,
+        "to": 70,
+        "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+        "rule": "Drop the shim's type package from devDependencies."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-4"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/frontend-plugin-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "No direct `use-sync-external-store` dependency and no `@types/use-sync-external-store` devDependency.",
+    "rules": [
+      "S1: the `use-sync-external-store` entry goes and `@standard-schema/spec` becomes the last key of `dependencies`, so its trailing comma goes with it.",
+      "S2: delete the `@types/use-sync-external-store` devDependency line.",
+      "Touch nothing else in this manifest — its `peerDependencies` block is rewritten by the tooling unit that runs the repo's peer-deps fixer, not by hand."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 52,
+        "to": 53,
+        "first_line": "\"@standard-schema/spec\": \"^1.1.0\",",
+        "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+        "rule": "Drop the `use-sync-external-store` dependency, leaving `@standard-schema/spec` as the final key with no trailing comma."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 64,
+        "to": 64,
+        "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+        "rule": "Drop the shim's type package from devDependencies."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-4"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U04",
+    "path": "plugins/app/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "No direct `use-sync-external-store` dependency.",
+    "rules": [
+      "This is a pure manifest removal: no source file in `plugins/app` imports the shim, and this package has no `@types/use-sync-external-store` entry to remove.",
+      "S1: the entry is mid-list, so the keys around it keep their commas and `zen-observable` stays as it is.",
+      "Touch nothing else in this manifest — its `peerDependencies` block is rewritten by the tooling unit that runs the repo's peer-deps fixer."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 78,
+        "to": 78,
+        "first_line": "\"use-sync-external-store\": \"^1.4.0\",",
+        "rule": "Drop the unused `use-sync-external-store` dependency."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-4"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U05",
+    "path": "yarn.lock",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "The repo's own peer-deps fixer rewrites the 56 generated peer-range manifests from U01's constants, then Yarn updates the lockfile in place to match the narrowed ranges.",
+    "rules": [
+      "The 56 manifests are generated output (NFR-3) — no typed unit in this spec writes a peer block. This step is the only thing that changes them.",
+      "Going through the fixer is what preserves the peer-block outliers: `plugins/permission-react` has no `react-router-dom` peer and `plugins/scaffolder-react` carries `react-router: ^6.30.3` beside `react-router-dom: ^6.30.2` (NFR-7). Both survive because the fixer rewrites only the keys its constants name.",
+      "`yarn install --no-immutable` updates the lockfile incrementally (FR-3); the lockfile is never regenerated from scratch, and `.yarn/patches` and the repo-local Yarn plugin are untouched.",
+      "This step runs after U01 so the fixer reads the new constants, and after U02, U03 and U04 so their line-numbered sites were applied to the manifests before the fixer re-serializes them."
+    ],
+    "run": "yarn backstage-repo-tools peer-deps --fix && yarn install --no-immutable",
+    "depends_on": ["U01", "U02", "U03", "U04"],
+    "covers": ["FR-2", "FR-3", "AC-1", "AC-2", "NFR-3", "NFR-7"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/ui/src/hooks/useBreakpoint.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "`useBreakpoint` reads the module-scoped breakpoint store through React's native `useSyncExternalStore`.",
+    "rules": [
+      "Merge `useSyncExternalStore` into the existing named `react` import on line 16 — one `react` import line, not two. A default or namespace import from 'react' is a lint error.",
+      "The call site at lines 106-110 keeps all three arguments, `subscribe`, `getSnapshot`, `getServerSnapshot`: React's native hook has the same signature, and `getServerSnapshot` is the SSR path this refactor preserves.",
+      "Change nothing else — not the store, not `IS_SERVER`, not the comments.",
+      "Do not touch the 2025 copyright header."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 16,
+        "to": 17,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+        "rule": "One named import from 'react' bringing in both `useMemo` and `useSyncExternalStore`; the `use-sync-external-store/shim` import is gone."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "AC-4"],
+    "checks": ["eslint", "prettier"]
+  },
+  {
+    "id": "U07",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "`useRouteRef` reads the app-lifecycle finalized flag through React's native `useSyncExternalStore`.",
+    "rules": [
+      "Merge `useSyncExternalStore` into the existing named `react` import on line 17 — one `react` import line, not two.",
+      "The call site at line 59 keeps its arguments exactly as they are; React's native hook has the same signature.",
+      "Change nothing else in this file, and do not touch its 2020 copyright header — eslint enforces headers with onNonMatchingHeader 'replace' and the year must not be advanced."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 18,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+        "rule": "One named import from 'react' bringing in both `useMemo` and `useSyncExternalStore`; the `use-sync-external-store/shim` import is gone."
+      }
+    ],
+    "style_from": {
+      "unit": "U06",
+      "reason": "The same one-line import merge, so both shim call sites end up identical in shape."
+    },
+    "depends_on": ["U06"],
+    "covers": ["FR-5", "AC-4"],
+    "checks": ["eslint", "prettier"]
+  }
+]

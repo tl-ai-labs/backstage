@@ -1,0 +1,121 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U17",
+      "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`renderWithEffects` takes only the wrapper render option; the `@public` `LegacyRootOption` type is gone from the package's public API.",
+      "rules": [
+        "S1 removes the whole doc comment and the type declaration together. The type is `@public`, so this is a breaking change to `@backstage/test-utils` — U21 writes its major changeset, and U24 regenerates the API report.",
+        "The type is re-exported through the star export in `packages/test-utils/src/testUtils/index.tsx` (`export * from './testingLibrary';`), so removing it needs no barrel edit.",
+        "S2: the options parameter becomes `options?: Pick<RenderOptions, 'wrapper'>`. Keep the parameter optional and keep its name.",
+        "`RenderOptions` is still used by S2's type, so leave the `@testing-library/react` import block (lines 18-23) exactly as it is.",
+        "Leave `renderWithEffects`'s `@public` doc comment and its act-wrapping body untouched; this is a signature narrowing, not a behaviour change (NFR-1).",
+        "Do not touch the 2026 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 25,
+          "to": 31,
+          "first_line": "/**",
+          "last_line": "",
+          "rule": "Remove the `LegacyRootOption` doc comment, its declaration and the blank line after it, so the `renderWithEffects` doc comment follows the imports with one blank line between."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 46,
+          "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+          "rule": "The options parameter is `Pick<RenderOptions, 'wrapper'>` only, with the intersection removed."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-16", "AC-6"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U18",
+      "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`renderInTestApp` takes only `TestAppOptions` and forwards just the wrapper to `renderWithEffects`.",
+      "rules": [
+        "S1: the import keeps only `renderWithEffects` — `import { renderWithEffects } from './testingLibrary';`.",
+        "S2: the options parameter becomes `options: TestAppOptions = {},` — the `& LegacyRootOption` intersection goes, the default `{}` stays.",
+        "S3 removes the `const { legacyRoot } = options;` destructuring and the blank line below it, so `return renderWithEffects(...)` follows the wrapped-element `if/else` with one blank line between.",
+        "S4 removes the `legacyRoot,` property, leaving `renderWithEffects(wrappedElement, { wrapper: createTestAppWrapper(options) })`. Prettier decides whether that object stays multi-line; let the check's write form settle it.",
+        "`wrapInTestApp` above (lines 228-242) already takes plain `TestAppOptions` and is not part of this change.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+          "rule": "Import `renderWithEffects` alone; the removed type is no longer available."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257,
+          "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+          "rule": "The options parameter is `TestAppOptions` with its `{}` default and no intersection."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 265,
+          "to": 266,
+          "first_line": "const { legacyRoot } = options;",
+          "last_line": "",
+          "rule": "Remove the `legacyRoot` destructuring and the blank line that followed it."
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 269,
+          "to": 269,
+          "first_line": "legacyRoot,",
+          "rule": "Stop forwarding `legacyRoot` to `renderWithEffects`."
+        }
+      ],
+      "style_from": {
+        "unit": "U17",
+        "reason": "The same removal on the other side of the same API; the two files must agree on `renderWithEffects`'s options type."
+      },
+      "depends_on": ["U17"],
+      "covers": ["FR-17", "AC-6"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U19",
+      "path": "packages/test-utils/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "The generated API report for @backstage/test-utils is regenerated so that `LegacyRootOption` is gone from the declaration and from both render signatures.",
+      "rules": [
+        "FR-18 and NFR-3: this file is generated by API Extractor, its own header says not to edit it, and it is listed in .prettierignore. No typed unit writes it — this step produces it.",
+        "`LANG=en_US.UTF-8` is set deliberately: locale affects sort order in the output, and a different locale produces spurious diffs. The repo's own `build:api-reports:only` script sets it for the same reason.",
+        "It runs after U17 and U18, the two source edits whose public surface it reports.",
+        "The step is repo-wide and memory-hungry; the root script already carries `--max-old-space-size=8192`.",
+        "Three places in this file change: the `LegacyRootOption` declaration (lines 72-76) and the `options?` lines of `renderInTestApp` (line 323) and `renderWithEffects` (line 329). `report-alpha.api.md` does not mention the type and should come out unchanged."
+      ],
+      "run": "yarn build:api-reports",
+      "depends_on": ["U17", "U18"],
+      "covers": ["FR-18", "AC-3", "NFR-3"]
+    }
+  ],
+  "hashes": {
+    "packages/test-utils/src/testUtils/testingLibrary.ts": "5738ed926e8371b55176ca0c2dcc212830bc006434b5a4cb31dca495614cf305",
+    "packages/test-utils/src/testUtils/appWrappers.tsx": "94779df6448853da391d2bc8e1410223561b30493e9e24399d55956356131af7"
+  }
+}

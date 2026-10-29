@@ -1,0 +1,139 @@
+[
+  {
+    "id": "U20",
+    "path": ".changeset/react18-peer-dependencies.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A patch changeset covering the React-18-only peer-range narrowing for the 53 affected published packages other than @backstage/test-utils.",
+    "rules": [
+      "Frontmatter: single-quoted package name and `: patch` on its own line, one per package, in alphabetical order, then `---`, a blank line, and one paragraph of prose.",
+      "The 53 names, in order (1 of 8): '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-compat-api', '@backstage/core-components', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/frontend-app-api'.",
+      "(2 of 8): '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/integration-react', '@backstage/module-federation-common'.",
+      "(3 of 8): '@backstage/plugin-api-docs', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-app', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-auth', '@backstage/plugin-auth-react'.",
+      "(4 of 8): '@backstage/plugin-catalog', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import', '@backstage/plugin-catalog-react', '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools'.",
+      "(5 of 8): '@backstage/plugin-devtools-react', '@backstage/plugin-home', '@backstage/plugin-home-react', '@backstage/plugin-kubernetes', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-mui-to-bui'.",
+      "(6 of 8): '@backstage/plugin-notifications', '@backstage/plugin-org', '@backstage/plugin-org-react', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-scaffolder-react'.",
+      "(7 of 8): '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-signals', '@backstage/plugin-signals-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib'.",
+      "(8 of 8): '@backstage/plugin-techdocs-react', '@backstage/plugin-user-settings', '@backstage/theme', '@backstage/version-bridge'.",
+      "Name exactly those 53 and no others. @backstage/test-utils is deliberately absent — U21 carries it at a higher bump. @backstage/ui is absent because it already required React 18. The two private manifests, `app-example-plugin` and `@internal/plugin-todo-list`, must never appear in a changeset.",
+      "The prose is one paragraph for adopters: React 18 is now the minimum supported React version, React 17 is no longer accepted by these packages' peer dependency ranges, and React 17 was already deprecated in Backstage. Plain language only — no file paths, no constant names, no mention of the peer-deps tooling.",
+      "patch, not minor or major: Gate 0 decided @backstage/test-utils carries the release train's only major, and the repo's own precedent for narrowing a peer range is a patch. Do not add a **BREAKING** marker here.",
+      "This message exists in no pending changeset. The three existing ones that name packages this run touches — `deep-plugin-extensions.md`, `quiet-wolves-listen.md` (@backstage/frontend-plugin-api) and `techdocs-toc-alignment.md` (@backstage/plugin-techdocs) — describe unrelated behaviour, so they are left exactly as they are and this file is added alongside them."
+    ],
+    "style_from": {
+      "path": ".changeset/type-only-deps-kubernetes.md",
+      "reason": "A multi-package patch changeset: the frontmatter quoting, the blank line, and the single adopter-facing paragraph."
+    },
+    "depends_on": ["U05"],
+    "covers": ["FR-19", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U21",
+    "path": ".changeset/test-utils-remove-legacy-root-option.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A major changeset for @backstage/test-utils covering the removal of the public legacy-root render option and the React-18-only peer requirement.",
+    "rules": [
+      "Frontmatter names exactly one package: `'@backstage/test-utils': major`.",
+      "major, not minor: @backstage/test-utils is at 1.7.24-next.0, and the repo's rule is major for a breaking change at or above 1.0.0.",
+      "The prose opens with the `**BREAKING**` marker, as the repo marks breaking changes in prose.",
+      "Two things in one paragraph each: the public legacy-root option is removed from the test render helpers, so tests that passed it must drop it (it only existed to support React 17 and React Testing Library's legacy root); and React 18 is now the minimum supported React version, with React 17 no longer accepted by the peer dependency ranges.",
+      "Write it for adopters: name the option as adopters pass it, not the removed type's name, and do not name files, line numbers or internal helpers.",
+      "This is the release train's only major among the pending changesets. Write it as the repo's rule requires; the run's final report flags the sequencing to the release owner."
+    ],
+    "style_from": {
+      "path": ".changeset/tidy-birds-mock.md",
+      "reason": "The repo's shape for a breaking change: the leading **BREAKING** marker and adopter-facing prose about what a test must now do differently."
+    },
+    "depends_on": ["U17", "U18", "U19"],
+    "covers": ["FR-20", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U22",
+    "path": ".changeset/ui-native-use-sync-external-store.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A patch changeset for @backstage/ui, in the package's mandated format, covering the move to React's built-in external-store hook and the dropped direct dependency.",
+    "rules": [
+      "Frontmatter names exactly one package: `'@backstage/ui': patch`.",
+      "The mandated @backstage/ui format from `.changeset/README.md` applies and nothing else does: no markdown headings (`##`, `###`) anywhere in the body — bold markers only — and the file must END with an `**Affected components:**` line.",
+      "The closing line is `**Affected components:** none` — this change touches a hook, not a component, and no component in the package consumes it.",
+      "No `**Migration:**` section: this is not a breaking change. The package already required React 18, its public hook keeps the same name and signature, and the only visible effect is one fewer transitive install.",
+      "The prose is a brief summary: the breakpoint hook now uses React's built-in external-store subscription, and the separate shim package is no longer installed as a dependency.",
+      "Do not mark this **BREAKING**, and do not name @backstage/ui in any other changeset of this change — its message differs from every other package's."
+    ],
+    "style_from": {
+      "path": ".changeset/README.md",
+      "lines": [12, 44],
+      "reason": "The mandated @backstage/ui changeset format, with its required closing line and the no-headings rule, stated in the repo's own words."
+    },
+    "depends_on": ["U02", "U06"],
+    "covers": ["FR-21", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U23",
+    "path": ".changeset/drop-use-sync-external-store-dependency.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A patch changeset for @backstage/frontend-plugin-api and @backstage/plugin-app covering the dropped direct external-store shim dependency.",
+    "rules": [
+      "Frontmatter names exactly two packages, alphabetically: `'@backstage/frontend-plugin-api': patch` then `'@backstage/plugin-app': patch`.",
+      "One paragraph that is true of both packages: the separate external-store shim package is no longer installed as a dependency, since React's built-in hook is used instead. @backstage/frontend-plugin-api swapped the import; @backstage/plugin-app never imported it and only declared it.",
+      "Do not name @backstage/ui here — it has its own mandated-format changeset (U22).",
+      "No public API changes, so no **BREAKING** marker and no minor bump. The React 18 minimum for both packages is covered by U20's changeset; do not repeat it here.",
+      "Internal refactoring gets no separate entry per the repo's rules: this changeset exists because a published package's declared dependencies changed, not because the import moved."
+    ],
+    "style_from": {
+      "path": ".changeset/type-only-deps-kubernetes.md",
+      "reason": "The repo's precedent for a multi-package patch about a dependency declaration moving or going away."
+    },
+    "depends_on": ["U03", "U04", "U07"],
+    "covers": ["FR-19", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U24",
+    "path": ".changeset/cli-require-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A minor changeset for @backstage/cli-module-build and @backstage/cli-module-test-jest covering the removal of the react-dom/client build flag and React 18 as the stated minimum.",
+    "rules": [
+      "Frontmatter names exactly two packages, alphabetically: `'@backstage/cli-module-build': minor` then `'@backstage/cli-module-test-jest': minor`.",
+      "minor, not major: both packages are below 1.0.0, and the repo's rule is minor for a breaking change below 1.0.0.",
+      "The prose opens with `**BREAKING**`: frontend builds and tests no longer define the `process.env.HAS_REACT_DOM_CLIENT` flag, so any app or plugin source that reads it must import `react-dom/client` directly instead. That flag was a documented part of the build contract, which is what makes its removal breaking.",
+      "Also state that React 18 is now the minimum supported React version for frontend builds and tests.",
+      "Name the environment variable exactly as adopters read it in their own source — it is part of the public build contract, not an internal symbol. Do not name the removed detection module or any file path.",
+      "Neither of these two packages appears in U20's changeset: they carry no React peer dependency range, so this file is their only coverage."
+    ],
+    "style_from": {
+      "path": ".changeset/tidy-birds-mock.md",
+      "reason": "The repo's shape for a breaking change below 1.0.0: minor in the frontmatter with the **BREAKING** marker leading the prose."
+    },
+    "depends_on": ["U12", "U13", "U14", "U15", "U16"],
+    "covers": ["FR-19", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U25",
+    "path": ".changeset/repo-tools-react18-peer-deps.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A patch changeset for @backstage/repo-tools covering the peer-deps command now expecting React-18-only ranges for every package.",
+    "rules": [
+      "Frontmatter names exactly one package: `'@backstage/repo-tools': patch`.",
+      "One sentence: the `peer-deps` command now expects React 18-only peer dependency ranges for every package, and the per-package React 18 exception it previously supported is gone.",
+      "patch, following the repo's own precedent for the opposite change — `@backstage/repo-tools` took a patch when per-package React 18 support was added to this same command.",
+      "The command and its options are the package's public surface, so naming `peer-deps` is correct; do not name the constants, the file or the removed helper function."
+    ],
+    "style_from": {
+      "path": ".changeset/techdocs-node-generator-exports.md",
+      "reason": "A single-package patch changeset: frontmatter, blank line, one sentence of adopter-facing prose."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-19", "AC-7"],
+    "checks": ["prettier"]
+  }
+]
