@@ -1,0 +1,143 @@
+[
+  {
+    "id": "U08",
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Render and validate the active step against its schema resolved over the accumulated answers of all steps, and drop answers whose governing condition no longer holds.",
+    "rules": [
+      "`stepsState` already holds every step's accumulated answers and is already passed as `formData`, so this edit adds NO new state. It changes which schema the step is rendered and validated against, and it prunes unreachable answers.",
+      "Add one `useMemo` that computes the resolved active-step schema: `resolveStepSchema(steps[activeStep]?.mergedSchema ?? {}, stepsState)`, keyed on `steps`, `activeStep` and `stepsState`. The resolved schema is the single source for both rendering and validation (FR-6).",
+      "Build the rendered schema from the resolved one by dropping the step `title`, exactly as `useTemplateSchema` does today — the title is rendered above the form and must not reach RJSF. Keep every other key.",
+      "Pass the rendered resolved schema to `<Form schema=...>` in place of `currentStep.schema`. Keep `currentStep` for its `uiSchema`: `useTransformSchemaToProps` resolves the layout from the uiSchema and must keep running.",
+      "Pass the resolved schema (titled, unmodified) to `createAsyncValidators` in place of `steps[activeStep]?.mergedSchema`, so the validators and the rendered form agree field for field.",
+      "Prune in `handleChange`: compute the merged state, pass it through `pruneUnreachableFormState(steps.map(step => step.mergedSchema), merged)`, and store the outcome. Keep the merge — replacing instead of merging would discard the other steps' answers and break the existing back-navigation cases.",
+      "Prune in `handleNext` the same way, over the state merged from `formData`, so the review step and `onCreate` never see an unreachable answer.",
+      "Prune in `handleBack` too, over the current state with no merge, so arriving back at an earlier step re-evaluates (FR-8). Keep the `setActiveStep(prev => prev - 1)` behaviour exactly.",
+      "`pruneUnreachableFormState` returns the same reference when it drops nothing, so a `setStepsState` with that reference is a no-op re-render at worst. Do not add a guard around it.",
+      "Do not enable `omitExtraData` or `liveOmit`. The destructuring at lines 180-181 that discards them stays as it is — RJSF's own omission is per-step and would strip other steps' answers.",
+      "Do not change `StepperProps`, the `ReviewState`/`ReviewStepComponent` branch, the scroll effect, the analytics calls, the stepper labels, or the Apache header year.",
+      "Keep `steps[activeStep]?.mergedSchema` guarded: `activeStep` equals `steps.length` on the review step, so the memo must tolerate an undefined step without throwing."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 59,
+        "to": 59,
+        "first_line": "import { hasErrors } from './utils';",
+        "rule": "Add the relative import of `resolveStepSchema` and `pruneUnreachableFormState` from '../../lib' after this import, keeping this file's import grouping."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 165,
+        "to": 169,
+        "first_line": "const validation = useMemo(() => {",
+        "last_line": "}, [steps, activeStep, validators, apiHolder]);",
+        "rule": "Introduce the resolved-schema useMemo above this block, then make `createAsyncValidators` take that resolved schema instead of `steps[activeStep]?.mergedSchema`, adding the resolved schema to this memo's dependency list in place of the parts it replaces."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 171,
+        "to": 173,
+        "first_line": "const handleBack = useCallback(() => {",
+        "last_line": "}, [setActiveStep]);",
+        "rule": "Also prune the accumulated state here, so conditions are re-evaluated on arrival at the earlier step. Keep the decrement of activeStep unchanged and extend the dependency list to what the prune call needs."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 185,
+        "to": 192,
+        "first_line": "const handleChange = useCallback(",
+        "last_line": ");",
+        "rule": "Keep the merge of `e.formData` over the current state, then pass that merged object through `pruneUnreachableFormState` over every step's mergedSchema and return the outcome from the updater. Extend the dependency list with `steps`."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 203,
+        "to": 206,
+        "first_line": "setStepsState(current => ({",
+        "last_line": "}));",
+        "rule": "Apply the same prune to the state merged from the submitted `formData`, so the review step and the submitted payload carry no unreachable answer."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 298,
+        "to": 298,
+        "first_line": "schema={currentStep.schema}",
+        "rule": "Pass the title-stripped resolved schema here instead. `currentStep` stays in use for `uiSchema` via `mergedUiSchema` on the next line."
+      }
+    ],
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [62, 72],
+        "reason": "Shows how the step title is stripped off the schema before it reaches RJSF; the resolved schema must be stripped the same way."
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTransformSchemaToProps.ts",
+        "reason": "Takes the whole ParsedTemplateSchema and returns it with the layout substituted into uiSchema; it must keep receiving the parsed step, not the resolved schema."
+      }
+    ],
+    "depends_on": ["U01", "U03"],
+    "covers": ["FR-5", "FR-6", "FR-7", "FR-8", "NFR-6"],
+    "checks": ["fmt", "lint"]
+  },
+  {
+    "id": "U09",
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Append React Testing Library cases driving the wizard end to end: a step-2 field that appears only when a step-1 flag is set, its conditional required validation, and back-navigation dropping the stale answer from the review step.",
+    "rules": [
+      "Append only. Every existing case in this file, including the `it.skip` at line 173, must stay exactly as it is — NFR-1.",
+      "Insert the new cases inside the top-level `describe('Stepper')`, after the `describe('state tracking')` block it already contains.",
+      "The shared fixture is the mobile-SDK shape: step 1 declares a boolean `mobile` titled 'Is this a mobile SDK?'; step 2 declares its own string `repo` titled 'Repo' plus a `dependencies.mobile.oneOf` whose first branch adds a string `sdkName` titled 'SDK Name' with `required: ['sdkName']` under `mobile: { const: true }`, and whose second branch is `mobile: { const: false }`.",
+      "Drive the form with `act` + `fireEvent` as the rest of this file does. Query the checkbox by its accessible name and the text inputs by theirs.",
+      "Use `queryByRole` for the absence assertions and `getByRole` for presence, matching the existing cases; do not introduce a test ID.",
+      "For the review-step assertions, read the `cell` role as the skipped case at line 173 does — the review step renders a StructuredMetadataTable.",
+      "Do not pass `omitExtraData` or `liveOmit` in `formProps`: the capability must work without them.",
+      "Give `onCreate` a jest.fn() and assert on its argument for the payload case, so FR-7 is pinned at the submitted-payload level and not only in the rendered table."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 923,
+        "to": 923,
+        "first_line": "});",
+        "rule": "Line 922 closes the last `it`, line 923 closes the `describe('state tracking')` block, and line 924 closes the outer `describe('Stepper')`. Insert the new cases after line 923, as siblings of that describe and still inside the outer one."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "lines": [173, 263],
+      "reason": "The skipped conditional case in this file already shows the exact idiom for a dependencies/oneOf manifest, stepping to review, going back, and asserting on review cells and the onCreate payload."
+    },
+    "depends_on": ["U08"],
+    "covers": ["FR-5", "FR-6", "FR-7", "FR-8", "AC-1", "AC-2", "AC-3", "AC-5"],
+    "tests": [
+      {
+        "name": "should show a step 2 field only when the step 1 flag is set",
+        "given": "The mobile-SDK manifest, advancing to step 2 first without touching the flag, then going back, setting the flag and advancing again",
+        "expect": "On the first visit to step 2 the 'SDK Name' input is absent while 'Repo' is present; on the second visit 'SDK Name' is present"
+      },
+      {
+        "name": "should apply the conditional required rule only when the flag is set",
+        "given": "The manifest advanced to step 2 with the flag unset, then the same run with the flag set and 'SDK Name' left empty, then filled",
+        "expect": "With the flag unset the step completes and the review step is reached; with the flag set and the field empty the wizard stays on step 2; once filled it advances"
+      },
+      {
+        "name": "should drop the dependent answer from the review step and the payload when the governing answer changes back",
+        "given": "The flag set, 'SDK Name' filled, advanced to review, then Back to step 1, the flag cleared, advanced to review again, and Create pressed",
+        "expect": "The review step shows the SDK Name value on the first visit and no cell for it on the second, and onCreate is called with form data that has no sdkName key while keeping the step-2 repo answer"
+      }
+    ],
+    "checks": ["fmt", "lint", "unit"]
+  }
+]

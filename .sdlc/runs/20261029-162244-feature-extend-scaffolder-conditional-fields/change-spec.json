@@ -1,0 +1,925 @@
+{
+  "header": {
+    "conventions": [
+      "TypeScript ~5.7, React 18, jsx: react-jsx — never write `import React from 'react'`; import only the hooks used.",
+      "Every NEW .ts/.tsx file starts with the Apache 2.0 header, `Copyright 2026 The Backstage Authors`. eslint-plugin-notice enforces it. Never change the year on an existing file.",
+      "Named exports only. No default exports, no React.FC. Components are arrow functions assigned to a const.",
+      "Pure modules use `export function`. Each module declares its own local `isObject` type guard rather than importing a shared one — see lib/schema.ts and Stepper/utils.ts, which each have their own. Follow that; do not refactor into a shared util.",
+      "Every exported symbol in plugins/scaffolder-react/src/next/** carries a TSDoc block with an `@alpha` release tag.",
+      "Imports are relative within a package ('../../lib'), package-scoped across packages ('@backstage/types'). No path aliases.",
+      "Barrels (index.ts) use explicit named re-exports with inline `type` modifiers, never `export *`.",
+      "Prettier: single quotes, trailing commas, 2-space indent, 80 columns, arrow parens avoided for a single param. Every unit's `fmt` check applies it before linting, so do not hand-tune wrapping.",
+      "Tests are Jest + React Testing Library, colocated as X.test.ts(x) beside X.ts(x). Never a __tests__/ directory.",
+      "Prefer fewer thorough tests with multiple assertions over many tiny ones. Use `screen` and `.findBy*` over `waitFor`. Never add a test ID to implementation code.",
+      "Scaffolder component tests build an inline `TemplateParameterSchema` literal as the fixture, wrap the subject in `<SecretsContextProvider>`, and import repo types relatively ('../../../types').",
+      "Existing Stepper tests drive the form with `act` + `fireEvent` from '@testing-library/react'. A new case in an existing test file copies that file's idiom rather than introducing userEvent.",
+      "JsonObject / JsonValue from '@backstage/types' are the types for template schema and form state. Do not introduce `any` for them.",
+      "Never add a dependency: every library this change needs (@rjsf/utils, @rjsf/validator-ajv8, json-schema-library, lodash, flatted) is already a direct dependency of plugins/scaffolder-react.",
+      "Markdown docs follow docs/contribute/doc-style-guide.md: sentence-case headings, fenced code blocks with a language tag, relative links between docs pages."
+    ],
+    "decisions": [
+      {
+        "topic": "Where cross-step resolution lives",
+        "choice": "One new pure module, plugins/scaffolder-react/src/next/lib/conditionalSchema.ts, exporting `resolveStepSchema(stepSchema, formState)` and `pruneUnreachableFormState(stepSchemas, formState)`. Stepper.tsx calls both; ReviewState/util.ts uses its own narrow helper from the same module.",
+        "rejected": [
+          "Resolving inside useTemplateSchema.ts (it has no access to live form state — it only sees the manifest)",
+          "Resolving inline in Stepper.tsx (untestable as a pure function, and FR-2 demands a pure function of (step schema, accumulated state))",
+          "A new React hook (resolution must also run from ReviewState/util.ts, which is not a component)"
+        ],
+        "reason": "FR-2 requires resolution be a pure function of (step schema, accumulated form state); a plain module is directly unit-testable and reusable by both the Stepper and the review step."
+      },
+      {
+        "topic": "How a cross-step condition is made resolvable",
+        "choice": "Stub injection into an isolated probe schema. For each governing key referenced by a condition but NOT declared in the step's own `properties`, build a throwaway probe `{type:'object', properties:{[key]:{}}, dependencies:{[key]: <that dependency>}}` (or `{properties:{<stubs>}, if, then, else}`), hand it to RJSF `retrieveSchema` with the accumulated form state, then merge only the NEWLY surfaced properties and required entries back into the step schema and drop the consumed condition.",
+        "rejected": [
+          "Injecting the stub into the step schema itself and rendering that (the injected governing property then renders as a duplicate of the earlier step's question)",
+          "Merging every earlier step's properties into the step schema (renders every earlier field again, and breaks `ui:order`, which throws when properties are absent from the order list)",
+          "Passing the whole accumulated state as `rootSchema` to RJSF (rootSchema is a schema, not data; it changes nothing)"
+        ],
+        "reason": "Verified against @rjsf/utils 5.24.13: processDependencies skips any dependency whose key is absent from `resolvedSchema.properties` when the step has a `properties` key at all, which is exactly the defect. An isolated probe satisfies that guard without polluting the rendered schema, and the probe's own stub key is stripped from the result so nothing extra renders."
+      },
+      {
+        "topic": "Which conditional forms resolve cross-step",
+        "choice": "`dependencies` (object, oneOf-wrapped, and array/required-only forms) and root-level `if`/`then`/`else`. Nested `anyOf`/`oneOf`/`allOf` inside those branches resolve transitively because `retrieveSchema` handles them.",
+        "rejected": [
+          "Adding a bespoke `ui:backstage` visibility option",
+          "Supporting conditions nested under a step's own object-typed property"
+        ],
+        "reason": "NFR-5 restricts the mechanism to standard JSON Schema. Verified: both forms resolve correctly through the probe, including an array dependency that only adds `required`."
+      },
+      {
+        "topic": "The additive-identity rule for resolution",
+        "choice": "`resolveStepSchema` returns the SAME object reference it was given whenever the step declares no cross-step condition — no conditions at all, or conditions whose governing keys are all in the step's own `properties`, or a step with `dependencies` and no `properties` key.",
+        "rejected": [
+          "Always returning a fresh resolved object",
+          "Deep-cloning the step schema on every call"
+        ],
+        "reason": "FR-3 demands byte-identical behaviour for existing templates and NFR-6 forbids per-keystroke deep cloning. Reference equality also keeps Stepper's useMemo and useTransformSchemaToProps from re-rendering. Verified: a step with `dependencies` but no `properties` key is already resolved correctly by RJSF today, so it must be left alone."
+      },
+      {
+        "topic": "Review-step data argument (FR-9)",
+        "choice": "Replace findSchemaForKey's `data` construction with `pickConditionData(schema, formState)` from the new module: collect every key referenced by the step's conditions (`dependencies` keys, plus `if.properties` keys and `if.required` entries, recursing through then/else/allOf/anyOf/oneOf), then copy just those keys from the accumulated formState.",
+        "rejected": [
+          "Passing the whole accumulated formState as `data`",
+          "Keeping the current dependencies-only construction and adding a separate cross-step pass"
+        ],
+        "reason": "Verified: passing the whole formState makes json-schema-library's createSchemaOf synthesise a schema for ANY key via additionalProperties, so findSchemaForKey returns the FIRST step for every key — that breaks four existing util.test.ts cases. Selecting only condition-referenced keys keeps all five existing cases green and fixes the if/then case, which returns undefined today because the current code only ever populates `dependencies` keys."
+      },
+      {
+        "topic": "Dropping stale values (FR-7)",
+        "choice": "`pruneUnreachableFormState(stepSchemas, formState)` runs on every form change and on back-navigation. A key is dropped only when all three hold: it is declared ONLY inside some step's conditional subschema (never in any step's top-level `properties`), it is absent from every step's resolved properties under the current state, and it is present in formState. Returns the same formState reference when nothing is dropped.",
+        "rejected": [
+          "Enabling RJSF `omitExtraData`/`liveOmit` (they are deliberately destructured out at Stepper.tsx:180-181 and the test that depended on them is skipped as broken)",
+          "Replacing rather than merging in handleChange (destroys every other step's answers — breaks 'should remember the state of the form')",
+          "Pruning only the active step's conditional keys (AC-3 changes a step-1 answer and then checks the REVIEW step, so the sweep must cover all steps)"
+        ],
+        "reason": "A key declared at any step's top level is a real answer and must survive (that is what the existing back-navigation tests assert). Only a conditional-only key whose condition no longer holds is unreachable. Verified against the mobile-SDK shape: flipping the flag to false drops sdkName and keeps mobile and repo."
+      },
+      {
+        "topic": "The useTemplateSchema.ts:73 guard (FR-1)",
+        "choice": "Widen the guard so feature-flag stripping rewrites `properties` only when the step actually declares top-level `properties`; when a step has no `properties` key, leave the schema's shape alone instead of writing an empty `properties: {}` over it.",
+        "rejected": [
+          "Removing the guard entirely",
+          "Hoisting conditional properties up into top-level `properties` in the parsed step"
+        ],
+        "reason": "Hoisting would make every conditional field render unconditionally. The parsed `schema` is what RJSF renders, so conditional subschemas must stay inside their conditions; `resolveStepSchema` surfaces them per-render instead. Verified the existing test 'should deal with dependencies and oneOf options' asserts the second step's schema equals exactly `{dependencies: secondStepDependencies}` with no `properties` key, so an empty-properties write must not reappear for that shape."
+      },
+      {
+        "topic": "Per-step validation (FR-6)",
+        "choice": "Stepper passes the RESOLVED active-step schema to both `<Form schema=...>` and `createAsyncValidators`, computed once per render in a single useMemo keyed on the active step and the accumulated state.",
+        "rejected": [
+          "Resolving for rendering but leaving createAsyncValidators on the raw mergedSchema",
+          "Resolving twice, separately for the form and the validators"
+        ],
+        "reason": "FR-6 requires validation be built from the same schema that was rendered. One memo keeps them identical and satisfies NFR-6."
+      },
+      {
+        "topic": "Public API surface",
+        "choice": "The new module's exports are re-exported from next/lib/index.ts, which flows into the package's `/alpha` entry point. This ADDS public alpha API, so `yarn build:api-reports` must be re-run; **/api-report*.md and report*.api.md are off-limits here, so that regeneration is a manual follow-up called out in this run's handover. plugins/scaffolder-react/src/types.ts does NOT change — no existing exported type's shape moves.",
+        "rejected": [
+          "Keeping the module unexported from the barrel",
+          "Changing ParsedTemplateSchema to carry a pre-resolved schema"
+        ],
+        "reason": "next/lib/index.ts is the house pattern for lib modules and the barrel keeps the module testable through the package surface. ParsedTemplateSchema must not change: it is parsed once from the manifest and cannot hold a value that depends on live form state, and widening it would break the review step's and the template editor's existing uses."
+      },
+      {
+        "topic": "Error shape for a condition referencing an unanswered key (FR-4)",
+        "choice": "No error, no throw, no log. The probe resolves to no added properties and no added required entries, so the condition simply does not hold. Every helper in the new module returns a value for every input and throws nothing.",
+        "rejected": [
+          "Throwing on an unresolvable governing key",
+          "console.warn on a governing key answered in no step"
+        ],
+        "reason": "FR-4 states such a condition must be treated as not holding and must not throw. Verified: the probe with an absent governing key yields zero added properties."
+      },
+      {
+        "topic": "Template editor preview parity (FR-11)",
+        "choice": "No source change in plugins/scaffolder/src. TemplateEditorForm.tsx already renders the shared Stepper, so it inherits resolution. Parity is demonstrated by a new test file beside it rather than asserted.",
+        "rejected": [
+          "Duplicating resolution logic into TemplateEditorForm.tsx",
+          "Asserting parity in the docs without a test"
+        ],
+        "reason": "FR-11 says explicitly that if parity needs no code change, it must be demonstrated by a test. TemplateEditorForm.tsx:184 passes the parsed parameters straight to Stepper, so the behaviour is inherited."
+      },
+      {
+        "topic": "Changeset scope",
+        "choice": "One file, .changeset/scaffolder-cross-step-conditional-fields.md, with a single `minor` bump for @backstage/plugin-scaffolder-react. It names no internal symbol and states plainly that an answer whose governing condition stops holding is now removed from the form data.",
+        "rejected": [
+          "Also bumping @backstage/plugin-scaffolder",
+          "A patch bump",
+          "Two changesets, one per requirement"
+        ],
+        "reason": "Only plugins/scaffolder-react has source changes; the scaffolder plugin gains a test only, and test-only changes need no changeset. scaffolder-react is at 3.0.0-next.0, so an additive feature at >=1.0.0 takes minor. FR-13 and Gate 1 require the dropped-value behaviour be visible in the release notes."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "fmt",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 90
+      },
+      {
+        "id": "lint",
+        "run": "yarn eslint --max-warnings 0 {path}",
+        "timeout_s": 180
+      },
+      {
+        "id": "unit",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 420
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "scaffolder-suites",
+        "run": "CI=true yarn test plugins/scaffolder-react plugins/scaffolder"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Pure helpers that resolve a wizard step's JSON Schema against the accumulated answers of all steps, so a condition in step N can reference an answer from an earlier step, and that report which answers have become unreachable.",
+      "rules": [
+        "Declare a module-local `function isObject(value: unknown): value is JsonObject` exactly as lib/schema.ts does. Do not import one.",
+        "Declare a module-local `const validator = customizeValidator();` at module scope, from '@rjsf/validator-ajv8'. Build it once per module, never per call.",
+        "Import `retrieveSchema` from '@rjsf/utils'. It is exported from that package's root.",
+        "`collectGoverningKeys(stepSchema)`: return the set of property names a step's conditions test. Collect every key of `stepSchema.dependencies` when it is an object. When `stepSchema.if` is an object, collect every key of `if.properties` when that is an object, and every string entry of `if.required` when that is an array. Recurse into `then`, `else`, and each object entry of `allOf`, `anyOf`, `oneOf`, and into each object value of `dependencies`, collecting their `dependencies` keys and `if` keys the same way. Never collect a plain `properties` key as governing.",
+        "`collectConditionalPropertyNames(stepSchema)`: return the set of property names declared ONLY inside conditional subschemas. Walk `dependencies` values, `if`, `then`, `else`, and each object entry of `allOf`, `anyOf`, `oneOf`, recursively; at every node BELOW the root collect the keys of that node's `properties` when it is an object. Never collect the keys of the root's own `properties`.",
+        "`pickConditionData(stepSchema, formState)`: return a new plain object holding, for each key of `collectGoverningKeys(stepSchema)`, that key's value from `formState` when `formState` has it as an own property. Omit any key `formState` lacks. Never include a key that is not governing.",
+        "`resolveStepSchema(stepSchema, formState)` returns the SAME `stepSchema` reference, with no copying, when any of: `stepSchema` is not an object; it has no object `dependencies` and no object `if`; it has no own object `properties` key (RJSF already resolves a dependencies-only step correctly, so leave it alone); or every governing key is already a key of its own `properties`.",
+        "Otherwise `resolveStepSchema` computes, for each governing dependency key NOT in its own `properties`, an isolated probe `{ type: 'object', properties: { [key]: {} }, dependencies: { [key]: stepSchema.dependencies[key] } }`, calls `retrieveSchema(validator, probe, probe, formState)`, and takes from the outcome every `properties` entry except the probe's own stub key, plus every `required` entry except that stub key.",
+        "When `stepSchema.if` is an object and at least one of its governing keys is absent from the step's own `properties`, resolve it with one further probe `{ type: 'object', properties: <a stub {} per absent governing key>, if: stepSchema.if, then: stepSchema.then, else: stepSchema.else }`, include `then`/`else` only when each is present, and take from the outcome every property and required entry except the stub keys.",
+        "The returned schema is a shallow copy of `stepSchema` with: `properties` set to the step's own properties followed by the collected additions (an addition never overwrites an own property of the same name); `required` set to the step's own `required` entries followed by the collected additions, de-duplicated, and the `required` key deleted entirely when that list is empty; each consumed cross-step dependency key removed from `dependencies`, and the `dependencies` key deleted when nothing is left in it; and `if`, `then`, `else` deleted when the `if` probe ran. Never mutate `stepSchema` or anything reachable from it.",
+        "`pruneUnreachableFormState(stepSchemas, formState)` returns the SAME `formState` reference whenever it would drop nothing, including when no step declares a conditional property.",
+        "A key is dropped by `pruneUnreachableFormState` only when all of: it is in the union of `collectConditionalPropertyNames` over every step; it is NOT a top-level `properties` key of ANY step (a key any step declares at top level is a real answer and always survives); it is absent from the `properties` of EVERY step's `resolveStepSchema(step, formState)` under the current state; and `formState` has it as an own property. Dropping otherwise is a defect.",
+        "When at least one key is dropped, return a new shallow copy of `formState` without those keys. Never delete a key from the argument.",
+        "No helper throws for any input. A governing key answered in no step yields no additions and no drops. A malformed subschema (a string, null, an array where an object is expected) is skipped, not an error.",
+        "No helper logs, and none deep-clones a whole step schema or the manifest."
+      ],
+      "exports": [
+        {
+          "name": "resolveStepSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formState",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "pruneUnreachableFormState",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchemas",
+              "type": "JsonObject[]"
+            },
+            {
+              "name": "formState",
+              "type": "Record<string, JsonValue>"
+            }
+          ],
+          "returns": "Record<string, JsonValue>"
+        },
+        {
+          "name": "pickConditionData",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "Partial<{ [key: string]: JsonValue }>"
+        }
+      ],
+      "import_line": "import { resolveStepSchema, pruneUnreachableFormState, pickConditionData } from '../../lib/conditionalSchema';",
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "The house shape for a pure JSON Schema walker in this package: module-local isObject type guard, named export function, recursion over properties/items/anyOf/oneOf/allOf/dependencies/then/else, TSDoc with an @alpha tag on each export."
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+          "lines": [
+            16,
+            52
+          ],
+          "reason": "Shows how this package imports JsonObject/JsonValue and constructs schema tooling at module scope; the resolved schema this module returns is what gets handed to createAsyncValidators."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "NFR-6"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/lib/conditionalSchema.test.ts",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Unit tests for the cross-step resolution helpers, covering the mobile-SDK shape from the originating issue, the additive-identity guarantees, and the unanswered-key case.",
+      "rules": [
+        "Import the helpers relatively from './conditionalSchema'. No package-scoped self-import.",
+        "Build step schemas as inline literals typed `JsonObject`, shaped like a scaffolder step: `{ type: 'object', properties: { ... }, dependencies: { ... } }`.",
+        "The mobile-SDK fixture is two steps: step 1 declares `mobile` as a boolean; step 2 declares its own `repo` string and a `dependencies.mobile.oneOf` whose first branch adds `sdkName` with `required: ['sdkName']` under `mobile: { const: true }` and whose second branch is `mobile: { const: false }`.",
+        "Assert identity with `toBe` where a rule promises the same reference, and value with `toEqual` where it promises a resolved shape. `toBe` is the point of the additive-identity cases; `toEqual` there would pass vacuously.",
+        "Group the cases with `describe` per exported helper, following this package's test files."
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "reason": "The colocated pure-module test idiom for this exact directory: plain describe/it, inline JsonObject literals, no React or test-app harness."
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-7",
+        "NFR-1",
+        "NFR-5",
+        "AC-8"
+      ],
+      "tests": [
+        {
+          "name": "resolveStepSchema surfaces a cross-step dependency field when the earlier answer satisfies it",
+          "given": "The mobile-SDK step 2, resolved against `{ mobile: true, repo: 'r' }`",
+          "expect": "The result's properties hold `repo` and `sdkName`, its required list holds `sdkName`, and it no longer carries a `dependencies` key; the input step schema object is unchanged"
+        },
+        {
+          "name": "resolveStepSchema omits the field and its required entry when the earlier answer does not satisfy the condition",
+          "given": "The same step 2 resolved against `{ mobile: false, repo: 'r' }`",
+          "expect": "The result's properties hold only `repo`, and the result has no `required` key and no `dependencies` key"
+        },
+        {
+          "name": "resolveStepSchema treats a governing key answered in no step as not holding and does not throw",
+          "given": "The same step 2 resolved against `{ repo: 'r' }`, and a step whose dependency names a key no step declares",
+          "expect": "Neither call throws; both results hold only the step's own properties and no added required entry"
+        },
+        {
+          "name": "resolveStepSchema resolves a root-level if/then that references an earlier step's answer",
+          "given": "A step with own `repo`, `if: { properties: { mobile: { const: true } }, required: ['mobile'] }` and `then` adding a required `sdkName`, resolved against `{ mobile: true }` and then `{ mobile: false }`",
+          "expect": "The first result holds `sdkName` and requires it; the second holds only `repo`, requires nothing, and neither result carries `if`, `then` or `else`"
+        },
+        {
+          "name": "resolveStepSchema resolves a dependency whose branch only adds required entries",
+          "given": "A step declaring both `repo` and `sdkName` in its own properties with `dependencies: { mobile: ['sdkName'] }`, resolved against `{ mobile: true }`",
+          "expect": "The result requires `sdkName` while its properties are unchanged"
+        },
+        {
+          "name": "resolveStepSchema returns the identical object for a step with no cross-step condition",
+          "given": "A step with no conditions; a step whose dependency key is declared in its own properties (a same-step condition); and a step with dependencies but no properties key",
+          "expect": "Each call returns the very object passed in, asserted with toBe"
+        },
+        {
+          "name": "pruneUnreachableFormState drops only the answer whose governing condition stopped holding",
+          "given": "The two mobile-SDK steps and `{ mobile: false, repo: 'r', sdkName: 's' }`",
+          "expect": "The result is `{ mobile: false, repo: 'r' }` — `sdkName` gone, the governing `mobile` and the unconditional `repo` kept"
+        },
+        {
+          "name": "pruneUnreachableFormState keeps a conditional answer while its condition still holds and returns the identical state when nothing is unreachable",
+          "given": "The same steps with `{ mobile: true, repo: 'r', sdkName: 's' }`, then two steps with no conditions at all and a state holding both their answers",
+          "expect": "The first result equals the input state; the second returns the very object passed in, asserted with toBe"
+        },
+        {
+          "name": "pickConditionData copies only the keys a step's conditions test",
+          "given": "A step whose `dependencies` names `mobile`, and one whose `if` names `mobile` via properties and required, against `{ mobile: true, repo: 'r', unrelated: 1 }`",
+          "expect": "Both results are `{ mobile: true }`; a state lacking `mobile` yields `{}` for both and neither call throws"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/lib/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Re-export the new cross-step resolution helpers from the lib barrel so they reach the package's /alpha entry point.",
+      "rules": [
+        "Add one explicit named re-export statement after the existing one. Keep `export *` out of this file.",
+        "Export exactly `resolveStepSchema`, `pruneUnreachableFormState` and `pickConditionData` from './conditionalSchema'.",
+        "Do not touch the Apache header or its year."
+      ],
+      "exports": [
+        {
+          "name": "resolveStepSchema",
+          "params": [],
+          "returns": "re-export"
+        },
+        {
+          "name": "pruneUnreachableFormState",
+          "params": [],
+          "returns": "re-export"
+        },
+        {
+          "name": "pickConditionData",
+          "params": [],
+          "returns": "re-export"
+        }
+      ],
+      "import_line": "import { resolveStepSchema, pruneUnreachableFormState, pickConditionData } from '../lib';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 16,
+          "to": 16,
+          "first_line": "export { extractSchemaFromStep, createFieldValidation } from './schema';",
+          "rule": "Append the new named re-export from './conditionalSchema' on the lines after this one, matching this file's single-line-per-module style."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "NFR-2"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Stop the feature-flag property stripping from overwriting a step's schema with top-level properties only, so a property that exists solely inside a conditional subschema survives parsing.",
+      "rules": [
+        "The parsed `schema` is what RJSF renders, so a conditional property must STAY inside its condition. Do not hoist anything into top-level `properties`.",
+        "Rewrite `strippedSchema.schema.properties` only when the step actually declares a top-level `properties` object. When the step has no `properties` key, leave the copied schema's shape untouched — do not write `properties: {}` onto it.",
+        "Keep the feature-flag filter itself byte-identical: a property survives when `step.uiSchema[key]?.['ui:backstage']?.featureFlag` is absent or that flag is active.",
+        "A step that declares `properties: {}` explicitly must still come out with `properties: {}` — an empty own object is a declaration, an absent key is not. The existing test 'should deal with steps having no properties' covers a step with neither properties nor dependencies and expects `properties: {}`; that case must keep passing, so the condition cannot be `properties` presence alone.",
+        "Resolve those two together: rewrite `properties` when the step declares `properties`, OR when it declares no `dependencies` (which preserves today's empty-object outcome for a plain step with neither). Do not widen further.",
+        "Do not change the hook's signature, the ParsedTemplateSchema interface, the step-level feature-flag filter, or the Apache header year."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 73,
+          "to": 85,
+          "first_line": "if (step.schema?.properties || !step.schema?.dependencies) {",
+          "last_line": "}",
+          "rule": "Replace this guard and its body so the `properties` rewrite happens only per the rules above: a step declaring top-level `properties`, or a step declaring no `dependencies`. The body's filter predicate stays exactly as it is."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+          "lines": [
+            244,
+            391
+          ],
+          "reason": "The two existing cases this edit must not disturb: 'should deal with steps having no properties' expects `properties: {}`, and 'should deal with dependencies and oneOf options' expects the second step's schema to equal exactly `{ dependencies: secondStepDependencies }` with no properties key."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "AC-6"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Append a case proving a property declared only inside a conditional subschema survives parsing, alongside the existing feature-flag cases.",
+      "rules": [
+        "Append only. Do not edit or re-indent any existing case — NFR-1 requires every existing case pass unchanged.",
+        "Insert the new `it` inside the existing `describe('FeatureFlags')` block, after its last case, so it reuses that block's `renderHook` + `TestApiProvider` + `mockApis.featureFlags.mock` idiom.",
+        "The fixture is a step declaring its own `repo` property plus a `dependencies.mobile` whose branch adds `sdkName`, with the feature-flag API returning false, so the case proves stripping no longer discards the conditional subschema."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 389,
+          "to": 389,
+          "first_line": "});",
+          "rule": "This line closes the final `it('should deal with dependencies and oneOf options')` inside the FeatureFlags describe. Insert the new `it` block after it, still inside that describe, which line 390 closes."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "lines": [
+          280,
+          389
+        ],
+        "reason": "The adjacent case in this very file already builds a dependencies/oneOf manifest and asserts on result.current.steps; copy its shape exactly."
+      },
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-1",
+        "AC-6"
+      ],
+      "tests": [
+        {
+          "name": "should keep properties that exist only inside a dependencies subschema",
+          "given": "A manifest whose step declares its own `repo` property and a `dependencies.mobile` branch adding `sdkName`, with the feature flag API inactive",
+          "expect": "The parsed step's schema still carries the whole `dependencies` object unaltered, and its top-level properties hold `repo` and do not hold `sdkName`"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolve each review-step key against the accumulated answers of all steps, so a key governed by an earlier step's answer resolves against the value actually given.",
+      "rules": [
+        "Replace the hand-rolled `data` construction with `pickConditionData(schema, formState)`, imported from '../../lib'.",
+        "Do NOT pass the whole `formState` as `data`. json-schema-library synthesises a schema for any key via additionalProperties, so a full state makes `getSchema` succeed for every key and `findSchemaForKey` returns the first step for all of them — that breaks four existing cases in util.test.ts.",
+        "Keep everything else in `findSchemaForKey` as it is: the loop over `schemas`, `step.mergedSchema`, the `new JSONSchema(schema)` construction, the `#/${key}` pointer, the truthiness return of `step`, and the trailing `null`.",
+        "Leave `isJsonObject` and `formatKey` exactly as they are — both are exported and covered by existing tests. `isJsonObject` must stay exported even if this file no longer calls it.",
+        "Do not change the function's signature or the Apache header year."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 41,
+          "to": 62,
+          "first_line": "/*",
+          "last_line": "}",
+          "rule": "Replace the explanatory comment block and the dependencies-only `data` construction with a short comment stating that conditions resolve against the accumulated answers of all steps, plus `const data = pickConditionData(schema, formState);`. The `const schema = step.mergedSchema;` line at 51 must survive, either kept in place or restated above the new data line."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Add the relative import of `pickConditionData` from '../../lib' after the existing imports."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+          "lines": [
+            83,
+            173
+          ],
+          "reason": "The five existing findSchemaForKey cases that must stay green, including the fixture where a bare `artifact` key must resolve to the third schema via its dependencies and `nonexistentKey` must resolve to null."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U03"
+      ],
+      "covers": [
+        "FR-9",
+        "FR-10",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Append cases proving a cross-step conditional key resolves against accumulated state, and is not found when its condition does not hold.",
+      "rules": [
+        "Append only. The five existing `findSchemaForKey` cases and the `isJsonObject` / `formatKey` describes must stay exactly as they are.",
+        "Add the new cases inside the existing `describe('findSchemaForKey')` block, after its last case, so they sit beside the fixtures they contrast with.",
+        "Declare new local fixtures for the cross-step shapes rather than altering the shared `schemas` and `formState` consts the existing cases assert against.",
+        "Cover both conditional forms: a `dependencies` branch and a root-level `if`/`then`. The if/then case is the one that returns null today because the current code only ever populated dependency keys."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 172,
+          "to": 172,
+          "first_line": "});",
+          "rule": "This line closes the final `it('should return the schema for an object key')`. Insert the new cases after it, still inside the findSchemaForKey describe, which line 173 closes."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "lines": [
+          83,
+          172
+        ],
+        "reason": "The existing findSchemaForKey describe: ParsedTemplateSchema array literals with mergedSchema/schema/title/uiSchema, a plain formState object, and toBe assertions against the fixture elements."
+      },
+      "depends_on": [
+        "U06"
+      ],
+      "covers": [
+        "FR-9",
+        "FR-10",
+        "AC-4"
+      ],
+      "tests": [
+        {
+          "name": "should resolve a key governed by an earlier step's answer",
+          "given": "Two schemas — the first declaring `mobile`, the second declaring its own `repo` plus a `dependencies.mobile` branch adding `sdkName` — with formState `{ mobile: true, repo: 'r', sdkName: 's' }`",
+          "expect": "`findSchemaForKey('sdkName', ...)` returns the second schema, and `findSchemaForKey('mobile', ...)` returns the first"
+        },
+        {
+          "name": "should not resolve a cross-step conditional key when its condition does not hold",
+          "given": "The same two schemas with formState `{ mobile: false, repo: 'r', sdkName: 's' }`",
+          "expect": "`findSchemaForKey('sdkName', ...)` returns null while `repo` still resolves to the second schema"
+        },
+        {
+          "name": "should resolve a key governed by an earlier answer through if/then",
+          "given": "A second schema using `if: { properties: { mobile: { const: true } }, required: ['mobile'] }` with `then` adding `sdkName`, against `{ mobile: true, sdkName: 's' }` and then `{ mobile: false, sdkName: 's' }`",
+          "expect": "The key resolves to that schema in the first state and to null in the second"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Render and validate the active step against its schema resolved over the accumulated answers of all steps, and drop answers whose governing condition no longer holds.",
+      "rules": [
+        "`stepsState` already holds every step's accumulated answers and is already passed as `formData`, so this edit adds NO new state. It changes which schema the step is rendered and validated against, and it prunes unreachable answers.",
+        "Add one `useMemo` that computes the resolved active-step schema: `resolveStepSchema(steps[activeStep]?.mergedSchema ?? {}, stepsState)`, keyed on `steps`, `activeStep` and `stepsState`. The resolved schema is the single source for both rendering and validation (FR-6).",
+        "Build the rendered schema from the resolved one by dropping the step `title`, exactly as `useTemplateSchema` does today — the title is rendered above the form and must not reach RJSF. Keep every other key.",
+        "Pass the rendered resolved schema to `<Form schema=...>` in place of `currentStep.schema`. Keep `currentStep` for its `uiSchema`: `useTransformSchemaToProps` resolves the layout from the uiSchema and must keep running.",
+        "Pass the resolved schema (titled, unmodified) to `createAsyncValidators` in place of `steps[activeStep]?.mergedSchema`, so the validators and the rendered form agree field for field.",
+        "Prune in `handleChange`: compute the merged state, pass it through `pruneUnreachableFormState(steps.map(step => step.mergedSchema), merged)`, and store the outcome. Keep the merge — replacing instead of merging would discard the other steps' answers and break the existing back-navigation cases.",
+        "Prune in `handleNext` the same way, over the state merged from `formData`, so the review step and `onCreate` never see an unreachable answer.",
+        "Prune in `handleBack` too, over the current state with no merge, so arriving back at an earlier step re-evaluates (FR-8). Keep the `setActiveStep(prev => prev - 1)` behaviour exactly.",
+        "`pruneUnreachableFormState` returns the same reference when it drops nothing, so a `setStepsState` with that reference is a no-op re-render at worst. Do not add a guard around it.",
+        "Do not enable `omitExtraData` or `liveOmit`. The destructuring at lines 180-181 that discards them stays as it is — RJSF's own omission is per-step and would strip other steps' answers.",
+        "Do not change `StepperProps`, the `ReviewState`/`ReviewStepComponent` branch, the scroll effect, the analytics calls, the stepper labels, or the Apache header year.",
+        "Keep `steps[activeStep]?.mergedSchema` guarded: `activeStep` equals `steps.length` on the review step, so the memo must tolerate an undefined step without throwing."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 59,
+          "to": 59,
+          "first_line": "import { hasErrors } from './utils';",
+          "rule": "Add the relative import of `resolveStepSchema` and `pruneUnreachableFormState` from '../../lib' after this import, keeping this file's import grouping."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 165,
+          "to": 169,
+          "first_line": "const validation = useMemo(() => {",
+          "last_line": "}, [steps, activeStep, validators, apiHolder]);",
+          "rule": "Introduce the resolved-schema useMemo above this block, then make `createAsyncValidators` take that resolved schema instead of `steps[activeStep]?.mergedSchema`, adding the resolved schema to this memo's dependency list in place of the parts it replaces."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 171,
+          "to": 173,
+          "first_line": "const handleBack = useCallback(() => {",
+          "last_line": "}, [setActiveStep]);",
+          "rule": "Also prune the accumulated state here, so conditions are re-evaluated on arrival at the earlier step. Keep the decrement of activeStep unchanged and extend the dependency list to what the prune call needs."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 185,
+          "to": 192,
+          "first_line": "const handleChange = useCallback(",
+          "last_line": ");",
+          "rule": "Keep the merge of `e.formData` over the current state, then pass that merged object through `pruneUnreachableFormState` over every step's mergedSchema and return the outcome from the updater. Extend the dependency list with `steps`."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 203,
+          "to": 206,
+          "first_line": "setStepsState(current => ({",
+          "last_line": "}));",
+          "rule": "Apply the same prune to the state merged from the submitted `formData`, so the review step and the submitted payload carry no unreachable answer."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 298,
+          "to": 298,
+          "first_line": "schema={currentStep.schema}",
+          "rule": "Pass the title-stripped resolved schema here instead. `currentStep` stays in use for `uiSchema` via `mergedUiSchema` on the next line."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+          "lines": [
+            62,
+            72
+          ],
+          "reason": "Shows how the step title is stripped off the schema before it reaches RJSF; the resolved schema must be stripped the same way."
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTransformSchemaToProps.ts",
+          "reason": "Takes the whole ParsedTemplateSchema and returns it with the layout substituted into uiSchema; it must keep receiving the parsed step, not the resolved schema."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U03"
+      ],
+      "covers": [
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "fmt",
+        "lint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Append React Testing Library cases driving the wizard end to end: a step-2 field that appears only when a step-1 flag is set, its conditional required validation, and back-navigation dropping the stale answer from the review step.",
+      "rules": [
+        "Append only. Every existing case in this file, including the `it.skip` at line 173, must stay exactly as it is — NFR-1.",
+        "Insert the new cases inside the top-level `describe('Stepper')`, after the `describe('state tracking')` block it already contains.",
+        "The shared fixture is the mobile-SDK shape: step 1 declares a boolean `mobile` titled 'Is this a mobile SDK?'; step 2 declares its own string `repo` titled 'Repo' plus a `dependencies.mobile.oneOf` whose first branch adds a string `sdkName` titled 'SDK Name' with `required: ['sdkName']` under `mobile: { const: true }`, and whose second branch is `mobile: { const: false }`.",
+        "Drive the form with `act` + `fireEvent` as the rest of this file does. Query the checkbox by its accessible name and the text inputs by theirs.",
+        "Use `queryByRole` for the absence assertions and `getByRole` for presence, matching the existing cases; do not introduce a test ID.",
+        "For the review-step assertions, read the `cell` role as the skipped case at line 173 does — the review step renders a StructuredMetadataTable.",
+        "Do not pass `omitExtraData` or `liveOmit` in `formProps`: the capability must work without them.",
+        "Give `onCreate` a jest.fn() and assert on its argument for the payload case, so FR-7 is pinned at the submitted-payload level and not only in the rendered table."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 923,
+          "to": 923,
+          "first_line": "});",
+          "rule": "Line 922 closes the last `it`, line 923 closes the `describe('state tracking')` block, and line 924 closes the outer `describe('Stepper')`. Insert the new cases after line 923, as siblings of that describe and still inside the outer one."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "lines": [
+          173,
+          263
+        ],
+        "reason": "The skipped conditional case in this file already shows the exact idiom for a dependencies/oneOf manifest, stepping to review, going back, and asserting on review cells and the onCreate payload."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-5"
+      ],
+      "tests": [
+        {
+          "name": "should show a step 2 field only when the step 1 flag is set",
+          "given": "The mobile-SDK manifest, advancing to step 2 first without touching the flag, then going back, setting the flag and advancing again",
+          "expect": "On the first visit to step 2 the 'SDK Name' input is absent while 'Repo' is present; on the second visit 'SDK Name' is present"
+        },
+        {
+          "name": "should apply the conditional required rule only when the flag is set",
+          "given": "The manifest advanced to step 2 with the flag unset, then the same run with the flag set and 'SDK Name' left empty, then filled",
+          "expect": "With the flag unset the step completes and the review step is reached; with the flag set and the field empty the wizard stays on step 2; once filled it advances"
+        },
+        {
+          "name": "should drop the dependent answer from the review step and the payload when the governing answer changes back",
+          "given": "The flag set, 'SDK Name' filled, advanced to review, then Back to step 1, the flag cleared, advanced to review again, and Create pressed",
+          "expect": "The review step shows the SDK Name value on the first visit and no cell for it on the second, and onCreate is called with form data that has no sdkName key while keeping the step-2 repo answer"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Demonstrate that the template editor preview inherits cross-step conditional behaviour from the shared Stepper, with no source change in this plugin.",
+      "rules": [
+        "Import `TemplateEditorForm` relatively from './TemplateEditorForm'. It is a named export of that file and is not re-exported from the directory barrel.",
+        "Feed the component through its `content` prop as a YAML string with `contentIsSpec: true`, so it parses `parameters` directly without needing a Template entity wrapper.",
+        "The YAML holds two parameter steps in the mobile-SDK shape: the first declaring a boolean `mobile` titled 'Is this a mobile SDK?', the second declaring its own string `repo` plus `dependencies.mobile.oneOf` adding a required string `sdkName` titled 'SDK Name' under `mobile: { const: true }`, with a `mobile: { const: false }` branch.",
+        "The component parses `content` inside a 250 ms `useDebounce`, so the first assertion must be an awaited `findBy*` query; a synchronous `getBy*` on first render will fail before the debounce fires.",
+        "Render with `renderInTestApp` and a `TestApiProvider`, following the sibling tests in this directory. Pass `setErrorText={jest.fn()}` and `fieldExtensions={[]}`.",
+        "Assert the YAML parsed without error by checking the jest.fn() passed as `setErrorText` was never called with a message, so a schema the preview cannot read fails loudly rather than silently rendering nothing.",
+        "This unit adds NO source change to plugins/scaffolder/src — parity is inherited because TemplateEditorForm renders the shared Stepper. The test exists to prove that, per FR-11.",
+        "Drive the wizard with `act` + `fireEvent`, and query by accessible name. Do not add a test ID to any component."
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/CustomFieldsPage.test.tsx",
+        "reason": "The sibling test idiom for this exact directory: Apache header, `renderInTestApp` with a `TestApiProvider` of mocked api refs, `screen` queries, no test IDs."
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm.tsx",
+          "lines": [
+            92,
+            200
+          ],
+          "reason": "The component under test: its props, the `contentIsSpec` branch that reads `parameters` straight off the parsed root, the 250 ms useDebounce, and the Stepper it renders."
+        },
+        {
+          "path": "plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateFormPreviewer.tsx",
+          "lines": [
+            53,
+            80
+          ],
+          "reason": "Its EXAMPLE_TEMPLATE_PARAMS_YAML shows the exact YAML shape this component expects under `contentIsSpec`, to copy for the fixture."
+        }
+      ],
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-11",
+        "AC-7"
+      ],
+      "tests": [
+        {
+          "name": "shows a cross-step conditional field in the preview only when the governing answer is set",
+          "given": "The mobile-SDK parameters YAML rendered as a preview, advanced to the second step with the flag unset, then back with the flag set and advanced again",
+          "expect": "The second step shows 'Repo' but no 'SDK Name' while the flag is unset, and shows 'SDK Name' once it is set, with setErrorText never called with a message"
+        }
+      ],
+      "checks": [
+        "fmt",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "docs/features/software-templates/writing-templates.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document cross-step conditional fields for template authors, with the mobile-SDK worked example, next to the existing section on hiding fields by feature flag.",
+      "rules": [
+        "Insert a new `###` section titled 'Show fields based on an answer from an earlier step', placed after the feature-flag section and before '### The Repository Picker', since both sections are about which fields a template shows.",
+        "Follow docs/contribute/doc-style-guide.md: sentence-case heading, second person, present tense, every fenced block tagged `yaml`.",
+        "State what is supported: a field in any step may be shown, hidden or required based on an answer given in an earlier step, expressed with standard JSON Schema `dependencies` or `if`/`then`. No Backstage-specific syntax is involved.",
+        "State what is not supported, explicitly: whole steps are never skipped — every step in `parameters` still renders. Conditions govern fields only.",
+        "Give the worked example from the originating issue as a single YAML block: step 1 asks 'Is this a mobile SDK?' as a boolean; step 2 declares its own repository field plus a `dependencies.mobile.oneOf` whose first branch adds the SDK-specific fields and marks them required under `mobile: { const: true }`, with a second branch for `mobile: { const: false }`.",
+        "Show the `if`/`then` alternative in a second short YAML block, so authors see both standard forms.",
+        "Document the behaviour change plainly: when an author's condition stops holding, the dependent answer is removed from the form data, so it does not appear on the review step and is not passed to `spec.steps`. An author who referenced that parameter in a step should guard it.",
+        "Note that the review step lists a conditional field only while its condition holds, and that the template editor preview behaves the same as the live form.",
+        "Do not add a mkdocs.yml nav entry: this is a new section inside an already-listed page, and mkdocs.yml is outside this run's allowlist.",
+        "Do not restructure, reword or re-indent any existing section of this file."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 468,
+          "to": 468,
+          "first_line": "### The Repository Picker",
+          "rule": "Insert the new section and a trailing blank line here, so it closes the group of field-visibility sections that begins at '### Remove sections or fields based on feature flags' (line 404) and the Repository Picker heading stays at the start of its own section."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-templates/writing-templates.md",
+        "lines": [
+          404,
+          440
+        ],
+        "reason": "The adjacent feature-flag section is the closest precedent: a short prose lead, one annotated YAML block of a `spec.parameters` fixture, then a paragraph explaining the outcome."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-9"
+      ],
+      "checks": [
+        "fmt"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset covering the one published package this run changes, with a minor bump and an adopter-facing note that includes the dropped-value behaviour change.",
+      "rules": [
+        "The file is YAML front matter between `---` fences naming exactly one package, then the message as markdown prose. Copy the shape of any existing file in .changeset/.",
+        "Name exactly one package: `'@backstage/plugin-scaffolder-react': minor`. It is at 3.0.0-next.0, so an additive feature at >= 1.0.0 takes minor.",
+        "Do NOT name @backstage/plugin-scaffolder: this run adds only a test there, and a test-only change needs no changeset.",
+        "Write for adopters in plain language. Name no internal code symbol — no function, hook, file or variable name. `dependencies` and `if`/`then` are fine: they are JSON Schema keywords an author writes in a template, not internal symbols.",
+        "First state the feature: a scaffolder template's form can now show, hide or require a field based on an answer given in an earlier step of the wizard, using standard JSON Schema conditions, and the review step reflects those conditions.",
+        "Then state the behaviour change in its own sentence, because adopters must learn it here rather than from a changed payload: when an answer's governing condition stops holding, that answer is now removed from the form data, so it no longer appears on the review step and is no longer submitted. Previously it persisted.",
+        "Keep it to a few sentences. Do not add a heading, a bullet list of requirement ids, or a link to this run."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/brave-subjects-canonical.md",
+        "reason": "An existing changeset in this repo: the front-matter fence, the quoted package name with its bump level, and the prose message beneath."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-7",
+        "FR-13",
+        "AC-10"
+      ],
+      "checks": [
+        "fmt"
+      ]
+    }
+  ]
+}
