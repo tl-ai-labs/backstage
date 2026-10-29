@@ -40,6 +40,34 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * Checks the format of the entity envelope fields.
+   *
+   * @remarks
+   *
+   * The validators given to the constructor (by default those of
+   * {@link makeValidator}) apply to `apiVersion`, `kind`, `metadata.name`,
+   * `metadata.namespace`, labels, annotations and tags.
+   *
+   * The checks are, in order:
+   *
+   * - `apiVersion`, `kind` and `metadata.name` must be present and valid
+   * - `metadata.namespace` is checked only when it is not `undefined`
+   * - every label key and value, annotation key and value, and tag is checked
+   * - each entry in `metadata.links` needs a valid `url`, and its `title` and
+   *   `icon` must be non-empty strings when not `undefined`; links are always
+   *   checked with the built-in URL and non-empty-string checks, whatever
+   *   validators were given to the constructor
+   * - `spec` is not checked
+   *
+   * @param entity - The entity to check
+   * @returns The same entity object, unchanged
+   * @throws An `Error` when a required field is `undefined` or `null`, when
+   *         any checked field is `null`, when a validator throws, or when a
+   *         value fails its validator. A failed validation names the field
+   *         and links to the catalog file format documentation, and for a
+   *         known validator it also describes the expected format.
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,

@@ -29,8 +29,27 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ResourceEntityV1alpha1 extends Entity {
+  /**
+   * The API version of the entity, either `backstage.io/v1alpha1` or
+   * `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `Resource`.
+   */
   kind: 'Resource';
+  /**
+   * The specification of the resource.
+   *
+   * @remarks
+   *
+   * The fields `type` and `owner` are required, and the other fields are
+   * optional. The `type` field is the type of resource, and `owner` is an
+   * entity reference to the owner. The `dependsOn` and `dependencyOf` fields
+   * are entity references to the entities the resource depends on and to the
+   * entities that depend on it. The `system` field is an entity reference to
+   * the system the resource belongs to.
+   */
   spec: {
     type: string;
     owner: string;

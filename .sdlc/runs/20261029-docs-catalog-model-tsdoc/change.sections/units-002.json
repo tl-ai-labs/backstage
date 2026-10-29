@@ -1,0 +1,471 @@
+[
+  {
+    "id": "U09",
+    "path": "packages/catalog-model/src/entity/conditions.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds a summary, @param entity and @returns to each of the 8 kind type guards, above their existing @public tag.",
+    "rules": [
+      "1. Each site inserts, right after the guard's existing '/**' line, these lines in order: ' * <summary>', ' *', ' * @param entity - The entity to check', ' * @returns <returns text>', ' *'; the existing ' * @public' line then follows unchanged and stays last.",
+      "2. Summary for guard X with kind literal K and interface I: 'Checks whether an entity is of the `K` kind, comparing `entity.kind` to `K` case-insensitively.' followed by 'Only `kind` is checked; `apiVersion` and `spec` are not validated.'",
+      "3. Returns text: '`true` if the entity kind matches, which narrows the type to {@link I}, otherwise `false`.'",
+      "4. Pairs (guard, K, I): isApiEntity, API, ApiEntityV1alpha1; isComponentEntity, Component, ComponentEntityV1alpha1; isDomainEntity, Domain, DomainEntityV1alpha1; isGroupEntity, Group, GroupEntityV1alpha1; isLocationEntity, Location, LocationEntityV1alpha1; isResourceEntity, Resource, ResourceEntityV1alpha1; isSystemEntity, System, SystemEntityV1alpha1; isUserEntity, User, UserEntityV1alpha1.",
+      "5. Blocks are at top level (no indentation before ' *')."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 29,
+        "to": 29,
+        "first_line": "/**",
+        "rule": "isApiEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 35,
+        "to": 35,
+        "first_line": "/**",
+        "rule": "isComponentEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 41,
+        "to": 41,
+        "first_line": "/**",
+        "rule": "isDomainEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 47,
+        "to": 47,
+        "first_line": "/**",
+        "rule": "isGroupEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S5",
+        "at": "insert_after",
+        "from": 53,
+        "to": 53,
+        "first_line": "/**",
+        "rule": "isLocationEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S6",
+        "at": "insert_after",
+        "from": 59,
+        "to": 59,
+        "first_line": "/**",
+        "rule": "isResourceEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S7",
+        "at": "insert_after",
+        "from": 65,
+        "to": 65,
+        "first_line": "/**",
+        "rule": "isSystemEntity block lines (rules 1-4)."
+      },
+      {
+        "id": "S8",
+        "at": "insert_after",
+        "from": 71,
+        "to": 71,
+        "first_line": "/**",
+        "rule": "isUserEntity block lines (rules 1-4)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/ref.ts",
+      "lines": [47, 61],
+      "reason": "Function-level TSDoc with @param entity and @returns in this package."
+    },
+    "depends_on": [],
+    "covers": [
+      "FR-4",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U10",
+    "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds a TSDoc block with summary, @param value and @returns to each of the 8 static validator methods.",
+    "rules": [
+      "1. Each block is indented two spaces and has: summary, ' *', ' * @param value - The value to check', ' * @returns <text>'; every @returns says the method returns `false` for any non-string value.",
+      "2. isValidApiVersion: the value is either `<version>` or `<group>/<version>`; `<group>` must pass {@link CommonValidatorFunctions.isValidDnsSubdomain} (at most 253 characters of dot-separated lowercase DNS labels); `<version>` is 1 to 63 ASCII letters or digits; a value with more than one `/` is invalid.",
+      "3. isValidKind: 1 to 63 characters, starting with an ASCII letter followed only by ASCII letters or digits (for example `Component`).",
+      "4. isValidObjectName: 1 to 63 characters of ASCII letters, digits, `-`, `_` and `.`, starting and ending with a letter or digit.",
+      "5. isValidNamespace: delegates to {@link CommonValidatorFunctions.isValidDnsLabel}: 1 to 63 characters of lowercase letters and digits, where hyphens may appear only between them (not first or last).",
+      "6. isValidLabelKey and isValidAnnotationKey (same rule, separate blocks): the value is `<name>` or `<prefix>/<name>`; `<prefix>` must pass {@link CommonValidatorFunctions.isValidDnsSubdomain} and `<name>` must pass {@link KubernetesValidatorFunctions.isValidObjectName}; a value with more than one `/` is invalid.",
+      "7. isValidLabelValue: the empty string, or a value that passes {@link KubernetesValidatorFunctions.isValidObjectName}.",
+      "8. isValidAnnotationValue: any string, including the empty string; there is no length or character limit."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "static isValidApiVersion(value: unknown): boolean {",
+        "rule": "isValidApiVersion block (rules 1-2)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 38,
+        "to": 38,
+        "first_line": "static isValidKind(value: unknown): boolean {",
+        "rule": "isValidKind block (rules 1, 3)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 47,
+        "to": 47,
+        "first_line": "static isValidObjectName(value: unknown): boolean {",
+        "rule": "isValidObjectName block (rules 1, 4)."
+      },
+      {
+        "id": "S4",
+        "at": "insert_before",
+        "from": 56,
+        "to": 56,
+        "first_line": "static isValidNamespace(value: unknown): boolean {",
+        "rule": "isValidNamespace block (rules 1, 5)."
+      },
+      {
+        "id": "S5",
+        "at": "insert_before",
+        "from": 60,
+        "to": 60,
+        "first_line": "static isValidLabelKey(value: unknown): boolean {",
+        "rule": "isValidLabelKey block (rules 1, 6)."
+      },
+      {
+        "id": "S6",
+        "at": "insert_before",
+        "from": 69,
+        "to": 69,
+        "first_line": "static isValidLabelValue(value: unknown): boolean {",
+        "rule": "isValidLabelValue block (rules 1, 7)."
+      },
+      {
+        "id": "S7",
+        "at": "insert_before",
+        "from": 75,
+        "to": 75,
+        "first_line": "static isValidAnnotationKey(value: unknown): boolean {",
+        "rule": "isValidAnnotationKey block (rules 1, 6)."
+      },
+      {
+        "id": "S8",
+        "at": "insert_before",
+        "from": 84,
+        "to": 84,
+        "first_line": "static isValidAnnotationValue(value: unknown): boolean {",
+        "rule": "isValidAnnotationValue block (rules 1, 8)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+      "lines": [68, 80],
+      "reason": "Static validator method TSDoc with '@param value - The value to check'."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+        "lines": [26, 97],
+        "reason": "Helpers the methods delegate to (prefix/suffix split, DNS subdomain, DNS label)."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-5",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U11",
+    "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc to DefaultNamespaceEntityPolicy.enforce.",
+    "rules": [
+      "1. Summary: fills in `metadata.namespace` with the namespace given to the constructor (`default` unless another is passed) when the entity has none.",
+      "2. '@param entity - The entity to process'.",
+      "3. '@returns' text: the same entity object, unchanged, if `metadata.namespace` is set to a non-empty value; otherwise a new entity object, deep-merged from the input over the default namespace, so the input entity is not modified.",
+      "4. Do not claim an empty-string or `null` namespace is replaced (the merge keeps the entity's own value); do not add @throws (the method throws no error of its own)."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert the enforce block, indented two spaces (rules 1-4)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/policies/types.ts",
+      "lines": [25, 35],
+      "reason": "The EntityPolicy.enforce TSDoc these methods implement."
+    },
+    "depends_on": [],
+    "covers": [
+      "FR-6",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U12",
+    "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc to FieldFormatEntityPolicy.enforce.",
+    "rules": [
+      "1. Summary: checks the format of the entity envelope fields with the validators given to the constructor (by default those of {@link makeValidator}).",
+      "2. @remarks lists, in order: `apiVersion`, `kind` and `metadata.name` must be present; `metadata.namespace` is checked only when it is not `undefined`; every label key and value, annotation key and value, and tag is checked; each entry in `metadata.links` needs a valid `url`, and its `title` and `icon` must be non-empty strings when not `undefined`; `spec` is not checked.",
+      "3. '@param entity - The entity to check'.",
+      "4. '@returns' text: the same entity object, unchanged.",
+      "5. '@throws' text: an `Error` naming the field when a required field is `undefined` or `null`, when a validator throws, or when a value fails its validator; for a known validator the message describes the expected format and links to the catalog file format documentation."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 43,
+        "to": 43,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert the enforce block, indented two spaces (rules 1-5)."
+      }
+    ],
+    "style_from": { "unit": "U11", "reason": "Same enforce block shape." },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/validation/makeValidator.ts",
+        "lines": [17, 50],
+        "reason": "Default validators the policy uses."
+      }
+    ],
+    "depends_on": ["U11"],
+    "covers": [
+      "FR-6",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc to GroupDefaultParentEntityPolicy.enforce.",
+    "rules": [
+      "1. Summary: sets `spec.parent` of a `Group` entity that has none to the parent group reference given to the constructor, stored in lowercase `group:<namespace>/<name>` form.",
+      "2. @remarks: only entities whose `kind` is exactly `Group` (case-sensitive) are affected; a group that already has a `spec.parent` is left as is; the configured parent group itself is never given itself as parent; the entity is modified in place.",
+      "3. '@param entity - The entity to process'.",
+      "4. '@returns' text: the same entity object that was passed in, with `spec.parent` set where rule 1 applies.",
+      "5. '@throws' text: a `TypeError` if a `Group` entity has no `spec` object; the method throws no error of its own."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 51,
+        "to": 51,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert the enforce block, indented two spaces (rules 1-5)."
+      }
+    ],
+    "style_from": { "unit": "U11", "reason": "Same enforce block shape." },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/entity/ref.ts",
+        "lines": [130, 158],
+        "reason": "stringifyEntityRef lowercases the parent reference and the compared entity reference."
+      }
+    ],
+    "depends_on": ["U11"],
+    "covers": [
+      "FR-6",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc to NoForeignRootFieldsEntityPolicy.enforce.",
+    "rules": [
+      "1. Summary: checks that every top-level field of the entity is in the list of known fields given to the constructor, which defaults to `apiVersion`, `kind`, `metadata` and `spec`.",
+      "2. @remarks: with the default list, an entity that has `relations` or `status` at the top level is rejected.",
+      "3. '@param entity - The entity to check'.",
+      "4. '@returns' text: the same entity object, unchanged.",
+      "5. '@throws' text: an `Error` with the message `Unknown field <name>` for the first top-level field that is not in the list."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert the enforce block, indented two spaces (rules 1-5)."
+      }
+    ],
+    "style_from": { "unit": "U11", "reason": "Same enforce block shape." },
+    "depends_on": ["U11"],
+    "covers": [
+      "FR-6",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U15",
+    "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc to SchemaValidEntityPolicy.enforce.",
+    "rules": [
+      "1. Summary: validates the entity against the entity envelope JSON schema, which requires `apiVersion`, `kind` and `metadata`, allows only the top-level fields `apiVersion`, `kind`, `metadata`, `spec`, `relations` and `status`, and checks `metadata` against the shared metadata schema.",
+      "2. @remarks: `spec` is only required to be an object when present; kind-specific spec fields are not validated here. The schema is compiled on the first call and reused afterwards.",
+      "3. '@param entity - The entity to validate'.",
+      "4. '@returns' text: the same entity object, unchanged, when it is valid.",
+      "5. '@throws' text: an `Error` whose message starts with `Malformed envelope,` and describes the first schema violation and its path (`<root>` for the top level)."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 38,
+        "to": 38,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert the enforce block, indented two spaces (rules 1-5)."
+      }
+    ],
+    "style_from": { "unit": "U11", "reason": "Same enforce block shape." },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/Entity.schema.json",
+        "reason": "The envelope schema the method compiles."
+      }
+    ],
+    "depends_on": ["U11"],
+    "covers": [
+      "FR-6",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U16",
+    "path": ".changeset/catalog-model-tsdoc.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "New patch changeset for @backstage/catalog-model announcing the added API documentation.",
+    "rules": [
+      "1. Front matter is exactly three lines: '---', \"'@backstage/catalog-model': patch\", '---'; then one blank line and one message paragraph.",
+      "2. Message: 'Added API documentation for the fields of the built-in entity kind types, the entity kind type guards, the Kubernetes-style validation functions, and the built-in entity policies.'",
+      "3. Name no other package and no code symbol (no function, class, method or variable names); no copyright header."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-catalog-placeholders.md",
+      "reason": "Changeset front matter and message format."
+    },
+    "depends_on": [
+      "U01",
+      "U02",
+      "U03",
+      "U04",
+      "U05",
+      "U06",
+      "U07",
+      "U08",
+      "U09",
+      "U10",
+      "U11",
+      "U12",
+      "U13",
+      "U14",
+      "U15"
+    ],
+    "covers": ["FR-7", "FR-8", "AC-1", "AC-6"],
+    "checks": ["prettier"]
+  }
+]

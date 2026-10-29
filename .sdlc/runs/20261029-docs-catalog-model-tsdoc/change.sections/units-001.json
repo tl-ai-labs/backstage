@@ -1,0 +1,516 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of ApiEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `API`.'",
+      "3. S3 block: summary 'The specification of the API.', then a sentence stating that `type`, `lifecycle`, `owner` and `definition` are required and `system` is optional.",
+      "4. S3 continues: `type` is the type of the API definition, `lifecycle` its lifecycle state, `owner` an entity reference to the owner, `definition` the API definition in the format given by `type`, and `system` an entity reference to the system the API belongs to.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'API';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/Entity.ts",
+      "lines": [28, 53],
+      "reason": "Member-level TSDoc blocks on apiVersion, kind and spec of the base Entity type."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/API.v1alpha1.schema.json",
+        "reason": "Field descriptions of the API kind spec."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/catalog-model/src/kinds/ComponentEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of ComponentEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `Component`.'",
+      "3. S3 block: summary 'The specification of the component.', then a sentence stating that `type`, `lifecycle` and `owner` are required and the other fields are optional.",
+      "4. S3 continues: `type` is the type of component, `lifecycle` its lifecycle state, `owner` an entity reference to the owner; `system` and `subcomponentOf` are entity references to the system and the component it is part of; `providesApis` and `consumesApis` are entity references to the APIs it provides and consumes; `dependsOn` and `dependencyOf` are entity references to the entities it depends on and that depend on it.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'Component';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/Component.v1alpha1.schema.json",
+        "reason": "Field descriptions of the Component kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/catalog-model/src/kinds/DomainEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of DomainEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `Domain`.'",
+      "3. S3 block: summary 'The specification of the domain.', then a sentence stating that `owner` is required and `subdomainOf` and `type` are optional.",
+      "4. S3 continues: `owner` is an entity reference to the owner, `subdomainOf` an entity reference to the domain this domain is part of, and `type` a free-form type with no enforced set of values.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'Domain';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/Domain.v1alpha1.schema.json",
+        "reason": "Field descriptions of the Domain kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/catalog-model/src/kinds/GroupEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of GroupEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `Group`.'",
+      "3. S3 block: summary 'The specification of the group.', then a sentence stating that `type` and `children` are required and `profile`, `parent` and `members` are optional.",
+      "4. S3 continues: `type` is a free-form group type with no enforced set of values; `children` lists entity references to the immediate child groups and may be empty; `profile` holds optional `displayName`, `email` and `picture` display fields; `parent` is an entity reference to the immediate parent group; `members` lists entity references to the users that are members of the group.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 28,
+        "to": 28,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "kind: 'Group';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 30,
+        "to": 30,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/Group.v1alpha1.schema.json",
+        "reason": "Field descriptions of the Group kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U05",
+    "path": "packages/catalog-model/src/kinds/LocationEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of LocationEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `Location`.'",
+      "3. S3 block: summary 'The specification of the location.', then a sentence stating that all of its fields are optional.",
+      "4. S3 continues: `type` is the location type common to the targets; `target` is a single target and `targets` a list of targets, each an absolute path or URL, or a relative path resolved against the location of this Location entity; `presence` is `required` or `optional` and states whether a target that cannot be found is an error.",
+      "5. Do not state a default for `type` or `presence`; the type declares none.",
+      "6. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 28,
+        "to": 28,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "kind: 'Location';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 30,
+        "to": 30,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-5)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/Location.v1alpha1.schema.json",
+        "reason": "Field descriptions of the Location kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/catalog-model/src/kinds/ResourceEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of ResourceEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `Resource`.'",
+      "3. S3 block: summary 'The specification of the resource.', then a sentence stating that `type` and `owner` are required and the other fields are optional.",
+      "4. S3 continues: `type` is the type of resource and `owner` an entity reference to the owner; `dependsOn` and `dependencyOf` are entity references to the entities it depends on and that depend on it; `system` is an entity reference to the system the resource belongs to.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'Resource';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/Resource.v1alpha1.schema.json",
+        "reason": "Field descriptions of the Resource kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U07",
+    "path": "packages/catalog-model/src/kinds/SystemEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of SystemEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `System`.'",
+      "3. S3 block: summary 'The specification of the system.', then a sentence stating that `owner` is required and `domain` and `type` are optional.",
+      "4. S3 continues: `owner` is an entity reference to the owner, `domain` an entity reference to the domain the system belongs to, and `type` a free-form type with no enforced set of values.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'System';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/System.v1alpha1.schema.json",
+        "reason": "Field descriptions of the System kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U08",
+    "path": "packages/catalog-model/src/kinds/UserEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds TSDoc blocks to the apiVersion, kind and spec members of UserEntityV1alpha1.",
+    "rules": [
+      "1. S1 block text: 'The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.'",
+      "2. S2 block text: 'The kind of the entity, always `User`.'",
+      "3. S3 block: summary 'The specification of the user.', then: `profile` is optional and holds optional `displayName`, `email` and `picture` display fields; `memberOf` lists entity references to the groups the user is a direct member of.",
+      "4. Do not call `memberOf` required or optional: the type marks it optional while the kind JSON schema requires it.",
+      "5. Indent each block two spaces, matching the member it precedes; add no blank lines."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 28,
+        "to": 28,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Insert the apiVersion block (rule 1)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "kind: 'User';",
+        "rule": "Insert the kind block (rule 2)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 30,
+        "to": 30,
+        "first_line": "spec: {",
+        "rule": "Insert the spec block (rules 3-4)."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Same three member blocks on a sibling kind interface."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/schema/kinds/User.v1alpha1.schema.json",
+        "reason": "Field descriptions of the User kind spec."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "AC-3",
+      "AC-7"
+    ],
+    "checks": ["prettier", "eslint", "comment-only"]
+  }
+]

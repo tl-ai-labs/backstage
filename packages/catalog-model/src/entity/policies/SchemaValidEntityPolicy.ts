@@ -35,6 +35,24 @@ import { EntityPolicy } from './types';
 export class SchemaValidEntityPolicy implements EntityPolicy {
   private validate: ValidateFunction<Entity> | undefined;
 
+  /**
+   * Validates the entity against the entity envelope JSON schema, which
+   * requires `apiVersion`, `kind` and `metadata`, allows only the top-level
+   * fields `apiVersion`, `kind`, `metadata`, `spec`, `relations` and `status`,
+   * and checks `metadata` against the shared metadata schema.
+   *
+   * @remarks
+   *
+   * `spec` is only required to be an object when present; kind-specific spec
+   * fields are not validated here. The schema is compiled on the first call and
+   * reused afterwards.
+   *
+   * @param entity - The entity to validate
+   * @returns The same entity object, unchanged, when it is valid
+   * @throws An `Error` whose message starts with `Malformed envelope,` and
+   *         describes the first schema violation and its path (`<root>` for the
+   *         top level)
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (!this.validate) {
       const ajv = new Ajv({ allowUnionTypes: true });
