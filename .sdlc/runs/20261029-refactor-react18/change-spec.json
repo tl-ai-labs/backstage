@@ -1,0 +1,962 @@
+{
+  "header": {
+    "conventions": [
+      "Every source file (.ts/.tsx/.js) carries the Apache 2.0 notice header; eslint owns it (notice/notice, onNonMatchingHeader: 'replace'). This change creates no source file, so never touch an existing header: years here span 2020-2026 (useRouteRef.tsx 2020, config.ts 2020, testingLibrary.ts 2026) and must not be advanced or tidied.",
+      "Default and namespace imports from 'react' are lint errors (no-restricted-syntax): named imports only, as in `import { useMemo } from 'react'`. The rule targets 'react' only, not 'react-dom'.",
+      "Prettier owns all formatting and is run as the check's write form before the check: write the statement, never hand-wrap to a column, and never reflow a line you were not given a site for.",
+      "A package.json edit writes valid JSON in the existing key order. A pre-commit hook re-sorts every staged manifest (scripts/sort-package-json.mjs), so key order is not yours to choose.",
+      "Generated files are never typed: the 56 peer-range manifests come from the constants in packages/repo-tools/src/commands/peer-deps/peer-deps.ts via `backstage-repo-tools peer-deps --fix`, and packages/test-utils/report.api.md from `yarn build:api-reports`. Both are produced by tooling units in this spec.",
+      "Test idioms are package-local, per AGENTS.md: packages/test-utils destructures `rendered.getByText` and has a local withLogCollector helper; packages/ui uses `screen` and `renderHook`; packages/frontend-dev-utils/src/createDevApp.test.tsx uses jest.isolateModules + require, process.env save/restore and jest.setTimeout(15000). Match the file you edit, not a repo-wide style.",
+      "A changeset file is frontmatter with single-quoted package names one per line, a blank line, then prose. Filenames are descriptive kebab-case. Never invoke the changesets CLI; write the file directly.",
+      "Breaking-change prose carries a leading **BREAKING** marker. Bump level follows the package version: minor below 1.0.0, major at or above it.",
+      "This is a refactor under NFR-1 (no visible change for React 18 users): change nothing outside a named site. No opportunistic renames, no reordering, no rewriting a surviving waitFor, no removing a comment you were not told to remove."
+    ],
+    "decisions": [
+      {
+        "topic": "How the React 18 peer ranges reach the 56 manifests",
+        "choice": "Edit the constants in packages/repo-tools/src/commands/peer-deps/peer-deps.ts, then propagate with a tooling unit running `backstage-repo-tools peer-deps --fix`.",
+        "rejected": [
+          "Typed units that hand-write the 56 package.json peer blocks",
+          "A find/replace of '^17.0.0 || ^18.0.0' across the repo"
+        ],
+        "reason": "CI runs `yarn lint:peer-deps` (.github/workflows/ci.yml:111) and fails any manifest disagreeing with those constants; plugins/permission-react has no react-router-dom peer and plugins/scaffolder-react carries react-router ^6.30.3 beside react-router-dom ^6.30.2, both of which a block replacement corrupts."
+      },
+      {
+        "topic": "The lazy-Promise boundary at the three render sites",
+        "choice": "Keep a module-scoped `const ReactDOMPromise = import('react-dom/client');` and render inside `.then()`.",
+        "rejected": [
+          "`import { createRoot } from 'react-dom/client'` at the top of the file",
+          "await at module scope"
+        ],
+        "reason": "A static import makes rendering synchronous and changes observable timing that existing waitFor assertions depend on; NFR-2 and AC-8 require the async boundary to survive."
+      },
+      {
+        "topic": "The bare `import 'react-dom';` side-effect lines at packages/dev-utils/src/devApp/render.tsx:53 and packages/frontend-dev-utils/src/createDevApp.tsx:24",
+        "choice": "Leave both lines exactly as they are.",
+        "rejected": [
+          "Removing them together with the conditional ReactDOM import"
+        ],
+        "reason": "No requirement names them, they exist to keep the dependency resolvable for the bundler, and removing them would change module resolution — outside this refactor's invariant."
+      },
+      {
+        "topic": "startFrontend's React-17 deprecation warning once the hasReactDomClient probe is gone",
+        "choice": "Delete the conditional warning with the probe, and state React 18 as the minimum in server.ts's checkReactVersion banner, which serveBundle runs on the same start path.",
+        "rejected": [
+          "Keeping the warning unconditionally in startFrontend",
+          "Replacing the probe with a react/package.json version read inside startFrontend"
+        ],
+        "reason": "With the probe removed there is no condition left to test, and inventing an unconditional or newly-written diagnostic is new behaviour, not a refactor. FR-12's 'React 18 as the minimum' is satisfied by the existing diagnostic in checkReactVersion."
+      },
+      {
+        "topic": "Bump level for the peer-range narrowing across the 54 affected published packages",
+        "choice": "patch for all 54, with prose stating React 18 is now the minimum supported version.",
+        "rejected": [
+          "major for every package at or above 1.0.0 and minor for every 0.x package",
+          "minor with a **BREAKING** marker for all 54"
+        ],
+        "reason": "Gate 0 decided the @backstage/test-utils major is the release train's only major, and the repo's own precedent for narrowing a peer range is a patch (packages/theme, react-router-dom ^6.30.2, CHANGELOG.md:24). React 17 is already deprecated in Backstage, so the range change records an already-deprecated state."
+      },
+      {
+        "topic": "Where @backstage/ui's changeset lives",
+        "choice": "Its own file in the mandated .changeset/README.md format, ending `**Affected components:** none`.",
+        "rejected": ["Naming @backstage/ui in the multi-package changesets"],
+        "reason": "@backstage/ui already carries React-18-only peers (it is not one of the 56 affected manifests), its only change here is the use-sync-external-store swap, and the mandated `**Affected components:**` line is not relevant to the other packages. AGENTS.md asks for separate changesets when messages differ."
+      },
+      {
+        "topic": "Removing packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+        "choice": "A tooling unit running `rm -f` on the file, after both importing files are edited.",
+        "rejected": [
+          "A typed unit that empties the file or replaces it with a stub"
+        ],
+        "reason": "The apply form writes content and cannot express a deletion (NFR-10); the step runs under provenance so /mmo:revert can undo it."
+      },
+      {
+        "topic": "The provenance path of the manifest-and-lockfile propagation step",
+        "choice": "One tooling unit at path yarn.lock running `backstage-repo-tools peer-deps --fix` and then `yarn install --no-immutable`, ordered after every typed manifest edit.",
+        "rejected": [
+          "A tooling unit per manifest",
+          "A glob path such as packages/*/package.json",
+          "Running the fixer before the typed manifest edits"
+        ],
+        "reason": "A tooling unit names one path, and yarn.lock is the only file in this change that no typed unit may write; the 56 manifests are git-tracked output of the repo's own fixer. The fixer re-serializes each manifest from the parsed object, so running it after the typed edits keeps those edits' line-numbered sites valid, while the reverse order would invalidate them."
+      },
+      {
+        "topic": "Whether expectedPeerDeps survives in peer-deps.ts",
+        "choice": "Remove getExpectedPeerDependencies and the local expectedPeerDeps binding, and read the single `peerDependencies` constant directly at all three fix sites.",
+        "rejected": [
+          "Keeping `const expectedPeerDeps = peerDependencies;` as an alias"
+        ],
+        "reason": "FR-1 asks that a single constant govern every package; an alias to a module constant is dead indirection a reviewer would ask to remove."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 180
+      },
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 90
+      },
+      {
+        "id": "node-check",
+        "run": "node --check {path}",
+        "timeout_s": 30
+      },
+      {
+        "id": "jest-file",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      },
+      {
+        "id": "lint-peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "test-scoped",
+        "run": "CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "A single `peerDependencies` constant holding React-18-only ranges governs every package; the React-18-only exception table and its per-package lookup are gone.",
+      "rules": [
+        "This file is the authoritative source for the 56 generated peer-range manifests; a tooling unit later in this spec propagates it. Change only the constants and the lookup, never the command's control flow or its console.error wording.",
+        "S1: the merged constant keeps the same key order, quoting and trailing comma as now, with '@types/react': '^18.0.0', react: '^18.0.0', 'react-dom': '^18.0.0', 'react-router-dom': '^6.30.2'.",
+        "S1: the `// Packages that have dropped React 17 support and only support React 18+` comment, `peerDependenciesReact18Only` and `react18OnlyPackages` all go — React 18-only is now the default for every package, so the exception is redundant.",
+        "S1: leave `desiredLocalVersionsOfDependencies` (lines 28-33) untouched; it governs devDependencies, is already React-18-only, and is a separate table.",
+        "S2: delete `getExpectedPeerDependencies` entirely. Do not replace it with a one-line passthrough.",
+        "S3: `matchesPeerDependency` compares against the module-level `peerDependencies` constant directly, with no local `expected` binding: `packageJson.peerDependencies[dep] === peerDependencies[dep as keyof typeof peerDependencies]`.",
+        "S4: delete the `expectedPeerDeps` local. S5, S6 and S7 are its three read sites, each of which becomes `peerDependencies[<key> as keyof typeof peerDependencies]` with the same key expression it has now (`groupDep` at S5, `dep` at S6 and S7).",
+        "Prettier owns the wrapping of the rewritten expressions; write the statement and let the check's write form format it."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 50,
+          "first_line": "const peerDependencies = {",
+          "last_line": "const react18OnlyPackages = new Set(['@backstage/ui']);",
+          "rule": "One `peerDependencies` constant with React-18-only ranges, replacing the React-17-inclusive table, the React-18-only table and the package set."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 92,
+          "to": 98,
+          "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+          "last_line": "",
+          "rule": "Remove the per-package lookup and the blank line after it, leaving one blank line between `matchesDependency` and `matchesPeerDependency`."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 103,
+          "to": 107,
+          "first_line": "const expected = getExpectedPeerDependencies(packageJson);",
+          "last_line": ");",
+          "rule": "Drop the `expected` local and compare the manifest's peer range against the `peerDependencies` constant directly."
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 145,
+          "to": 145,
+          "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+          "rule": "Remove the per-package expected-table local from the fix loop."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 218,
+          "to": 218,
+          "first_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];",
+          "rule": "Read the group member's range from the `peerDependencies` constant."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 245,
+          "to": 245,
+          "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+          "rule": "Read the corrected range from the `peerDependencies` constant."
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 255,
+          "to": 255,
+          "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+          "rule": "Read the added range from the `peerDependencies` constant."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-1", "AC-2", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U02",
+      "path": "packages/ui/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "No direct `use-sync-external-store` dependency and no `@types/use-sync-external-store` devDependency; React's native hook replaces the shim in this package's source.",
+      "rules": [
+        "S1: the `use-sync-external-store` entry goes and `react-stately` becomes the last key of `dependencies`, so its trailing comma goes with it.",
+        "S2: delete the `@types/use-sync-external-store` devDependency line; the surrounding devDependencies keep their commas.",
+        "Touch nothing else: the `peerDependencies` block of this manifest is already React-18-only and is tool-maintained, and the pre-commit hook re-sorts keys.",
+        "Leave the manifest's 2-space indent and trailing newline as they are."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 59,
+          "first_line": "\"react-stately\": \"~3.51.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "Drop the `use-sync-external-store` dependency, leaving `react-stately` as the final key with no trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 70,
+          "to": 70,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Drop the shim's type package from devDependencies."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-6", "AC-4"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U03",
+      "path": "packages/frontend-plugin-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "No direct `use-sync-external-store` dependency and no `@types/use-sync-external-store` devDependency.",
+      "rules": [
+        "S1: the `use-sync-external-store` entry goes and `@standard-schema/spec` becomes the last key of `dependencies`, so its trailing comma goes with it.",
+        "S2: delete the `@types/use-sync-external-store` devDependency line.",
+        "Touch nothing else in this manifest — its `peerDependencies` block is rewritten by the tooling unit that runs the repo's peer-deps fixer, not by hand."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 52,
+          "to": 53,
+          "first_line": "\"@standard-schema/spec\": \"^1.1.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "Drop the `use-sync-external-store` dependency, leaving `@standard-schema/spec` as the final key with no trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 64,
+          "to": 64,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Drop the shim's type package from devDependencies."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-6", "AC-4"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/app/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "No direct `use-sync-external-store` dependency.",
+      "rules": [
+        "This is a pure manifest removal: no source file in `plugins/app` imports the shim, and this package has no `@types/use-sync-external-store` entry to remove.",
+        "S1: the entry is mid-list, so the keys around it keep their commas and `zen-observable` stays as it is.",
+        "Touch nothing else in this manifest — its `peerDependencies` block is rewritten by the tooling unit that runs the repo's peer-deps fixer."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 78,
+          "to": 78,
+          "first_line": "\"use-sync-external-store\": \"^1.4.0\",",
+          "rule": "Drop the unused `use-sync-external-store` dependency."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-6", "AC-4"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U05",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "The repo's own peer-deps fixer rewrites the 56 generated peer-range manifests from U01's constants, then Yarn updates the lockfile in place to match the narrowed ranges.",
+      "rules": [
+        "The 56 manifests are generated output (NFR-3) — no typed unit in this spec writes a peer block. This step is the only thing that changes them.",
+        "Going through the fixer is what preserves the peer-block outliers: `plugins/permission-react` has no `react-router-dom` peer and `plugins/scaffolder-react` carries `react-router: ^6.30.3` beside `react-router-dom: ^6.30.2` (NFR-7). Both survive because the fixer rewrites only the keys its constants name.",
+        "`yarn install --no-immutable` updates the lockfile incrementally (FR-3); the lockfile is never regenerated from scratch, and `.yarn/patches` and the repo-local Yarn plugin are untouched.",
+        "This step runs after U01 so the fixer reads the new constants, and after U02, U03 and U04 so their line-numbered sites were applied to the manifests before the fixer re-serializes them."
+      ],
+      "run": "yarn backstage-repo-tools peer-deps --fix && yarn install --no-immutable",
+      "depends_on": ["U01", "U02", "U03", "U04"],
+      "covers": ["FR-2", "FR-3", "AC-1", "AC-2", "NFR-3", "NFR-7"]
+    },
+    {
+      "id": "U06",
+      "path": "packages/ui/src/hooks/useBreakpoint.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`useBreakpoint` reads the module-scoped breakpoint store through React's native `useSyncExternalStore`.",
+      "rules": [
+        "Merge `useSyncExternalStore` into the existing named `react` import on line 16 — one `react` import line, not two. A default or namespace import from 'react' is a lint error.",
+        "The call site at lines 106-110 keeps all three arguments, `subscribe`, `getSnapshot`, `getServerSnapshot`: React's native hook has the same signature, and `getServerSnapshot` is the SSR path this refactor preserves.",
+        "Change nothing else — not the store, not `IS_SERVER`, not the comments.",
+        "Do not touch the 2025 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "One named import from 'react' bringing in both `useMemo` and `useSyncExternalStore`; the `use-sync-external-store/shim` import is gone."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-4", "AC-4"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U07",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`useRouteRef` reads the app-lifecycle finalized flag through React's native `useSyncExternalStore`.",
+      "rules": [
+        "Merge `useSyncExternalStore` into the existing named `react` import on line 17 — one `react` import line, not two.",
+        "The call site at line 59 keeps its arguments exactly as they are; React's native hook has the same signature.",
+        "Change nothing else in this file, and do not touch its 2020 copyright header — eslint enforces headers with onNonMatchingHeader 'replace' and the year must not be advanced."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "One named import from 'react' bringing in both `useMemo` and `useSyncExternalStore`; the `use-sync-external-store/shim` import is gone."
+        }
+      ],
+      "style_from": {
+        "unit": "U06",
+        "reason": "The same one-line import merge, so both shim call sites end up identical in shape."
+      },
+      "depends_on": ["U06"],
+      "covers": ["FR-5", "AC-4"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`renderReactElement` renders through `react-dom/client`'s `createRoot` inside the resolved lazy `import('react-dom/client')` Promise, with no React-17 fallback branch.",
+      "rules": [
+        "NFR-2 and AC-8: the lazy-Promise async boundary must survive. S1 produces `const ReactDOMPromise = import('react-dom/client');` at module scope — a dynamic `import()` assigned to a module constant. Do NOT collapse this to a static `import { createRoot } from 'react-dom/client'`: that makes rendering synchronous and changes observable timing that existing waitFor assertions depend on.",
+        "S1: `let` with an explicit union type becomes `const` with the type inferred from the single `import()`; the `process.env.HAS_REACT_DOM_CLIENT` branch and the `react-dom` arm both go.",
+        "S2: the `.then()` callback destructures what it needs — `ReactDOMPromise.then(({ createRoot }) => { createRoot(root).render(element); });` — so the `'createRoot' in ReactDOM` narrowing and the `ReactDOM.render` fallback disappear together.",
+        "Keep the `/** @internal */` tag and the exported function's signature `(element: JSX.Element, root: HTMLElement)` exactly as they are: this is a refactor with no visible change (NFR-1).",
+        "Do not touch the 2023 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 24,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "A single module-scoped `const ReactDOMPromise = import('react-dom/client');` — still a lazy Promise, with the env-flag branch and the `react-dom` arm removed."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 28,
+          "to": 34,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Render inside `.then()` via a destructured `createRoot`, with no `'createRoot' in ReactDOM` check and no `ReactDOM.render` fallback."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-9", "NFR-2", "AC-8"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U09",
+      "path": "packages/dev-utils/src/devApp/render.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The dev app renders into `#root` through `react-dom/client`'s `createRoot` inside the resolved lazy `import('react-dom/client')` Promise, with no React-17 fallback branch.",
+      "rules": [
+        "NFR-2 and AC-8: keep the lazy-Promise async boundary. S1 produces `const ReactDOMPromise = import('react-dom/client');` at module scope. Never a static `import { createRoot } from 'react-dom/client'`.",
+        "S2: `ReactDOMPromise.then(({ createRoot }) => { createRoot(document.getElementById('root')!).render(<DevApp />); });` — the non-null assertion on `getElementById` stays, since the `createRoot` arm already carried it.",
+        "Leave the bare side-effect `import 'react-dom';` on line 53 exactly as it is: no requirement names it, it keeps the dependency resolvable for the bundler, and removing it would change module resolution.",
+        "Change nothing else in this ~340-line file: not `isReactRouterBeta`, not the sidebar builders, not the default-page redirect above the render call. Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 65,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "A single module-scoped `const ReactDOMPromise = import('react-dom/client');`, replacing the typed `let` and the env-flag branch."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 320,
+          "to": 328,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Render `<DevApp />` inside `.then()` via a destructured `createRoot`, dropping the `'createRoot' in ReactDOM` check and the `ReactDOM.render` fallback."
+        }
+      ],
+      "style_from": {
+        "unit": "U08",
+        "reason": "The same conversion on the same lazy-Promise shape; all three render sites should read identically."
+      },
+      "depends_on": ["U08"],
+      "covers": ["FR-7", "NFR-2", "AC-8"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U10",
+      "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`createDevApp` renders the app root through `react-dom/client`'s `createRoot` inside the resolved lazy `import('react-dom/client')` Promise, with no React-17 fallback branch.",
+      "rules": [
+        "NFR-2 and AC-8: keep the lazy-Promise async boundary. S1 produces `const ReactDOMPromise = import('react-dom/client');` at module scope. Never a static `import { createRoot } from 'react-dom/client'`.",
+        "Once the env flag is gone this module no longer reads `process.env` at load time, but the existing test still loads it through `jest.isolateModules` to apply its `doMock`s; do not restructure the module to make that unnecessary.",
+        "S2 changes only the `.then()` parameter to a destructured `({ createRoot })`. The `rootNode` JSX construction on lines 110-118 stays inside the callback, byte-identical.",
+        "S3: the `if ('createRoot' in ReactDOM) / else` block becomes the single statement `createRoot(rootElement).render(rootNode);`.",
+        "Leave the bare side-effect `import 'react-dom';` on line 24 exactly as it is.",
+        "Keep `getRootElement` and its error message verbatim — the missing-root test asserts on that exact string. Do not touch the 2026 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 50,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "A single module-scoped `const ReactDOMPromise = import('react-dom/client');`, replacing the typed `let` and the env-flag branch."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 109,
+          "to": 109,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "rule": "The `.then()` callback destructures `createRoot` from the resolved module instead of binding the whole namespace."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 119,
+          "to": 123,
+          "first_line": "if ('createRoot' in ReactDOM) {",
+          "last_line": "}",
+          "rule": "One `createRoot(rootElement).render(rootNode);` call, with the narrowing check and the `ReactDOM.render` fallback gone."
+        }
+      ],
+      "style_from": {
+        "unit": "U08",
+        "reason": "The same conversion on the same lazy-Promise shape; all three render sites should read identically."
+      },
+      "depends_on": ["U08"],
+      "covers": ["FR-8", "NFR-2", "AC-8"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U11",
+      "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Three tests remain — plugin render, `bindRoutes` forwarding, and the missing-root error — with the legacy `ReactDOM.render` fallback expectation gone.",
+      "rules": [
+        "S1 deletes only the `'should fall back to legacy react-dom rendering when createRoot is unavailable'` test and the blank line before it. That test deletes `process.env.HAS_REACT_DOM_CLIENT` and mocks `react-dom`; both describe behaviour U10 removed.",
+        "Keep `loadCreateDevAppIsolated` — the surviving `bindRoutes` test calls it, and relies on `jest.isolateModules` + `require` to apply its `jest.doMock`s of `@backstage/frontend-defaults`, `@backstage/plugin-app` and `react-dom/client`.",
+        "Keep the `process.env` save/restore (`originalEnv`, the `beforeEach`, the `afterAll`) — the first test still assigns `process.env.APP_CONFIG`.",
+        "Keep `jest.setTimeout(15000)`, the `within(document.body)` + `findByText(..., { timeout: 10000 })` idiom, and the surviving `waitFor` block in the `bindRoutes` test. AGENTS.md prefers `screen` and `.findBy*` over `waitFor`, but this file's own idiom and NFR-1 win: do not opportunistically rewrite assertions this change did not invalidate.",
+        "Add no test. The three survivors already cover mounting, route binding and the error path, which is the coverage FR-10 asks to keep.",
+        "Do not touch the 2026 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 149,
+          "to": 192,
+          "first_line": "",
+          "last_line": "});",
+          "rule": "Remove the legacy-rendering fallback test and the blank line separating it from the missing-root test, leaving the missing-root test as the last case in the describe block."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should render a dev app with a plugin",
+          "given": "a #root element in the document, a frontend plugin with a PageBlueprint page, and APP_CONFIG on process.env",
+          "expect": "the plugin's page text is found in document.body"
+        },
+        {
+          "name": "should forward bindRoutes to createApp",
+          "given": "createApp, plugin-app and react-dom/client mocked via jest.doMock, the module loaded through loadCreateDevAppIsolated, and createDevApp called with bindRoutes",
+          "expect": "createApp receives the bindRoutes option with the app-plugin override prepended to features, createRoot is called with the #root element, and the rendered node carries the BuiCss Suspense boundary plus the app root"
+        },
+        {
+          "name": "should throw a clear error when the root element is missing",
+          "given": "no #root element in the document",
+          "expect": "createDevApp throws the exact missing-root-element message"
+        }
+      ],
+      "depends_on": ["U10"],
+      "covers": ["FR-10", "AC-8"],
+      "checks": ["eslint", "prettier", "jest-file"]
+    },
+    {
+      "id": "U12",
+      "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Neither DefinePlugin branch defines `process.env.HAS_REACT_DOM_CLIENT`, and the bundler config no longer imports the detection module.",
+      "rules": [
+        "This is removal site 1 of three for the flag, and it appears TWICE in this file — once in the webpack DefinePlugin branch (S2) and once in the rspack branch (S3). Both must go; S1 removes the import they share.",
+        "The explanatory comment (`// This allows for conditional imports of react-dom/client, since there's no way / // to check for presence of it in source code without module resolution errors.`) goes with the flag at both sites: it explains only the flag.",
+        "After S2 the webpack branch keeps `process.env.BUILD_INFO` and the `process.env.APP_CONFIG` runtimeValue entry, with the closing `),` on line 271 and the `})` on line 277 unchanged. After S3 the rspack branch keeps `process.env.BUILD_INFO` and its `process.env.APP_CONFIG` entry.",
+        "Remove nothing else from the import block: `yn`, `transforms`, `version`, `createWorkspaceLinkingPlugins`, `ConfigInjectingHtmlWebpackPlugin` and `STATIC_ASSET_HASH_LENGTH` all stay.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37,
+          "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+          "rule": "Drop the import of the detection module, which a later tooling unit deletes."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 272,
+          "to": 276,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the flag and its explanatory comment from the webpack DefinePlugin branch."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 281,
+          "to": 285,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the flag and its explanatory comment from the rspack DefinePlugin branch."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-11", "AC-5", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U13",
+      "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`startFrontend` reads the package manifest and serves the bundle, with no React-DOM-client probe and no conditional React-17 deprecation warning.",
+      "rules": [
+        "This is removal site 2 of three for the detection. S1 removes the import of the module a later tooling unit deletes; S2 removes its only call and the warning it guarded.",
+        "The warning goes rather than becoming unconditional: with the probe removed there is no condition left to test, and React 18 as the stated minimum (FR-12) is carried by the existing diagnostic in `checkReactVersion` (packages/cli-module-build/src/lib/bundler/server.ts), which `serveBundle` runs on this same start path and which U15 updates. Do not write a new diagnostic here.",
+        "S2 takes the blank line before the `if` with it, so one blank line separates `)) as BackstagePackageJson;` from `const waitForExit = await serveBundle({`.",
+        "Leave `StartAppOptions`, the `readJson` call and the whole `serveBundle` options object exactly as they are. Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+          "rule": "Drop the import of the detection module."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 44,
+          "to": 49,
+          "first_line": "",
+          "last_line": "}",
+          "rule": "Remove the probe call and the React-17 deprecation warning it guarded, together with the blank line above them."
+        }
+      ],
+      "uses": [
+        {
+          "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+          "lines": [269, 291],
+          "reason": "The React-version diagnostic that survives on this start path, so the typist can see that removing the warning here leaves the minimum-version message stated elsewhere."
+        }
+      ],
+      "depends_on": ["U12"],
+      "covers": ["FR-12", "AC-5", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U14",
+      "path": "packages/cli-module-test-jest/config/jest.js",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The shared jest config no longer probes for `react-dom/client` and no longer sets `process.env.HAS_REACT_DOM_CLIENT`.",
+      "rules": [
+        "This is removal site 3 of three: an independent copy of the `require.resolve` probe, not an import of the detection module. It must be removed even though this file never referenced `hasReactDomClient`.",
+        "S1 takes the blank line above the `try` block with it, so one blank line separates the `envOptions` object's closing `};` from the `/**` of the projectConfigKeys doc comment.",
+        "Leave `envOptions` and everything below the deleted block alone — this file also selects the jest environment from `backstage.role`, which this change does not touch.",
+        "This file is eslint-ignored by the package's own `.eslintrc.js` (`ignorePatterns: ['config/**']`), so it is checked with `node --check` and prettier only. It is CommonJS: keep `require`, do not convert anything to ESM.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 51,
+          "to": 59,
+          "first_line": "",
+          "last_line": "}",
+          "rule": "Remove the `react-dom/client` require.resolve probe, its `process.env.HAS_REACT_DOM_CLIENT` assignment, its ignored catch, and the blank line above the try block."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-13", "AC-5", "AC-9"],
+      "checks": ["node-check", "prettier"]
+    },
+    {
+      "id": "U15",
+      "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`checkReactVersion`'s React-16 deprecation banner directs users to React 18 as the minimum.",
+      "rules": [
+        "One character changes: `React 17` becomes `React 18` in the banner's third line. Nothing else on that line moves.",
+        "The banner's column alignment is hand-maintained — the trailing spaces before the closing warning emoji are what keep all four lines the same width. `17` and `18` are both two characters, so reproduce the line with exactly the same leading and trailing whitespace. Do not reflow, re-pad or reword it.",
+        "Leave the React-16 detection logic, the `require.resolve('react/package.json')` call and the `startsWith('16.')` test as they are: this run narrows the peer range, it does not change what the CLI detects.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 282,
+          "to": 282,
+          "first_line": "⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️",
+          "rule": "The same line with `React 18` in place of `React 17`, byte-identical in every other position so the banner stays aligned."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-15", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U16",
+      "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "The obsolete React-DOM-client detection module is deleted from the tree.",
+      "rules": [
+        "NFR-10: the apply form writes content and cannot express a deletion, so this is a shell step. It runs under provenance, so /mmo:revert can undo it.",
+        "It runs after U12 and U13, the only two files that import this module; deleting it first would leave the tree un-typecheckable between packets.",
+        "After this step `hasReactDomClient` appears nowhere in the tree outside CHANGELOG and docs/releases history, which AC-5 asks for and which the project typecheck confirms."
+      ],
+      "run": "rm -f packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "depends_on": ["U12", "U13"],
+      "covers": ["FR-14", "AC-5", "NFR-10"]
+    },
+    {
+      "id": "U17",
+      "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`renderWithEffects` takes only the wrapper render option; the `@public` `LegacyRootOption` type is gone from the package's public API.",
+      "rules": [
+        "S1 removes the whole doc comment and the type declaration together. The type is `@public`, so this is a breaking change to `@backstage/test-utils` — U21 writes its major changeset, and U24 regenerates the API report.",
+        "The type is re-exported through the star export in `packages/test-utils/src/testUtils/index.tsx` (`export * from './testingLibrary';`), so removing it needs no barrel edit.",
+        "S2: the options parameter becomes `options?: Pick<RenderOptions, 'wrapper'>`. Keep the parameter optional and keep its name.",
+        "`RenderOptions` is still used by S2's type, so leave the `@testing-library/react` import block (lines 18-23) exactly as it is.",
+        "Leave `renderWithEffects`'s `@public` doc comment and its act-wrapping body untouched; this is a signature narrowing, not a behaviour change (NFR-1).",
+        "Do not touch the 2026 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 25,
+          "to": 31,
+          "first_line": "/**",
+          "last_line": "",
+          "rule": "Remove the `LegacyRootOption` doc comment, its declaration and the blank line after it, so the `renderWithEffects` doc comment follows the imports with one blank line between."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 46,
+          "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+          "rule": "The options parameter is `Pick<RenderOptions, 'wrapper'>` only, with the intersection removed."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-16", "AC-6"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U18",
+      "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`renderInTestApp` takes only `TestAppOptions` and forwards just the wrapper to `renderWithEffects`.",
+      "rules": [
+        "S1: the import keeps only `renderWithEffects` — `import { renderWithEffects } from './testingLibrary';`.",
+        "S2: the options parameter becomes `options: TestAppOptions = {},` — the `& LegacyRootOption` intersection goes, the default `{}` stays.",
+        "S3 removes the `const { legacyRoot } = options;` destructuring and the blank line below it, so `return renderWithEffects(...)` follows the wrapped-element `if/else` with one blank line between.",
+        "S4 removes the `legacyRoot,` property, leaving `renderWithEffects(wrappedElement, { wrapper: createTestAppWrapper(options) })`. Prettier decides whether that object stays multi-line; let the check's write form settle it.",
+        "`wrapInTestApp` above (lines 228-242) already takes plain `TestAppOptions` and is not part of this change.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+          "rule": "Import `renderWithEffects` alone; the removed type is no longer available."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257,
+          "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+          "rule": "The options parameter is `TestAppOptions` with its `{}` default and no intersection."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 265,
+          "to": 266,
+          "first_line": "const { legacyRoot } = options;",
+          "last_line": "",
+          "rule": "Remove the `legacyRoot` destructuring and the blank line that followed it."
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 269,
+          "to": 269,
+          "first_line": "legacyRoot,",
+          "rule": "Stop forwarding `legacyRoot` to `renderWithEffects`."
+        }
+      ],
+      "style_from": {
+        "unit": "U17",
+        "reason": "The same removal on the other side of the same API; the two files must agree on `renderWithEffects`'s options type."
+      },
+      "depends_on": ["U17"],
+      "covers": ["FR-17", "AC-6"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U19",
+      "path": "packages/test-utils/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "The generated API report for @backstage/test-utils is regenerated so that `LegacyRootOption` is gone from the declaration and from both render signatures.",
+      "rules": [
+        "FR-18 and NFR-3: this file is generated by API Extractor, its own header says not to edit it, and it is listed in .prettierignore. No typed unit writes it — this step produces it.",
+        "`LANG=en_US.UTF-8` is set deliberately: locale affects sort order in the output, and a different locale produces spurious diffs. The repo's own `build:api-reports:only` script sets it for the same reason.",
+        "It runs after U17 and U18, the two source edits whose public surface it reports.",
+        "The step is repo-wide and memory-hungry; the root script already carries `--max-old-space-size=8192`.",
+        "Three places in this file change: the `LegacyRootOption` declaration (lines 72-76) and the `options?` lines of `renderInTestApp` (line 323) and `renderWithEffects` (line 329). `report-alpha.api.md` does not mention the type and should come out unchanged."
+      ],
+      "run": "yarn build:api-reports",
+      "depends_on": ["U17", "U18"],
+      "covers": ["FR-18", "AC-3", "NFR-3"]
+    },
+    {
+      "id": "U20",
+      "path": ".changeset/react18-peer-dependencies.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A patch changeset covering the React-18-only peer-range narrowing for the 53 affected published packages other than @backstage/test-utils.",
+      "rules": [
+        "Frontmatter: single-quoted package name and `: patch` on its own line, one per package, in alphabetical order, then `---`, a blank line, and one paragraph of prose.",
+        "The 53 names, in order (1 of 8): '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-compat-api', '@backstage/core-components', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/frontend-app-api'.",
+        "(2 of 8): '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/integration-react', '@backstage/module-federation-common'.",
+        "(3 of 8): '@backstage/plugin-api-docs', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-app', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-auth', '@backstage/plugin-auth-react'.",
+        "(4 of 8): '@backstage/plugin-catalog', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import', '@backstage/plugin-catalog-react', '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools'.",
+        "(5 of 8): '@backstage/plugin-devtools-react', '@backstage/plugin-home', '@backstage/plugin-home-react', '@backstage/plugin-kubernetes', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-mui-to-bui'.",
+        "(6 of 8): '@backstage/plugin-notifications', '@backstage/plugin-org', '@backstage/plugin-org-react', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-scaffolder-react'.",
+        "(7 of 8): '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-signals', '@backstage/plugin-signals-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib'.",
+        "(8 of 8): '@backstage/plugin-techdocs-react', '@backstage/plugin-user-settings', '@backstage/theme', '@backstage/version-bridge'.",
+        "Name exactly those 53 and no others. @backstage/test-utils is deliberately absent — U21 carries it at a higher bump. @backstage/ui is absent because it already required React 18. The two private manifests, `app-example-plugin` and `@internal/plugin-todo-list`, must never appear in a changeset.",
+        "The prose is one paragraph for adopters: React 18 is now the minimum supported React version, React 17 is no longer accepted by these packages' peer dependency ranges, and React 17 was already deprecated in Backstage. Plain language only — no file paths, no constant names, no mention of the peer-deps tooling.",
+        "patch, not minor or major: Gate 0 decided @backstage/test-utils carries the release train's only major, and the repo's own precedent for narrowing a peer range is a patch. Do not add a **BREAKING** marker here.",
+        "This message exists in no pending changeset. The three existing ones that name packages this run touches — `deep-plugin-extensions.md`, `quiet-wolves-listen.md` (@backstage/frontend-plugin-api) and `techdocs-toc-alignment.md` (@backstage/plugin-techdocs) — describe unrelated behaviour, so they are left exactly as they are and this file is added alongside them."
+      ],
+      "style_from": {
+        "path": ".changeset/type-only-deps-kubernetes.md",
+        "reason": "A multi-package patch changeset: the frontmatter quoting, the blank line, and the single adopter-facing paragraph."
+      },
+      "depends_on": ["U05"],
+      "covers": ["FR-19", "AC-7"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U21",
+      "path": ".changeset/test-utils-remove-legacy-root-option.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A major changeset for @backstage/test-utils covering the removal of the public legacy-root render option and the React-18-only peer requirement.",
+      "rules": [
+        "Frontmatter names exactly one package: `'@backstage/test-utils': major`.",
+        "major, not minor: @backstage/test-utils is at 1.7.24-next.0, and the repo's rule is major for a breaking change at or above 1.0.0.",
+        "The prose opens with the `**BREAKING**` marker, as the repo marks breaking changes in prose.",
+        "Two things in one paragraph each: the public legacy-root option is removed from the test render helpers, so tests that passed it must drop it (it only existed to support React 17 and React Testing Library's legacy root); and React 18 is now the minimum supported React version, with React 17 no longer accepted by the peer dependency ranges.",
+        "Write it for adopters: name the option as adopters pass it, not the removed type's name, and do not name files, line numbers or internal helpers.",
+        "This is the release train's only major among the pending changesets. Write it as the repo's rule requires; the run's final report flags the sequencing to the release owner."
+      ],
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "reason": "The repo's shape for a breaking change: the leading **BREAKING** marker and adopter-facing prose about what a test must now do differently."
+      },
+      "depends_on": ["U17", "U18", "U19"],
+      "covers": ["FR-20", "AC-7"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U22",
+      "path": ".changeset/ui-native-use-sync-external-store.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A patch changeset for @backstage/ui, in the package's mandated format, covering the move to React's built-in external-store hook and the dropped direct dependency.",
+      "rules": [
+        "Frontmatter names exactly one package: `'@backstage/ui': patch`.",
+        "The mandated @backstage/ui format from `.changeset/README.md` applies and nothing else does: no markdown headings (`##`, `###`) anywhere in the body — bold markers only — and the file must END with an `**Affected components:**` line.",
+        "The closing line is `**Affected components:** none` — this change touches a hook, not a component, and no component in the package consumes it.",
+        "No `**Migration:**` section: this is not a breaking change. The package already required React 18, its public hook keeps the same name and signature, and the only visible effect is one fewer transitive install.",
+        "The prose is a brief summary: the breakpoint hook now uses React's built-in external-store subscription, and the separate shim package is no longer installed as a dependency.",
+        "Do not mark this **BREAKING**, and do not name @backstage/ui in any other changeset of this change — its message differs from every other package's."
+      ],
+      "style_from": {
+        "path": ".changeset/README.md",
+        "lines": [12, 44],
+        "reason": "The mandated @backstage/ui changeset format, with its required closing line and the no-headings rule, stated in the repo's own words."
+      },
+      "depends_on": ["U02", "U06"],
+      "covers": ["FR-21", "AC-7"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U23",
+      "path": ".changeset/drop-use-sync-external-store-dependency.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A patch changeset for @backstage/frontend-plugin-api and @backstage/plugin-app covering the dropped direct external-store shim dependency.",
+      "rules": [
+        "Frontmatter names exactly two packages, alphabetically: `'@backstage/frontend-plugin-api': patch` then `'@backstage/plugin-app': patch`.",
+        "One paragraph that is true of both packages: the separate external-store shim package is no longer installed as a dependency, since React's built-in hook is used instead. @backstage/frontend-plugin-api swapped the import; @backstage/plugin-app never imported it and only declared it.",
+        "Do not name @backstage/ui here — it has its own mandated-format changeset (U22).",
+        "No public API changes, so no **BREAKING** marker and no minor bump. The React 18 minimum for both packages is covered by U20's changeset; do not repeat it here.",
+        "Internal refactoring gets no separate entry per the repo's rules: this changeset exists because a published package's declared dependencies changed, not because the import moved."
+      ],
+      "style_from": {
+        "path": ".changeset/type-only-deps-kubernetes.md",
+        "reason": "The repo's precedent for a multi-package patch about a dependency declaration moving or going away."
+      },
+      "depends_on": ["U03", "U04", "U07"],
+      "covers": ["FR-19", "AC-7"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U24",
+      "path": ".changeset/cli-require-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A minor changeset for @backstage/cli-module-build and @backstage/cli-module-test-jest covering the removal of the react-dom/client build flag and React 18 as the stated minimum.",
+      "rules": [
+        "Frontmatter names exactly two packages, alphabetically: `'@backstage/cli-module-build': minor` then `'@backstage/cli-module-test-jest': minor`.",
+        "minor, not major: both packages are below 1.0.0, and the repo's rule is minor for a breaking change below 1.0.0.",
+        "The prose opens with `**BREAKING**`: frontend builds and tests no longer define the `process.env.HAS_REACT_DOM_CLIENT` flag, so any app or plugin source that reads it must import `react-dom/client` directly instead. That flag was a documented part of the build contract, which is what makes its removal breaking.",
+        "Also state that React 18 is now the minimum supported React version for frontend builds and tests.",
+        "Name the environment variable exactly as adopters read it in their own source — it is part of the public build contract, not an internal symbol. Do not name the removed detection module or any file path.",
+        "Neither of these two packages appears in U20's changeset: they carry no React peer dependency range, so this file is their only coverage."
+      ],
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "reason": "The repo's shape for a breaking change below 1.0.0: minor in the frontmatter with the **BREAKING** marker leading the prose."
+      },
+      "depends_on": ["U12", "U13", "U14", "U15", "U16"],
+      "covers": ["FR-19", "AC-7"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U25",
+      "path": ".changeset/repo-tools-react18-peer-deps.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A patch changeset for @backstage/repo-tools covering the peer-deps command now expecting React-18-only ranges for every package.",
+      "rules": [
+        "Frontmatter names exactly one package: `'@backstage/repo-tools': patch`.",
+        "One sentence: the `peer-deps` command now expects React 18-only peer dependency ranges for every package, and the per-package React 18 exception it previously supported is gone.",
+        "patch, following the repo's own precedent for the opposite change — `@backstage/repo-tools` took a patch when per-package React 18 support was added to this same command.",
+        "The command and its options are the package's public surface, so naming `peer-deps` is correct; do not name the constants, the file or the removed helper function."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-node-generator-exports.md",
+        "reason": "A single-package patch changeset: frontmatter, blank line, one sentence of adopter-facing prose."
+      },
+      "depends_on": ["U01"],
+      "covers": ["FR-19", "AC-7"],
+      "checks": ["prettier"]
+    }
+  ]
+}

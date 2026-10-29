@@ -1,0 +1,1451 @@
+[
+  {
+    "id": "tp_codegen_U01",
+    "unit": "U01",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/repo-tools/src/commands/peer-deps/peer-deps.ts` (unit U01) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 35-50 (line 35 reads `const peerDependencies = {`, line 50 reads `const react18OnlyPackages = new Set(['@backstage/ui']);`) — One `peerDependencies` constant with React-18-only ranges, replacing the React-17-inclusive table, the React-18-only table and the package set.\n- S2: delete lines 92-98 (line 92 reads `const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {`, line 98 reads ``) — Remove the per-package lookup and the blank line after it, leaving one blank line between `matchesDependency` and `matchesPeerDependency`.\n- S3: replace lines 103-107 (line 103 reads `const expected = getExpectedPeerDependencies(packageJson);`, line 107 reads `);`) — Drop the `expected` local and compare the manifest's peer range against the `peerDependencies` constant directly.\n- S4: delete line 145 (line 145 reads `const expectedPeerDeps = getExpectedPeerDependencies(packageJson);`) — Remove the per-package expected-table local from the fix loop.\n- S5: replace line 218 (line 218 reads `expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];`) — Read the group member's range from the `peerDependencies` constant.\n- S6: replace line 245 (line 245 reads `expectedPeerDeps[dep as keyof typeof expectedPeerDeps];`) — Read the corrected range from the `peerDependencies` constant.\n- S7: replace line 255 (line 255 reads `expectedPeerDeps[dep as keyof typeof expectedPeerDeps];`) — Read the added range from the `peerDependencies` constant.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/repo-tools/src/commands/peer-deps/peer-deps.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/repo-tools/src/commands/peer-deps/peer-deps.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 50
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 92,
+          "to": 98
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 103,
+          "to": 107
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 145,
+          "to": 145
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 218,
+          "to": 218
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 245,
+          "to": 245
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 255,
+          "to": 255
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U02",
+    "unit": "U02",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/ui/package.json",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/ui/package.json` (unit U02) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 58-59 (line 58 reads `\"react-stately\": \"~3.51.0\",`, line 59 reads `\"use-sync-external-store\": \"^1.4.0\"`) — Drop the `use-sync-external-store` dependency, leaving `react-stately` as the final key with no trailing comma.\n- S2: delete line 70 (line 70 reads `\"@types/use-sync-external-store\": \"^1.0.0\",`) — Drop the shim's type package from devDependencies.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/ui/package.json\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/ui/package.json\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/ui/package.json",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 59
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 70,
+          "to": 70
+        }
+      ],
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U03",
+    "unit": "U03",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/frontend-plugin-api/package.json",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-plugin-api/package.json` (unit U03) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 52-53 (line 52 reads `\"@standard-schema/spec\": \"^1.1.0\",`, line 53 reads `\"use-sync-external-store\": \"^1.4.0\"`) — Drop the `use-sync-external-store` dependency, leaving `@standard-schema/spec` as the final key with no trailing comma.\n- S2: delete line 64 (line 64 reads `\"@types/use-sync-external-store\": \"^1.0.0\",`) — Drop the shim's type package from devDependencies.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/package.json\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/package.json\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/package.json",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 52,
+          "to": 53
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 64,
+          "to": 64
+        }
+      ],
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U04",
+    "unit": "U04",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "plugins/app/package.json",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/app/package.json` (unit U04) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: delete line 78 (line 78 reads `\"use-sync-external-store\": \"^1.4.0\",`) — Drop the unused `use-sync-external-store` dependency.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/app/package.json\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/app/package.json\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/app/package.json",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 78,
+          "to": 78
+        }
+      ],
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tooling_U05",
+    "unit": "U05",
+    "phase": "codegen",
+    "task_type": "tooling",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "yarn.lock",
+    "depends_on": [
+      "tp_codegen_U01",
+      "tp_codegen_U02",
+      "tp_codegen_U03",
+      "tp_codegen_U04"
+    ],
+    "instruction": "Orchestrator shell step, no model (unit U05): in one Bash call, write-provenance.mjs --before --run-id=20261029-refactor-react18 --packet-id=tooling_U05 for `yarn.lock` and every other file the step writes, then `yarn backstage-repo-tools peer-deps --fix && yarn install --no-immutable`, then write-provenance.mjs --after --run-id=20261029-refactor-react18 for each of them, whether the step succeeded or not (brownfield-runs.md, Phase 5). The repo's own peer-deps fixer rewrites the 56 generated peer-range manifests from U01's constants, then Yarn updates the lockfile in place to match the narrowed ranges.",
+    "inputs": [],
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string"
+        }
+      }
+    },
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0
+    }
+  },
+  {
+    "id": "tp_codegen_U06",
+    "unit": "U06",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/ui/src/hooks/useBreakpoint.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/ui/src/hooks/useBreakpoint.ts` (unit U06) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 16-17 (line 16 reads `import { useMemo } from 'react';`, line 17 reads `import { useSyncExternalStore } from 'use-sync-external-store/shim';`) — One named import from 'react' bringing in both `useMemo` and `useSyncExternalStore`; the `use-sync-external-store/shim` import is gone.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/ui/src/hooks/useBreakpoint.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/ui/src/hooks/useBreakpoint.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/ui/src/hooks/useBreakpoint.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 17
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U07",
+    "unit": "U07",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "depends_on": ["tp_codegen_U06"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` (unit U07) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 17-18 (line 17 reads `import { useMemo } from 'react';`, line 18 reads `import { useSyncExternalStore } from 'use-sync-external-store/shim';`) — One named import from 'react' bringing in both `useMemo` and `useSyncExternalStore`; the `use-sync-external-store/shim` import is gone.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/ui/src/hooks/useBreakpoint.ts",
+        "reason": "style file: The same one-line import merge, so both shim call sites end up identical in shape."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U08",
+    "unit": "U08",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/techdocs/src/reader/transformers/renderReactElement.ts` (unit U08) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 17-24 (line 17 reads `let ReactDOMPromise: Promise<`, line 24 reads `}`) — A single module-scoped `const ReactDOMPromise = import('react-dom/client');` — still a lazy Promise, with the env-flag branch and the `react-dom` arm removed.\n- S2: replace lines 28-34 (line 28 reads `ReactDOMPromise.then(ReactDOM => {`, line 34 reads `});`) — Render inside `.then()` via a destructured `createRoot`, with no `'createRoot' in ReactDOM` check and no `ReactDOM.render` fallback.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/transformers/renderReactElement.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/transformers/renderReactElement.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 24
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 28,
+          "to": 34
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U09",
+    "unit": "U09",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/dev-utils/src/devApp/render.tsx",
+    "depends_on": ["tp_codegen_U08"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/dev-utils/src/devApp/render.tsx` (unit U09) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 58-65 (line 58 reads `let ReactDOMPromise: Promise<`, line 65 reads `}`) — A single module-scoped `const ReactDOMPromise = import('react-dom/client');`, replacing the typed `let` and the env-flag branch.\n- S2: replace lines 320-328 (line 320 reads `ReactDOMPromise.then(ReactDOM => {`, line 328 reads `});`) — Render `<DevApp />` inside `.then()` via a destructured `createRoot`, dropping the `'createRoot' in ReactDOM` check and the `ReactDOM.render` fallback.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/dev-utils/src/devApp/render.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/dev-utils/src/devApp/render.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+        "reason": "style file: The same conversion on the same lazy-Promise shape; all three render sites should read identically."
+      },
+      {
+        "path": "packages/dev-utils/src/devApp/render.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 65
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 320,
+          "to": 328
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U10",
+    "unit": "U10",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+    "depends_on": ["tp_codegen_U08"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-dev-utils/src/createDevApp.tsx` (unit U10) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 43-50 (line 43 reads `let ReactDOMPromise: Promise<`, line 50 reads `}`) — A single module-scoped `const ReactDOMPromise = import('react-dom/client');`, replacing the typed `let` and the env-flag branch.\n- S2: replace line 109 (line 109 reads `ReactDOMPromise.then(ReactDOM => {`) — The `.then()` callback destructures `createRoot` from the resolved module instead of binding the whole namespace.\n- S3: replace lines 119-123 (line 119 reads `if ('createRoot' in ReactDOM) {`, line 123 reads `}`) — One `createRoot(rootElement).render(rootNode);` call, with the narrowing check and the `ReactDOM.render` fallback gone.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-dev-utils/src/createDevApp.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-dev-utils/src/createDevApp.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+        "reason": "style file: The same conversion on the same lazy-Promise shape; all three render sites should read identically."
+      },
+      {
+        "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 50
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 109,
+          "to": 109
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 119,
+          "to": 123
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U11",
+    "unit": "U11",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+    "depends_on": ["tp_codegen_U10"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-dev-utils/src/createDevApp.test.tsx` (unit U11) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: delete lines 149-192 (line 149 reads ``, line 192 reads `});`) — Remove the legacy-rendering fallback test and the blank line separating it from the missing-root test, leaving the missing-root test as the last case in the describe block.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-dev-utils/src/createDevApp.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-dev-utils/src/createDevApp.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should render a dev app with a plugin: given a #root element in the document, a frontend plugin with a PageBlueprint page, and APP_CONFIG on process.env, expect the plugin's page text is found in document.body",
+      "should forward bindRoutes to createApp: given createApp, plugin-app and react-dom/client mocked via jest.doMock, the module loaded through loadCreateDevAppIsolated, and createDevApp called with bindRoutes, expect createApp receives the bindRoutes option with the app-plugin override prepended to features, createRoot is called with the #root element, and the rendered node carries the BuiCss Suspense boundary plus the app root",
+      "should throw a clear error when the root element is missing: given no #root element in the document, expect createDevApp throws the exact missing-root-element message"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "jest-file",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 149,
+          "to": 192
+        }
+      ],
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U12",
+    "unit": "U12",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/cli-module-build/src/lib/bundler/config.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/cli-module-build/src/lib/bundler/config.ts` (unit U12) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: delete line 37 (line 37 reads `import { hasReactDomClient } from './hasReactDomClient';`) — Drop the import of the detection module, which a later tooling unit deletes.\n- S2: delete lines 272-276 (line 272 reads `// This allows for conditional imports of react-dom/client, since there's no way`, line 276 reads `),`) — Remove the flag and its explanatory comment from the webpack DefinePlugin branch.\n- S3: delete lines 281-285 (line 281 reads `// This allows for conditional imports of react-dom/client, since there's no way`, line 285 reads `),`) — Remove the flag and its explanatory comment from the rspack DefinePlugin branch.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/cli-module-build/src/lib/bundler/config.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/cli-module-build/src/lib/bundler/config.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 272,
+          "to": 276
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 281,
+          "to": 285
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U13",
+    "unit": "U13",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+    "depends_on": ["tp_codegen_U12"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/cli-module-build/src/commands/package/start/startFrontend.ts` (unit U13) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: delete line 26 (line 26 reads `import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';`) — Drop the import of the detection module.\n- S2: delete lines 44-49 (line 44 reads ``, line 49 reads `}`) — Remove the probe call and the React-17 deprecation warning it guarded, together with the blank line above them.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/cli-module-build/src/commands/package/start/startFrontend.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/cli-module-build/src/commands/package/start/startFrontend.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+        "lines": [269, 291],
+        "reason": "uses: The React-version diagnostic that survives on this start path, so the typist can see that removing the warning here leaves the minimum-version message stated elsewhere."
+      },
+      {
+        "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 44,
+          "to": 49
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U14",
+    "unit": "U14",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/cli-module-test-jest/config/jest.js",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/cli-module-test-jest/config/jest.js` (unit U14) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: delete lines 51-59 (line 51 reads ``, line 59 reads `}`) — Remove the `react-dom/client` require.resolve probe, its `process.env.HAS_REACT_DOM_CLIENT` assignment, its ignored catch, and the blank line above the try block.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/cli-module-test-jest/config/jest.js\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/cli-module-test-jest/config/jest.js\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U14.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/cli-module-test-jest/config/jest.js",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "node-check",
+          "run": "node --check '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 51,
+          "to": 59
+        }
+      ],
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U15",
+    "unit": "U15",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/cli-module-build/src/lib/bundler/server.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/cli-module-build/src/lib/bundler/server.ts` (unit U15) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 282 (line 282 reads `⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️`) — The same line with `React 18` in place of `React 17`, byte-identical in every other position so the banner stays aligned.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/cli-module-build/src/lib/bundler/server.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/cli-module-build/src/lib/bundler/server.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 282,
+          "to": 282
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tooling_U16",
+    "unit": "U16",
+    "phase": "codegen",
+    "task_type": "tooling",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "depends_on": ["tp_codegen_U12", "tp_codegen_U13"],
+    "instruction": "Orchestrator shell step, no model (unit U16): in one Bash call, write-provenance.mjs --before --run-id=20261029-refactor-react18 --packet-id=tooling_U16 for `packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts` and every other file the step writes, then `rm -f packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts`, then write-provenance.mjs --after --run-id=20261029-refactor-react18 for each of them, whether the step succeeded or not (brownfield-runs.md, Phase 5). The obsolete React-DOM-client detection module is deleted from the tree.",
+    "inputs": [],
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string"
+        }
+      }
+    },
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0
+    }
+  },
+  {
+    "id": "tp_codegen_U17",
+    "unit": "U17",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/test-utils/src/testUtils/testingLibrary.ts` (unit U17) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: delete lines 25-31 (line 25 reads `/**`, line 31 reads ``) — Remove the `LegacyRootOption` doc comment, its declaration and the blank line after it, so the `renderWithEffects` doc comment follows the imports with one blank line between.\n- S2: replace line 46 (line 46 reads `options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,`) — The options parameter is `Pick<RenderOptions, 'wrapper'>` only, with the intersection removed.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/test-utils/src/testUtils/testingLibrary.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/test-utils/src/testUtils/testingLibrary.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U17.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 25,
+          "to": 31
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 46
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U18",
+    "unit": "U18",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+    "depends_on": ["tp_codegen_U17"],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/test-utils/src/testUtils/appWrappers.tsx` (unit U18) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 38 (line 38 reads `import { LegacyRootOption, renderWithEffects } from './testingLibrary';`) — Import `renderWithEffects` alone; the removed type is no longer available.\n- S2: replace line 257 (line 257 reads `options: TestAppOptions & LegacyRootOption = {},`) — The options parameter is `TestAppOptions` with its `{}` default and no intersection.\n- S3: delete lines 265-266 (line 265 reads `const { legacyRoot } = options;`, line 266 reads ``) — Remove the `legacyRoot` destructuring and the blank line that followed it.\n- S4: delete line 269 (line 269 reads `legacyRoot,`) — Stop forwarding `legacyRoot` to `renderWithEffects`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/test-utils/src/testUtils/appWrappers.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/test-utils/src/testUtils/appWrappers.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U18.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+        "reason": "style file: The same removal on the other side of the same API; the two files must agree on `renderWithEffects`'s options type."
+      },
+      {
+        "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 265,
+          "to": 266
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 269,
+          "to": 269
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tooling_U19",
+    "unit": "U19",
+    "phase": "codegen",
+    "task_type": "tooling",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": "packages/test-utils/report.api.md",
+    "depends_on": ["tp_codegen_U17", "tp_codegen_U18"],
+    "instruction": "Orchestrator shell step, no model (unit U19): in one Bash call, write-provenance.mjs --before --run-id=20261029-refactor-react18 --packet-id=tooling_U19 for `packages/test-utils/report.api.md` and every other file the step writes, then `yarn build:api-reports`, then write-provenance.mjs --after --run-id=20261029-refactor-react18 for each of them, whether the step succeeded or not (brownfield-runs.md, Phase 5). The generated API report for @backstage/test-utils is regenerated so that `LegacyRootOption` is gone from the declaration and from both render signatures.",
+    "inputs": [],
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string"
+        }
+      }
+    },
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0
+    }
+  },
+  {
+    "id": "tp_docs_U20",
+    "unit": "U20",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": ".changeset/react18-peer-dependencies.md",
+    "depends_on": ["tooling_U05"],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/react18-peer-dependencies.md` (unit U20) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U20.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/type-only-deps-kubernetes.md",
+        "reason": "style file: A multi-package patch changeset: the frontmatter quoting, the blank line, and the single adopter-facing paragraph."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/type-only-deps-kubernetes.md",
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U21",
+    "unit": "U21",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": ".changeset/test-utils-remove-legacy-root-option.md",
+    "depends_on": ["tp_codegen_U17", "tp_codegen_U18", "tooling_U19"],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/test-utils-remove-legacy-root-option.md` (unit U21) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U21.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/tidy-birds-mock.md",
+        "reason": "style file: The repo's shape for a breaking change: the leading **BREAKING** marker and adopter-facing prose about what a test must now do differently."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/tidy-birds-mock.md",
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U22",
+    "unit": "U22",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": ".changeset/ui-native-use-sync-external-store.md",
+    "depends_on": ["tp_codegen_U02", "tp_codegen_U06"],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/ui-native-use-sync-external-store.md` (unit U22) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U22.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/README.md",
+        "lines": [12, 44],
+        "reason": "style file: The mandated @backstage/ui changeset format, with its required closing line and the no-headings rule, stated in the repo's own words."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/README.md",
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U23",
+    "unit": "U23",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": ".changeset/drop-use-sync-external-store-dependency.md",
+    "depends_on": ["tp_codegen_U03", "tp_codegen_U04", "tp_codegen_U07"],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/drop-use-sync-external-store-dependency.md` (unit U23) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U23.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/type-only-deps-kubernetes.md",
+        "reason": "style file: The repo's precedent for a multi-package patch about a dependency declaration moving or going away."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/type-only-deps-kubernetes.md",
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U24",
+    "unit": "U24",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": ".changeset/cli-require-react-18.md",
+    "depends_on": [
+      "tp_codegen_U12",
+      "tp_codegen_U13",
+      "tp_codegen_U14",
+      "tp_codegen_U15",
+      "tooling_U16"
+    ],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/cli-require-react-18.md` (unit U24) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U24.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/tidy-birds-mock.md",
+        "reason": "style file: The repo's shape for a breaking change below 1.0.0: minor in the frontmatter with the **BREAKING** marker leading the prose."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/tidy-birds-mock.md",
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U25",
+    "unit": "U25",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-refactor-react18",
+    "artifact_path": ".changeset/repo-tools-react18-peer-deps.md",
+    "depends_on": ["tp_codegen_U01"],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/repo-tools-react18-peer-deps.md` (unit U25) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-refactor-react18/briefs/U25.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/techdocs-node-generator-exports.md",
+        "reason": "style file: A single-package patch changeset: frontmatter, blank line, one sentence of adopter-facing prose."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/techdocs-node-generator-exports.md",
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    },
+    "verify_deferred": [
+      "yarn tsc",
+      "yarn lint:all",
+      "yarn lint:peer-deps",
+      "CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+    ]
+  }
+]

@@ -1,0 +1,175 @@
+[
+  {
+    "id": "U08",
+    "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "`renderReactElement` renders through `react-dom/client`'s `createRoot` inside the resolved lazy `import('react-dom/client')` Promise, with no React-17 fallback branch.",
+    "rules": [
+      "NFR-2 and AC-8: the lazy-Promise async boundary must survive. S1 produces `const ReactDOMPromise = import('react-dom/client');` at module scope — a dynamic `import()` assigned to a module constant. Do NOT collapse this to a static `import { createRoot } from 'react-dom/client'`: that makes rendering synchronous and changes observable timing that existing waitFor assertions depend on.",
+      "S1: `let` with an explicit union type becomes `const` with the type inferred from the single `import()`; the `process.env.HAS_REACT_DOM_CLIENT` branch and the `react-dom` arm both go.",
+      "S2: the `.then()` callback destructures what it needs — `ReactDOMPromise.then(({ createRoot }) => { createRoot(root).render(element); });` — so the `'createRoot' in ReactDOM` narrowing and the `ReactDOM.render` fallback disappear together.",
+      "Keep the `/** @internal */` tag and the exported function's signature `(element: JSX.Element, root: HTMLElement)` exactly as they are: this is a refactor with no visible change (NFR-1).",
+      "Do not touch the 2023 copyright header."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 24,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "A single module-scoped `const ReactDOMPromise = import('react-dom/client');` — still a lazy Promise, with the env-flag branch and the `react-dom` arm removed."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 28,
+        "to": 34,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Render inside `.then()` via a destructured `createRoot`, with no `'createRoot' in ReactDOM` check and no `ReactDOM.render` fallback."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-9", "NFR-2", "AC-8"],
+    "checks": ["eslint", "prettier"]
+  },
+  {
+    "id": "U09",
+    "path": "packages/dev-utils/src/devApp/render.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The dev app renders into `#root` through `react-dom/client`'s `createRoot` inside the resolved lazy `import('react-dom/client')` Promise, with no React-17 fallback branch.",
+    "rules": [
+      "NFR-2 and AC-8: keep the lazy-Promise async boundary. S1 produces `const ReactDOMPromise = import('react-dom/client');` at module scope. Never a static `import { createRoot } from 'react-dom/client'`.",
+      "S2: `ReactDOMPromise.then(({ createRoot }) => { createRoot(document.getElementById('root')!).render(<DevApp />); });` — the non-null assertion on `getElementById` stays, since the `createRoot` arm already carried it.",
+      "Leave the bare side-effect `import 'react-dom';` on line 53 exactly as it is: no requirement names it, it keeps the dependency resolvable for the bundler, and removing it would change module resolution.",
+      "Change nothing else in this ~340-line file: not `isReactRouterBeta`, not the sidebar builders, not the default-page redirect above the render call. Do not touch the 2020 copyright header."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 65,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "A single module-scoped `const ReactDOMPromise = import('react-dom/client');`, replacing the typed `let` and the env-flag branch."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 320,
+        "to": 328,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Render `<DevApp />` inside `.then()` via a destructured `createRoot`, dropping the `'createRoot' in ReactDOM` check and the `ReactDOM.render` fallback."
+      }
+    ],
+    "style_from": {
+      "unit": "U08",
+      "reason": "The same conversion on the same lazy-Promise shape; all three render sites should read identically."
+    },
+    "depends_on": ["U08"],
+    "covers": ["FR-7", "NFR-2", "AC-8"],
+    "checks": ["eslint", "prettier"]
+  },
+  {
+    "id": "U10",
+    "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "`createDevApp` renders the app root through `react-dom/client`'s `createRoot` inside the resolved lazy `import('react-dom/client')` Promise, with no React-17 fallback branch.",
+    "rules": [
+      "NFR-2 and AC-8: keep the lazy-Promise async boundary. S1 produces `const ReactDOMPromise = import('react-dom/client');` at module scope. Never a static `import { createRoot } from 'react-dom/client'`.",
+      "Once the env flag is gone this module no longer reads `process.env` at load time, but the existing test still loads it through `jest.isolateModules` to apply its `doMock`s; do not restructure the module to make that unnecessary.",
+      "S2 changes only the `.then()` parameter to a destructured `({ createRoot })`. The `rootNode` JSX construction on lines 110-118 stays inside the callback, byte-identical.",
+      "S3: the `if ('createRoot' in ReactDOM) / else` block becomes the single statement `createRoot(rootElement).render(rootNode);`.",
+      "Leave the bare side-effect `import 'react-dom';` on line 24 exactly as it is.",
+      "Keep `getRootElement` and its error message verbatim — the missing-root test asserts on that exact string. Do not touch the 2026 copyright header."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 43,
+        "to": 50,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "A single module-scoped `const ReactDOMPromise = import('react-dom/client');`, replacing the typed `let` and the env-flag branch."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 109,
+        "to": 109,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "rule": "The `.then()` callback destructures `createRoot` from the resolved module instead of binding the whole namespace."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 119,
+        "to": 123,
+        "first_line": "if ('createRoot' in ReactDOM) {",
+        "last_line": "}",
+        "rule": "One `createRoot(rootElement).render(rootNode);` call, with the narrowing check and the `ReactDOM.render` fallback gone."
+      }
+    ],
+    "style_from": {
+      "unit": "U08",
+      "reason": "The same conversion on the same lazy-Promise shape; all three render sites should read identically."
+    },
+    "depends_on": ["U08"],
+    "covers": ["FR-8", "NFR-2", "AC-8"],
+    "checks": ["eslint", "prettier"]
+  },
+  {
+    "id": "U11",
+    "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Three tests remain — plugin render, `bindRoutes` forwarding, and the missing-root error — with the legacy `ReactDOM.render` fallback expectation gone.",
+    "rules": [
+      "S1 deletes only the `'should fall back to legacy react-dom rendering when createRoot is unavailable'` test and the blank line before it. That test deletes `process.env.HAS_REACT_DOM_CLIENT` and mocks `react-dom`; both describe behaviour U10 removed.",
+      "Keep `loadCreateDevAppIsolated` — the surviving `bindRoutes` test calls it, and relies on `jest.isolateModules` + `require` to apply its `jest.doMock`s of `@backstage/frontend-defaults`, `@backstage/plugin-app` and `react-dom/client`.",
+      "Keep the `process.env` save/restore (`originalEnv`, the `beforeEach`, the `afterAll`) — the first test still assigns `process.env.APP_CONFIG`.",
+      "Keep `jest.setTimeout(15000)`, the `within(document.body)` + `findByText(..., { timeout: 10000 })` idiom, and the surviving `waitFor` block in the `bindRoutes` test. AGENTS.md prefers `screen` and `.findBy*` over `waitFor`, but this file's own idiom and NFR-1 win: do not opportunistically rewrite assertions this change did not invalidate.",
+      "Add no test. The three survivors already cover mounting, route binding and the error path, which is the coverage FR-10 asks to keep.",
+      "Do not touch the 2026 copyright header."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 149,
+        "to": 192,
+        "first_line": "",
+        "last_line": "});",
+        "rule": "Remove the legacy-rendering fallback test and the blank line separating it from the missing-root test, leaving the missing-root test as the last case in the describe block."
+      }
+    ],
+    "tests": [
+      {
+        "name": "should render a dev app with a plugin",
+        "given": "a #root element in the document, a frontend plugin with a PageBlueprint page, and APP_CONFIG on process.env",
+        "expect": "the plugin's page text is found in document.body"
+      },
+      {
+        "name": "should forward bindRoutes to createApp",
+        "given": "createApp, plugin-app and react-dom/client mocked via jest.doMock, the module loaded through loadCreateDevAppIsolated, and createDevApp called with bindRoutes",
+        "expect": "createApp receives the bindRoutes option with the app-plugin override prepended to features, createRoot is called with the #root element, and the rendered node carries the BuiCss Suspense boundary plus the app root"
+      },
+      {
+        "name": "should throw a clear error when the root element is missing",
+        "given": "no #root element in the document",
+        "expect": "createDevApp throws the exact missing-root-element message"
+      }
+    ],
+    "depends_on": ["U10"],
+    "covers": ["FR-10", "AC-8"],
+    "checks": ["eslint", "prettier", "jest-file"]
+  }
+]

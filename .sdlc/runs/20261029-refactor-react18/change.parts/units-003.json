@@ -1,0 +1,168 @@
+{
+  "section": "units",
+  "source": "units-003.json",
+  "value": [
+    {
+      "id": "U12",
+      "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Neither DefinePlugin branch defines `process.env.HAS_REACT_DOM_CLIENT`, and the bundler config no longer imports the detection module.",
+      "rules": [
+        "This is removal site 1 of three for the flag, and it appears TWICE in this file — once in the webpack DefinePlugin branch (S2) and once in the rspack branch (S3). Both must go; S1 removes the import they share.",
+        "The explanatory comment (`// This allows for conditional imports of react-dom/client, since there's no way / // to check for presence of it in source code without module resolution errors.`) goes with the flag at both sites: it explains only the flag.",
+        "After S2 the webpack branch keeps `process.env.BUILD_INFO` and the `process.env.APP_CONFIG` runtimeValue entry, with the closing `),` on line 271 and the `})` on line 277 unchanged. After S3 the rspack branch keeps `process.env.BUILD_INFO` and its `process.env.APP_CONFIG` entry.",
+        "Remove nothing else from the import block: `yn`, `transforms`, `version`, `createWorkspaceLinkingPlugins`, `ConfigInjectingHtmlWebpackPlugin` and `STATIC_ASSET_HASH_LENGTH` all stay.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37,
+          "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+          "rule": "Drop the import of the detection module, which a later tooling unit deletes."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 272,
+          "to": 276,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the flag and its explanatory comment from the webpack DefinePlugin branch."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 281,
+          "to": 285,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the flag and its explanatory comment from the rspack DefinePlugin branch."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-11", "AC-5", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U13",
+      "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`startFrontend` reads the package manifest and serves the bundle, with no React-DOM-client probe and no conditional React-17 deprecation warning.",
+      "rules": [
+        "This is removal site 2 of three for the detection. S1 removes the import of the module a later tooling unit deletes; S2 removes its only call and the warning it guarded.",
+        "The warning goes rather than becoming unconditional: with the probe removed there is no condition left to test, and React 18 as the stated minimum (FR-12) is carried by the existing diagnostic in `checkReactVersion` (packages/cli-module-build/src/lib/bundler/server.ts), which `serveBundle` runs on this same start path and which U15 updates. Do not write a new diagnostic here.",
+        "S2 takes the blank line before the `if` with it, so one blank line separates `)) as BackstagePackageJson;` from `const waitForExit = await serveBundle({`.",
+        "Leave `StartAppOptions`, the `readJson` call and the whole `serveBundle` options object exactly as they are. Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+          "rule": "Drop the import of the detection module."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 44,
+          "to": 49,
+          "first_line": "",
+          "last_line": "}",
+          "rule": "Remove the probe call and the React-17 deprecation warning it guarded, together with the blank line above them."
+        }
+      ],
+      "uses": [
+        {
+          "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+          "lines": [269, 291],
+          "reason": "The React-version diagnostic that survives on this start path, so the typist can see that removing the warning here leaves the minimum-version message stated elsewhere."
+        }
+      ],
+      "depends_on": ["U12"],
+      "covers": ["FR-12", "AC-5", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U14",
+      "path": "packages/cli-module-test-jest/config/jest.js",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The shared jest config no longer probes for `react-dom/client` and no longer sets `process.env.HAS_REACT_DOM_CLIENT`.",
+      "rules": [
+        "This is removal site 3 of three: an independent copy of the `require.resolve` probe, not an import of the detection module. It must be removed even though this file never referenced `hasReactDomClient`.",
+        "S1 takes the blank line above the `try` block with it, so one blank line separates the `envOptions` object's closing `};` from the `/**` of the projectConfigKeys doc comment.",
+        "Leave `envOptions` and everything below the deleted block alone — this file also selects the jest environment from `backstage.role`, which this change does not touch.",
+        "This file is eslint-ignored by the package's own `.eslintrc.js` (`ignorePatterns: ['config/**']`), so it is checked with `node --check` and prettier only. It is CommonJS: keep `require`, do not convert anything to ESM.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 51,
+          "to": 59,
+          "first_line": "",
+          "last_line": "}",
+          "rule": "Remove the `react-dom/client` require.resolve probe, its `process.env.HAS_REACT_DOM_CLIENT` assignment, its ignored catch, and the blank line above the try block."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-13", "AC-5", "AC-9"],
+      "checks": ["node-check", "prettier"]
+    },
+    {
+      "id": "U15",
+      "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`checkReactVersion`'s React-16 deprecation banner directs users to React 18 as the minimum.",
+      "rules": [
+        "One character changes: `React 17` becomes `React 18` in the banner's third line. Nothing else on that line moves.",
+        "The banner's column alignment is hand-maintained — the trailing spaces before the closing warning emoji are what keep all four lines the same width. `17` and `18` are both two characters, so reproduce the line with exactly the same leading and trailing whitespace. Do not reflow, re-pad or reword it.",
+        "Leave the React-16 detection logic, the `require.resolve('react/package.json')` call and the `startsWith('16.')` test as they are: this run narrows the peer range, it does not change what the CLI detects.",
+        "Do not touch the 2020 copyright header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 282,
+          "to": 282,
+          "first_line": "⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️",
+          "rule": "The same line with `React 18` in place of `React 17`, byte-identical in every other position so the banner stays aligned."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-15", "AC-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U16",
+      "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "The obsolete React-DOM-client detection module is deleted from the tree.",
+      "rules": [
+        "NFR-10: the apply form writes content and cannot express a deletion, so this is a shell step. It runs under provenance, so /mmo:revert can undo it.",
+        "It runs after U12 and U13, the only two files that import this module; deleting it first would leave the tree un-typecheckable between packets.",
+        "After this step `hasReactDomClient` appears nowhere in the tree outside CHANGELOG and docs/releases history, which AC-5 asks for and which the project typecheck confirms."
+      ],
+      "run": "rm -f packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "depends_on": ["U12", "U13"],
+      "covers": ["FR-14", "AC-5", "NFR-10"]
+    }
+  ],
+  "hashes": {
+    "packages/cli-module-build/src/lib/bundler/config.ts": "f74b0b32550ca17f52a804776987d9d990cdcb285ddbca133c1ed1e0ea8eb4d3",
+    "packages/cli-module-build/src/commands/package/start/startFrontend.ts": "791de76149030bd24d1d479d53cc5f6dc4de2d22ab7fc32061e6b7ad022924e1",
+    "packages/cli-module-build/src/lib/bundler/server.ts": "53feca1de3375b3f8c537ce89fbf06d5ac4fbf63783a5b0091c02501d9278cf4",
+    "packages/cli-module-test-jest/config/jest.js": "cf9bea425ca2b53b6cf5e24e0fe3e848007c806675066806a304be304ecdfda9"
+  }
+}
