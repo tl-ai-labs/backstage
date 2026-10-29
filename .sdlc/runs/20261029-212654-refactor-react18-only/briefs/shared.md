@@ -1,0 +1,106 @@
+## Conventions
+
+- Match the existing style of each file: consistency within a package beats consistency across the repo (CLAUDE.md).
+- Prettier is the formatter (config @backstage/cli/config/prettier): single quotes, trailing commas, arrowParens avoid, 80 columns, 2-space indent; every changed file is formatted with yarn prettier --write <path>.
+- Every edited .ts/.tsx/.js file keeps its existing Apache 2.0 copyright header and year unchanged; no new source files are created (changesets are markdown and carry no header).
+- Change only the lines a unit's sites name; do not reorder imports, rename symbols or touch unrelated code.
+- package.json edits: keep 2-space JSON indentation and key order; keep a trailing comma exactly when another entry follows in the same object; never touch peerDependenciesMeta or react-router-dom.
+- React APIs are imported by name: import { createRoot } from 'react-dom/client'; import { useMemo, useSyncExternalStore } from 'react'.
+- Tests run on Jest 30 through backstage-cli (CI=1 yarn test <path> from the repo root), with describe/it, expect matchers and React Testing Library.
+- Changesets are new .changeset/<kebab-name>.md files: YAML front matter of '<package-name>': <bump> lines (single-quoted names, one per line, sorted by name), a blank line, then a plain-language adopter-facing message; never name internal symbols (functions, variables, env flags).
+- A breaking changeset message starts with **BREAKING**: (bold, then a colon), as existing changesets in .changeset/ do.
+- Docs follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as you, no statements about the future, code style for package names and file paths.
+- No yarn build, yarn release or changesets version; no commits; only write-contract allowlisted paths change; yarn.lock is written only by yarn install.
+
+## Decisions
+
+- React peer range value: Exactly "^18.0.0" for @types/react, react and react-dom in peerDependencies of every listed package; react-router-dom stays "^6.30.2"; devDependencies stay as they are (@types/react ^18.0.0, react and react-dom ^18.0.2). (not ^18.0.2 (devDependency pin, stricter than needed for peers); not >=18.0.0 (would claim React 19 support, a non-goal)) — Matches @backstage/ui, which is already React 18 only, and the single expected range the peer-deps lint enforces after this change.
+- How the three render sites mount: Static named import `import { createRoot } from 'react-dom/client';` replacing the `import 'react-dom';` side-effect line (or the dynamic import block), then a direct synchronous `createRoot(container).render(node)` call; no promise, no process.env.HAS_REACT_DOM_CLIENT branch. (not default import ReactDOM from 'react-dom/client' (createDevApp.test.tsx mocks react-dom/client with only a named createRoot export, so ReactDOM.createRoot would be undefined); not keeping the dynamic import() promise (it only existed to avoid resolving react-dom/client under React 17)) — React 18 is required, so react-dom/client always resolves; the named import works with both the real module and the existing jest.doMock in createDevApp.test.tsx.
+- process.env.HAS_REACT_DOM_CLIENT after detection is removed: config.ts defines 'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(true) in both the webpack and the rspack DefinePlugin branches; cli-module-test-jest/config/jest.js sets process.env.HAS_REACT_DOM_CLIENT = true unconditionally at the same spot the try/catch was. (not dropping the define entirely (already published plugin builds read the flag and would silently fall back to ReactDOM.render); not keeping require.resolve detection (React 17 is no longer supported)) — Keeps older published packages on their createRoot path while removing the detection code (FR-6, brief goal 4).
+- Deleting hasReactDomClient.ts: A tooling unit runs `rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts` from the project root after config.ts and startFrontend.ts stop importing it. (not an edit that empties the file (the file would still exist, failing AC-4); not git rm (stages the change in the index; the run makes no commits or index changes)) — The spec has no delete action for a typed unit; a tooling step is the only way to remove a file, and it is shown at Gate 2.
+- CLI React version warning in server.ts: checkReactVersion keeps its try/catch and require.resolve of react/package.json from targetPaths.rootDir; it reads `const major = parseInt(reactPkg.version, 10);` and when `major < 18` prints one console.log(chalk.yellow(...)) with the text: You are using React ${reactPkg.version}, which is no longer supported by Backstage. Please upgrade your app to React 18 by following the migration guide: https://backstage.io/docs/tutorials/react18-migration/ (not adding a semver dependency to cli-module-build (a new dependency for a single major comparison); not console.warn (the existing check in this function uses console.log with chalk.yellow); not a boxed multi-line warning (the box cannot stay aligned with a dynamic version string)) — One warning when the app's React major is below 18, linking to the React 18 migration guide (FR-8); a NaN major never warns because NaN < 18 is false.
+- cli-module-build knip-report.md: Typed edit of the generated report, not a regeneration: drop the react-dom row that points at the deleted file, change the heading count to (1), and realign the table to its remaining row as knip's markdown reporter does (column width = longest cell); the react row keeps its location text src/lib/bundler/server.ts:274:43 unchanged. (not running yarn build:knip-reports (it rewrites reports beyond this package's change and is not checked in CI)) — FR-6 requires only that the report no longer points at the deleted file; the report is prettier-ignored and generated, so the edit reproduces the generator's table format by hand.
+- Files left untouched although listed in the brief: No unit for packages/dev-utils/src/devApp/render.test.tsx or packages/test-utils/report.api.md. (not editing render.test.tsx (it renders through build() and React Testing Library and never touches the removed fallback); not editing report.api.md (API Extractor reports carry the release tag and the type, not the doc comment text, so the LegacyRootOption comment change does not alter it)) — A refactor changes only what the requirement needs; both files stay consistent with the change as they are.
+- Changeset split and bump levels: Six new files: react-18-required-major.md (major, the 17 published packages at >=1.0.0 whose peer range narrows), react-18-required-minor.md (minor, the 37 published packages below 1.0.0 whose peer range narrows), react-18-drop-sync-external-store-shim.md (patch: @backstage/ui, @backstage/frontend-plugin-api, @backstage/plugin-app), react-18-cli-module-build.md (patch), react-18-cli-module-test-jest.md (patch), react-18-repo-tools-peer-deps.md (minor, breaking for a 0.x package). (not one changeset for every package (messages must be relevant to every package they name); not editing existing changesets (none of the 42 existing ones cover React peer ranges or these CLI changes)) — CLAUDE.md: breaking below 1.0.0 is minor, at or above 1.0.0 is major; private app-example-plugin and @internal/plugin-todo-list get none; changesets merges a patch entry into a larger bump of the same package.
+
+## Files of this change
+
+- `packages/repo-tools/src/commands/peer-deps/peer-deps.ts` (U01, edit)
+- `packages/app-defaults/package.json` (U02, edit)
+- `packages/app-example-plugin/package.json` (U03, edit)
+- `packages/core-app-api/package.json` (U04, edit)
+- `packages/core-compat-api/package.json` (U05, edit)
+- `packages/core-components/package.json` (U06, edit)
+- `packages/core-plugin-api/package.json` (U07, edit)
+- `packages/dev-utils/package.json` (U08, edit)
+- `packages/frontend-app-api/package.json` (U09, edit)
+- `packages/frontend-defaults/package.json` (U10, edit)
+- `packages/frontend-dev-utils/package.json` (U11, edit)
+- `packages/frontend-dynamic-feature-loader/package.json` (U12, edit)
+- `packages/frontend-plugin-api/package.json` (U13, edit)
+- `packages/frontend-test-utils/package.json` (U14, edit)
+- `packages/integration-react/package.json` (U15, edit)
+- `packages/module-federation-common/package.json` (U16, edit)
+- `packages/test-utils/package.json` (U17, edit)
+- `packages/theme/package.json` (U18, edit)
+- `packages/version-bridge/package.json` (U19, edit)
+- `plugins/api-docs-module-protoc-gen-doc/package.json` (U20, edit)
+- `plugins/api-docs/package.json` (U21, edit)
+- `plugins/app-react/package.json` (U22, edit)
+- `plugins/app-visualizer/package.json` (U23, edit)
+- `plugins/app/package.json` (U24, edit)
+- `plugins/auth-react/package.json` (U25, edit)
+- `plugins/auth/package.json` (U26, edit)
+- `plugins/catalog-graph/package.json` (U27, edit)
+- `plugins/catalog-import/package.json` (U28, edit)
+- `plugins/catalog-react/package.json` (U29, edit)
+- `plugins/catalog-unprocessed-entities/package.json` (U30, edit)
+- `plugins/catalog/package.json` (U31, edit)
+- `plugins/config-schema/package.json` (U32, edit)
+- `plugins/devtools-react/package.json` (U33, edit)
+- `plugins/devtools/package.json` (U34, edit)
+- `plugins/example-todo-list/package.json` (U35, edit)
+- `plugins/home-react/package.json` (U36, edit)
+- `plugins/home/package.json` (U37, edit)
+- `plugins/kubernetes-cluster/package.json` (U38, edit)
+- `plugins/kubernetes-react/package.json` (U39, edit)
+- `plugins/kubernetes/package.json` (U40, edit)
+- `plugins/mui-to-bui/package.json` (U41, edit)
+- `plugins/notifications/package.json` (U42, edit)
+- `plugins/org-react/package.json` (U43, edit)
+- `plugins/org/package.json` (U44, edit)
+- `plugins/permission-react/package.json` (U45, edit)
+- `plugins/scaffolder-node-test-utils/package.json` (U46, edit)
+- `plugins/scaffolder-react/package.json` (U47, edit)
+- `plugins/scaffolder/package.json` (U48, edit)
+- `plugins/search-react/package.json` (U49, edit)
+- `plugins/search/package.json` (U50, edit)
+- `plugins/signals-react/package.json` (U51, edit)
+- `plugins/signals/package.json` (U52, edit)
+- `plugins/techdocs-addons-test-utils/package.json` (U53, edit)
+- `plugins/techdocs-module-addons-contrib/package.json` (U54, edit)
+- `plugins/techdocs-react/package.json` (U55, edit)
+- `plugins/techdocs/package.json` (U56, edit)
+- `plugins/user-settings/package.json` (U57, edit)
+- `packages/ui/package.json` (U58, edit)
+- `packages/cli-module-test-jest/config/jest.js` (U59, edit)
+- `packages/cli-module-build/src/lib/bundler/config.ts` (U60, edit)
+- `packages/cli-module-build/src/commands/package/start/startFrontend.ts` (U61, edit)
+- `packages/cli-module-build/src/lib/bundler/server.ts` (U62, edit)
+- `packages/cli-module-build/knip-report.md` (U63, edit)
+- `packages/dev-utils/src/devApp/render.tsx` (U65, edit)
+- `packages/frontend-dev-utils/src/createDevApp.tsx` (U66, edit)
+- `packages/frontend-dev-utils/src/createDevApp.test.tsx` (U67, edit)
+- `plugins/techdocs/src/reader/transformers/renderReactElement.ts` (U68, edit)
+  - `function renderReactElement(element: JSX.Element, root: HTMLElement): void`
+- `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` (U69, edit)
+- `packages/ui/src/hooks/useBreakpoint.ts` (U70, edit)
+- `packages/test-utils/src/testUtils/testingLibrary.ts` (U71, edit)
+- `docs/tutorials/react18-migration.md` (U73, edit)
+- `.gitignore` (U74, edit)
+- `.changeset/react-18-required-major.md` (U75, create)
+- `.changeset/react-18-required-minor.md` (U76, create)
+- `.changeset/react-18-drop-sync-external-store-shim.md` (U77, create)
+- `.changeset/react-18-cli-module-build.md` (U78, create)
+- `.changeset/react-18-cli-module-test-jest.md` (U79, create)
+- `.changeset/react-18-repo-tools-peer-deps.md` (U80, create)

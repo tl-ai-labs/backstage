@@ -6,11 +6,11 @@ description: A guide to migrating your project to React 18
 
 :::info
 
-This guide has been updated to include steps for removing support for React 16, as it is now deprecated.
+Backstage packages require React 18. React 17 is no longer supported, and the Backstage CLI shows a warning when your app uses an older version of React.
 
 :::
 
-The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.
+The Backstage core libraries and plugins declare `^18.0.0` as their peer range for `react`, `react-dom` and `@types/react`. If your project is still on React 17, you must follow this guide before you upgrade to a Backstage release that requires React 18.
 
 ## Migration
 
@@ -83,9 +83,9 @@ To migrate a Backstage instance to React 18, follow these steps:
        "react-dom": "^16.13.1 || ^17.0.0",
        // highlight-remove-end
        // highlight-add-start
-       "@types/react": "^17.0.0 || ^18.0.0",
-       "react": "^17.0.0 || ^18.0.0",
-       "react-dom": "^17.0.0 || ^18.0.0",
+       "@types/react": "^18.0.0",
+       "react": "^18.0.2",
+       "react-dom": "^18.0.2",
        // highlight-add-end
        ...
      },
@@ -100,9 +100,9 @@ To migrate a Backstage instance to React 18, follow these steps:
        "react-dom": "^16.13.1 || ^17.0.0",
        // highlight-remove-end
        // highlight-add-start
-       "@types/react": "^17.0.0 || ^18.0.0",
-       "react": "^17.0.0 || ^18.0.0",
-       "react-dom": "^17.0.0 || ^18.0.0",
+       "@types/react": "^18.0.0",
+       "react": "^18.0.0",
+       "react-dom": "^18.0.0",
        // highlight-add-end
        ...
      },
@@ -127,10 +127,6 @@ The good news is that these errors can be fixed while still staying on React 17.
 ### Migrating Tests
 
 At this point the app hopefully works and you have no type errors, but if you run your tests you may see that a lot of them are failing. This is because the current version of the `@testing-library/react` package does not support React 18. Unfortunately the new version that we will be moving to does not support React 17, which is why we need to do this all at once.
-
-:::info
-If migrating your entire project at once is not feasible, you can try to add `devDependencies` for `react` and `react-dom` v17 to individual plugins to be migrated later. This is not something we have tried ourselves in practice, so let us know in the community Discord if you attempt this and how it goes.
-:::
 
 #### Dependency Upgrades
 

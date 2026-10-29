@@ -8,10 +8,9 @@
 | buffer  | package.json:61:6 | error    |
 | util    | package.json:98:6 | error    |
 
-## Unlisted dependencies (2)
+## Unlisted dependencies (1)
 
-| Name      | Location                                   | Severity |
-| :-------- | :----------------------------------------- | :------- |
-| react-dom | src/lib/bundler/hasReactDomClient.ts:21:22 | error    |
-| react     | src/lib/bundler/server.ts:274:43           | error    |
+| Name  | Location                         | Severity |
+| :---- | :------------------------------- | :------- |
+| react | src/lib/bundler/server.ts:274:43 | error    |
 

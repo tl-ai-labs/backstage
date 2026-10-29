@@ -1,0 +1,166 @@
+{
+  "conventions": [
+    "Match the existing style of each file: consistency within a package beats consistency across the repo (CLAUDE.md).",
+    "Prettier is the formatter (config @backstage/cli/config/prettier): single quotes, trailing commas, arrowParens avoid, 80 columns, 2-space indent; every changed file is formatted with yarn prettier --write <path>.",
+    "Every edited .ts/.tsx/.js file keeps its existing Apache 2.0 copyright header and year unchanged; no new source files are created (changesets are markdown and carry no header).",
+    "Change only the lines a unit's sites name; do not reorder imports, rename symbols or touch unrelated code.",
+    "package.json edits: keep 2-space JSON indentation and key order; keep a trailing comma exactly when another entry follows in the same object; never touch peerDependenciesMeta or react-router-dom.",
+    "React APIs are imported by name: import { createRoot } from 'react-dom/client'; import { useMemo, useSyncExternalStore } from 'react'.",
+    "Tests run on Jest 30 through backstage-cli (CI=1 yarn test <path> from the repo root), with describe/it, expect matchers and React Testing Library.",
+    "Changesets are new .changeset/<kebab-name>.md files: YAML front matter of '<package-name>': <bump> lines (single-quoted names, one per line, sorted by name), a blank line, then a plain-language adopter-facing message; never name internal symbols (functions, variables, env flags).",
+    "A breaking changeset message starts with **BREAKING**: (bold, then a colon), as existing changesets in .changeset/ do.",
+    "Docs follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as you, no statements about the future, code style for package names and file paths.",
+    "No yarn build, yarn release or changesets version; no commits; only write-contract allowlisted paths change; yarn.lock is written only by yarn install."
+  ],
+  "decisions": [
+    {
+      "topic": "React peer range value",
+      "choice": "Exactly \"^18.0.0\" for @types/react, react and react-dom in peerDependencies of every listed package; react-router-dom stays \"^6.30.2\"; devDependencies stay as they are (@types/react ^18.0.0, react and react-dom ^18.0.2).",
+      "rejected": [
+        "^18.0.2 (devDependency pin, stricter than needed for peers)",
+        ">=18.0.0 (would claim React 19 support, a non-goal)"
+      ],
+      "reason": "Matches @backstage/ui, which is already React 18 only, and the single expected range the peer-deps lint enforces after this change."
+    },
+    {
+      "topic": "How the three render sites mount",
+      "choice": "Static named import `import { createRoot } from 'react-dom/client';` replacing the `import 'react-dom';` side-effect line (or the dynamic import block), then a direct synchronous `createRoot(container).render(node)` call; no promise, no process.env.HAS_REACT_DOM_CLIENT branch.",
+      "rejected": [
+        "default import ReactDOM from 'react-dom/client' (createDevApp.test.tsx mocks react-dom/client with only a named createRoot export, so ReactDOM.createRoot would be undefined)",
+        "keeping the dynamic import() promise (it only existed to avoid resolving react-dom/client under React 17)"
+      ],
+      "reason": "React 18 is required, so react-dom/client always resolves; the named import works with both the real module and the existing jest.doMock in createDevApp.test.tsx."
+    },
+    {
+      "topic": "process.env.HAS_REACT_DOM_CLIENT after detection is removed",
+      "choice": "config.ts defines 'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(true) in both the webpack and the rspack DefinePlugin branches; cli-module-test-jest/config/jest.js sets process.env.HAS_REACT_DOM_CLIENT = true unconditionally at the same spot the try/catch was.",
+      "rejected": [
+        "dropping the define entirely (already published plugin builds read the flag and would silently fall back to ReactDOM.render)",
+        "keeping require.resolve detection (React 17 is no longer supported)"
+      ],
+      "reason": "Keeps older published packages on their createRoot path while removing the detection code (FR-6, brief goal 4)."
+    },
+    {
+      "topic": "Deleting hasReactDomClient.ts",
+      "choice": "A tooling unit runs `rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts` from the project root after config.ts and startFrontend.ts stop importing it.",
+      "rejected": [
+        "an edit that empties the file (the file would still exist, failing AC-4)",
+        "git rm (stages the change in the index; the run makes no commits or index changes)"
+      ],
+      "reason": "The spec has no delete action for a typed unit; a tooling step is the only way to remove a file, and it is shown at Gate 2."
+    },
+    {
+      "topic": "CLI React version warning in server.ts",
+      "choice": "checkReactVersion keeps its try/catch and require.resolve of react/package.json from targetPaths.rootDir; it reads `const major = parseInt(reactPkg.version, 10);` and when `major < 18` prints one console.log(chalk.yellow(...)) with the text: You are using React ${reactPkg.version}, which is no longer supported by Backstage. Please upgrade your app to React 18 by following the migration guide: https://backstage.io/docs/tutorials/react18-migration/",
+      "rejected": [
+        "adding a semver dependency to cli-module-build (a new dependency for a single major comparison)",
+        "console.warn (the existing check in this function uses console.log with chalk.yellow)",
+        "a boxed multi-line warning (the box cannot stay aligned with a dynamic version string)"
+      ],
+      "reason": "One warning when the app's React major is below 18, linking to the React 18 migration guide (FR-8); a NaN major never warns because NaN < 18 is false."
+    },
+    {
+      "topic": "cli-module-build knip-report.md",
+      "choice": "Typed edit of the generated report, not a regeneration: drop the react-dom row that points at the deleted file, change the heading count to (1), and realign the table to its remaining row as knip's markdown reporter does (column width = longest cell); the react row keeps its location text src/lib/bundler/server.ts:274:43 unchanged.",
+      "rejected": [
+        "running yarn build:knip-reports (it rewrites reports beyond this package's change and is not checked in CI)"
+      ],
+      "reason": "FR-6 requires only that the report no longer points at the deleted file; the report is prettier-ignored and generated, so the edit reproduces the generator's table format by hand."
+    },
+    {
+      "topic": "Files left untouched although listed in the brief",
+      "choice": "No unit for packages/dev-utils/src/devApp/render.test.tsx or packages/test-utils/report.api.md.",
+      "rejected": [
+        "editing render.test.tsx (it renders through build() and React Testing Library and never touches the removed fallback)",
+        "editing report.api.md (API Extractor reports carry the release tag and the type, not the doc comment text, so the LegacyRootOption comment change does not alter it)"
+      ],
+      "reason": "A refactor changes only what the requirement needs; both files stay consistent with the change as they are."
+    },
+    {
+      "topic": "Changeset split and bump levels",
+      "choice": "Six new files: react-18-required-major.md (major, the 17 published packages at >=1.0.0 whose peer range narrows), react-18-required-minor.md (minor, the 37 published packages below 1.0.0 whose peer range narrows), react-18-drop-sync-external-store-shim.md (patch: @backstage/ui, @backstage/frontend-plugin-api, @backstage/plugin-app), react-18-cli-module-build.md (patch), react-18-cli-module-test-jest.md (patch), react-18-repo-tools-peer-deps.md (minor, breaking for a 0.x package).",
+      "rejected": [
+        "one changeset for every package (messages must be relevant to every package they name)",
+        "editing existing changesets (none of the 42 existing ones cover React peer ranges or these CLI changes)"
+      ],
+      "reason": "CLAUDE.md: breaking below 1.0.0 is minor, at or above 1.0.0 is major; private app-example-plugin and @internal/plugin-todo-list get none; changesets merges a patch entry into a larger bump of the same package."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "prettier",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "eslint",
+      "run": "yarn eslint {path}",
+      "timeout_s": 120
+    },
+    {
+      "id": "node-syntax",
+      "run": "node --check {path}",
+      "timeout_s": 30
+    },
+    {
+      "id": "jest-related",
+      "run": "CI=1 yarn test --findRelatedTests {path} --passWithNoTests",
+      "timeout_s": 300
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "tsc",
+      "run": "yarn tsc"
+    },
+    {
+      "id": "lint-peer-deps",
+      "run": "yarn lint:peer-deps"
+    },
+    {
+      "id": "no-react17-ranges",
+      "run": "! git grep -nE '\"(react|react-dom|@types/react)\": \"[^\"]*\\^17' -- 'packages/*/package.json' 'plugins/*/package.json'"
+    },
+    {
+      "id": "no-react17-shims",
+      "run": "! git grep -nE 'hasReactDomClient|use-sync-external-store|ReactDOM\\.render\\(' -- packages plugins ':!*.md' ':!*.test.ts' ':!*.test.tsx'"
+    },
+    {
+      "id": "test-dev-utils",
+      "run": "CI=1 yarn test packages/dev-utils"
+    },
+    {
+      "id": "test-frontend-dev-utils",
+      "run": "CI=1 yarn test packages/frontend-dev-utils"
+    },
+    {
+      "id": "test-frontend-plugin-api",
+      "run": "CI=1 yarn test packages/frontend-plugin-api"
+    },
+    {
+      "id": "test-ui",
+      "run": "CI=1 yarn test packages/ui"
+    },
+    {
+      "id": "test-test-utils",
+      "run": "CI=1 yarn test packages/test-utils"
+    },
+    {
+      "id": "test-cli-module-build",
+      "run": "CI=1 yarn test packages/cli-module-build"
+    },
+    {
+      "id": "test-repo-tools",
+      "run": "CI=1 yarn test packages/repo-tools"
+    },
+    {
+      "id": "test-techdocs",
+      "run": "CI=1 yarn test plugins/techdocs"
+    },
+    {
+      "id": "test-plugin-app",
+      "run": "CI=1 yarn test plugins/app"
+    }
+  ]
+}

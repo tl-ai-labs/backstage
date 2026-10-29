@@ -34,7 +34,6 @@ import { findOwnPaths, runOutput, targetPaths } from '@backstage/cli-common';
 import { transforms } from './transforms';
 import { version } from '../../../package.json';
 import yn from 'yn';
-import { hasReactDomClient } from './hasReactDomClient';
 import { createWorkspaceLinkingPlugins } from './linkWorkspaces';
 import { ConfigInjectingHtmlWebpackPlugin } from './ConfigInjectingHtmlWebpackPlugin';
 import { STATIC_ASSET_HASH_LENGTH } from './staticAssetHash';
@@ -269,20 +268,16 @@ export async function createConfig(
             () => JSON.stringify(options.getFrontendAppConfigs()),
             true,
           ),
-          // This allows for conditional imports of react-dom/client, since there's no way
-          // to check for presence of it in source code without module resolution errors.
-          'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(
-            hasReactDomClient(),
-          ),
+          // React 18 is required, so this is always true; older published
+          // packages read it to choose the react-dom/client render path.
+          'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(true),
         })
       : new bundler.DefinePlugin({
           'process.env.BUILD_INFO': JSON.stringify(buildInfo),
           'process.env.APP_CONFIG': JSON.stringify([]), // Inject via index.html instead
-          // This allows for conditional imports of react-dom/client, since there's no way
-          // to check for presence of it in source code without module resolution errors.
-          'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(
-            hasReactDomClient(),
-          ),
+          // React 18 is required, so this is always true; older published
+          // packages read it to choose the react-dom/client render path.
+          'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(true),
         }),
   );
 

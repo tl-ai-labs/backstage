@@ -1,0 +1,2165 @@
+{
+  "header": {
+    "conventions": [
+      "Match the existing style of each file: consistency within a package beats consistency across the repo (CLAUDE.md).",
+      "Prettier is the formatter (config @backstage/cli/config/prettier): single quotes, trailing commas, arrowParens avoid, 80 columns, 2-space indent; every changed file is formatted with yarn prettier --write <path>.",
+      "Every edited .ts/.tsx/.js file keeps its existing Apache 2.0 copyright header and year unchanged; no new source files are created (changesets are markdown and carry no header).",
+      "Change only the lines a unit's sites name; do not reorder imports, rename symbols or touch unrelated code.",
+      "package.json edits: keep 2-space JSON indentation and key order; keep a trailing comma exactly when another entry follows in the same object; never touch peerDependenciesMeta or react-router-dom.",
+      "React APIs are imported by name: import { createRoot } from 'react-dom/client'; import { useMemo, useSyncExternalStore } from 'react'.",
+      "Tests run on Jest 30 through backstage-cli (CI=1 yarn test <path> from the repo root), with describe/it, expect matchers and React Testing Library.",
+      "Changesets are new .changeset/<kebab-name>.md files: YAML front matter of '<package-name>': <bump> lines (single-quoted names, one per line, sorted by name), a blank line, then a plain-language adopter-facing message; never name internal symbols (functions, variables, env flags).",
+      "A breaking changeset message starts with **BREAKING**: (bold, then a colon), as existing changesets in .changeset/ do.",
+      "Docs follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as you, no statements about the future, code style for package names and file paths.",
+      "No yarn build, yarn release or changesets version; no commits; only write-contract allowlisted paths change; yarn.lock is written only by yarn install."
+    ],
+    "decisions": [
+      {
+        "topic": "React peer range value",
+        "choice": "Exactly \"^18.0.0\" for @types/react, react and react-dom in peerDependencies of every listed package; react-router-dom stays \"^6.30.2\"; devDependencies stay as they are (@types/react ^18.0.0, react and react-dom ^18.0.2).",
+        "rejected": [
+          "^18.0.2 (devDependency pin, stricter than needed for peers)",
+          ">=18.0.0 (would claim React 19 support, a non-goal)"
+        ],
+        "reason": "Matches @backstage/ui, which is already React 18 only, and the single expected range the peer-deps lint enforces after this change."
+      },
+      {
+        "topic": "How the three render sites mount",
+        "choice": "Static named import `import { createRoot } from 'react-dom/client';` replacing the `import 'react-dom';` side-effect line (or the dynamic import block), then a direct synchronous `createRoot(container).render(node)` call; no promise, no process.env.HAS_REACT_DOM_CLIENT branch.",
+        "rejected": [
+          "default import ReactDOM from 'react-dom/client' (createDevApp.test.tsx mocks react-dom/client with only a named createRoot export, so ReactDOM.createRoot would be undefined)",
+          "keeping the dynamic import() promise (it only existed to avoid resolving react-dom/client under React 17)"
+        ],
+        "reason": "React 18 is required, so react-dom/client always resolves; the named import works with both the real module and the existing jest.doMock in createDevApp.test.tsx."
+      },
+      {
+        "topic": "process.env.HAS_REACT_DOM_CLIENT after detection is removed",
+        "choice": "config.ts defines 'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(true) in both the webpack and the rspack DefinePlugin branches; cli-module-test-jest/config/jest.js sets process.env.HAS_REACT_DOM_CLIENT = true unconditionally at the same spot the try/catch was.",
+        "rejected": [
+          "dropping the define entirely (already published plugin builds read the flag and would silently fall back to ReactDOM.render)",
+          "keeping require.resolve detection (React 17 is no longer supported)"
+        ],
+        "reason": "Keeps older published packages on their createRoot path while removing the detection code (FR-6, brief goal 4)."
+      },
+      {
+        "topic": "Deleting hasReactDomClient.ts",
+        "choice": "A tooling unit runs `rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts` from the project root after config.ts and startFrontend.ts stop importing it.",
+        "rejected": [
+          "an edit that empties the file (the file would still exist, failing AC-4)",
+          "git rm (stages the change in the index; the run makes no commits or index changes)"
+        ],
+        "reason": "The spec has no delete action for a typed unit; a tooling step is the only way to remove a file, and it is shown at Gate 2."
+      },
+      {
+        "topic": "CLI React version warning in server.ts",
+        "choice": "checkReactVersion keeps its try/catch and require.resolve of react/package.json from targetPaths.rootDir; it reads `const major = parseInt(reactPkg.version, 10);` and when `major < 18` prints one console.log(chalk.yellow(...)) with the text: You are using React ${reactPkg.version}, which is no longer supported by Backstage. Please upgrade your app to React 18 by following the migration guide: https://backstage.io/docs/tutorials/react18-migration/",
+        "rejected": [
+          "adding a semver dependency to cli-module-build (a new dependency for a single major comparison)",
+          "console.warn (the existing check in this function uses console.log with chalk.yellow)",
+          "a boxed multi-line warning (the box cannot stay aligned with a dynamic version string)"
+        ],
+        "reason": "One warning when the app's React major is below 18, linking to the React 18 migration guide (FR-8); a NaN major never warns because NaN < 18 is false."
+      },
+      {
+        "topic": "cli-module-build knip-report.md",
+        "choice": "Typed edit of the generated report, not a regeneration: drop the react-dom row that points at the deleted file, change the heading count to (1), and realign the table to its remaining row as knip's markdown reporter does (column width = longest cell); the react row keeps its location text src/lib/bundler/server.ts:274:43 unchanged.",
+        "rejected": [
+          "running yarn build:knip-reports (it rewrites reports beyond this package's change and is not checked in CI)"
+        ],
+        "reason": "FR-6 requires only that the report no longer points at the deleted file; the report is prettier-ignored and generated, so the edit reproduces the generator's table format by hand."
+      },
+      {
+        "topic": "Files left untouched although listed in the brief",
+        "choice": "No unit for packages/dev-utils/src/devApp/render.test.tsx or packages/test-utils/report.api.md.",
+        "rejected": [
+          "editing render.test.tsx (it renders through build() and React Testing Library and never touches the removed fallback)",
+          "editing report.api.md (API Extractor reports carry the release tag and the type, not the doc comment text, so the LegacyRootOption comment change does not alter it)"
+        ],
+        "reason": "A refactor changes only what the requirement needs; both files stay consistent with the change as they are."
+      },
+      {
+        "topic": "Changeset split and bump levels",
+        "choice": "Six new files: react-18-required-major.md (major, the 17 published packages at >=1.0.0 whose peer range narrows), react-18-required-minor.md (minor, the 37 published packages below 1.0.0 whose peer range narrows), react-18-drop-sync-external-store-shim.md (patch: @backstage/ui, @backstage/frontend-plugin-api, @backstage/plugin-app), react-18-cli-module-build.md (patch), react-18-cli-module-test-jest.md (patch), react-18-repo-tools-peer-deps.md (minor, breaking for a 0.x package).",
+        "rejected": [
+          "one changeset for every package (messages must be relevant to every package they name)",
+          "editing existing changesets (none of the 42 existing ones cover React peer ranges or these CLI changes)"
+        ],
+        "reason": "CLAUDE.md: breaking below 1.0.0 is minor, at or above 1.0.0 is major; private app-example-plugin and @internal/plugin-todo-list get none; changesets merges a patch entry into a larger bump of the same package."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "node-syntax",
+        "run": "node --check {path}",
+        "timeout_s": 30
+      },
+      {
+        "id": "jest-related",
+        "run": "CI=1 yarn test --findRelatedTests {path} --passWithNoTests",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "no-react17-ranges",
+        "run": "! git grep -nE '\"(react|react-dom|@types/react)\": \"[^\"]*\\^17' -- 'packages/*/package.json' 'plugins/*/package.json'"
+      },
+      {
+        "id": "no-react17-shims",
+        "run": "! git grep -nE 'hasReactDomClient|use-sync-external-store|ReactDOM\\.render\\(' -- packages plugins ':!*.md' ':!*.test.ts' ':!*.test.tsx'"
+      },
+      {
+        "id": "test-dev-utils",
+        "run": "CI=1 yarn test packages/dev-utils"
+      },
+      {
+        "id": "test-frontend-dev-utils",
+        "run": "CI=1 yarn test packages/frontend-dev-utils"
+      },
+      {
+        "id": "test-frontend-plugin-api",
+        "run": "CI=1 yarn test packages/frontend-plugin-api"
+      },
+      {
+        "id": "test-ui",
+        "run": "CI=1 yarn test packages/ui"
+      },
+      {
+        "id": "test-test-utils",
+        "run": "CI=1 yarn test packages/test-utils"
+      },
+      {
+        "id": "test-cli-module-build",
+        "run": "CI=1 yarn test packages/cli-module-build"
+      },
+      {
+        "id": "test-repo-tools",
+        "run": "CI=1 yarn test packages/repo-tools"
+      },
+      {
+        "id": "test-techdocs",
+        "run": "CI=1 yarn test plugins/techdocs"
+      },
+      {
+        "id": "test-plugin-app",
+        "run": "CI=1 yarn test plugins/app"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The peer-deps lint expects ^18.0.0 for @types/react, react and react-dom in every package, with no React 18-only special case.",
+      "rules": [
+        "1. peerDependencies holds '@types/react': '^18.0.0', react: '^18.0.0', 'react-dom': '^18.0.0' and 'react-router-dom': '^6.30.2', in that order; it is the only expected peer range table.",
+        "2. Remove the peerDependenciesReact18Only object, its comment, the react18OnlyPackages set and the getExpectedPeerDependencies function.",
+        "3. matchesPeerDependency compares packageJson.peerDependencies[dep] with peerDependencies[dep as keyof typeof peerDependencies].",
+        "4. Every fix that writes a peer range assigns peerDependencies[x as keyof typeof peerDependencies] where it used expectedPeerDeps[x as keyof typeof expectedPeerDeps]; the expectedPeerDeps local is removed.",
+        "5. desiredLocalVersionsOfDependencies, groupsOfPeerDependencies, optional handling and every console.error message stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 50,
+          "first_line": "const peerDependencies = {",
+          "last_line": "const react18OnlyPackages = new Set(['@backstage/ui']);",
+          "rule": "Rules 1 and 2: one peerDependencies object with the three React ranges at '^18.0.0' and react-router-dom unchanged; nothing else."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 92,
+          "to": 98,
+          "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+          "last_line": "",
+          "rule": "Rule 2: remove the function and the blank line after it."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 103,
+          "to": 106,
+          "first_line": "const expected = getExpectedPeerDependencies(packageJson);",
+          "last_line": "packageJson.peerDependencies[dep] === expected[dep as keyof typeof expected]",
+          "rule": "Rule 3: drop the expected local; return packageJson.peerDependencies && packageJson.peerDependencies[dep] === peerDependencies[dep as keyof typeof peerDependencies]."
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 145,
+          "to": 145,
+          "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+          "rule": "Rule 4: remove the expectedPeerDeps local."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 218,
+          "to": 218,
+          "first_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];",
+          "rule": "Rule 4: peerDependencies[groupDep as keyof typeof peerDependencies];"
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 245,
+          "to": 245,
+          "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+          "rule": "Rule 4: peerDependencies[dep as keyof typeof peerDependencies];"
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 255,
+          "to": 255,
+          "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+          "rule": "Rule 4: peerDependencies[dep as keyof typeof peerDependencies];"
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-2", "AC-2", "NFR-1"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U02",
+      "path": "packages/app-defaults/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 60,
+          "to": 62,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U03",
+      "path": "packages/app-example-plugin/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 57,
+          "to": 59,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U04",
+      "path": "packages/core-app-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 83,
+          "to": 85,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U05",
+      "path": "packages/core-compat-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 61,
+          "to": 63,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U06",
+      "path": "packages/core-components/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 131,
+          "to": 133,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U07",
+      "path": "packages/core-plugin-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 74,
+          "to": 76,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U08",
+      "path": "packages/dev-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 66,
+          "to": 68,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U09",
+      "path": "packages/frontend-app-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 64,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U10",
+      "path": "packages/frontend-defaults/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U11",
+      "path": "packages/frontend-dev-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 56,
+          "to": 58,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U12",
+      "path": "packages/frontend-dynamic-feature-loader/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U13",
+      "path": "packages/frontend-plugin-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0 and drops the use-sync-external-store dependency.",
+      "covers": ["FR-1", "AC-1", "FR-7", "AC-5"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 52,
+          "to": 53,
+          "first_line": "\"@standard-schema/spec\": \"^1.1.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "Keep @standard-schema/spec as the last dependency, without a trailing comma; remove the use-sync-external-store line."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 64,
+          "to": 64,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Remove the @types/use-sync-external-store devDependency line."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 72,
+          "to": 74,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U14",
+      "path": "packages/frontend-test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 68,
+          "to": 70,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U15",
+      "path": "packages/integration-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 55,
+          "to": 57,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U16",
+      "path": "packages/module-federation-common/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 57,
+          "to": 59,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U17",
+      "path": "packages/test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 79,
+          "to": 81,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U18",
+      "path": "packages/theme/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 56,
+          "to": 58,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U19",
+      "path": "packages/version-bridge/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 49,
+          "to": 51,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U20",
+      "path": "plugins/api-docs-module-protoc-gen-doc/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 51,
+          "to": 53,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U21",
+      "path": "plugins/api-docs/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 96,
+          "to": 98,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U22",
+      "path": "plugins/app-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 60,
+          "to": 62,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U23",
+      "path": "plugins/app-visualizer/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 53,
+          "to": 55,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U24",
+      "path": "plugins/app/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0 and drops the use-sync-external-store dependency.",
+      "covers": ["FR-1", "AC-1", "FR-7", "AC-5"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 78,
+          "to": 78,
+          "first_line": "\"use-sync-external-store\": \"^1.4.0\",",
+          "rule": "Remove the unused use-sync-external-store dependency line."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 98,
+          "to": 100,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U25",
+      "path": "plugins/auth-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 61,
+          "to": 63,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U26",
+      "path": "plugins/auth/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 72,
+          "to": 74,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U27",
+      "path": "plugins/catalog-graph/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 87,
+          "to": 89,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U28",
+      "path": "plugins/catalog-import/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 98,
+          "to": 100,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U29",
+      "path": "plugins/catalog-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 115,
+          "to": 117,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U30",
+      "path": "plugins/catalog-unprocessed-entities/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 81,
+          "to": 83,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U31",
+      "path": "plugins/catalog/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 115,
+          "to": 117,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U32",
+      "path": "plugins/config-schema/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 63,
+          "to": 65,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U33",
+      "path": "plugins/devtools-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U34",
+      "path": "plugins/devtools/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 83,
+          "to": 85,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U35",
+      "path": "plugins/example-todo-list/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 59,
+          "to": 61,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U36",
+      "path": "plugins/home-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 78,
+          "to": 80,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U37",
+      "path": "plugins/home/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 101,
+          "to": 103,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U38",
+      "path": "plugins/kubernetes-cluster/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 83,
+          "to": 85,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U39",
+      "path": "plugins/kubernetes-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 94,
+          "to": 96,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U40",
+      "path": "plugins/kubernetes/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 84,
+          "to": 86,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U41",
+      "path": "plugins/mui-to-bui/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U42",
+      "path": "plugins/notifications/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 86,
+          "to": 88,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U43",
+      "path": "plugins/org-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 67,
+          "to": 69,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U44",
+      "path": "plugins/org/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 93,
+          "to": 95,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U45",
+      "path": "plugins/permission-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 64,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\"",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U46",
+      "path": "plugins/scaffolder-node-test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U47",
+      "path": "plugins/scaffolder-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 125,
+          "to": 127,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U48",
+      "path": "plugins/scaffolder/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 136,
+          "to": 138,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U49",
+      "path": "plugins/search-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 90,
+          "to": 92,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U50",
+      "path": "plugins/search/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 95,
+          "to": 97,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U51",
+      "path": "plugins/signals-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U52",
+      "path": "plugins/signals/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 78,
+          "to": 80,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U53",
+      "path": "plugins/techdocs-addons-test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 66,
+          "to": 68,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U54",
+      "path": "plugins/techdocs-module-addons-contrib/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 82,
+          "to": 84,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U55",
+      "path": "plugins/techdocs-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 87,
+          "to": 89,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U56",
+      "path": "plugins/techdocs/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 111,
+          "to": 113,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U57",
+      "path": "plugins/user-settings/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Requires React 18: the @types/react, react and react-dom peer ranges are ^18.0.0.",
+      "covers": ["FR-1", "AC-1"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 93,
+          "to": 95,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set the peerDependencies ranges of @types/react, react and react-dom to \"^18.0.0\" in the same order, keeping each line's trailing comma as it is now."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U58",
+      "path": "packages/ui/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Drops the use-sync-external-store runtime dependency and its @types devDependency; the React 18 only peer ranges stay as they are.",
+      "covers": ["FR-7", "AC-5"],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 59,
+          "first_line": "\"react-stately\": \"~3.51.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "Keep the react-stately entry as the last dependency, without a trailing comma; remove the use-sync-external-store line."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 70,
+          "to": 70,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Remove the @types/use-sync-external-store devDependency line."
+        }
+      ],
+      "depends_on": [],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U59",
+      "path": "packages/cli-module-test-jest/config/jest.js",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Jest config always sets process.env.HAS_REACT_DOM_CLIENT to true, with no react-dom/client detection.",
+      "rules": [
+        "1. Replace the try/catch around require.resolve('react-dom/client') with a two-line comment and the unconditional statement process.env.HAS_REACT_DOM_CLIENT = true;",
+        "2. The comment says React 18 is required, and older published packages still read this flag to choose the react-dom/client render path.",
+        "3. Everything else in the file, including every other use of paths, stays unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 52,
+          "to": 59,
+          "first_line": "try {",
+          "last_line": "}",
+          "rule": "Rules 1 and 2: comment lines then process.env.HAS_REACT_DOM_CLIENT = true; at top level."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-6", "AC-4"],
+      "checks": ["prettier", "node-syntax"]
+    },
+    {
+      "id": "U60",
+      "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Both DefinePlugin branches define process.env.HAS_REACT_DOM_CLIENT as JSON.stringify(true) without importing hasReactDomClient.",
+      "rules": [
+        "1. Remove the import of hasReactDomClient from './hasReactDomClient'.",
+        "2. In the webpack and the rspack DefinePlugin objects, the entry is 'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(true), on one line, preceded by a two-line comment: React 18 is required, so this is always true; older published packages read it to choose the react-dom/client render path.",
+        "3. BUILD_INFO and APP_CONFIG entries stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37,
+          "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+          "rule": "Rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 272,
+          "to": 276,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Rule 2, webpack branch."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 281,
+          "to": 285,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Rule 2, rspack branch."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-6", "AC-4"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U61",
+      "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "startFrontend no longer imports hasReactDomClient and prints no React 17 deprecation warning.",
+      "rules": [
+        "1. Remove the hasReactDomClient import line.",
+        "2. Remove the if (!hasReactDomClient()) block and the blank line after it, so the packageJson read is followed by one blank line and then the serveBundle call."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+          "rule": "Rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 45,
+          "to": 50,
+          "first_line": "if (!hasReactDomClient()) {",
+          "last_line": "",
+          "rule": "Rule 2."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-8", "AC-4"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U62",
+      "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "checkReactVersion warns once, linking to the React 18 migration guide, when the app's React major version is below 18.",
+      "rules": [
+        "1. Keep the function name, the try/catch with the /* ignored */ catch, the comment and the require.resolve('react/package.json', { paths: [targetPaths.rootDir] }) and require(reactPkgPath) lines exactly as they are, so line numbers before them do not move.",
+        "2. Compute const major = parseInt(reactPkg.version, 10); and warn only when major < 18 (a NaN major never warns).",
+        "3. The warning is one console.log(chalk.yellow(...)) of a template literal reading: You are using React ${reactPkg.version}, which is no longer supported by Backstage. Please upgrade your app to React 18 by following the migration guide: https://backstage.io/docs/tutorials/react18-migration/",
+        "4. No emoji box and no mention of React 16 or 17 remain; the call site checkReactVersion() in serveBundle is unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 276,
+          "to": 287,
+          "first_line": "if (reactPkg.version.startsWith('16.')) {",
+          "last_line": "}",
+          "rule": "Rules 2 to 4: the major computation and the single warning, inside the existing try block."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-8"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U63",
+      "path": "packages/cli-module-build/knip-report.md",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The generated knip report lists one unlisted dependency, react in server.ts, and no row for the deleted hasReactDomClient.ts.",
+      "rules": [
+        "1. The heading reads ## Unlisted dependencies (1).",
+        "2. The table is exactly these three lines, padded as knip's markdown reporter pads them (each column as wide as its longest cell):",
+        "3. | Name  | Location                         | Severity |",
+        "4. | :---- | :------------------------------- | :------- |",
+        "5. | react | src/lib/bundler/server.ts:274:43 | error    |",
+        "6. The Unused dependencies section above and the trailing empty line stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 11,
+          "to": 16,
+          "first_line": "## Unlisted dependencies (2)",
+          "last_line": "| react     | src/lib/bundler/server.ts:274:43           | error    |",
+          "rule": "Rules 1 to 5: heading, blank line, then the three table lines."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-6"]
+    },
+    {
+      "id": "U64",
+      "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Deletes hasReactDomClient.ts once nothing imports it.",
+      "run": "rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "depends_on": ["U60", "U61", "U63"],
+      "covers": ["FR-6", "AC-4"]
+    },
+    {
+      "id": "U65",
+      "path": "packages/dev-utils/src/devApp/render.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "DevAppBuilder.render mounts the dev app with createRoot from react-dom/client, with no legacy ReactDOM.render fallback.",
+      "rules": [
+        "1. Replace the side-effect import 'react-dom' with import { createRoot } from 'react-dom/client'; in the same position.",
+        "2. Remove the ReactDOMPromise declaration and its HAS_REACT_DOM_CLIENT if/else, and the blank line after them.",
+        "3. In render(), after the defaultPage redirect, call createRoot(document.getElementById('root')!).render(<DevApp />); directly and synchronously.",
+        "4. build(), isReactRouterBeta and every public signature stay unchanged; app.createRoot(DevApp) in build() is the app's method and is untouched."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 53,
+          "to": 53,
+          "first_line": "import 'react-dom';",
+          "rule": "Rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 58,
+          "to": 66,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "",
+          "rule": "Rule 2."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 320,
+          "to": 328,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Rule 3."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-3", "AC-3"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U66",
+      "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "createDevApp mounts the app with createRoot from react-dom/client, with no legacy ReactDOM.render fallback.",
+      "rules": [
+        "1. Replace the side-effect import 'react-dom' with import { createRoot } from 'react-dom/client'; in the same position.",
+        "2. Remove the ReactDOMPromise declaration and its HAS_REACT_DOM_CLIENT if/else, and the blank line after them.",
+        "3. After const AppRoot = app.createRoot();, build rootNode exactly as now (a fragment with <Suspense fallback={null}><BuiCss /></Suspense> then {AppRoot}) and call createRoot(rootElement).render(rootNode); synchronously.",
+        "4. getRootElement, CreateDevAppOptions and the createDevApp signature stay unchanged; the missing-root error is still thrown before anything renders."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 24,
+          "to": 24,
+          "first_line": "import 'react-dom';",
+          "rule": "Rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 43,
+          "to": 51,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "",
+          "rule": "Rule 2."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 109,
+          "to": 124,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Rule 3."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-4", "AC-3"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U67",
+      "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "The createDevApp tests cover rendering, bindRoutes forwarding through the mocked react-dom/client createRoot, and the missing-root error; the legacy fallback test is gone.",
+      "rules": [
+        "1. Delete the 'should fall back to legacy react-dom rendering when createRoot is unavailable' test and the blank line before it.",
+        "2. The other three tests, loadCreateDevAppIsolated and the beforeEach/afterEach/afterAll hooks stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 149,
+          "to": 192,
+          "first_line": "",
+          "last_line": "});",
+          "rule": "Rule 1: the file then ends with the missing-root test's closing }); followed by the describe's closing });."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should render a dev app with a plugin",
+          "given": "a #root element and a plugin with a page at /",
+          "expect": "Test Plugin Page is found in the document"
+        },
+        {
+          "name": "should forward bindRoutes to createApp",
+          "given": "mocked frontend-defaults, plugin-app and react-dom/client with a named createRoot",
+          "expect": "createApp receives bindRoutes and the features, createRoot receives the root element, and render gets the BuiCss Suspense and the app root"
+        },
+        {
+          "name": "should throw a clear error when the root element is missing",
+          "given": "no #root element",
+          "expect": "createDevApp throws the missing root element error"
+        }
+      ],
+      "depends_on": ["U66"],
+      "covers": ["FR-4", "AC-7"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U68",
+      "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "renderReactElement mounts the element into the given container with createRoot from react-dom/client.",
+      "rules": [
+        "1. After the license header and its blank line, the file holds import { createRoot } from 'react-dom/client';, a blank line, the /** @internal */ comment and the function.",
+        "2. export function renderReactElement(element: JSX.Element, root: HTMLElement) keeps its signature and calls createRoot(root).render(element); directly.",
+        "3. No ReactDOMPromise, no HAS_REACT_DOM_CLIENT branch, no ReactDOM.render."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 35,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "Rules 1 to 3."
+        }
+      ],
+      "exports": [
+        {
+          "name": "renderReactElement",
+          "kind": "function",
+          "params": [
+            {
+              "name": "element",
+              "type": "JSX.Element"
+            },
+            {
+              "name": "root",
+              "type": "HTMLElement"
+            }
+          ],
+          "returns": "void"
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-5", "AC-3"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U69",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useRouteRef subscribes to app finalization with React's built-in useSyncExternalStore.",
+      "rules": [
+        "1. The two import lines become one: import { useMemo, useSyncExternalStore } from 'react';",
+        "2. The useSyncExternalStore call, its arguments and everything else stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "Rule 1."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7", "AC-5", "AC-6"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U70",
+      "path": "packages/ui/src/hooks/useBreakpoint.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useBreakpoint reads the breakpoint store with React's built-in useSyncExternalStore.",
+      "rules": [
+        "1. The two import lines become one: import { useMemo, useSyncExternalStore } from 'react';",
+        "2. The useSyncExternalStore call with subscribe, getSnapshot and getServerSnapshot and everything else stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "Rule 1."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7", "AC-5"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U71",
+      "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The LegacyRootOption doc comment describes the option without referring to React 17; the type is unchanged.",
+      "rules": [
+        "1. Keep the /** and @public lines; the description reads: Renders with React's legacy root API instead of createRoot when set to true. Use it for tests that depend on synchronous rendering.",
+        "2. Do not write ReactDOM.render or any React version number in the comment.",
+        "3. export type LegacyRootOption = { legacyRoot?: boolean }; stays unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 27,
+          "to": 28,
+          "first_line": "* Set legacy mode when using React 18/RTL 13+.",
+          "last_line": "* Mock this option while we're working against React 17 or lower.",
+          "rule": "Rule 1, as one or two * comment lines."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-9"],
+      "checks": ["prettier", "eslint", "jest-related"]
+    },
+    {
+      "id": "U72",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates yarn.lock after the peer range narrowing and the use-sync-external-store removals.",
+      "run": "yarn install",
+      "depends_on": [
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10",
+        "U11",
+        "U12",
+        "U13",
+        "U14",
+        "U15",
+        "U16",
+        "U17",
+        "U18",
+        "U19",
+        "U20",
+        "U21",
+        "U22",
+        "U23",
+        "U24",
+        "U25",
+        "U26",
+        "U27",
+        "U28",
+        "U29",
+        "U30",
+        "U31",
+        "U32",
+        "U33",
+        "U34",
+        "U35",
+        "U36",
+        "U37",
+        "U38",
+        "U39",
+        "U40",
+        "U41",
+        "U42",
+        "U43",
+        "U44",
+        "U45",
+        "U46",
+        "U47",
+        "U48",
+        "U49",
+        "U50",
+        "U51",
+        "U52",
+        "U53",
+        "U54",
+        "U55",
+        "U56",
+        "U57",
+        "U58",
+        "U69",
+        "U70"
+      ],
+      "covers": ["FR-7", "NFR-3", "NFR-4"]
+    },
+    {
+      "id": "U73",
+      "path": "docs/tutorials/react18-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The React 18 migration guide states that React 17 is no longer supported and React 18 is the minimum version.",
+      "rules": [
+        "1. The :::info admonition reads: Backstage packages require React 18. React 17 is no longer supported, and the Backstage CLI shows a warning when your app uses an older version of React.",
+        "2. The intro paragraph says Backstage core libraries and plugins declare ^18.0.0 as their peer range for react, react-dom and @types/react (code style), and that a project still on React 17 must follow this guide before it upgrades to a Backstage release that requires React 18.",
+        "3. In the plugin package.json examples, the highlight-add devDependencies lines are \"@types/react\": \"^18.0.0\", \"react\": \"^18.0.2\", \"react-dom\": \"^18.0.2\", and the highlight-add peerDependencies lines are \"^18.0.0\" for all three.",
+        "4. Remove the :::info admonition that suggests keeping React 17 devDependencies in individual plugins.",
+        "5. Follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as you, no statements about the future."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 9,
+          "to": 9,
+          "first_line": "This guide has been updated to include steps for removing support for React 16, as it is now deprecated.",
+          "rule": "Rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 13,
+          "to": 13,
+          "first_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+          "rule": "Rule 2, one paragraph."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 86,
+          "to": 88,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Rule 3, devDependencies block, same indentation."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 103,
+          "to": 105,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Rule 3, peerDependencies block, same indentation."
+        },
+        {
+          "id": "S5",
+          "at": "delete",
+          "from": 131,
+          "to": 134,
+          "first_line": ":::info",
+          "last_line": "",
+          "rule": "Rule 4: remove the admonition and the blank line after it."
+        }
+      ],
+      "uses": [
+        {
+          "path": "docs/contribute/doc-style-guide.md",
+          "lines": [1, 140],
+          "reason": "Tone, formatting and admonition rules for the edited text."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-10", "NFR-2"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U74",
+      "path": ".gitignore",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The .sdlc/ run records folder is ignored by git.",
+      "rules": [
+        "1. After the last line, add a blank line, the comment # SDLC run records and the line .sdlc/"
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 193,
+          "to": 193,
+          "first_line": ".claude/worktrees/",
+          "rule": "Rule 1."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-12"]
+    },
+    {
+      "id": "U75",
+      "path": ".changeset/react-18-required-major.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Major changeset for the published packages at 1.0.0 or above whose React peer ranges narrow to React 18.",
+      "rules": [
+        "1. Front matter: one line per package with bump major, in this order: @backstage/app-defaults, @backstage/core-app-api, @backstage/core-plugin-api, @backstage/dev-utils, @backstage/integration-react, @backstage/plugin-catalog, @backstage/plugin-catalog-react, @backstage/plugin-scaffolder, @backstage/plugin-scaffolder-react, @backstage/plugin-search, @backstage/plugin-search-react, @backstage/plugin-techdocs, @backstage/plugin-techdocs-addons-test-utils, @backstage/plugin-techdocs-module-addons-contrib, @backstage/plugin-techdocs-react, @backstage/test-utils, @backstage/version-bridge.",
+        "2. Message: **BREAKING**: This package now requires React 18. The peer dependency ranges for react, react-dom and @types/react are now ^18.0.0, and React 17 is no longer supported. If your app still uses React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/) before you upgrade.",
+        "3. Package and range names in the message use code style; no internal symbol names."
+      ],
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "lines": [1, 5],
+        "reason": "Front matter and **BREAKING** message shape of an existing changeset."
+      },
+      "depends_on": ["U72"],
+      "covers": ["FR-11", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U76",
+      "path": ".changeset/react-18-required-minor.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Minor changeset for the published packages below 1.0.0 whose React peer ranges narrow to React 18.",
+      "rules": [
+        "1. Front matter: one line per package with bump minor, in this order: @backstage/core-compat-api, @backstage/core-components, @backstage/frontend-app-api, @backstage/frontend-defaults, @backstage/frontend-dev-utils, @backstage/frontend-dynamic-feature-loader, @backstage/frontend-plugin-api, @backstage/frontend-test-utils, @backstage/module-federation-common, @backstage/plugin-api-docs, @backstage/plugin-api-docs-module-protoc-gen-doc, @backstage/plugin-app, @backstage/plugin-app-react, @backstage/plugin-app-visualizer, @backstage/plugin-auth, @backstage/plugin-auth-react, @backstage/plugin-catalog-graph, @backstage/plugin-catalog-import, @backstage/plugin-catalog-unprocessed-entities, @backstage/plugin-config-schema, @backstage/plugin-devtools, @backstage/plugin-devtools-react, @backstage/plugin-home, @backstage/plugin-home-react, @backstage/plugin-kubernetes, @backstage/plugin-kubernetes-cluster, @backstage/plugin-kubernetes-react, @backstage/plugin-mui-to-bui, @backstage/plugin-notifications, @backstage/plugin-org, @backstage/plugin-org-react, @backstage/plugin-permission-react, @backstage/plugin-scaffolder-node-test-utils, @backstage/plugin-signals, @backstage/plugin-signals-react, @backstage/plugin-user-settings, @backstage/theme.",
+        "2. Message: the same text as U75's message (**BREAKING**: This package now requires React 18 ... before you upgrade.), word for word."
+      ],
+      "style_from": {
+        "unit": "U75",
+        "reason": "Same message; only the packages and bump level differ."
+      },
+      "depends_on": ["U75"],
+      "covers": ["FR-11", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U77",
+      "path": ".changeset/react-18-drop-sync-external-store-shim.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for the packages that drop the use-sync-external-store dependency.",
+      "rules": [
+        "1. Front matter, bump patch, in this order: @backstage/frontend-plugin-api, @backstage/plugin-app, @backstage/ui.",
+        "2. Message: Removed the `use-sync-external-store` dependency. These packages now use the hook built into React 18."
+      ],
+      "style_from": {
+        "unit": "U75",
+        "reason": "Front matter shape."
+      },
+      "depends_on": ["U75"],
+      "covers": ["FR-11", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U78",
+      "path": ".changeset/react-18-cli-module-build.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for @backstage/cli-module-build's React 18 warning and build changes.",
+      "rules": [
+        "1. Front matter: '@backstage/cli-module-build': patch",
+        "2. Message, two sentences: Starting a frontend package or app now shows a single warning, with a link to the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/), when the app uses a React version older than 18, and the previous React 16 and React 17 warnings are removed. Frontend builds always target React 18, and packages built for earlier Backstage versions keep rendering with the React 18 root API."
+      ],
+      "style_from": {
+        "unit": "U75",
+        "reason": "Front matter shape."
+      },
+      "depends_on": ["U75"],
+      "covers": ["FR-11", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U79",
+      "path": ".changeset/react-18-cli-module-test-jest.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for @backstage/cli-module-test-jest's React 18 test environment change.",
+      "rules": [
+        "1. Front matter: '@backstage/cli-module-test-jest': patch",
+        "2. Message: Tests always run with React 18 rendering enabled, without checking which version of `react-dom` is installed."
+      ],
+      "style_from": {
+        "unit": "U75",
+        "reason": "Front matter shape."
+      },
+      "depends_on": ["U75"],
+      "covers": ["FR-11", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U80",
+      "path": ".changeset/react-18-repo-tools-peer-deps.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Minor changeset for @backstage/repo-tools: the peer-deps command now requires React 18 ranges.",
+      "rules": [
+        "1. Front matter: '@backstage/repo-tools': minor",
+        "2. Message: **BREAKING**: The `peer-deps` command now expects `^18.0.0` as the peer dependency range for `react`, `react-dom` and `@types/react` in every package, and reports `^17.0.0 || ^18.0.0` as incorrect. Run `backstage-repo-tools peer-deps --fix` to update your packages."
+      ],
+      "style_from": {
+        "unit": "U75",
+        "reason": "Front matter and **BREAKING** shape."
+      },
+      "depends_on": ["U75"],
+      "covers": ["FR-11", "AC-8"],
+      "checks": ["prettier"]
+    }
+  ]
+}

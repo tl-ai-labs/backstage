@@ -50,19 +50,10 @@ import BookmarkIcon from '@material-ui/icons/Bookmark';
 import { ComponentType, lazy, PropsWithChildren, ReactNode } from 'react';
 import { createRoutesFromChildren, Route } from 'react-router-dom';
 import { SidebarThemeSwitcher } from './SidebarThemeSwitcher';
-import 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { SidebarLanguageSwitcher, SidebarSignOutButton } from '../components';
 
 const BuiCss = lazy(() => import('./BuiCss'));
-
-let ReactDOMPromise: Promise<
-  typeof import('react-dom') | typeof import('react-dom/client')
->;
-if (process.env.HAS_REACT_DOM_CLIENT) {
-  ReactDOMPromise = import('react-dom/client');
-} else {
-  ReactDOMPromise = import('react-dom');
-}
 
 export function isReactRouterBeta(): boolean {
   const [obj] = createRoutesFromChildren(<Route index element={<div />} />);
@@ -317,15 +308,7 @@ export class DevAppBuilder {
       window.location.pathname = this.defaultPage;
     }
 
-    ReactDOMPromise.then(ReactDOM => {
-      if ('createRoot' in ReactDOM) {
-        ReactDOM.createRoot(document.getElementById('root')!).render(
-          <DevApp />,
-        );
-      } else {
-        ReactDOM.render(<DevApp />, document.getElementById('root'));
-      }
-    });
+    createRoot(document.getElementById('root')!).render(<DevApp />);
   }
 }
 

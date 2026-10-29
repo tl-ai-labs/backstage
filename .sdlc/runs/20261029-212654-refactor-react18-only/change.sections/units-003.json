@@ -1,0 +1,103 @@
+[
+  {
+    "id": "U75",
+    "path": ".changeset/react-18-required-major.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Major changeset for the published packages at 1.0.0 or above whose React peer ranges narrow to React 18.",
+    "rules": [
+      "1. Front matter: one line per package with bump major, in this order: @backstage/app-defaults, @backstage/core-app-api, @backstage/core-plugin-api, @backstage/dev-utils, @backstage/integration-react, @backstage/plugin-catalog, @backstage/plugin-catalog-react, @backstage/plugin-scaffolder, @backstage/plugin-scaffolder-react, @backstage/plugin-search, @backstage/plugin-search-react, @backstage/plugin-techdocs, @backstage/plugin-techdocs-addons-test-utils, @backstage/plugin-techdocs-module-addons-contrib, @backstage/plugin-techdocs-react, @backstage/test-utils, @backstage/version-bridge.",
+      "2. Message: **BREAKING**: This package now requires React 18. The peer dependency ranges for react, react-dom and @types/react are now ^18.0.0, and React 17 is no longer supported. If your app still uses React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/) before you upgrade.",
+      "3. Package and range names in the message use code style; no internal symbol names."
+    ],
+    "style_from": {
+      "path": ".changeset/tidy-birds-mock.md",
+      "lines": [1, 5],
+      "reason": "Front matter and **BREAKING** message shape of an existing changeset."
+    },
+    "depends_on": ["U72"],
+    "covers": ["FR-11", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U76",
+    "path": ".changeset/react-18-required-minor.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for the published packages below 1.0.0 whose React peer ranges narrow to React 18.",
+    "rules": [
+      "1. Front matter: one line per package with bump minor, in this order: @backstage/core-compat-api, @backstage/core-components, @backstage/frontend-app-api, @backstage/frontend-defaults, @backstage/frontend-dev-utils, @backstage/frontend-dynamic-feature-loader, @backstage/frontend-plugin-api, @backstage/frontend-test-utils, @backstage/module-federation-common, @backstage/plugin-api-docs, @backstage/plugin-api-docs-module-protoc-gen-doc, @backstage/plugin-app, @backstage/plugin-app-react, @backstage/plugin-app-visualizer, @backstage/plugin-auth, @backstage/plugin-auth-react, @backstage/plugin-catalog-graph, @backstage/plugin-catalog-import, @backstage/plugin-catalog-unprocessed-entities, @backstage/plugin-config-schema, @backstage/plugin-devtools, @backstage/plugin-devtools-react, @backstage/plugin-home, @backstage/plugin-home-react, @backstage/plugin-kubernetes, @backstage/plugin-kubernetes-cluster, @backstage/plugin-kubernetes-react, @backstage/plugin-mui-to-bui, @backstage/plugin-notifications, @backstage/plugin-org, @backstage/plugin-org-react, @backstage/plugin-permission-react, @backstage/plugin-scaffolder-node-test-utils, @backstage/plugin-signals, @backstage/plugin-signals-react, @backstage/plugin-user-settings, @backstage/theme.",
+      "2. Message: the same text as U75's message (**BREAKING**: This package now requires React 18 ... before you upgrade.), word for word."
+    ],
+    "style_from": {
+      "unit": "U75",
+      "reason": "Same message; only the packages and bump level differ."
+    },
+    "depends_on": ["U75"],
+    "covers": ["FR-11", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U77",
+    "path": ".changeset/react-18-drop-sync-external-store-shim.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for the packages that drop the use-sync-external-store dependency.",
+    "rules": [
+      "1. Front matter, bump patch, in this order: @backstage/frontend-plugin-api, @backstage/plugin-app, @backstage/ui.",
+      "2. Message: Removed the `use-sync-external-store` dependency. These packages now use the hook built into React 18."
+    ],
+    "style_from": { "unit": "U75", "reason": "Front matter shape." },
+    "depends_on": ["U75"],
+    "covers": ["FR-11", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U78",
+    "path": ".changeset/react-18-cli-module-build.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/cli-module-build's React 18 warning and build changes.",
+    "rules": [
+      "1. Front matter: '@backstage/cli-module-build': patch",
+      "2. Message, two sentences: Starting a frontend package or app now shows a single warning, with a link to the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/), when the app uses a React version older than 18, and the previous React 16 and React 17 warnings are removed. Frontend builds always target React 18, and packages built for earlier Backstage versions keep rendering with the React 18 root API."
+    ],
+    "style_from": { "unit": "U75", "reason": "Front matter shape." },
+    "depends_on": ["U75"],
+    "covers": ["FR-11", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U79",
+    "path": ".changeset/react-18-cli-module-test-jest.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/cli-module-test-jest's React 18 test environment change.",
+    "rules": [
+      "1. Front matter: '@backstage/cli-module-test-jest': patch",
+      "2. Message: Tests always run with React 18 rendering enabled, without checking which version of `react-dom` is installed."
+    ],
+    "style_from": { "unit": "U75", "reason": "Front matter shape." },
+    "depends_on": ["U75"],
+    "covers": ["FR-11", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U80",
+    "path": ".changeset/react-18-repo-tools-peer-deps.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for @backstage/repo-tools: the peer-deps command now requires React 18 ranges.",
+    "rules": [
+      "1. Front matter: '@backstage/repo-tools': minor",
+      "2. Message: **BREAKING**: The `peer-deps` command now expects `^18.0.0` as the peer dependency range for `react`, `react-dom` and `@types/react` in every package, and reports `^17.0.0 || ^18.0.0` as incorrect. Run `backstage-repo-tools peer-deps --fix` to update your packages."
+    ],
+    "style_from": {
+      "unit": "U75",
+      "reason": "Front matter and **BREAKING** shape."
+    },
+    "depends_on": ["U75"],
+    "covers": ["FR-11", "AC-8"],
+    "checks": ["prettier"]
+  }
+]
