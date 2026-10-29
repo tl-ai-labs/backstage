@@ -1,0 +1,461 @@
+diff --git a/.changeset/calm-bats-dance.md b/.changeset/calm-bats-dance.md
+new file mode 100644
+index 00000000000000..68bedc5c015478
+--- /dev/null
++++ b/.changeset/calm-bats-dance.md
+@@ -0,0 +1,5 @@
++---
++'@backstage/plugin-scaffolder-react': patch
++---
++
++Support conditional template fields that depend on values from earlier form steps.
+diff --git a/docs/features/software-templates/input-examples.md b/docs/features/software-templates/input-examples.md
+index 91190bf595b632..3219080e4dfeac 100644
+--- a/docs/features/software-templates/input-examples.md
++++ b/docs/features/software-templates/input-examples.md
+@@ -289,6 +289,58 @@ parameters:
+                 - lastName
+ ```
+ 
++### Conditional fields across steps
++
++Conditional fields can use values from earlier form steps. In this example, the
++first step enables optional details, the second step collects those details, and
++the third step shows an additional field when details were provided.
++
++```yaml
++parameters:
++  - title: Optional details
++    properties:
++      includeOptionalDetails:
++        title: Include optional details?
++        type: boolean
++        default: false
++
++  - title: Details
++    properties:
++      name:
++        title: Name
++        type: string
++    dependencies:
++      includeOptionalDetails:
++        allOf:
++          - if:
++              properties:
++                includeOptionalDetails:
++                  const: true
++            then:
++              properties:
++                optionalDetails:
++                  title: Optional details
++                  type: string
++
++  - title: Additional details
++    properties:
++      description:
++        title: Description
++        type: string
++    dependencies:
++      optionalDetails:
++        allOf:
++          - if:
++              properties:
++                optionalDetails:
++                  minLength: 1
++            then:
++              properties:
++                additionalDetails:
++                  title: Additional details
++                  type: string
++```
++
+ ### Multiple conditional fields with custom ordering
+ 
+ In this example, we show how to conditionally show multiple fields based on the value of a parameter. The `ui:order` property is used to control the order of the fields in the form.
+diff --git a/plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx b/plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx
+index 6a542396de600f..9c5ab60a8b6d27 100644
+--- a/plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx
++++ b/plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx
+@@ -119,6 +119,216 @@ describe('Stepper', () => {
+     );
+   });
+ 
++  it('should apply conditional fields using values from previous steps', async () => {
++    const manifest: TemplateParameterSchema = {
++      steps: [
++        {
++          title: 'Choose if last name is required',
++          schema: {
++            properties: {
++              includeLast: {
++                title: 'Include last name?',
++                type: 'boolean',
++                default: true,
++              },
++            },
++          },
++        },
++        {
++          title: 'Write your name',
++          schema: {
++            required: ['name'],
++            properties: {
++              name: {
++                title: 'Name',
++                type: 'string',
++              },
++            },
++            dependencies: {
++              includeLast: {
++                allOf: [
++                  {
++                    if: {
++                      properties: {
++                        includeLast: { const: true },
++                      },
++                    },
++                    then: {
++                      properties: {
++                        lastName: {
++                          title: 'Last Name',
++                          type: 'string',
++                        },
++                      },
++                      required: ['lastName'],
++                    },
++                  },
++                ],
++              },
++            },
++          },
++        },
++      ],
++      title: 'Cross-step conditional fields',
++    };
++
++    const { getByRole } = await renderInTestApp(
++      <SecretsContextProvider>
++        <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
++      </SecretsContextProvider>,
++    );
++
++    await act(async () => {
++      fireEvent.click(getByRole('button', { name: 'Next' }));
++    });
++
++    expect(getByRole('textbox', { name: 'Last Name' })).toBeInTheDocument();
++  });
++
++  it('should hide cross-step conditional fields when the condition is false', async () => {
++    const manifest: TemplateParameterSchema = {
++      steps: [
++        {
++          title: 'Choose if last name is required',
++          schema: {
++            properties: {
++              includeLast: {
++                title: 'Include last name?',
++                type: 'boolean',
++                default: false,
++              },
++            },
++          },
++        },
++        {
++          title: 'Write your name',
++          schema: {
++            properties: {
++              name: { title: 'Name', type: 'string' },
++            },
++            dependencies: {
++              includeLast: {
++                allOf: [
++                  {
++                    if: { properties: { includeLast: { const: true } } },
++                    then: {
++                      properties: {
++                        lastName: { title: 'Last Name', type: 'string' },
++                      },
++                    },
++                  },
++                ],
++              },
++            },
++          },
++        },
++      ],
++      title: 'Cross-step conditional fields',
++    };
++
++    const { getByRole, queryByRole } = await renderInTestApp(
++      <SecretsContextProvider>
++        <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
++      </SecretsContextProvider>,
++    );
++
++    await act(async () => {
++      fireEvent.click(getByRole('button', { name: 'Next' }));
++    });
++
++    expect(
++      queryByRole('textbox', { name: 'Last Name' }),
++    ).not.toBeInTheDocument();
++  });
++
++  it('should apply nested conditions across multiple steps', async () => {
++    const manifest: TemplateParameterSchema = {
++      steps: [
++        {
++          title: 'Choose if last name is required',
++          schema: {
++            properties: {
++              includeLast: {
++                title: 'Include last name?',
++                type: 'boolean',
++                default: true,
++              },
++            },
++          },
++        },
++        {
++          title: 'Write your name',
++          schema: {
++            required: ['name'],
++            properties: {
++              name: { title: 'Name', type: 'string' },
++            },
++            dependencies: {
++              includeLast: {
++                allOf: [
++                  {
++                    if: { properties: { includeLast: { const: true } } },
++                    then: {
++                      properties: {
++                        lastName: { title: 'Last Name', type: 'string' },
++                      },
++                      required: ['lastName'],
++                    },
++                  },
++                ],
++              },
++            },
++          },
++        },
++        {
++          title: 'Add a nickname',
++          schema: {
++            properties: {
++              nickname: { title: 'Nickname', type: 'string' },
++            },
++            dependencies: {
++              lastName: {
++                allOf: [
++                  {
++                    if: { properties: { lastName: { const: 'Doe' } } },
++                    then: {
++                      properties: {
++                        middleName: { title: 'Middle Name', type: 'string' },
++                      },
++                    },
++                  },
++                ],
++              },
++            },
++          },
++        },
++      ],
++      title: 'Nested cross-step conditional fields',
++    };
++
++    const { getByRole } = await renderInTestApp(
++      <SecretsContextProvider>
++        <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
++      </SecretsContextProvider>,
++    );
++
++    await act(async () => {
++      fireEvent.click(getByRole('button', { name: 'Next' }));
++    });
++    fireEvent.change(getByRole('textbox', { name: 'Name' }), {
++      target: { value: 'John' },
++    });
++    fireEvent.change(getByRole('textbox', { name: 'Last Name' }), {
++      target: { value: 'Doe' },
++    });
++
++    await act(async () => {
++      fireEvent.click(getByRole('button', { name: 'Next' }));
++    });
++
++    expect(getByRole('textbox', { name: 'Middle Name' })).toBeInTheDocument();
++  });
++
+   it('should remember the state of the form when cycling through the pages by directly clicking on the step labels', async () => {
+     const manifest: TemplateParameterSchema = {
+       steps: [
+diff --git a/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx b/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx
+index b51e3ff147ef13..df6184627f935c 100644
+--- a/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx
++++ b/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx
+@@ -75,12 +75,14 @@ describe('useTemplateSchema', () => {
+     });
+ 
+     expect(second.uiSchema).toEqual({
++      field1: { 'ui:widget': 'hidden' },
+       field2: { 'ui:field': 'MyCoolerComponent' },
+     });
+ 
+     expect(second.schema).toEqual({
+       type: 'object',
+       properties: {
++        field1: { type: 'string' },
+         field2: { type: 'string' },
+       },
+     });
+@@ -385,6 +387,15 @@ describe('useTemplateSchema', () => {
+ 
+       expect(second.schema).toEqual({
+         dependencies: secondStepDependencies,
++        properties: {
++          preconditions: {
++            title: 'Preconditions',
++            type: 'string',
++            description: 'Choose an option',
++            enum: ['optionA', 'optionB'],
++            enumNames: ['Option A', 'Option B'],
++          },
++        },
+       });
+     });
+   });
+diff --git a/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts b/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts
+index 380d87d7ad5254..4a63878f38cfab 100644
+--- a/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts
++++ b/plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts
+@@ -32,6 +32,32 @@ export interface ParsedTemplateSchema {
+   description?: string;
+ }
+ 
++const isJsonObject = (value: unknown): value is JsonObject =>
++  typeof value === 'object' && value !== null && !Array.isArray(value);
++
++const getConditionalProperties = (schema: JsonObject): JsonObject => {
++  const properties: JsonObject = {};
++  const conditionalSchemas = [
++    ...((schema.allOf as JsonObject[]) ?? []),
++    ...((schema.anyOf as JsonObject[]) ?? []),
++    ...((schema.oneOf as JsonObject[]) ?? []),
++    ...Object.values((schema.dependencies as JsonObject) ?? {}),
++    schema.then,
++    schema.else,
++  ];
++
++  for (const conditionalSchema of conditionalSchemas) {
++    if (isJsonObject(conditionalSchema)) {
++      Object.assign(properties, getConditionalProperties(conditionalSchema));
++    }
++  }
++
++  return {
++    ...properties,
++    ...((schema.properties as JsonObject) ?? {}),
++  };
++};
++
+ /**
+  * This hook will parse the template schema and return the steps with the
+  * parsed schema and uiSchema. Filtering out any steps or properties that
+@@ -51,6 +77,23 @@ export const useTemplateSchema = (
+     mergedSchema: schema,
+     ...extractSchemaFromStep(schema),
+   }));
++  const filterProperties = (properties: JsonObject, uiSchema: UiSchema) =>
++    Object.fromEntries(
++      Object.entries(properties).filter(([key]) => {
++        const stepFeatureFlag = uiSchema[key]?.['ui:backstage']?.featureFlag;
++        return stepFeatureFlag ? featureFlags.isActive(stepFeatureFlag) : true;
++      }),
++    );
++  const getStepProperties = (
++    step: ParsedTemplateSchema,
++    includeConditionalProperties = false,
++  ) =>
++    filterProperties(
++      includeConditionalProperties
++        ? getConditionalProperties(step.schema)
++        : (step.schema.properties as JsonObject) ?? {},
++      step.uiSchema,
++    );
+ 
+   const returningSteps = steps
+     // Filter out steps that are not enabled with the feature flags
+@@ -59,30 +102,55 @@ export const useTemplateSchema = (
+       return stepFeatureFlag ? featureFlags.isActive(stepFeatureFlag) : true;
+     })
+     // Then filter out the properties that are not enabled with feature flag
+-    .map(step => {
++    .map((step, index, filteredSteps) => {
+       // Title is rendered at the top of the page, so let's ignore this from jsonschemaform
+       const { title, ...stepSchema } = step.schema;
+ 
++      const shouldIncludeCurrentProperties =
++        Boolean(step.schema.properties) || !step.schema.dependencies;
++      const currentStepProperties = shouldIncludeCurrentProperties
++        ? getStepProperties(step)
++        : undefined;
++      const previousStepProperties = filteredSteps
++        .slice(0, index)
++        .reduce<JsonObject>(
++          (properties, previousStep) => ({
++            ...properties,
++            ...getStepProperties(previousStep, true),
++          }),
++          {},
++        );
++
+       const strippedSchema = {
+         ...step,
+         schema: {
+           ...stepSchema,
++          ...(currentStepProperties ||
++          Object.keys(previousStepProperties).length
++            ? {
++                properties: {
++                  ...previousStepProperties,
++                  ...(currentStepProperties ?? {}),
++                },
++              }
++            : {}),
+         },
+       } as ParsedTemplateSchema;
+ 
+-      if (step.schema?.properties || !step.schema?.dependencies) {
+-        strippedSchema.schema.properties = Object.fromEntries(
+-          Object.entries((step.schema?.properties ?? {}) as JsonObject).filter(
+-            ([key]) => {
+-              const stepFeatureFlag =
+-                step.uiSchema[key]?.['ui:backstage']?.featureFlag;
+-              return stepFeatureFlag
+-                ? featureFlags.isActive(stepFeatureFlag)
+-                : true;
+-            },
+-          ),
+-        );
+-      }
++      strippedSchema.uiSchema = {
++        ...Object.fromEntries(
++          Object.keys(previousStepProperties)
++            .filter(property => !(property in (currentStepProperties ?? {})))
++            .map(property => [
++              property,
++              {
++                ...(step.uiSchema[property] as JsonObject | undefined),
++                'ui:widget': 'hidden',
++              },
++            ]),
++        ),
++        ...step.uiSchema,
++      };
+ 
+       return strippedSchema;
+     });
