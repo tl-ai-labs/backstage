@@ -1,0 +1,57 @@
+---
+'@backstage/app-defaults': patch
+'@backstage/core-app-api': patch
+'@backstage/core-compat-api': patch
+'@backstage/core-components': patch
+'@backstage/core-plugin-api': patch
+'@backstage/dev-utils': patch
+'@backstage/frontend-app-api': patch
+'@backstage/frontend-defaults': patch
+'@backstage/frontend-dev-utils': patch
+'@backstage/frontend-dynamic-feature-loader': patch
+'@backstage/frontend-plugin-api': patch
+'@backstage/frontend-test-utils': patch
+'@backstage/integration-react': patch
+'@backstage/module-federation-common': patch
+'@backstage/plugin-api-docs': patch
+'@backstage/plugin-api-docs-module-protoc-gen-doc': patch
+'@backstage/plugin-app': patch
+'@backstage/plugin-app-react': patch
+'@backstage/plugin-app-visualizer': patch
+'@backstage/plugin-auth': patch
+'@backstage/plugin-auth-react': patch
+'@backstage/plugin-catalog': patch
+'@backstage/plugin-catalog-graph': patch
+'@backstage/plugin-catalog-import': patch
+'@backstage/plugin-catalog-react': patch
+'@backstage/plugin-catalog-unprocessed-entities': patch
+'@backstage/plugin-config-schema': patch
+'@backstage/plugin-devtools': patch
+'@backstage/plugin-devtools-react': patch
+'@backstage/plugin-home': patch
+'@backstage/plugin-home-react': patch
+'@backstage/plugin-kubernetes': patch
+'@backstage/plugin-kubernetes-cluster': patch
+'@backstage/plugin-kubernetes-react': patch
+'@backstage/plugin-mui-to-bui': patch
+'@backstage/plugin-notifications': patch
+'@backstage/plugin-org': patch
+'@backstage/plugin-org-react': patch
+'@backstage/plugin-permission-react': patch
+'@backstage/plugin-scaffolder': patch
+'@backstage/plugin-scaffolder-node-test-utils': patch
+'@backstage/plugin-scaffolder-react': patch
+'@backstage/plugin-search': patch
+'@backstage/plugin-search-react': patch
+'@backstage/plugin-signals': patch
+'@backstage/plugin-signals-react': patch
+'@backstage/plugin-techdocs': patch
+'@backstage/plugin-techdocs-addons-test-utils': patch
+'@backstage/plugin-techdocs-module-addons-contrib': patch
+'@backstage/plugin-techdocs-react': patch
+'@backstage/plugin-user-settings': patch
+'@backstage/theme': patch
+'@backstage/version-bridge': patch
+---
+
+React 18 is now the minimum supported React version. React 17 is no longer accepted by peer dependency ranges across these packages, matching its prior deprecation in Backstage.
