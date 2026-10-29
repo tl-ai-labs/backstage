@@ -24,8 +24,8 @@ import {
 
 /**
  * @public
- * Set legacy mode when using React 18/RTL 13+.
- * Mock this option while we're working against React 17 or lower.
+ * Renders with React's legacy root API instead of createRoot when set to true.
+ * Use it for tests that depend on synchronous rendering.
  */
 export type LegacyRootOption = { legacyRoot?: boolean };
 

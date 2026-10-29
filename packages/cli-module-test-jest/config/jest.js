@@ -49,14 +49,9 @@ const envOptions = {
   oldTests: Boolean(process.env.BACKSTAGE_OLD_TESTS),
 };
 
-try {
-  require.resolve('react-dom/client', {
-    paths: [paths.targetRoot],
-  });
-  process.env.HAS_REACT_DOM_CLIENT = true;
-} catch {
-  /* ignored */
-}
+// React 18 is required, so react-dom/client is always available. Older published
+// packages still read this flag to choose the react-dom/client render path.
+process.env.HAS_REACT_DOM_CLIENT = true;
 
 /**
  * A list of config keys that are valid for project-level config.

@@ -1,0 +1,22 @@
+{
+  "module": "react18-only (brownfield refactor, 20261029-212654-refactor-react18-only)",
+  "mode": "brownfield",
+  "intent": "refactor",
+  "verdict": "approved",
+  "tool_calls": 9,
+  "findings": [],
+  "refinement_packets": [],
+  "checks_passed": [
+    "correctness: every unit U01-U80 matches change_plan.md sites and rules (peer-deps single table, three render sites use static named createRoot import, HAS_REACT_DOM_CLIENT defined true in both DefinePlugin branches and jest.js, server.ts single <18 warning with NaN-safe parseInt, knip report realigned, hasReactDomClient.ts deleted with no remaining importers)",
+    "type safety: no new any; keyof typeof peerDependencies indexing preserved; createRoot typed via react-dom/client",
+    "error handling: checkReactVersion keeps try/catch; createDevApp still throws missing-root error before render; no swallowed errors introduced",
+    "manifests: only peer ranges (^17||^18 -> ^18.0.0) and use-sync-external-store / @types/use-sync-external-store removals in frontend-plugin-api, ui, plugins/app; no scripts, peerDependenciesMeta or react-router-dom touched",
+    "changesets: bump levels match versions (17 packages >=1.0.0 major, 37 <1.0.0 minor, privates excluded); messages adopter-facing with no internal symbols; BREAKING prefix present",
+    "tests: legacy-fallback test removed per U67; remaining createDevApp tests cover render, bindRoutes/createRoot forwarding and missing-root error",
+    "docs: react18-migration.md edits follow plan and style guide",
+    "authz / PII / env-fixture: not applicable (refactor intent, no routes, no config schema)"
+  ],
+  "advisory_out_of_scope": [
+    "packages/cli-module-new/templates/{frontend-plugin,legacy-frontend-plugin,plugin-web-library}/package.json.hbs still default react/react-dom to '^16.13.1 || ^17.0.0 || ^18.0.0'. These files were not touched by this run and are not in change_plan.md, so this is not a finding; consider a follow-up so newly scaffolded plugins match the ^18.0.0 range the peer-deps lint now enforces."
+  ]
+}

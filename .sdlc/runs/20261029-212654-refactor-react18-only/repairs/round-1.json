@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "refactor",
+    "pass_id": "20261029-212654-refactor-react18-only",
+    "artifact_path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+    "instruction": "Fix `packages/frontend-dev-utils/src/createDevApp.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Unit U67 must be applied before U66 can pass its checks. When createDevApp.tsx drops the legacy ReactDOM.render fallback (U66), the related-tests check fails with: `createDevApp › should fall back to legacy react-dom rendering when createRoot is unavailable — TypeError: Cannot read properties of undefined (reading 'render') at createDevApp.tsx:109 createRoot(rootElement).render(rootNode)`. Apply U67 now: delete only the test 'should fall back to legacy react-dom rendering when createRoot is unavailable' (and any helper/import used only by it, including the `delete process.env.HAS_REACT_DOM_CLIENT` setup), keeping the other three tests unchanged.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-dev-utils/src/createDevApp.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-dev-utils/src/createDevApp.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-212654-refactor-react18-only/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-212654-refactor-react18-only/briefs/U67.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest-related",
+          "run": "CI=1 yarn test --findRelatedTests '{path}' --passWithNoTests"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]
