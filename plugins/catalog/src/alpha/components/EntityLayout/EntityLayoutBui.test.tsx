@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { ComponentType } from 'react';
+import { ComponentType, useEffect } from 'react';
 import { screen, waitFor } from '@testing-library/react';
+import { useNavigate } from 'react-router-dom';
 import { renderInTestApp } from '@backstage/frontend-test-utils';
 import { Entity } from '@backstage/catalog-model';
 import {
@@ -48,9 +49,25 @@ async function renderLayout(options: {
   loading?: boolean;
   error?: Error;
   path?: string;
+  state?: unknown;
   NotFoundComponent?: React.ReactNode;
   HeaderComponent?: ComponentType<EntityHeaderLayoutProps>;
 }) {
+  const targetPath = `/catalog/default/component/artist-lookup${
+    options.path ?? ''
+  }`;
+
+  const NavigateWithState = () => {
+    const navigate = useNavigate();
+    useEffect(() => {
+      navigate(targetPath, {
+        replace: true,
+        state: options.state,
+      });
+    }, [navigate]);
+    return null;
+  };
+
   return renderInTestApp(
     <AsyncEntityProvider
       entity={options.entity}
@@ -77,6 +94,7 @@ async function renderLayout(options: {
         NotFoundComponent={options.NotFoundComponent}
         HeaderComponent={options.HeaderComponent}
       />
+      {options.state !== undefined && <NavigateWithState />}
     </AsyncEntityProvider>,
     {
       apis: [
@@ -88,9 +106,7 @@ async function renderLayout(options: {
         backend: { baseUrl: 'http://localhost:7000' },
       },
       mountPath: '/catalog/:namespace/:kind/:name/*',
-      initialRouteEntries: [
-        `/catalog/default/component/artist-lookup${options.path ?? ''}`,
-      ],
+      initialRouteEntries: [targetPath],
       mountedRoutes: {
         '/catalog/:namespace/:kind/:name/*': entityRouteRef,
       },
@@ -158,5 +174,22 @@ describe('EntityLayoutBui', () => {
       HeaderComponent: () => <header>Successor header</header>,
     });
     expect(await screen.findByText('Entity Inspector')).toBeInTheDocument();
+  });
+
+  it('shows the rename notice on a redirected arrival in the alpha layout', async () => {
+    const formerRef = 'component:default/old-name';
+    const first = await renderLayout({
+      entity: componentEntity,
+      path: '/overview',
+      state: { formerEntityRef: formerRef },
+    });
+    expect(await screen.findByText(new RegExp(formerRef))).toBeInTheDocument();
+    first.unmount();
+
+    await renderLayout({
+      entity: componentEntity,
+      path: '/overview',
+    });
+    expect(screen.queryByText(new RegExp(formerRef))).toBeNull();
   });
 });

@@ -1,0 +1,59 @@
+[
+  {
+    "id": "tp_debug_r8_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. 1 test in this file fails. `CI=1 yarn test plugins/techdocs` -> 1 failed, 708 passed.\n\n  ● <TechDocsReaderPage /> > former ref redirect > navigates to renamed entity docs preserving sub-path when entity is absent, and does not navigate when present\n\n    expect(jest.fn()).not.toHaveBeenCalled()\n    Expected number of calls: 0\n    Received number of calls: 1\n    1: \"/docs/default/component/new-name/some/sub/path\", {\"replace\": true, \"state\": {\"formerEntityRef\": \"test:test-namespace/test-name\"}}\n    at line 524: expect(mockNavigate).not.toHaveBeenCalled();\n\nCause: this single test does TWO renders. The first (absent entity) correctly asserts the redirect. Before the second render it calls `mockNavigate.mockClear()` and sets `catalogApiMock.getEntityByRef.mockResolvedValue(mockEntityMetadata)` — but it does NOT reset `catalogApiMock.queryEntities`, which is still mocked (line ~472) to resolve with the renamed entity. So in the second render the former-ref resolution still finds a match and navigates, and the final assertion fails. Note the leaked ref in the failure message ('test:test-namespace/test-name'), which is the SECOND render's ref being resolved — proof the stale queryEntities mock is what fires.\n\nFix the TEST. Before the second render, also reset the resolution path so that no former-ref match is found — e.g. make `queryEntities` resolve with `{ items: [], totalItems: 0, pageInfo: {} }` (the 'nothing claims this former ref' shape), alongside the existing getEntityByRef mock that makes the entity present. Keep `mockNavigate.mockClear()`.\n\nKeep the test's INTENTION exactly as its name states — one test asserting both halves: it navigates to the renamed entity's docs preserving the sub-path when the entity is absent, and does NOT navigate when the entity is present. Do not split it into two tests and do not weaken either assertion. Keep the repo conventions: `screen` and `findBy*` over waitFor for DOM queries, no test IDs added to implementations, and the Apache 2.0 header unchanged (existing file — do not change its year).\n\nAcceptance: `CI=1 yarn test plugins/techdocs` passes with ZERO failures (709 tests) and `yarn tsc` stays at zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U30.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

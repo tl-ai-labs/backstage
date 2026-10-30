@@ -45,6 +45,7 @@ import {
   EntityDisplayName,
   EntityRefLink,
   EntityRefLinks,
+  EntityRenamedNotice,
   entityRouteRef,
   FavoriteEntity,
   getEntityRelations,
@@ -374,6 +375,8 @@ export const EntityLayout = (props: EntityLayoutProps) => {
       </Header>
 
       {loading && <Progress />}
+
+      <EntityRenamedNotice />
 
       {entity && <RoutedTabs routes={routes} />}
 

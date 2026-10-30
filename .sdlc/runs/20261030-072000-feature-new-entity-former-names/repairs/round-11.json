@@ -1,0 +1,55 @@
+[
+  {
+    "id": "tp_debug_r11_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 1 error, which blocks the project's combined check (`CI=true yarn test ... && yarn tsc && yarn lint:all`):\n\n  plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx:214:11 - error TS6133: 'result' is declared but its value is never read.\n\n  214     const { result } = renderHook(\n\nIn that test the hook's states are captured by pushing into `recordedStatuses` inside the renderHook callback, and the assertions read `recordedStatuses` — so the destructured `result` is genuinely unused.\n\nFix minimally: drop the unused binding, i.e. call `renderHook(...)` without destructuring `result` (keep the call and all its arguments exactly as they are). If any OTHER test in this file destructures `result` and does use it, leave those untouched — fix only the unused one(s) that TypeScript flags.\n\nChange nothing else. Keep all tests and their intentions exactly: no extra request when the ref resolves directly; redirect preserving sub-path, query and fragment; unknown ref left on the not-found path; resolution attempted at most once per ref; the no-flash case asserting the hook never reports {loading:false, hasEntity:false, hasError:false} for a stale ref that will resolve; and the case asserting loading is RELEASED when resolution settles unresolved. Keep both catalogApiRef and errorApiRef registered. Keep `screen`/`findBy*` usage, add no test IDs, and keep the Apache 2.0 header with year 2026 unchanged.\n\nAcceptance: `yarn tsc` reports ZERO errors and `CI=1 yarn test plugins/catalog` passes with ZERO failures.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U24.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "id": "tp_debug_r7_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. REGRESSION: your change to this file broke an EXISTING test that passed before this run.\n\n  CI=1 yarn test plugins/catalog  ->  1 failed\n  ● Entity page > Entity Page Headers > does not flash Entity not found when navigating to another entity\n    expect(received).toBe(expected)  Expected: false  Received: true\n    at plugins/catalog/src/alpha/pages.test.tsx:852:11\n\nThat existing test asserts the entity provider NEVER enters the state (!loading && !hasError && !hasEntity) while navigating from one entity to another — i.e. the UI must not flash 'Entity not found' mid-navigation.\n\nCause: the staleness guard added in an earlier fix round computes\n\n    const entity = lookupResult?.ref === requestedRef ? lookupResult?.entity : undefined;\n\nWhen the URL params change, `requestedRef` updates IMMEDIATELY but `lookupResult` still holds the PREVIOUS ref and `loading` is briefly false before useAsyncRetry restarts. In that window `entity` is forced to undefined while `loading` is false and there is no error — exactly the forbidden flash state.\n\nFix so that BOTH hold:\n  (a) the existing no-flash guarantee is restored — never report {loading: false, error: undefined, entity: undefined} merely because the lookup result is stale for the newly requested ref; treat a stale-result window as still loading instead; and\n  (b) the staleness protection the senior review asked for is kept — a resolved redirect must NOT cause a second former-ref resolution query for the destination ref, i.e. the resolution gate must not act on a lookup result belonging to a different ref.\n\nA correct shape is to derive `loading` as `loading || (requestedRef !== undefined && lookupResult?.ref !== requestedRef && !error)` and keep `entity` as the ref-matched value, so the stale window reads as loading rather than not-found. Use whatever minimal form achieves both properties.\n\nPreserve everything else already fixed in this file: the guarded ref stringification that must not throw when `kind` is absent (stringifyEntityRef is only called when kind/namespace/name are present), the attemptedRefRef and navigatedRefRef guards that prevent a redirect loop, the sub-path/query/fragment prefix swap, the errorApi 'No name provided!' path, and the Apache 2.0 header (existing file - do not change its year).\n\nAcceptance: `CI=1 yarn test plugins/catalog` passes with ZERO failures (3261 tests, 41 skipped), including both pages.test.tsx and useEntityFromUrl.test.tsx, and `yarn tsc` stays at zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U20.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r7_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. 3 tests in this file fail. `CI=1 yarn test plugins/techdocs` -> 3 failed, 706 passed.\n\n  ● useFormerRefRedirect > does nothing when the docs entity exists\n  ● useFormerRefRedirect > checks once per entity and survives a failing lookup\n  ● <TechDocsReaderPage /> > former ref redirect > navigates to renamed entity docs preserving sub-path when entity is absent, and does not navigate when present\n\nThe first failure's error:\n    expect(jest.fn()).toHaveBeenCalledWith(...expected)\n    Expected: {\"kind\": \"Component\", \"name\": \"my-component\", \"namespace\": \"default\"}\n    Number of calls: 0\n    at line 94: expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledWith({...})\n\nThe TEST is wrong, not the hook. The hook's real signature is\n\n    useFormerRefRedirect(entityRef: CompoundEntityRef, entity?: Entity): { shouldShowProgress: boolean }\n\nIt RECEIVES the already-loaded entity as its second parameter and short-circuits (`if (entity) return undefined`) — it never calls `catalogApi.getEntityByRef` itself. So asserting getEntityByRef was called is asserting behaviour the hook does not and should not have.\n\nRewrite the failing assertions to match the hook's actual contract, reading the implementation in your context files first:\n  - 'does nothing when the docs entity exists': pass an entity as the second argument and assert that resolveFormerEntityRef was NOT called and navigate was NOT called. Do not assert on getEntityByRef.\n  - 'checks once per entity and survives a failing lookup': drive it by calling the hook WITHOUT an entity (so it attempts resolution), make resolveFormerEntityRef reject, and assert it is attempted at most once per entity ref (the checkedEntityRef guard) and that no navigation happens.\n  - The TechDocsReaderPage case: align it with the same contract — the redirect happens when the hook is given no entity and resolution resolves, and does not happen when an entity is supplied.\n\nKeep each test's INTENTION exactly as named; only fix the mechanism. Keep the repo conventions: `screen` and `findBy*` over waitFor where a DOM query is involved, no test IDs added to implementations, fewer-but-thorough multi-assertion tests, and the Apache 2.0 header with year 2026 unchanged.\n\nReturn the WHOLE file. Acceptance: `CI=1 yarn test plugins/techdocs` passes with ZERO failures (709 tests) and `yarn tsc` stays at zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U29.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

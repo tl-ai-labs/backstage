@@ -249,6 +249,17 @@ export type EntityOrderQuery =
     }>;
 
 // @public
+export type FormerEntityRefResolution =
+  | {
+      status: 'resolved';
+      entity: Entity;
+      formerEntityRef: string;
+    }
+  | {
+      status: 'unknown';
+    };
+
+// @public
 export interface GetEntitiesByRefsRequest {
   entityRefs: string[];
   fields?: EntityFieldsQuery | undefined;
@@ -394,6 +405,13 @@ export interface QueryLocationsResponse {
   // (undocumented)
   totalItems: number;
 }
+
+// @public
+export function resolveFormerEntityRef(
+  catalogApi: CatalogApi,
+  formerEntityRef: string,
+  options?: CatalogRequestOptions,
+): Promise<FormerEntityRefResolution>;
 
 // @public
 export type StreamEntitiesRequest = Omit<

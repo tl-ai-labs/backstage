@@ -28,6 +28,7 @@ import {
   WarningPanel,
 } from '@backstage/core-components';
 import {
+  EntityRenamedNotice,
   entityRouteRef,
   useAsyncEntity,
 } from '@backstage/plugin-catalog-react';
@@ -95,6 +96,8 @@ export function EntityLayout(props: EntityLayoutProps) {
       )}
 
       {loading && <Progress />}
+
+      <EntityRenamedNotice />
 
       {entity && (
         <EntityTabs

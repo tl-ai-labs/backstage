@@ -1,0 +1,312 @@
+[
+  {
+    "id": "U06",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Emits one synthetic search row per declared former entity ref so each individual former ref is an index-backed exact match, and structurally refuses to index any former ref for a kind: User entity.",
+    "rules": [
+      "1. The rows are added inside buildEntitySearch, between the relations loop and the duplicate-casing validation, so they pass through the existing mapToRows length capping and the existing (key, value) de-duplication unchanged. Do NOT add a new table, a new column, a new index or a migration, and do NOT touch performStitching: buildEntitySearch is already called at the single stitching choke point.",
+      "2. Read the annotation value from `entity.metadata.annotations?.[ANNOTATION_FORMER_ENTITY_REFS]` and parse it with `parseFormerEntityRefs`. Both come from '@backstage/catalog-model'.",
+      "3. STRUCTURAL USER EXCLUSION: when `entity.kind.toLowerCase() === 'user'`, skip this block entirely — emit no former-ref row. A User entity's own former-name declaration must never enter the index, so that no later caller composing its own predicate can surface it. Guard on the kind BEFORE parsing, so a User's annotation is not even read.",
+      "4. For each parsed ref, push one entry onto the same `raw` array the rest of the function uses, with key `` `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}${ref}` `` and value `true`. Define that prefix as a module-level const equal to `` `metadata.annotations.${ANNOTATION_FORMER_ENTITY_REFS}.` `` so the key and the predicate that reads it cannot drift apart.",
+      "5. This mirrors the array-item convention the traverse function already uses (`metadata.tags.java` -> true), so the row is indistinguishable in shape from a tag row and is served by the existing search_key_value_entity_idx with no change to the filter compiler.",
+      "6. Export ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX so the resolution predicate builder imports the one definition. Mark it `@internal` in a TSDoc comment — this file is not part of the package's public API.",
+      "7. Do not alter traverse, mapToRows, SPECIAL_KEYS, MAX_KEY_LENGTH or MAX_VALUE_LENGTH. A former-ref key longer than MAX_KEY_LENGTH is already dropped to a null-valued row by mapToRows, which is the correct fail-closed outcome; add no special case for it.",
+      "8. Do not change the file's 2020 copyright year.",
+      "9. NO MIGRATION IS INTRODUCED BY THIS CHANGE, so AC-16 is satisfied by construction: this unit is the whole of the data-layer change and it writes only additional rows into the existing `search` table through the existing buildEntitySearch/mapToRows path. There is no new table, no new column, no new index and therefore no file under plugins/catalog-backend/migrations/, so src/tests/migrations.test.ts has nothing new to round-trip and is left untouched. If a typist finds themselves needing a migration file here, the plan is wrong — stop and report rather than adding one."
+    ],
+    "exports": [
+      {
+        "name": "ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX",
+        "kind": "const",
+        "params": [],
+        "returns": "string"
+      }
+    ],
+    "import_line": "import { buildEntitySearch, ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX } from './buildEntitySearch';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';",
+        "rule": "Add ANNOTATION_FORMER_ENTITY_REFS and parseFormerEntityRefs to this named import, keeping the names alphabetically ordered. Prettier wraps the line."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 39,
+        "to": 39,
+        "first_line": "const MAX_VALUE_LENGTH = 200;",
+        "rule": "Insert a blank line, then the TSDoc'd `@internal` export of ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX, built as a template literal from ANNOTATION_FORMER_ENTITY_REFS with a trailing dot."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 212,
+        "to": 212,
+        "first_line": "}",
+        "rule": "After the relations loop's closing brace and before the duplicate-casing validation comment on line 214, insert a blank line, a comment explaining that each declared former ref gets its own row so it is an exact index match, and that kind: User is excluded structurally for privacy; then the kind guard and the loop pushing one { key, value: true } entry per parsed ref onto raw."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts",
+      "lines": [206, 212],
+      "reason": "The relations loop immediately above is the exact raw.push({ key, value }) shape and comment style the new block must copy."
+    },
+    "uses": [
+      {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts",
+        "lines": [96, 140],
+        "reason": "The traverse array branch shows the existing `<path>.<item>` -> true convention the synthetic key deliberately mirrors, and mapToRows shows the key-length capping the new rows inherit."
+      }
+    ],
+    "depends_on": ["U03"],
+    "covers": ["FR-4", "FR-22", "NFR-2", "NFR-3", "AC-16"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U07",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds coverage proving former refs are indexed one row per entry, that malformed values are tolerated, and that a kind: User entity produces no former-ref row at all.",
+    "rules": [
+      "1. Append one `describe('former entity refs')` block at the end of the file. Do not modify any existing test.",
+      "2. Keep to at most three thorough `it` blocks, each with several assertions, per the repo's fewer-and-thorough rule.",
+      "3. The first asserts the happy path: a Component declaring three comma-separated refs, one of them whitespace-padded and one differing only by namespace, yields exactly one row per canonicalized ref with the prefixed key and the string value 'true' (mapToRows lowercases and stringifies the boolean, so assert the row's `value` is 'true' and its `original_value` is 'true'). Also assert the row for the RAW annotation string still exists, proving the existing behaviour is additive and unbroken.",
+      "4. The second asserts fail-closed and dedup: a value mixing a malformed entry with valid ones yields rows only for the valid ones and the call does not throw; a value repeating a ref yields exactly one row for it.",
+      "5. The third asserts the structural User exclusion (AC-17): a kind: User entity with a populated former-refs annotation yields ZERO rows whose key starts with the prefix, while a Component with the identical annotation yields rows. Assert on the filtered row count being 0, not merely on the absence of one specific key.",
+      "6. Import ANNOTATION_FORMER_ENTITY_REFS from '@backstage/catalog-model' and ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX from './buildEntitySearch'; never hand-write the key string in an assertion.",
+      "7. Do not change the file's existing copyright year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 345,
+        "to": 345,
+        "first_line": "});",
+        "rule": "Insert a blank line and the new describe('former entity refs') block at the very end of the file, after the last existing describe's closing line."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+      "lines": [1, 120],
+      "reason": "The existing buildEntitySearch tests show how this file builds an Entity fixture, calls buildEntitySearch and asserts on the returned row array."
+    },
+    "depends_on": ["U06"],
+    "covers": ["AC-17", "AC-18", "AC-20", "FR-22"],
+    "tests": [
+      {
+        "name": "indexes one row per declared former ref alongside the raw annotation row",
+        "given": "a Component whose former-refs annotation lists three refs, one whitespace-padded and one differing only by namespace",
+        "expect": "one prefixed row per canonicalized ref with value 'true', plus the pre-existing raw annotation-value row still present"
+      },
+      {
+        "name": "tolerates a malformed entry and collapses duplicates",
+        "given": "an annotation value mixing a malformed entry with valid refs, and separately a value repeating one ref",
+        "expect": "rows for the valid refs only, no throw, and exactly one row for the repeated ref"
+      },
+      {
+        "name": "emits no former-ref row for a kind: User entity",
+        "given": "a User and a Component carrying the identical former-refs annotation",
+        "expect": "zero prefixed rows for the User and the full set for the Component"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  },
+  {
+    "id": "U08",
+    "path": "plugins/catalog-backend/src/service/request/formerEntityRefQuery.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Builds the single filter predicate that resolves a candidate former entity ref to the live entities now claiming it, with kind: User refused structurally.",
+    "rules": [
+      "1. Export one function, `buildFormerEntityRefQuery(formerRef: string)`, returning `FilterPredicate | undefined`. Return `undefined` — meaning 'do not query at all' — rather than a predicate that matches nothing, so the caller can skip the round trip entirely.",
+      "2. Parse `formerRef` with `parseEntityRef` inside a try/catch with no defaulting context. On a throw, return `undefined`: a malformed requested ref resolves nothing and throws nothing (fail closed).",
+      "3. STRUCTURAL USER REFUSAL: after parsing, return `undefined` when the parsed `kind` lowercases to 'user'. A former-name claim naming a User entity must never resolve, because a former user name can disclose a legal name change.",
+      "4. Canonicalize the parsed ref through `stringifyEntityRef` to get the lowercase full ref, and build the search key as the imported ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX concatenated with it. Never hand-format the key.",
+      "5. Return the predicate `{ $all: [ { [key]: true }, { $not: { kind: 'user' } } ] }`. The first clause compiles to an exact (key, value) match over the search table, served by the existing search_key_value_entity_idx with no new query shape. The second clause is the read-side half of the User exclusion: it stops a non-User entity from laundering a User former ref into a resolvable redirect even if such a row somehow existed.",
+      "6. The predicate object needs a cast to FilterPredicate because the key is computed, matching how searchFilterToPredicate in the sibling parseEntityFilterParams.ts casts its computed-key object literals.",
+      "7. Add no new route, no change to openapi.yaml and no generated-schema regeneration: this predicate travels over the EXISTING POST /entities/by-query endpoint.",
+      "8. TSDoc the function `@internal` with a `@remarks` block recording why the two clauses are both present and that it never throws. Apache 2.0 header with year 2026.",
+      "9. Import FilterPredicate from '@backstage/filter-predicates', the ref helpers from '@backstage/catalog-model', and the key prefix from '../../database/operations/stitcher/buildEntitySearch'."
+    ],
+    "exports": [
+      {
+        "name": "buildFormerEntityRefQuery",
+        "kind": "function",
+        "params": [{ "name": "formerRef", "type": "string" }],
+        "returns": "FilterPredicate | undefined"
+      }
+    ],
+    "import_line": "import { buildFormerEntityRefQuery } from './formerEntityRefQuery';",
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/request/parseEntityFilterParams.ts",
+      "lines": [17, 30],
+      "reason": "searchFilterToPredicate in this sibling file is the exact shape for returning a FilterPredicate built from a computed key, including the cast idiom."
+    },
+    "uses": [
+      {
+        "path": "plugins/catalog-backend/src/service/request/applyPredicateEntityFilterToQuery.ts",
+        "lines": [117, 170],
+        "reason": "applyFieldCondition shows how a primitive-valued field expression compiles to an exact (key, value) EXISTS over the search table, which is why { [key]: true } is index-backed, and how $not is handled."
+      }
+    ],
+    "depends_on": ["U06"],
+    "covers": ["FR-4", "FR-22", "NFR-2", "AC-20"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U09",
+    "path": "plugins/catalog-backend/src/service/request/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Re-exports the former-ref query builder from the request barrel so the service layer imports it the same way it imports its siblings.",
+    "rules": [
+      "1. Add exactly one named export line for buildFormerEntityRefQuery from './formerEntityRefQuery', appended as the last export in the barrel's list.",
+      "2. Add nothing else; this barrel is internal to the plugin and is not the package's public API."
+    ],
+    "exports": [
+      {
+        "name": "buildFormerEntityRefQuery",
+        "kind": "re-export",
+        "params": [{ "name": "formerRef", "type": "string" }],
+        "returns": "FilterPredicate | undefined"
+      }
+    ],
+    "import_line": "import { buildFormerEntityRefQuery } from './request';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 22,
+        "to": 22,
+        "first_line": "export { parseQueryEntitiesParams } from './parseQueryEntitiesParams';",
+        "rule": "Append the named export of buildFormerEntityRefQuery from './formerEntityRefQuery' on the line after this last existing export."
+      }
+    ],
+    "depends_on": ["U08"],
+    "covers": ["FR-4"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U10",
+    "path": "plugins/catalog-backend/src/service/request/formerEntityRefQuery.test.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Proves the predicate builder refuses User refs and malformed refs structurally and otherwise emits the exact index-backed predicate.",
+    "rules": [
+      "1. At most three thorough `it` blocks in one describe, per the fewer-and-thorough rule. This is a pure unit test — no database, no TestDatabases.",
+      "2. One block asserts the emitted predicate for a well-formed non-User ref by deep equality: the $all wrapper, the prefixed key with the canonicalized lowercase ref and the value true, and the { $not: { kind: 'user' } } clause. Also assert that a mixed-case input and an input with an explicit 'default' namespace both canonicalize to the same key, so URL casing cannot change the lookup.",
+      "3. One block asserts undefined is returned for every malformed input — the empty string, a bare name with no kind, ':default/x', 'component:default/' — and that no call throws.",
+      "4. One block asserts the structural User refusal: 'user:default/old-name' and 'User:default/Old-Name' both return undefined, while 'component:default/old-name' returns a predicate. This is the read-side half of AC-17.",
+      "5. Build the expected key from the imported ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX, never from a hand-written string.",
+      "6. Apache 2.0 header with year 2026."
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/request/applyEntityFilterToQuery.test.ts",
+      "lines": [1, 40],
+      "reason": "Shows this directory's test header, import style and describe layout for a pure request-layer unit."
+    },
+    "depends_on": ["U08"],
+    "covers": ["AC-17", "AC-20", "FR-22"],
+    "tests": [
+      {
+        "name": "builds an index-backed predicate for a well-formed ref",
+        "given": "a component ref, the same ref in mixed case, and the same ref with an explicit default namespace",
+        "expect": "the identical $all predicate each time, carrying the prefixed canonicalized key with value true and the $not kind user clause"
+      },
+      {
+        "name": "returns undefined for a malformed ref without throwing",
+        "given": "the empty string, a kindless bare name, an empty-kind ref and an empty-name ref",
+        "expect": "undefined for each, and no throw"
+      },
+      {
+        "name": "refuses a User ref structurally",
+        "given": "a lowercase and a mixed-case User ref, plus a Component ref as control",
+        "expect": "undefined for both User forms and a predicate for the Component"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  },
+  {
+    "id": "U11",
+    "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Proves against a real database, on every engine TestDatabases supports, that a former ref resolves through the existing query path, that a live holder wins, that contested claims resolve to nothing, and that User refs never resolve.",
+    "rules": [
+      "1. Append one `describe('former entity ref resolution')` block inside the existing `describe.each(databases.eachSupportedId())` body, so it runs against every supported engine (AC-1). Do not modify any existing test and do not change the file's copyright year.",
+      "2. Use the file's existing `addEntity` helper to seed entities; it already calls buildEntitySearch and inserts the resulting rows, so the former-ref rows arrive through exactly the production code path. Do not insert search rows by hand.",
+      "3. Exercise resolution by calling `entitiesCatalog.entities({ filter: buildFormerEntityRefQuery(ref), credentials })` — the same method the HTTP layer already uses — and asserting on the returned entities. This proves resolution rides the existing filter path with no new route and no new query shape.",
+      "4. Keep to at most four thorough `it` blocks, each with several assertions.",
+      "5. Block one, the happy path and multi-ref case (AC-1, AC-18): an entity declaring several former refs resolves from EACH of them, including a former ref that differs only by namespace and a second-generation rename where the entity declares both of its two previous refs. Assert the resolved entity's ref equals the current one each time.",
+      "6. Block two, precedence and conflict (AC-2, AC-3, FR-5, FR-6, FR-7): seed a live entity holding a name AND another entity claiming that same name as a former ref, then assert the direct lookup by that ref returns the live entity while the former-ref query returns the claimant — demonstrating the claim is inert for the live name because the direct lookup is consulted first and never reaches resolution. Separately seed two entities both claiming the same unused former ref and assert the former-ref query returns two rows, which the caller treats as ambiguous.",
+      "7. Block three, the structural User exclusion (AC-17): a User entity declaring a former ref produces no resolvable row, asserted by the former-ref query for that ref returning zero entities; and buildFormerEntityRefQuery for a User ref returns undefined so no query is issued at all.",
+      "8. Block four, no regression (AC-5): with former-ref rows present in the database, assert an ordinary `entities` call with no filter and an `entitiesBatch` call over a mix of existing and non-existent refs return exactly what they returned before — same membership, same count, and positional null alignment preserved in entitiesBatch. This is the guard that the extra search rows changed nothing for refs that already resolve.",
+      "9. Import buildFormerEntityRefQuery from './request' and ANNOTATION_FORMER_ENTITY_REFS from '@backstage/catalog-model'.",
+      "10. The file already sets jest.setTimeout(60_000); do not change it."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 2806,
+        "to": 2806,
+        "first_line": "});",
+        "rule": "Insert the new describe('former entity ref resolution') block here: after the last existing nested describe's closing line and before line 2807's `},` which closes the describe.each callback body. Indent it to two spaces, matching the sibling describes inside that callback."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+      "lines": [17, 110],
+      "reason": "The file's TestDatabases setup, the addEntity helper and the describe.each nesting the new block must sit inside."
+    },
+    "uses": [
+      {
+        "path": "plugins/catalog-backend/src/catalog/types.ts",
+        "reason": "The EntitiesRequest / EntitiesResponse and EntitiesBatchRequest shapes the assertions are written against, including how entitiesBatch represents a miss."
+      }
+    ],
+    "depends_on": ["U08", "U06"],
+    "covers": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-5",
+      "AC-17",
+      "AC-18",
+      "FR-5",
+      "FR-6",
+      "FR-7",
+      "FR-9"
+    ],
+    "tests": [
+      {
+        "name": "resolves each of an entity's several former refs",
+        "given": "an entity declaring three former refs including a namespace move and two generations of rename, seeded through addEntity",
+        "expect": "the former-ref query returns that one entity for every declared ref, on every supported database engine"
+      },
+      {
+        "name": "a live entity holding a name wins and contested claims are ambiguous",
+        "given": "a live entity holding a name plus a claimant declaring it as former; and separately two entities claiming the same unused former ref",
+        "expect": "the direct ref lookup returns the live entity and the claim is inert; the contested ref returns two entities, which the caller treats as resolving to nothing"
+      },
+      {
+        "name": "a User entity's former ref never resolves",
+        "given": "a User entity declaring a former ref, and a request for that User former ref",
+        "expect": "zero entities from the query and undefined from the predicate builder, so no query is issued"
+      },
+      {
+        "name": "existing entities and entitiesBatch behaviour is unchanged",
+        "given": "a database holding entities with former-ref rows indexed, queried with no filter and with a batch of mixed existing and missing refs",
+        "expect": "unchanged membership and count for entities, and unchanged positional null alignment for entitiesBatch"
+      }
+    ],
+    "checks": ["format", "lint"]
+  }
+]

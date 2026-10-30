@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "plugin_version": "0.9.3",
+  "built_at": "2026-10-30T07:21:29Z",
+  "run_id": "20261030-072000-feature-new-entity-former-names",
+  "mode": "first-time",
+  "scan_notes": [
+    "Very large monorepo: 12364 git-tracked files, 324 dirs at depth 2, 74 packages/* and 162 plugins/* workspaces. Snapshot is pointer-based by design; no exhaustive file enumeration.",
+    "Group 3 sampled root manifest plus the catalog/techdocs-relevant workspace manifests only."
+  ],
+
+  "git": {
+    "head": "f20fd9b598285c88401406b3812fe00d7708136c",
+    "branch": "BS-NF-12/flash-agsdk-only-v38",
+    "dirty": false,
+    "remotes": [
+      { "name": "origin", "url": "https://github.com/tl-ai-labs/backstage.git" },
+      { "name": "upstream", "url": "https://github.com/backstage/backstage.git" }
+    ],
+    "gitignore_covers_sdlc": false,
+    "default_branch_guess": "master"
+  },
+
+  "topology": {
+    "top_level_dirs": [
+      ".changeset", ".claude", ".cursor", ".devcontainer", ".github", ".husky",
+      ".lighthouseci", ".patches", ".storybook", ".yarn", "beps", "contrib",
+      "dist-types", "docs", "docs-ui", "microsite", "packages", "plugins",
+      "scripts", "workspaces"
+    ],
+    "entry_points": [
+      "packages/app/src/index.tsx",
+      "packages/backend/src/index.ts"
+    ],
+    "areas_relevant_to_intent": {
+      "note": "Pointers for the planned 'entity former names + redirect' capability. Not a scope decision.",
+      "entity_model": ["packages/catalog-model/src/entity", "packages/catalog-model/src/schema", "packages/catalog-model/src/entity/ref.ts"],
+      "catalog_backend": [
+        "plugins/catalog-backend/src/service/createRouter.ts",
+        "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+        "plugins/catalog-backend/src/service/CatalogPlugin.ts",
+        "plugins/catalog-backend/src/database",
+        "plugins/catalog-backend/migrations",
+        "plugins/catalog-backend/src/stitching",
+        "plugins/catalog-backend/src/schema/openapi",
+        "plugins/catalog-backend/config.d.ts"
+      ],
+      "catalog_client": ["packages/catalog-client"],
+      "catalog_frontend": [
+        "plugins/catalog/src/routes.ts",
+        "plugins/catalog/src/plugin.ts",
+        "plugins/catalog/src/alpha",
+        "plugins/catalog-react"
+      ],
+      "techdocs": [
+        "plugins/techdocs/src/routes.ts",
+        "plugins/techdocs/src/Router.tsx",
+        "plugins/techdocs/src/reader",
+        "plugins/techdocs/src/alpha",
+        "plugins/techdocs-backend",
+        "plugins/techdocs-node"
+      ],
+      "docs_targets": ["docs/features/software-catalog", "docs/features/techdocs", "docs/conf"],
+      "changeset_dir": ".changeset"
+    }
+  },
+
+  "stacks": [
+    {
+      "manifest": "package.json",
+      "stack": "node-typescript",
+      "detected_frameworks": ["yarn-berry-workspaces", "backstage", "react", "jest", "playwright", "storybook"],
+      "notes": "Root is a private workspace root (name 'root', version 1.57.0-next.0). TypeScript ~5.7, Node 22||24, packageManager yarn@4.18.1, nodeLinker node-modules."
+    },
+    {
+      "manifest": "plugins/catalog-backend/package.json",
+      "stack": "node-typescript",
+      "detected_frameworks": ["express", "knex", "zod", "backstage-backend-plugin-api"]
+    },
+    {
+      "manifest": "plugins/catalog/package.json",
+      "stack": "node-typescript-react",
+      "detected_frameworks": ["react", "material-ui-v4", "backstage-core-plugin-api", "backstage-frontend-plugin-api"]
+    },
+    {
+      "manifest": "docs-ui/package.json",
+      "stack": "node-typescript-react",
+      "detected_frameworks": ["next", "mdx", "base-ui"],
+      "notes": "Separate nested app, not part of root workspaces."
+    },
+    {
+      "manifest": "microsite/package.json",
+      "stack": "node-typescript-react",
+      "detected_frameworks": ["docusaurus"],
+      "notes": "Separate nested site, not part of root workspaces."
+    },
+    {
+      "manifest": "workspaces/ui/package.json",
+      "stack": "node-typescript",
+      "detected_frameworks": ["yarn-workspaces"],
+      "notes": "Nested independent workspace root with its own yarn.lock; out of scope of the root install."
+    },
+    {
+      "manifest": "mkdocs.yml",
+      "stack": "python-mkdocs-docs",
+      "detected_frameworks": ["mkdocs"],
+      "notes": "Docs site config only; no python package manifest (no pyproject.toml / requirements.txt at root)."
+    }
+  ],
+
+  "test_command_proposed": "CI=1 yarn test <path>",
+  "test_command_source": "package.json#scripts.test (backstage-cli repo test) confirmed by .claude/CLAUDE.md 'Development Flow'",
+  "test_command_probe": {
+    "status": "pass",
+    "command": "CI=1 NODE_OPTIONS='--experimental-vm-modules' yarn test plugins/catalog-backend/src/database/conversion.test.ts",
+    "result": "1 suite passed, 3 tests passed, 2.2s",
+    "note": "A path argument is mandatory per repo instructions — never run the full suite. Full-repo test run is not a viable gate on this monorepo."
+  },
+  "aux_commands": {
+    "typecheck": "yarn tsc",
+    "lint": "yarn lint --fix",
+    "format": "yarn prettier --write <paths>",
+    "api_reports": "yarn build:api-reports",
+    "e2e": "yarn test:e2e",
+    "forbidden": ["yarn build", "yarn changesets version", "yarn release", "changeset CLI (even for inspection)"]
+  },
+
+  "docs_present": [
+    { "path": "README.md", "kind": "readme" },
+    { "path": "README-fr_FR.md", "kind": "readme-translation" },
+    { "path": "README-ja_JP.md", "kind": "readme-translation" },
+    { "path": "README-ko_kr.md", "kind": "readme-translation" },
+    { "path": "README-zh_Hans.md", "kind": "readme-translation" },
+    { "path": "AGENTS.md", "kind": "agents-instructions" },
+    { "path": ".claude/CLAUDE.md", "kind": "claude-instructions" },
+    { "path": "CONTRIBUTING.md", "kind": "contributing" },
+    { "path": "STYLE.md", "kind": "style-guide" },
+    { "path": "REVIEWING.md", "kind": "review-guide" },
+    { "path": "SECURITY.md", "kind": "security-policy" },
+    { "path": "CODE_OF_CONDUCT.md", "kind": "code-of-conduct" },
+    { "path": "docs/architecture-decisions/", "kind": "adr-dir" },
+    { "path": "beps/", "kind": "enhancement-proposals-dir" },
+    { "path": "docs/contribute/doc-style-guide.md", "kind": "doc-style-guide" },
+    { "path": "docs/contribute/project-structure.md", "kind": "project-structure" },
+    { "path": "mkdocs.yml", "kind": "docs-site-config" },
+    { "path": ".changeset/README.md", "kind": "changeset-guide" }
+  ],
+  "docs_absent": ["ARCHITECTURE.md", "CLAUDE.md (repo root — lives at .claude/CLAUDE.md instead)"],
+
+  "ai_configs_detected": [
+    { "path": ".claude/", "type": "claude-code-project-config" },
+    { "path": ".claude/CLAUDE.md", "type": "claude-instructions" },
+    { "path": ".claude/settings.local.json", "type": "claude-local-settings" },
+    { "path": ".claude/skills/catalog-db-performance.md", "type": "claude-skill" },
+    { "path": ".claude/skills/backstage-release-notes/SKILL.md", "type": "claude-skill" },
+    { "path": ".cursor/rules/backstage-project.mdc", "type": "cursor" },
+    { "path": ".cursor/rules/tests/test-utils.mdc", "type": "cursor" },
+    { "path": ".cursor/rules/tests/backend-test-utils.mdc", "type": "cursor" },
+    { "path": ".github/copilot-instructions.md", "type": "copilot" },
+    { "path": ".sdlc/project.json", "type": "mmo-project-config" }
+  ],
+  "ai_configs_absent": [
+    "CLAUDE.local.md", ".mcp.json", ".cursorrules", ".aider.conf.yml",
+    ".continue/", ".roo/", "routing-policy.yaml (none in repo)", "gemini*.{yaml,json} (none in repo)"
+  ],
+
+  "env_keys_by_file": {},
+  "env_keys_all": [],
+  "env_keys_referenced_in_code": [
+    "APP_CONFIG", "AWS_ACCESS_KEY_ID", "AWS_CONFIG_FILE", "AWS_CREDENTIAL_EXPIRATION",
+    "AWS_DEFAULT_REGION", "AWS_REGION", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+    "AWS_SHARED_CREDENTIALS_FILE", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID",
+    "BACKSTAGE_APP_NAME", "BACKSTAGE_CLI_BUILD_PARALLEL", "BACKSTAGE_CLI_CHANNEL",
+    "BACKSTAGE_CLI_CONCURRENCY", "BACKSTAGE_ENV", "BACKSTAGE_MANIFEST_FILE",
+    "BACKSTAGE_OLD_TESTS", "BACKSTAGE_TEST_DISABLE_DOCKER", "BACKSTAGE_TEST_DOCKER_REGISTRY",
+    "BACKSTAGE_VERSIONS_BASE_URL", "CI", "FOSSA_API_KEY", "GITHUB_BASE_REF", "GITHUB_OUTPUT",
+    "GITHUB_REF", "GITHUB_TOKEN", "KUBERNETES_CA_FILE_PATH", "KUBERNETES_SERVICE_HOST",
+    "KUBERNETES_SERVICE_PORT", "LOG_LEVEL", "MYSQL_CONNECTION", "NODE_ENV", "PLAYWRIGHT_URL",
+    "PORT", "POSTGRES_HOST", "POSTGRES_PASSWORD", "POSTGRES_PORT", "POSTGRES_USER",
+    "TECHDOCS_TEST_SECRET"
+  ],
+  "env_keys_note": "No .env file of any kind exists in the repo or is tracked by git. Names above are from source references only; no values were read. .gitignore lines 103-105 already ignore .env, .env.test, .envrc.",
+
+  "monorepo": {
+    "type": "yarn-berry-workspaces",
+    "package_manager": "yarn@4.18.1",
+    "workspace_globs": ["packages/*", "plugins/*"],
+    "package_count": { "packages": 74, "plugins": 162 },
+    "packages_enumerated": false,
+    "packages_note": "236 workspaces — not enumerated. Resolve a package by directory name under packages/ or plugins/.",
+    "nested_independent_workspaces": [
+      { "root": "workspaces/ui", "manifest": "workspaces/ui/package.json", "own_lockfile": true },
+      { "root": "microsite", "manifest": "microsite/package.json" },
+      { "root": "docs-ui", "manifest": "docs-ui/package.json" }
+    ],
+    "per_package_test_command": "CI=1 yarn test <path-under-package>",
+    "intent_relevant_packages": [
+      { "name": "@backstage/catalog-model", "root": "packages/catalog-model", "version": "1.10.2" },
+      { "name": "@backstage/catalog-client", "root": "packages/catalog-client", "version": "1.16.3" },
+      { "name": "@backstage/plugin-catalog-backend", "root": "plugins/catalog-backend", "version": "4.0.3-next.0" },
+      { "name": "@backstage/plugin-catalog-node", "root": "plugins/catalog-node", "version": "2.2.7-next.0" },
+      { "name": "@backstage/plugin-catalog", "root": "plugins/catalog", "version": "2.0.11-next.0" },
+      { "name": "@backstage/plugin-catalog-react", "root": "plugins/catalog-react", "version": "4.0.0-next.0" },
+      { "name": "@backstage/plugin-catalog-common", "root": "plugins/catalog-common", "version": "1.2.1" },
+      { "name": "@backstage/plugin-techdocs", "root": "plugins/techdocs", "version": "1.19.1-next.0" },
+      { "name": "@backstage/plugin-techdocs-backend", "root": "plugins/techdocs-backend", "version": "2.4.1-next.0" },
+      { "name": "@backstage/plugin-techdocs-react", "root": "plugins/techdocs-react", "version": "1.4.1-next.0" },
+      { "name": "@backstage/plugin-techdocs-node", "root": "plugins/techdocs-node", "version": "2.2.0-next.0" },
+      { "name": "@backstage/frontend-plugin-api", "root": "packages/frontend-plugin-api", "version": "0.18.3-next.0" },
+      { "name": "@backstage/core-plugin-api", "root": "packages/core-plugin-api", "version": "1.12.12-next.0" }
+    ]
+  },
+
+  "submodules": [],
+  "lfs": false,
+  "lfs_patterns": [],
+  "gitattributes_present": false,
+
+  "infra_hints": {
+    "dockerfile": true,
+    "dockerfile_paths": ["packages/backend/Dockerfile", ".devcontainer/Dockerfile", "contrib/docker/*"],
+    "docker_compose": true,
+    "docker_compose_paths": ["docker-compose.deps.yml"],
+    "terraform": false,
+    "github_workflows": true,
+    "github_workflows_count": 49,
+    "gitlab_ci": false,
+    "circleci": false,
+    "jenkins": false,
+    "husky_hooks": true,
+    "lint_staged": true,
+    "lint_staged_note": "Pre-commit hooks run eslint --fix, prettier --write, catalog-info generation and lockfile dedupe checks on staged files. A plugin-authored commit will be reformatted by them."
+  },
+
+  "regulated_repo_signals": [
+    { "kind": "security-policy", "path": "SECURITY.md" }
+  ],
+  "regulated_repo_warning_required": false,
+  "regulated_repo_note": "Only a standard OSS SECURITY.md. No HIPAA/PCI/SOC2/GDPR/compliance dirs, no CODEOWNERS entries for security-team/compliance-team/privacy-team/legal. Not treated as a regulated repo.",
+
+  "off_limits_proposed": [
+    ".git/**",
+    ".sdlc/**",
+    ".env",
+    ".env.*",
+    ".envrc",
+    ".claude/**",
+    ".cursor/**",
+    ".github/copilot-instructions.md",
+    ".mcp.json",
+    "routing-policy.yaml",
+    "node_modules/**",
+    "**/node_modules/**",
+    "dist/**",
+    "**/dist/**",
+    "dist-types/**",
+    "dist-workspace/**",
+    "dist-storybook/**",
+    "build/**",
+    ".next/**",
+    ".yarn/**",
+    "yarn.lock",
+    "workspaces/ui/yarn.lock",
+    "coverage/**",
+    "**/__snapshots__/**",
+    "**/report-*.api.md",
+    "**/api-report*.md",
+    "packages/*/report*.api.md",
+    "plugins/*/report*.api.md",
+    "**/src/schema/openapi/generated/**",
+    "**/*.generated.ts",
+    "**/catalog-info.yaml",
+    ".patches/**",
+    "microsite/**",
+    "docs-ui/**",
+    "contrib/**",
+    "docs/releases/**"
+  ],
+  "off_limits_rationale": {
+    "api_reports": "Generated by `yarn build:api-reports`, never hand-edited.",
+    "catalog_info_yaml": "Generated by backstage-repo-tools via lint-staged.",
+    "openapi_generated": "Generated from the OpenAPI spec by repo tooling.",
+    "docs_releases": "Repo instructions: never change release notes under /docs/releases unless explicitly asked.",
+    "microsite_docs_ui_contrib": "Separate installs/sites, unrelated to the catalog capability; excluded to keep scope tight (user may re-include at Gate 0).",
+    "yarn_lock": "Maintained by yarn + lockfile dedupe script, not hand-edited.",
+    "eslint_prettier_tsconfig": "Repo instructions forbid changing ESLint/Prettier/TypeScript config unless specifically requested — see must_not_touch_unless_requested."
+  },
+  "must_not_touch_unless_requested": [
+    ".eslintrc*", "eslint.config.*", ".prettierrc*", "tsconfig*.json",
+    "docs/releases/**", "*/CHANGELOG.md"
+  ],
+
+  "repo_conventions_hard_rules": [
+    "Every new .ts/.tsx/.js/.jsx source file needs an Apache 2.0 header with the current year; never bump the year on existing files.",
+    "Published changes under /packages or /plugins need changeset coverage in .changeset/*.md; inspect and edit those files directly, never via the changeset CLI.",
+    "Breaking change => minor for <1.0.0 packages, major for >=1.0.0. New feature => minor for >=1.0.0, patch for <1.0.0.",
+    "Match the style of the individual package being edited; per-package consistency beats repo-wide consistency.",
+    "Prefer fewer thorough tests with multiple assertions; use screen and findBy* in React Testing Library; do not add test IDs to implementation.",
+    "Behavior changes need docs — TSDoc, package README, or /docs (feature guides belong in /docs, not READMEs).",
+    "Run yarn build:api-reports before a PR touching a workspace package's public API.",
+    "Never run yarn build / changesets version / yarn release."
+  ],
+
+  "coexistence_notes": [
+    "Cursor rules detected at .cursor/rules/backstage-project.mdc (alwaysApply: true) plus .cursor/rules/tests/*.mdc. The plugin will never touch them, but if you have Cursor's auto-lint running on save, changes we make may trigger it.",
+    "GitHub Copilot instructions detected at .github/copilot-instructions.md. Untouched by default.",
+    "Claude Code project config detected (.claude/CLAUDE.md, .claude/skills/, .claude/settings.local.json). Untouched by default. .claude/settings.local.json sets GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION in env, which the model-dispatch MCP server inherits — expect Vertex-backed Gemini auth in this repo.",
+    "No .mcp.json in this repo — no custom MCP servers registered at repo level.",
+    "No repo-local routing-policy.yaml. .sdlc/project.json sets default_policy 'flash-agsdk-only-v38'; pass --policy <name> to override.",
+    "Your .gitignore doesn't cover .sdlc/. Run artifacts under .sdlc/ (packets, backups, telemetry) will be untracked but visible to `git add -A`. Gate 0 will offer to add .gitignore (create if missing, append if present) to this run's allowlist so the plugin can add the entry as part of the run.",
+    "Husky + lint-staged are active. Any commit the plugin makes will be rewritten by eslint --fix and prettier --write on staged files, and may regenerate catalog-info.yaml files.",
+    "Working on branch BS-NF-12/flash-agsdk-only-v38, not master; origin is a fork (tl-ai-labs/backstage) with upstream backstage/backstage. PRs default to the fork."
+  ],
+
+  "risks": [
+    { "kind": "scale", "severity": "medium", "detail": "12364 tracked files, 236 workspaces. Full-suite test or tsc runs are slow (tsc uses --max-old-space-size=8192). Always gate on path-scoped tests." },
+    { "kind": "gitignore", "severity": "medium", "detail": ".sdlc/ is not gitignored — run artifacts are visible to `git add -A`." },
+    { "kind": "hooks", "severity": "low", "detail": "Husky pre-commit lint-staged will reformat plugin-authored commits." },
+    { "kind": "release-process", "severity": "medium", "detail": "Changeset coverage is mandatory for published package changes and must be hand-edited; version/release commands are forbidden." },
+    { "kind": "api-surface", "severity": "medium", "detail": "Changing a package's exported API requires regenerating report.api.md via yarn build:api-reports; stale reports fail CI." },
+    { "kind": "branch", "severity": "low", "detail": "HEAD is a feature branch on a fork, clean tree. Rollback anchor f20fd9b5 is valid." },
+    { "kind": "dual-frontend-system", "severity": "medium", "detail": "Both the legacy frontend system (core-plugin-api, plugins/*/src/plugin.ts) and the new one (frontend-plugin-api, plugins/*/src/alpha) are live. Any entity-page or TechDocs routing change likely needs both paths." },
+    { "kind": "db-migration", "severity": "medium", "detail": "Persisting former names implies a knex migration under plugins/catalog-backend/migrations (JS, exports.up/down, Postgres + SQLite support required)." }
+  ],
+
+  "tier2b_triggered": true,
+  "tier2b_reason": "Dominant stack (Backstage/React/Express monorepo) has no matching pre-authored adapter; shipped adapters are generic.md, nest.md, python.md.",
+  "stack_profile_path": ".sdlc/baseline/stack-profile.md"
+}

@@ -25,6 +25,7 @@ import { Entity } from '@backstage/catalog-model';
 import { EntityFilter } from '@backstage/plugin-catalog-node';
 import { FilterPredicate } from '@backstage/filter-predicates';
 import { mockCredentials } from '@backstage/backend-test-utils';
+import { ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX } from '../database/operations/stitcher/buildEntitySearch';
 
 describe('AuthorizedEntitiesCatalog', () => {
   const fakeCatalog = {
@@ -447,6 +448,77 @@ describe('AuthorizedEntitiesCatalog', () => {
         orderFieldValues: ['aaa', null],
         query: userFilter,
         orderFields: [{ field: 'name', order: 'asc' }],
+      });
+    });
+
+    it('enforces permissions on former-ref queries under DENY and CONDITIONAL decisions', async () => {
+      const formerRefKey = `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/old-component`;
+      const formerRefQuery: FilterPredicate = {
+        $all: [{ [formerRefKey]: true }, { $not: { kind: 'user' } }],
+      };
+
+      // Under DENY: returns empty response without calling underlying catalog
+      fakePermissionApi.authorizeConditional.mockResolvedValueOnce([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const denyCatalog = createCatalog();
+
+      await expect(
+        denyCatalog.queryEntities({
+          credentials: mockCredentials.none(),
+          filter: formerRefQuery,
+        }),
+      ).resolves.toEqual({
+        items: { type: 'object', entities: [] },
+        pageInfo: {},
+        totalItems: 0,
+      });
+
+      expect(fakeCatalog.queryEntities).not.toHaveBeenCalled();
+
+      // Under CONDITIONAL: permission filter is ANDed into the query the underlying catalog receives
+      fakePermissionApi.authorizeConditional.mockResolvedValueOnce([
+        {
+          result: AuthorizeResult.CONDITIONAL,
+          conditions: {
+            rule: 'IS_ENTITY_KIND',
+            params: { kinds: ['component'] },
+          },
+        },
+      ]);
+
+      const entities = [
+        {
+          kind: 'component',
+          namespace: 'default',
+          name: 'new-component',
+        } as unknown as Entity,
+      ];
+
+      fakeCatalog.queryEntities.mockResolvedValueOnce({
+        items: { type: 'object', entities },
+        pageInfo: {},
+        totalItems: 1,
+      } as QueryEntitiesResponse);
+
+      const conditionalCatalog = createCatalog(isEntityKind);
+
+      const response = await conditionalCatalog.queryEntities({
+        credentials: mockCredentials.none(),
+        filter: formerRefQuery,
+      });
+
+      expect(fakeCatalog.queryEntities).toHaveBeenCalledWith({
+        credentials: mockCredentials.none(),
+        filter: {
+          $all: [{ kind: 'component' }, formerRefQuery],
+        },
+      });
+
+      expect(response).toEqual({
+        items: { type: 'object', entities },
+        totalItems: 1,
+        pageInfo: {},
       });
     });
   });

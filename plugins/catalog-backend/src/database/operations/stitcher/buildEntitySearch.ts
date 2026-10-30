@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_ENTITY_REFS,
+  DEFAULT_NAMESPACE,
+  Entity,
+  parseFormerEntityRefs,
+} from '@backstage/catalog-model';
 import { InputError } from '@backstage/errors';
 import { DbSearchRow } from '../../tables';
 import { NULL_SENTINEL } from './util';
@@ -37,6 +42,13 @@ const SPECIAL_KEYS = [
 // postgres will balk after 8191 byte line sizes.
 const MAX_KEY_LENGTH = 200;
 const MAX_VALUE_LENGTH = 200;
+
+/**
+ * Search key prefix for per-entry former entity ref search rows.
+ *
+ * @internal
+ */
+export const ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX = `metadata.annotations.${ANNOTATION_FORMER_ENTITY_REFS}.`;
 
 type Kv = {
   key: string;
@@ -209,6 +221,28 @@ export function buildEntitySearch(
       key: `relations.${relation.type}`,
       value: relation.targetRef,
     });
+  }
+
+  // Each declared former ref gets its own synthetic row so it can be matched
+  // exactly via the index. Former refs of kind: User, as well as kind: User
+  // entities themselves, are excluded structurally to avoid disclosing previous
+  // user identities.
+  if (entity.kind.toLowerCase() !== 'user') {
+    const formerRefs = parseFormerEntityRefs(
+      entity.metadata.annotations?.[ANNOTATION_FORMER_ENTITY_REFS],
+    );
+    for (const ref of formerRefs) {
+      const colonIndex = ref.indexOf(':');
+      const kind = colonIndex === -1 ? ref : ref.slice(0, colonIndex);
+      if (kind.toLowerCase() === 'user') {
+        continue;
+      }
+
+      raw.push({
+        key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}${ref}`,
+        value: true,
+      });
+    }
   }
 
   // This validates that there are no keys that vary only in casing, such

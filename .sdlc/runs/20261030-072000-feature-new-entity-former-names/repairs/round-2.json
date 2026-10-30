@@ -1,0 +1,275 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. STILL FAILING after a previous fix round. `CI=1 yarn test 'plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx'` exits 1; all 4 tests fail with the SAME error:\n\n  NotImplementedError: No implementation available for apiRef{core.error}\n    at useApi (packages/frontend-plugin-api/src/apis/system/useApi.tsx:53:11)\n    at useEntityFromUrl (components/CatalogEntityPage/useEntityFromUrl.ts:39:26)\n\nThe previous attempt did not actually register errorApiRef in a way that resolves. The hook calls useApi(errorApiRef) at line 39 of the implementation. Every render throws before any assertion.\n\nConcretely: import { errorApiRef } from '@backstage/core-plugin-api' and import { mockApis } from '@backstage/test-utils', then include [errorApiRef, mockApis.error()] in the TestApiProvider apis tuple ALONGSIDE the existing catalogApiRef entry, in EVERY one of the four tests (or in a shared wrapper all four use). Verify the apis prop is a tuple of [ref, impl] pairs — a common mistake is nesting it wrongly or registering only one pair.\n\nAlso: this file has a TypeScript error that must be fixed in the same pass. `yarn tsc` reports at EntityRenamedNotice-style call sites that an object { pathname, state } is not assignable to type 'string'. If this file passes a location object where a string is expected, use the router's correct API for carrying state (for MemoryRouter use initialEntries={[{ pathname, state }]}, which IS allowed, rather than passing an object where a plain path string is typed).\n\nFix the TEST only, not the implementation. Keep all four test intentions, keep `screen` and `findBy*` (no waitFor), add no test IDs, leave the Apache 2.0 header untouched.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U24.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "packages/catalog-client/src/resolveFormerEntityRef.ts",
+    "instruction": "Fix `packages/catalog-client/src/resolveFormerEntityRef.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 1 error:\n\n  packages/catalog-client/src/resolveFormerEntityRef.ts:83:18 - error TS2322: Type '{ [x: string]: true; }' is not assignable to type 'FilterPredicate'.\n\nLine 83 is the `$all: [{ [key]: true }, { $not: { kind: 'user' } }]` predicate. The computed key makes TypeScript widen the object to an index signature, which FilterPredicate does not accept. This is expected and the change spec anticipated it: the predicate object needs an explicit cast to FilterPredicate, exactly as searchFilterToPredicate in plugins/catalog-backend/src/service/request/parseEntityFilterParams.ts casts its own computed-key object literals.\n\nAdd the minimal cast so the predicate typechecks. Do NOT change the predicate's SHAPE — it must stay `{ $all: [ { [key]: true }, { $not: { kind: 'user' } } ] }` with limit 2, which is the approved index-backed form. Change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-client/src/resolveFormerEntityRef.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-client/src/resolveFormerEntityRef.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/request/formerEntityRefQuery.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/resolveFormerEntityRef.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 11 errors in this file, all missing imports for symbols the new tests use:\n\n  :2819:16 error TS2304: Cannot find name 'ANNOTATION_FORMER_ENTITY_REFS'\n  :2839:26 error TS2304: Cannot find name 'buildFormerEntityRefQuery'\n  :2865, :2879, :2890, :2950, :2988, :2999 - same, ANNOTATION_FORMER_ENTITY_REFS\n  :2916, :2926, :2965 - same, buildFormerEntityRefQuery\n\nThe new test cases reference both symbols but neither is imported. Add the two imports, matching this file's existing import style (it already imports Entity and stringifyEntityRef from '@backstage/catalog-model' on line 22, and buildEntitySearch from '../database/operations/stitcher/buildEntitySearch' on line 38):\n  - ANNOTATION_FORMER_ENTITY_REFS comes from '@backstage/catalog-model' — add it to the EXISTING import on line 22 rather than writing a second import from the same module.\n  - buildFormerEntityRefQuery comes from './request' (it is exported from plugins/catalog-backend/src/service/request/index.ts).\n\nAdd only the imports. Do not change any test body, do not reorder existing imports, and leave the Apache 2.0 header untouched.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/request/index.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/constants.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+    "instruction": "Fix `plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 1 error:\n\n  plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx:17:8 - error TS6133: 'React' is declared but its value is never read.\n\nLine 17 is `import React, { useState } from 'react';`. The default React binding is unused (this package's tsconfig uses the modern JSX runtime) while useState IS used.\n\nFix by importing only what is used: `import { useState } from 'react';`. Change nothing else in the file — in particular keep the component's behaviour, its location.state reading, its @material-ui/lab Alert usage and the Apache 2.0 header exactly as they are. Its own test currently passes and must keep passing.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U16.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 1 error:\n\n  plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx:494:11 - error TS2322: Type '{ pathname: string; state: { formerEntityRef: string; }; }' is not assignable to type 'string'.\n\nAround line 494 the new test passes an object `{ pathname: '/catalog/default/component/new-name', state: { formerEntityRef } }` where a plain path string is expected. The surrounding harness prop is typed as string.\n\nFix it by using the router API that accepts a location object with state. With renderInTestApp the route is given as a string, so carry the state the way the rest of this repo does: wrap in a MemoryRouter whose initialEntries accepts [{ pathname, state }], or set the state through the navigation the component under test performs. Read how the file's other tests pass routes and stay consistent with them.\n\nFix the TEST only. Keep the test's intention (the rename notice renders in the legacy EntityLayout naming the former ref), keep `screen` and `findBy*`, add no test IDs, and leave the Apache 2.0 header untouched. The file's other tests must keep passing.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U25.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

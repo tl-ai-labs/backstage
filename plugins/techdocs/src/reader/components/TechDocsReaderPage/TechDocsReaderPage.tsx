@@ -41,6 +41,7 @@ import {
   useTheme,
 } from '@material-ui/core/styles';
 import { useExternalRedirect } from './useExternalRedirect';
+import { useFormerRefRedirect } from './useFormerRefRedirect';
 
 /* An explanation for the multiple ways of customizing the TechDocs reader page
 
@@ -197,8 +198,11 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
     [entityRef.kind, entityRef.name, entityRef.namespace],
   );
 
-  // Check for external TechDocs redirects and handle navigation
-  const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef);
+  // Check for external and former-ref TechDocs redirects and handle navigation
+  const { shouldShowProgress: shouldShowExternalProgress } =
+    useExternalRedirect(memoizedEntityRef);
+  const { shouldShowProgress: shouldShowFormerRefProgress } =
+    useFormerRefRedirect(memoizedEntityRef);
 
   const page: ReactNode = useMemo(() => {
     if (children) {
@@ -220,7 +224,7 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
 
   // Show full-page loading spinner when checking for external redirects or about to redirect.
   // This replaces the entire page content (header, sidebar, and documentation).
-  if (shouldShowProgress) {
+  if (shouldShowExternalProgress || shouldShowFormerRefProgress) {
     return <Progress />;
   }
 

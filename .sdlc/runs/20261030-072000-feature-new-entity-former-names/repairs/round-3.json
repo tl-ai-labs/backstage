@@ -1,0 +1,124 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx",
+    "instruction": "Fix `plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. This file's 2 tests PASS but `yarn tsc` fails with 3 errors in it:\n\n  :30:11 - error TS2322: Type '{ pathname: string; state: { formerEntityRef: string; }; }' is not assignable to type 'string'.\n  :54:11 - error TS2322: same\n  :85:11 - error TS2322: Type '{ pathname: string; state: unknown; }' is not assignable to type 'string'.\n\nCause: the test passes `routeEntries: [{ pathname, state }]` to renderInTestApp, but renderInTestApp's routeEntries option is typed `string[]` — it accepts path strings only, not location objects. The object happens to work at runtime but does not typecheck, and `yarn tsc` passing at the repo root is a hard acceptance criterion.\n\nUse the pattern that a SIBLING FILE IN THIS RUN already uses successfully and which is type-clean — plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx (in your context files). It carries router state by navigating inside the test app instead of through routeEntries:\n\n    const NavigateWithState = () => {\n      const navigate = useNavigate();\n      useEffect(() => {\n        navigate('/catalog/default/component/new-service', {\n          replace: true,\n          state: { formerEntityRef },\n        });\n      }, [navigate]);\n      return null;\n    };\n\nand renders that component alongside the component under test, with routeEntries given as plain strings (or omitted).\n\nApply that pattern to all three call sites (lines ~30, ~54, ~85). Keep BOTH existing tests and their exact intentions — the first asserts the former ref is named and the notice can be dismissed in both UI vocabularies (legacy and bui), the third case asserts the notice renders nothing when no former-ref state is present. Keep `screen` and `findBy*` (no waitFor), add no test IDs, leave the Apache 2.0 header untouched. Both tests must still pass AND the file must typecheck.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U19.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. STILL FAILING after two fix rounds (six model attempts). All 4 tests fail with the SAME error every time:\n\n  NotImplementedError: No implementation available for apiRef{core.error}\n    at useApi (packages/frontend-plugin-api/src/apis/system/useApi.tsx:53:11)\n    at useEntityFromUrl (components/CatalogEntityPage/useEntityFromUrl.ts:39:26)\n\nPrevious attempts kept failing to register errorApiRef so that it actually resolves. READ THE CONTEXT FILES CAREFULLY before writing.\n\nThe decisive reference is plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx (in your context files). It was fixed in this same run, it passes, and it typechecks. Note exactly how it builds its api registry and renders: it constructs an `apis` collection and wraps the tree in `<ApiProvider apis={apis}>`, and it carries router state by navigating inside the test app with useNavigate + useEffect rather than by passing a location object to routeEntries (routeEntries is typed string[] and an object there is a TYPE ERROR).\n\nMirror that approach here:\n  1. Register BOTH apis the hook needs: catalogApiRef (the mock the tests already use) AND errorApiRef. For errorApiRef use mockApis.error() from '@backstage/test-utils', or the same mechanism EntityLayout.test.tsx uses. Every render path in all four tests must see both.\n  2. Keep each of the four test intentions exactly: (a) issues no extra request when the ref resolves directly, (b) redirects a stale ref preserving sub-path, query and fragment, (c) leaves an unknown ref on the not-found path, (d) attempts resolution at most once per ref.\n  3. Any router state must be carried the type-clean way shown in EntityLayout.test.tsx — never an object in routeEntries.\n\nReturn the WHOLE file (the {path, content} form) rather than edits: previous edit attempts have repeatedly failed on this file. Fix the TEST only, never the implementation under test. Use `screen` and `findBy*` (no waitFor), add no test IDs, keep the Apache 2.0 header with year 2026. The file must both PASS and TYPECHECK.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U24.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

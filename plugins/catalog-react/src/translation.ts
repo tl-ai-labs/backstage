@@ -185,5 +185,11 @@ export const catalogReactTranslationRef = createTranslationRef({
       generateDescription_other:
         'The annotations {{annotations}} are missing. You need to add the annotations to your {{entityKind}} if you want to enable this tool.',
     },
+    entityRenamedNotice: {
+      title: 'Entity renamed',
+      description:
+        'This entity was previously known as {{formerEntityRef}}. You were redirected from its former location.',
+      dismiss: 'Dismiss',
+    },
   },
 });

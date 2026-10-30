@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ReactNode } from 'react';
-import { waitFor } from '@testing-library/react';
+import { ReactNode, useEffect } from 'react';
+import { screen, waitFor } from '@testing-library/react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   CompoundEntityRef,
@@ -318,5 +319,48 @@ describe('<TechDocsReaderPageContent />', () => {
     await waitFor(() => {
       expect(rendered.queryByRole('progressbar')).toBeInTheDocument();
     });
+  });
+
+  it('shows the rename notice only when location state carries a formerEntityRef', async () => {
+    getEntityMetadata.mockResolvedValue(mockEntityMetadata);
+    getTechDocsMetadata.mockResolvedValue(mockTechDocsMetadata);
+    useTechDocsReaderDom.mockReturnValue(document.createElement('html'));
+    useReaderState.mockReturnValue({ state: 'cached' });
+
+    const formerEntityRef = 'component:default/old-name';
+
+    const NavigateWithState = () => {
+      const navigate = useNavigate();
+      useEffect(() => {
+        navigate('/', {
+          replace: true,
+          state: { formerEntityRef },
+        });
+      }, [navigate]);
+      return null;
+    };
+
+    const renderedWithRedirect = await renderInTestApp(
+      <Wrapper>
+        <TechDocsReaderPageContent withSearch={false} />
+        <NavigateWithState />
+      </Wrapper>,
+    );
+
+    expect(
+      await screen.findByText(new RegExp(formerEntityRef)),
+    ).toBeInTheDocument();
+
+    renderedWithRedirect.unmount();
+
+    await renderInTestApp(
+      <Wrapper>
+        <TechDocsReaderPageContent withSearch={false} />
+      </Wrapper>,
+    );
+
+    expect(
+      screen.queryByText(new RegExp(formerEntityRef)),
+    ).not.toBeInTheDocument();
   });
 });

@@ -21,4 +21,6 @@
  */
 
 export { CatalogClient } from './CatalogClient';
+export { resolveFormerEntityRef } from './resolveFormerEntityRef';
+export type { FormerEntityRefResolution } from './resolveFormerEntityRef';
 export * from './types';
