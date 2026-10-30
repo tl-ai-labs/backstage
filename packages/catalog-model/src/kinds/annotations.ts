@@ -15,7 +15,11 @@
  */
 
 import { createCatalogModelLayer } from '../model/createCatalogModelLayer';
-import { ANNOTATION_EDIT_URL, ANNOTATION_VIEW_URL } from '../entity';
+import {
+  ANNOTATION_EDIT_URL,
+  ANNOTATION_FORMER_ENTITY_REFS,
+  ANNOTATION_VIEW_URL,
+} from '../entity';
 import {
   ANNOTATION_LOCATION,
   ANNOTATION_ORIGIN_LOCATION,
@@ -54,6 +58,11 @@ export const wellKnownAnnotationsModel = createCatalogModelLayer({
       name: ANNOTATION_EDIT_URL,
       description:
         'A URL to edit the entity in an external tool, e.g. a source code repository.',
+    });
+    model.addAnnotation({
+      name: ANNOTATION_FORMER_ENTITY_REFS,
+      description:
+        "A comma-separated list of entity refs the entity was previously known by, used to redirect links from the entity's former refs.",
     });
   },
 });

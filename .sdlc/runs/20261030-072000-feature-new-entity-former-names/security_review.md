@@ -49,3 +49,85 @@ set — recorded as unchanged, `npm audit` not re-run.
 - Decide and record: either make the live-holder/contest gates viewer-independent, or document in `well-known-annotations.md` that both gates are evaluated against the viewer's visible set — `packages/catalog-client/src/resolveFormerEntityRef.ts:80-99`.
 
 Tool calls: 18
+
+---
+
+## Re-review after remediation (2026-10-30)
+
+Re-reviewed by the orchestrator after the Gate 3 `revise` round and the Gate 4 `reject` round. Both
+originally-blocking findings are **closed**; verification evidence is the item-8 combined check
+(`CI=true yarn test plugins/catalog-backend plugins/catalog plugins/techdocs && yarn tsc && yarn lint:all`)
+exiting **0**, plus `CI=true yarn test packages/catalog-model packages/catalog-client` exiting 0.
+
+### HIGH — TechDocs live-entity gate — CLOSED (fixed structurally)
+
+Was: `useFormerRefRedirect(entityRef, entity?)` carried its only live-holder guard on an optional
+second parameter that the sole production call site never passed, so the guard was dead code — a
+hostile descriptor could capture a live entity's docs traffic, and the resolution query fired on
+every docs page view.
+
+Now: the optional parameter is **removed**. The hook performs the direct lookup itself
+(`catalogApi.getEntityByRef(entityRef)`) inside its own async body and returns early when an entity
+is found, mirroring its sibling `useExternalRedirect`. The gate can no longer be omitted by a
+caller, which is what was asked for in preference to call-site discipline.
+
+Follow-up hardening from the Gate 4 round: a direct lookup that **throws** now also returns early
+and does **not** fall through to resolution. A thrown lookup is not a proven miss (transient backend
+error, network failure, permission error), so treating it as "absent" could have redirected a ref
+that is in fact live.
+
+Covered by tests asserting (a) a live entity holding the ref produces no navigation **and** no
+resolution query — the second assertion is what proves the hot-path promise for the docs route — and
+(b) a rejecting lookup produces neither.
+
+### MEDIUM — `User` gates not independent — CLOSED
+
+Was: `buildEntitySearch` gated only on the **claimant's** kind, so a `Component` declaring
+`user:default/old-name` still had that synthetic row written and queryable through the ordinary
+filter API — a confirm-a-guessed-former-username oracle.
+
+Now: both directions are gated. The claimant-side skip is retained, and each **claimed ref** whose
+kind lowercases to `user` is additionally skipped inside the loop, case-insensitively and without
+introducing a throw on the stitching path. Covered by a test asserting a `Component` claiming
+`user:default/old-name` produces no synthetic row for it, while a non-user former ref declared
+alongside it is still indexed.
+
+### MEDIUM — viewer-relative anti-hijack — ACCEPTED, NOT FIXED (by decision)
+
+The live-entity and contested checks only consider entities the viewer may read, so a viewer who
+cannot read the true holder of a name may be redirected by another entity's claim on it. Accepted
+by the user as a deliberate trade: closing it would require a privileged lookup, and the absence of
+any privileged path is what makes the confidentiality property hold. Confidentiality is unaffected;
+only the anti-hijack guarantee degrades per viewer. **Now also documented for adopters** in
+`docs/features/software-catalog/well-known-annotations.md`.
+
+### LOW — silent drop of over-long refs — DOCUMENTED
+
+Refs longer than roughly 147 characters exceed the 200-character search-key bound and are dropped
+without a signal. No logger is in scope at that point in the stitcher, so adding one would have
+required changing a function signature; the behaviour is instead documented for adopters in
+`well-known-annotations.md`. Fail-closed semantics unchanged.
+
+### LOW — `.gitignore` / tracked run artifacts — REVERSED BY DECISION
+
+The `.sdlc/` entry added earlier in the run was **removed** at the user's instruction; `.gitignore`
+is byte-identical to its pre-run state. No git index operation was performed by this run.
+
+### Additional coverage added in the Gate 4 round
+
+- **Permission enforcement against the real authorization path.** `AuthorizedEntitiesCatalog`'s
+  `queryEntities` block now covers a former-ref query under both `DENY` and `CONDITIONAL`
+  decisions, so AC-4 no longer rests on a mocked client alone.
+- **The real predicate exercised against a real database.** A test now captures the query that
+  `resolveFormerEntityRef` actually sends through a stub `CatalogApi` and runs that exact filter
+  against the test database, closing the gap where the production predicate had never been
+  exercised through the code path that uses it.
+- **TechDocs rename notice.** `EntityRenamedNotice` now renders in the TechDocs reader content, with
+  a jsdom test — FR-18 and AC-8 were genuinely unmet before this round.
+- **Entity-page not-found flash.** `useEntityFromUrl` now holds `loading` through resolution and
+  navigation, releasing it when resolution settles unresolved, with tests asserting the forbidden
+  `{loading: false, no entity, no error}` state never occurs for a resolvable stale ref and that an
+  unknown ref still releases loading.
+
+No new finding was identified in the re-review. No new env key, credential, runtime dependency,
+manifest or lockfile change was introduced at any point in this run.

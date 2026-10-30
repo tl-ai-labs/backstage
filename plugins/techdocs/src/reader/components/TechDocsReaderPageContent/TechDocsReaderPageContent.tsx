@@ -17,6 +17,7 @@
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 
+import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';
 import { TechDocsShadowDom } from '@backstage/plugin-techdocs-react';
 import { CompoundEntityRef } from '@backstage/catalog-model';
 import { Content, Progress } from '@backstage/core-components';
@@ -117,6 +118,9 @@ export const TechDocsReaderPageContent = withTechDocsReaderProvider(
     return (
       <Content>
         <Grid container>
+          <Grid xs={12} item>
+            <EntityRenamedNotice />
+          </Grid>
           <Grid xs={12} item>
             <TechDocsStateIndicator />
           </Grid>

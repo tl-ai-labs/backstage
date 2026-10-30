@@ -28,6 +28,7 @@ import { Link, Progress } from '@backstage/core-components';
 import { NotFoundErrorPage } from '@backstage/frontend-plugin-api';
 import {
   entityRouteRef,
+  EntityRenamedNotice,
   InspectEntityDialog,
   useAsyncEntity,
   useEntityPresentation,
@@ -115,7 +116,12 @@ function EntityLayoutContent(props: {
       </Container>
     );
   } else if (entity) {
-    content = <Container>{props.content ?? <NotFoundErrorPage />}</Container>;
+    content = (
+      <Container>
+        <EntityRenamedNotice ui="bui" />
+        {props.content ?? <NotFoundErrorPage />}
+      </Container>
+    );
   } else if (!loading) {
     content = (
       <Container>

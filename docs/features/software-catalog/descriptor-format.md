@@ -354,6 +354,10 @@ Values can be of any length, but are limited to being strings.
 There is a list of [well-known annotations](well-known-annotations.md), but
 anybody is free to add more annotations as they see fit.
 
+An entity can also declare the references it was previously known by using the
+[`backstage.io/former-entity-refs`](well-known-annotations.md#backstageioformer-entity-refs)
+annotation, allowing links to its former location to continue working.
+
 ### `tags` [optional]
 
 A list of single-valued strings, for example to classify catalog entities in

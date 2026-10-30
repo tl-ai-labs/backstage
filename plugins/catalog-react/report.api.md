@@ -205,13 +205,13 @@ export const catalogReactTranslationRef: TranslationRef<
     readonly 'inspectEntityDialog.overviewPage.metadata.title': 'Metadata';
     readonly 'inspectEntityDialog.overviewPage.labels': 'Labels';
     readonly 'inspectEntityDialog.overviewPage.status.title': 'Status';
-    readonly 'inspectEntityDialog.overviewPage.identity.title': 'Identity';
-    readonly 'inspectEntityDialog.overviewPage.tags': 'Tags';
-    readonly 'inspectEntityDialog.overviewPage.annotations': 'Annotations';
     readonly 'inspectEntityDialog.overviewPage.relation.title': 'Relations';
+    readonly 'inspectEntityDialog.overviewPage.annotations': 'Annotations';
+    readonly 'inspectEntityDialog.overviewPage.tags': 'Tags';
     readonly 'inspectEntityDialog.overviewPage.copyAriaLabel': 'Copy {{label}}';
     readonly 'inspectEntityDialog.overviewPage.copiedStatus': 'Copied';
     readonly 'inspectEntityDialog.overviewPage.helpLinkAriaLabel': 'Learn more';
+    readonly 'inspectEntityDialog.overviewPage.identity.title': 'Identity';
     readonly 'inspectEntityDialog.yamlPage.title': 'Entity as YAML';
     readonly 'inspectEntityDialog.yamlPage.description': 'This is the raw entity data as received from the catalog, on YAML form.';
     readonly 'inspectEntityDialog.tabNames.json': 'Raw JSON';
@@ -244,19 +244,22 @@ export const catalogReactTranslationRef: TranslationRef<
     readonly 'entityTableColumnTitle.label': 'Label';
     readonly 'entityTableColumnTitle.title': 'Title';
     readonly 'entityTableColumnTitle.description': 'Description';
+    readonly 'entityTableColumnTitle.domain': 'Domain';
     readonly 'entityTableColumnTitle.system': 'System';
     readonly 'entityTableColumnTitle.namespace': 'Namespace';
-    readonly 'entityTableColumnTitle.tags': 'Tags';
-    readonly 'entityTableColumnTitle.domain': 'Domain';
-    readonly 'entityTableColumnTitle.owner': 'Owner';
     readonly 'entityTableColumnTitle.lifecycle': 'Lifecycle';
+    readonly 'entityTableColumnTitle.owner': 'Owner';
     readonly 'entityTableColumnTitle.targets': 'Targets';
+    readonly 'entityTableColumnTitle.tags': 'Tags';
     readonly 'entityRelationCard.emptyHelpLinkTitle': 'Learn how to change this.';
     readonly 'missingAnnotationEmptyState.title': 'Missing Annotation';
     readonly 'missingAnnotationEmptyState.readMore': 'Read more';
     readonly 'missingAnnotationEmptyState.annotationYaml': 'Add the annotation to your {{entityKind}} YAML as shown in the highlighted example below:';
     readonly 'missingAnnotationEmptyState.generateDescription_one': 'The annotation {{annotations}} is missing. You need to add the annotation to your {{entityKind}} if you want to enable this tool.';
     readonly 'missingAnnotationEmptyState.generateDescription_other': 'The annotations {{annotations}} are missing. You need to add the annotations to your {{entityKind}} if you want to enable this tool.';
+    readonly 'entityRenamedNotice.title': 'Entity renamed';
+    readonly 'entityRenamedNotice.description': 'This entity was previously known as {{formerEntityRef}}. You were redirected from its former location.';
+    readonly 'entityRenamedNotice.dismiss': 'Dismiss';
   }
 >;
 
@@ -685,6 +688,16 @@ export interface EntityRefPresentationSnapshot {
   primaryTitle: string;
   secondaryTitle?: string;
 }
+
+// @public
+export function EntityRenamedNotice(
+  props: EntityRenamedNoticeProps,
+): JSX.Element | null;
+
+// @public
+export type EntityRenamedNoticeProps = {
+  ui?: 'legacy' | 'bui';
+};
 
 // @public
 export function entityRouteParams(

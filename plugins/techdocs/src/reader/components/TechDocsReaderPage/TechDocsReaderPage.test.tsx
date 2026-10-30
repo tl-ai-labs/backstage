@@ -447,4 +447,86 @@ describe('<TechDocsReaderPage />', () => {
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
+
+  describe('former ref redirect', () => {
+    beforeEach(() => {
+      mockNavigate.mockClear();
+      catalogApiMock.getEntityByRef.mockReset();
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      if (!catalogApiMock.queryEntities) {
+        catalogApiMock.queryEntities = jest.fn();
+      }
+      (catalogApiMock.queryEntities as jest.Mock).mockReset();
+    });
+
+    it('navigates to renamed entity docs preserving sub-path when entity is absent, and does not navigate when present', async () => {
+      const renamedEntity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          namespace: 'default',
+          name: 'new-name',
+        },
+      };
+
+      (catalogApiMock.queryEntities as jest.Mock).mockResolvedValue({
+        items: [renamedEntity],
+        totalItems: 1,
+        pageInfo: {},
+      });
+
+      await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/docs/default/component/old-name/some/sub/path'],
+        },
+      );
+
+      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/docs/default/component/new-name/some/sub/path',
+        {
+          replace: true,
+          state: {
+            formerEntityRef: 'component:default/old-name',
+          },
+        },
+      );
+
+      mockNavigate.mockClear();
+      catalogApiMock.getEntityByRef.mockResolvedValue(mockEntityMetadata);
+      (catalogApiMock.queryEntities as jest.Mock).mockResolvedValue({
+        items: [],
+        totalItems: 0,
+        pageInfo: {},
+      });
+
+      await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/docs/test-namespace/test/test-name/some/sub/path'],
+        },
+      );
+
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
 });

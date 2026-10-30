@@ -60,3 +60,17 @@ export const ANNOTATION_KUBERNETES_API_SERVER_CA =
  */
 export const ANNOTATION_KUBERNETES_AUTH_PROVIDER =
   'kubernetes.io/auth-provider';
+
+/**
+ * Annotation holding a comma-separated list of entity refs that the entity was previously known by.
+ *
+ * @public
+ */
+export const ANNOTATION_FORMER_ENTITY_REFS = 'backstage.io/former-entity-refs';
+
+/**
+ * The maximum number of former entity refs a single entity may declare.
+ *
+ * @public
+ */
+export const FORMER_ENTITY_REFS_MAX_COUNT = 20;

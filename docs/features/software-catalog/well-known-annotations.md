@@ -455,6 +455,47 @@ The value of this annotation contains the path to the secrets of the entity in
 Vault. If not present when the Vault plugin is in use, a message will be shown
 instead, letting the user know what is missing in the `catalog-info.yaml`.
 
+### backstage.io/former-entity-refs
+
+```yaml
+# Example:
+metadata:
+  annotations:
+    backstage.io/former-entity-refs: 'component:default/old-service, component:legacy/old-service'
+```
+
+This annotation records previous entity references that this entity was known by.
+The value is a comma-separated list of entity refs. Surrounding whitespace around
+each entry is ignored. Any entry that is not a valid entity ref is ignored rather
+than failing the entity. You may declare a maximum of 20 refs; if a longer list
+is declared, the entire declaration is ignored. A former ref that a live entity
+currently holds has no effect, because the live entity always takes precedence.
+When two or more entities claim the same former ref, neither entity resolves.
+
+Opening a URL for one of the declared former refs redirects to the entity's current
+URL, preserving the sub-path, and displays a notice naming the former ref. Both the
+catalog entity page and TechDocs support this redirect.
+
+The live-entity and contested checks are viewer-relative. Former-ref resolution runs
+through the same permissioned catalog lookup as any other read, so the rule that a
+live entity holding the name always wins and the rule that a name claimed by two or
+more entities resolves to nothing only consider entities you are permitted to read.
+A viewer who cannot read the entity that really holds a name may therefore be
+redirected by another entity's claim on it. This is a deliberate consequence of not
+using a privileged lookup: it guarantees the redirect never reveals an entity the
+viewer may not read.
+
+Long refs are ignored. A former ref is indexed under a synthetic search key built
+from the annotation name plus the full ref, and the catalog drops search keys longer
+than 200 characters. In practice a former ref longer than about 147 characters is
+silently ignored and will not redirect.
+
+> **Warning:** `User` entities are excluded from this mechanism entirely. A former ref naming a
+> `User` entity never resolves, and a `User` entity's own former ref declaration never
+> produces a redirect. You must not record a person's former name anywhere in catalog
+> metadata, because a previous user name can disclose a legal name change. This exclusion
+> is enforced by the catalog, not merely advised.
+
 ## Deprecated Annotations
 
 The following annotations are deprecated, and only listed here to aid in

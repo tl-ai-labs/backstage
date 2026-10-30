@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_ENTITY_REFS,
+  DEFAULT_NAMESPACE,
+  Entity,
+} from '@backstage/catalog-model';
 import { performance } from 'node:perf_hooks';
-import { buildEntitySearch, mapToRows, traverse } from './buildEntitySearch';
+import {
+  ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX,
+  buildEntitySearch,
+  mapToRows,
+  traverse,
+} from './buildEntitySearch';
 
 describe('buildEntitySearch', () => {
   describe('traverse', () => {
@@ -340,6 +349,202 @@ describe('buildEntitySearch', () => {
       ).toThrow(
         `Entity has duplicate keys that vary only in casing, 'spec.owner', 'spec.lifecycle'`,
       );
+    });
+  });
+
+  describe('former entity refs', () => {
+    it('indexes one row per declared former ref alongside the raw annotation row', () => {
+      const rawAnnotationValue =
+        'component:default/old-name,  component:custom-ns/old-name , component:default/legacy-name';
+      const entity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          annotations: {
+            [ANNOTATION_FORMER_ENTITY_REFS]: rawAnnotationValue,
+          },
+        },
+      };
+
+      const rows = buildEntitySearch('eid', entity);
+
+      // The pre-existing raw annotation-value row must still be present
+      const rawRow = rows.find(
+        r => r.key === `metadata.annotations.${ANNOTATION_FORMER_ENTITY_REFS}`,
+      );
+      expect(rawRow).toEqual({
+        entity_id: 'eid',
+        key: `metadata.annotations.${ANNOTATION_FORMER_ENTITY_REFS}`,
+        original_value: rawAnnotationValue,
+        value: rawAnnotationValue.toLowerCase(),
+      });
+
+      // Synthetic per-ref rows
+      const prefixedRows = rows.filter(r =>
+        r.key.startsWith(ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX),
+      );
+      expect(prefixedRows).toHaveLength(3);
+      expect(prefixedRows).toEqual(
+        expect.arrayContaining([
+          {
+            entity_id: 'eid',
+            key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/old-name`,
+            original_value: 'true',
+            value: 'true',
+          },
+          {
+            entity_id: 'eid',
+            key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:custom-ns/old-name`,
+            original_value: 'true',
+            value: 'true',
+          },
+          {
+            entity_id: 'eid',
+            key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/legacy-name`,
+            original_value: 'true',
+            value: 'true',
+          },
+        ]),
+      );
+    });
+
+    it('tolerates a malformed entry and collapses duplicates', () => {
+      const mixedEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          annotations: {
+            [ANNOTATION_FORMER_ENTITY_REFS]:
+              'component:default/valid-one, :::bad-ref:::, other:default/valid-two',
+          },
+        },
+      };
+
+      let mixedRows: ReturnType<typeof buildEntitySearch> = [];
+      expect(() => {
+        mixedRows = buildEntitySearch('eid', mixedEntity);
+      }).not.toThrow();
+
+      const mixedPrefixed = mixedRows.filter(r =>
+        r.key.startsWith(ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX),
+      );
+      expect(mixedPrefixed).toHaveLength(2);
+      expect(mixedPrefixed).toEqual(
+        expect.arrayContaining([
+          {
+            entity_id: 'eid',
+            key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/valid-one`,
+            original_value: 'true',
+            value: 'true',
+          },
+          {
+            entity_id: 'eid',
+            key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}other:default/valid-two`,
+            original_value: 'true',
+            value: 'true',
+          },
+        ]),
+      );
+
+      const dupEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          annotations: {
+            [ANNOTATION_FORMER_ENTITY_REFS]:
+              'component:default/repeated, component:default/repeated, Component:Default/Repeated',
+          },
+        },
+      };
+
+      const dupRows = buildEntitySearch('eid', dupEntity);
+      const dupPrefixed = dupRows.filter(r =>
+        r.key.startsWith(ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX),
+      );
+      expect(dupPrefixed).toHaveLength(1);
+      expect(dupPrefixed[0]).toEqual({
+        entity_id: 'eid',
+        key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/repeated`,
+        original_value: 'true',
+        value: 'true',
+      });
+    });
+
+    it('emits no former-ref row for a kind: User entity', () => {
+      const annotationValue =
+        'component:default/previous-name, component:default/other-previous';
+
+      const userEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'User',
+        metadata: {
+          name: 'some-user',
+          annotations: {
+            [ANNOTATION_FORMER_ENTITY_REFS]: annotationValue,
+          },
+        },
+      };
+
+      const componentEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'some-comp',
+          annotations: {
+            [ANNOTATION_FORMER_ENTITY_REFS]: annotationValue,
+          },
+        },
+      };
+
+      const userRows = buildEntitySearch('eid-user', userEntity);
+      const userPrefixed = userRows.filter(r =>
+        r.key.startsWith(ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX),
+      );
+      expect(userPrefixed).toHaveLength(0);
+
+      const componentRows = buildEntitySearch('eid-comp', componentEntity);
+      const componentPrefixed = componentRows.filter(r =>
+        r.key.startsWith(ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX),
+      );
+      expect(componentPrefixed).toHaveLength(2);
+    });
+
+    it('emits no former-ref row when the claimed ref kind is user', () => {
+      const entity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'some-comp',
+          annotations: {
+            [ANNOTATION_FORMER_ENTITY_REFS]:
+              'user:default/old-name, component:default/old-name',
+          },
+        },
+      };
+
+      const rows = buildEntitySearch('eid', entity);
+
+      const userClaimRow = rows.find(
+        r =>
+          r.key ===
+          `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}user:default/old-name`,
+      );
+      expect(userClaimRow).toBeUndefined();
+
+      const componentClaimRow = rows.find(
+        r =>
+          r.key ===
+          `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/old-name`,
+      );
+      expect(componentClaimRow).toEqual({
+        entity_id: 'eid',
+        key: `${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}component:default/old-name`,
+        original_value: 'true',
+        value: 'true',
+      });
     });
   });
 });

@@ -20,3 +20,4 @@ export { entityFilterToFilterPredicate } from './entityFilterToFilterPredicate';
 export { parseEntityFilterParams } from './parseEntityFilterParams';
 export { parseEntityTransformParams } from './parseEntityTransformParams';
 export { parseQueryEntitiesParams } from './parseQueryEntitiesParams';
+export { buildFormerEntityRefQuery } from './formerEntityRefQuery';

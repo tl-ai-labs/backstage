@@ -19,7 +19,11 @@ import {
   mockCredentials,
   mockServices,
 } from '@backstage/backend-test-utils';
-import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_ENTITY_REFS,
+  Entity,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { Knex } from 'knex';
 import { randomUUID as uuid } from 'node:crypto';
 import {
@@ -35,8 +39,14 @@ import {
 } from '../database/tables';
 import { DefaultEntitiesCatalog } from './DefaultEntitiesCatalog';
 import { EntitiesRequest } from '../catalog/types';
-import { buildEntitySearch } from '../database/operations/stitcher/buildEntitySearch';
+import {
+  buildEntitySearch,
+  ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX,
+} from '../database/operations/stitcher/buildEntitySearch';
+import { buildFormerEntityRefQuery } from './request';
 import { entitiesResponseToObjects } from './response';
+import { CatalogApi, resolveFormerEntityRef } from '@backstage/catalog-client';
+import { FilterPredicate } from '@backstage/filter-predicates';
 
 jest.setTimeout(60_000);
 
@@ -2802,6 +2812,300 @@ describe.each(databases.eachSupportedId())(
             'spec.type': [{ value: 'service', count: 1 }],
           },
         });
+      });
+    });
+
+    describe('former entity ref resolution', () => {
+      it("resolves each of an entity's several former refs", async () => {
+        await createDatabase();
+
+        const entity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'c-v3',
+            namespace: 'team-b',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]:
+                'component:team-a/c-v1, component:team-a/c-v2, component:team-b/c-v2',
+            },
+          },
+          spec: {},
+        };
+        await addEntity(entity, []);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const credentials = mockCredentials.none();
+
+        for (const formerRef of [
+          'component:team-a/c-v1',
+          'component:team-a/c-v2',
+          'component:team-b/c-v2',
+        ]) {
+          const filter = buildFormerEntityRefQuery(formerRef);
+          expect(filter).toBeDefined();
+          const res = await catalog.entities({ filter, credentials });
+          const entities = entitiesResponseToObjects(res.entities);
+          expect(entities).toHaveLength(1);
+          expect(entities[0] && stringifyEntityRef(entities[0])).toEqual(
+            'component:team-b/c-v3',
+          );
+        }
+      });
+
+      it('a live entity holding a name wins and contested claims are ambiguous', async () => {
+        await createDatabase();
+
+        const liveEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: { name: 'live-holder' },
+          spec: {},
+        };
+        const claimant: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'renamed-away',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'component:default/live-holder',
+            },
+          },
+          spec: {},
+        };
+        await addEntity(liveEntity, []);
+        await addEntity(claimant, []);
+
+        const contenderA: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'contender-a',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'component:default/contested',
+            },
+          },
+          spec: {},
+        };
+        const contenderB: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'contender-b',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'component:default/contested',
+            },
+          },
+          spec: {},
+        };
+        await addEntity(contenderA, []);
+        await addEntity(contenderB, []);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const credentials = mockCredentials.none();
+
+        const directRes = await catalog.entitiesBatch({
+          entityRefs: ['component:default/live-holder'],
+          credentials,
+        });
+        const directItems = entitiesResponseToObjects(directRes.items);
+        expect(directItems).toHaveLength(1);
+        expect(directItems[0] && stringifyEntityRef(directItems[0])).toEqual(
+          'component:default/live-holder',
+        );
+
+        const formerRes = await catalog.entities({
+          filter: buildFormerEntityRefQuery('component:default/live-holder'),
+          credentials,
+        });
+        const formerEntities = entitiesResponseToObjects(formerRes.entities);
+        expect(formerEntities).toHaveLength(1);
+        expect(
+          formerEntities[0] && stringifyEntityRef(formerEntities[0]),
+        ).toEqual('component:default/renamed-away');
+
+        const contestedRes = await catalog.entities({
+          filter: buildFormerEntityRefQuery('component:default/contested'),
+          credentials,
+        });
+        const contestedEntities = entitiesResponseToObjects(
+          contestedRes.entities,
+        );
+        expect(contestedEntities).toHaveLength(2);
+        expect(
+          contestedEntities.map(e => e && stringifyEntityRef(e)).toSorted(),
+        ).toEqual([
+          'component:default/contender-a',
+          'component:default/contender-b',
+        ]);
+      });
+
+      it("a User entity's former ref never resolves", async () => {
+        await createDatabase();
+
+        const userEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'User',
+          metadata: {
+            name: 'current-user',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'user:default/old-user',
+            },
+          },
+          spec: {},
+        };
+        await addEntity(userEntity, []);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const credentials = mockCredentials.none();
+
+        expect(
+          buildFormerEntityRefQuery('user:default/old-user'),
+        ).toBeUndefined();
+
+        const res = await catalog.entities({
+          filter: {
+            [`${ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX}user:default/old-user`]:
+              true,
+          },
+          credentials,
+        });
+        const entities = entitiesResponseToObjects(res.entities);
+        expect(entities).toHaveLength(0);
+      });
+
+      it('existing entities and entitiesBatch behaviour is unchanged', async () => {
+        await createDatabase();
+
+        const e1: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'e1',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'component:default/old-e1',
+            },
+          },
+          spec: {},
+        };
+        const e2: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'e2',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'component:default/old-e2',
+            },
+          },
+          spec: {},
+        };
+        await addEntity(e1, []);
+        await addEntity(e2, []);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const credentials = mockCredentials.none();
+
+        const entitiesRes = await catalog.entities({ credentials });
+        const allEntities = entitiesResponseToObjects(entitiesRes.entities);
+        expect(allEntities).toHaveLength(2);
+        expect(
+          allEntities.map(e => e && stringifyEntityRef(e)).toSorted(),
+        ).toEqual(['component:default/e1', 'component:default/e2']);
+
+        const batchRes = await catalog.entitiesBatch({
+          entityRefs: [
+            'component:default/e2',
+            'component:default/old-e1',
+            'component:default/e1',
+            'component:default/non-existent',
+          ],
+          credentials,
+        });
+        const batchItems = entitiesResponseToObjects(batchRes.items);
+        expect(batchItems.map(e => (e ? stringifyEntityRef(e) : null))).toEqual(
+          ['component:default/e2', null, 'component:default/e1', null],
+        );
+      });
+
+      it('resolves using the exact query produced by resolveFormerEntityRef', async () => {
+        await createDatabase();
+
+        let capturedQuery: FilterPredicate | undefined;
+        const stubCatalogApi = {
+          async queryEntities(request: { query?: FilterPredicate }) {
+            capturedQuery = request.query;
+            return {
+              items: [],
+              totalItems: 0,
+              pageInfo: {},
+            };
+          },
+        } as unknown as CatalogApi;
+
+        await resolveFormerEntityRef(
+          stubCatalogApi,
+          'component:default/old-target',
+        );
+
+        expect(capturedQuery).toBeDefined();
+
+        const targetEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-target',
+            annotations: {
+              [ANNOTATION_FORMER_ENTITY_REFS]: 'component:default/old-target',
+            },
+          },
+          spec: {},
+        };
+        const unrelatedEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'unrelated',
+          },
+          spec: {},
+        };
+
+        await addEntity(targetEntity, []);
+        await addEntity(unrelatedEntity, []);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const credentials = mockCredentials.none();
+
+        const response = await catalog.queryEntities({
+          filter: capturedQuery,
+          limit: 2,
+          credentials,
+        });
+
+        const matchedEntities = entitiesResponseToObjects(response.items);
+        expect(matchedEntities).toHaveLength(1);
+        expect(
+          matchedEntities[0] && stringifyEntityRef(matchedEntities[0]),
+        ).toEqual('component:default/new-target');
       });
     });
   },

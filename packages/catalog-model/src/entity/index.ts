@@ -16,6 +16,7 @@
 
 export * from './conditions';
 export * from './constants';
+export { parseFormerEntityRefs } from './formerEntityRefs';
 export type { Entity, EntityLink, EntityMeta, EntityRelation } from './Entity';
 export type { EntityEnvelope } from './EntityEnvelope';
 export * from './policies';

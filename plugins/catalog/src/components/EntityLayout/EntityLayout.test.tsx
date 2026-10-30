@@ -459,6 +459,88 @@ describe('EntityLayout - CleanUpAfterRemoval', () => {
   });
 });
 
+describe('EntityLayout - rename notice', () => {
+  const mockEntity = {
+    apiVersion: 'backstage.io/v1alpha1',
+    kind: 'Component',
+    metadata: {
+      name: 'new-name',
+      namespace: 'default',
+    },
+  } as Entity;
+
+  const apis = TestApiRegistry.from(
+    [catalogApiRef, catalogApiMock()],
+    [alertApiRef, mockApis.alert()],
+    [starredEntitiesApiRef, new MockStarredEntitiesApi()],
+    [permissionApiRef, mockApis.permission()],
+  );
+
+  it('shows the rename notice only on a redirected arrival', async () => {
+    const formerEntityRef = 'component:default/old-name';
+
+    const NavigateWithState = () => {
+      const navigate = useNavigate();
+      useEffect(() => {
+        navigate('/catalog/default/component/new-name', {
+          replace: true,
+          state: { formerEntityRef },
+        });
+      }, [navigate]);
+      return null;
+    };
+
+    const renderedWithRedirect = await renderInTestApp(
+      <ApiProvider apis={apis}>
+        <AsyncEntityProvider entity={mockEntity} loading={false}>
+          <EntityLayout>
+            <EntityLayout.Route path="/" title="tabbed-test-title">
+              <div>overview-content</div>
+            </EntityLayout.Route>
+          </EntityLayout>
+        </AsyncEntityProvider>
+        <NavigateWithState />
+      </ApiProvider>,
+      {
+        routeEntries: ['/catalog/default/component/new-name'],
+        mountedRoutes: {
+          '/catalog/:namespace/:kind/:name': entityRouteRef,
+          '/catalog': rootRouteRef,
+        },
+      },
+    );
+
+    expect(
+      await screen.findByText(new RegExp(formerEntityRef)),
+    ).toBeInTheDocument();
+
+    renderedWithRedirect.unmount();
+
+    await renderInTestApp(
+      <ApiProvider apis={apis}>
+        <AsyncEntityProvider entity={mockEntity} loading={false}>
+          <EntityLayout>
+            <EntityLayout.Route path="/" title="tabbed-test-title">
+              <div>overview-content</div>
+            </EntityLayout.Route>
+          </EntityLayout>
+        </AsyncEntityProvider>
+      </ApiProvider>,
+      {
+        routeEntries: ['/catalog/default/component/new-name'],
+        mountedRoutes: {
+          '/catalog/:namespace/:kind/:name': entityRouteRef,
+          '/catalog': rootRouteRef,
+        },
+      },
+    );
+
+    expect(
+      screen.queryByText(new RegExp(formerEntityRef)),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe('EntityLayout - inspect dialog', () => {
   const mockEntity = {
     apiVersion: 'backstage.io/v1alpha1',

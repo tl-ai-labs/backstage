@@ -1,0 +1,462 @@
+[
+  {
+    "id": "tp_debug_r10_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. FIX (user item 1). When the direct `catalogApi.getEntityByRef(entityRef)` call THROWS, the current code swallows the error in its own try/catch and then FALLS THROUGH to call `resolveFormerEntityRef`. That is wrong: a thrown lookup is not a proven miss (it can be a transient backend or network error, or a permission error), so treating it as 'the entity does not exist' lets a former-ref redirect fire for a ref that may well be live.\n\nChange it so a throw from the direct lookup returns `undefined` from the `useAsync` body immediately and does NOT call `resolveFormerEntityRef` at all. Only a lookup that COMPLETES and yields no entity may proceed to resolution.\n\nA clean shape: do the direct lookup in a try/catch that, on catch, returns `undefined` from the async body directly (rather than falling through), e.g. assign `let existing; try { existing = await catalogApi.getEntityByRef(entityRef); } catch { return undefined; }` and then `if (existing) return undefined;` before the resolution call.\n\nKeep everything else from the previous round exactly as it is: the hook takes ONE parameter (`entityRef: CompoundEntityRef`) and there is no `entity?: Entity` parameter — do not reintroduce it; the live-entity gate must stay inside the hook so no caller can omit it; keep the `checkedEntityRef` remount guard, the `entityKey` dependency list, the sub-path/query/fragment preservation, the `{ replace: true }` navigation with `state: { formerEntityRef }`, the swallow-errors behaviour of the resolution call itself (it is a render path and must not throw), and the `shouldShowProgress` computation. Keep the Apache 2.0 header with year 2026.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U27.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. ADD a test for the fix in user item 1 (see the hook's updated implementation in your context files): when the direct `catalogApi.getEntityByRef` call REJECTS, the hook must return `undefined` (no redirect) and must NOT call `resolveFormerEntityRef` at all — a thrown lookup is not a proven miss.\n\nAdd a case asserting: with `getEntityByRef` mocked to reject, `resolveFormerEntityRef` was NOT called AND `mockNavigate` was NOT called.\n\nKeep every existing test in this file and its intention, including the live-entity gate case added last round (a live entity holding the requested ref produces no navigation AND no resolution query). Call the hook with ONE argument everywhere — a second argument no longer typechecks.\n\nKeep repo conventions: fewer-but-thorough multi-assertion tests, `screen` and `findBy*` over waitFor for DOM queries, no test IDs added to implementations, Apache 2.0 header year 2026 unchanged. Return the WHOLE file.\n\nAcceptance: `CI=1 yarn test plugins/techdocs` passes with ZERO failures and `yarn tsc` reports zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U29.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. FIX (user item 2) — FR-18 and AC-8 are currently UNMET: `EntityRenamedNotice` has no render site anywhere in plugins/techdocs, so a TechDocs former-ref redirect lands with no 'this entity was renamed' notice.\n\nRender `EntityRenamedNotice` as the FIRST Grid item inside the ready-state `<Content>` return of this component — the final `return (<Content><Grid container> ... )` block (around lines 117-140), before the existing `<Grid xs={12} item><TechDocsStateIndicator /></Grid>`. Add it as its own `<Grid xs={12} item>` wrapper so it matches the surrounding layout idiom exactly.\n\nImport it from '@backstage/plugin-catalog-react' (it is exported from that package's public API). The component is prop-less in its default (legacy MUI) vocabulary: it reads the former ref from react-router `location.state` itself and renders `null` when absent, so adding it is safe on every ordinary docs page view and needs no conditional around it.\n\nDo NOT add it to the `!isDomReady` early-return block, and do NOT change the `isNotFound` early return. Change nothing else: keep the search Grid, the `showProgress` Progress, the TechDocsShadowDom and its addons, and the existing styles. This is an EXISTING file — keep its Apache 2.0 header year exactly as it is, and match its existing import ordering and style (@material-ui/core deep default imports).\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [],
+      "baseline": false,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. ADD a jsdom test for user item 2 / AC-8: the rename notice shows on the TechDocs reader content when router location state carries a `formerEntityRef`.\n\nThe component now renders `EntityRenamedNotice` as the first Grid item in its ready-state Content (see the updated implementation in your context files). `EntityRenamedNotice` reads the former ref from react-router `location.state` and renders null when absent.\n\nAdd a case that renders this component with location state carrying `formerEntityRef` (e.g. 'component:default/old-name') and asserts the notice text naming that former ref appears. Use the type-clean way to carry router state that this run already uses successfully in plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx — navigating inside the test app with useNavigate + useEffect and passing `state` through `navigate`, because `routeEntries`/`initialRouteEntries` options are typed `string[]` and passing a location OBJECT there is a TYPE ERROR that fails `yarn tsc`.\n\nAlso assert the complement in the same test if it is cheap: with no former-ref state, no notice text is present.\n\nKeep every existing test in this file byte-identical and follow its existing harness and mocking style exactly. Repo conventions: fewer-but-thorough multi-assertion tests, `screen` and `findBy*` over waitFor, no test IDs added to implementations. EXISTING file — keep its Apache 2.0 header year unchanged. Return the WHOLE file.\n\nAcceptance: `CI=1 yarn test plugins/techdocs` passes with ZERO failures and `yarn tsc` reports zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [],
+      "baseline": false,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. ADD tests for user item 3 / AC-4: permission enforcement on former-ref resolution currently has only a mocked-client test, so the real authorization path is unexercised for this query shape.\n\nIn the EXISTING `describe('queryEntities', ...)` block (starts at line 165), add cases that issue a FORMER-REF query — a `queryEntities` request whose `query` filter is the former-ref predicate shape `{ $all: [ { [key]: true }, { $not: { kind: 'user' } } ] }`, where `key` is the `metadata.annotations.backstage.io/former-entity-refs.<normalized-ref>` synthetic search key — and assert:\n\n  - Under an `AuthorizeResult.DENY` decision: the caller gets the empty/あno-match result the existing DENY cases in this block assert for other queries (follow exactly what the sibling DENY cases do), so a former ref reveals nothing.\n  - Under an `AuthorizeResult.CONDITIONAL` decision: the permission filter is ANDed into the query the underlying catalog receives — assert on the filter actually passed to the mocked inner catalog, in the same manner the existing CONDITIONAL cases in this block do, so that a caller who may not read the target cannot learn it exists.\n\nRead the existing cases in that describe block first and mirror their harness, mock shapes, naming and assertion style precisely — do not invent a new harness. Keep every existing test byte-identical. Prefer fewer, thorough, multi-assertion tests. EXISTING file — keep its Apache 2.0 header year unchanged. Return the WHOLE file.\n\nAcceptance: `CI=1 yarn test plugins/catalog-backend` passes with ZERO failures and `yarn tsc` reports zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/request/formerEntityRefQuery.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/resolveFormerEntityRef.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [],
+      "baseline": false,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_006",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. FIX (user item 4). The hook returns `loading: isLookupLoading`, which is false once the DIRECT lookup settles — but the former-ref resolution query runs AFTER that. So for a stale ref the hook briefly reports {loading: false, entity: undefined}, the not-found panel flashes, and only then the redirect happens.\n\nKeep `loading` true until the former-ref resolution has SETTLED, and — when it resolved to an entity — until the navigation actually happens. Requirements, all of which must hold simultaneously:\n\n  (a) A ref that resolves directly must be UNAFFECTED: no extra loading, no extra request. The resolution step already short-circuits for that case.\n  (b) A stale ref must report loading continuously from the direct lookup through resolution and navigation, so the not-found panel never flashes.\n  (c) A resolution that settles as UNRESOLVED must RELEASE loading and let the ordinary not-found panel render — it must never leave the page loading forever. This includes the resolution erroring.\n  (d) The anti-loop guards from the design must keep working: the `attemptedRefRef` guard (resolution attempted at most once per requested ref) and the `navigatedRefRef` guard must not be defeated or bypassed, and the destination ref — where the direct lookup succeeds — must never enter resolution.\n  (e) The existing no-flash-on-navigation behaviour must be preserved: the `isStale` window where `lookupResult` belongs to a previous ref still reads as loading (this is what keeps plugins/catalog/src/alpha/pages.test.tsx 'does not flash Entity not found when navigating to another entity' passing — do not regress it).\n\nA workable derivation is to treat loading as `isLookupLoading || (resolutionIsPending-for-this-ref) || (resolutionResolved && navigation-not-yet-performed-for-this-ref)`, where the pending notion is keyed on the requested ref so a settled-unresolved outcome releases it. Use whatever minimal correct form satisfies (a)-(e).\n\nChange nothing else: keep the guarded ref stringification that must not throw when `kind` is absent, the sub-path/query/fragment prefix swap, the errorApi 'No name provided!' path, and the returned shape `{ entity, loading, error, refresh }`. EXISTING file — keep its Apache 2.0 header year unchanged.\n\nAcceptance: `CI=1 yarn test plugins/catalog` passes with ZERO failures (including pages.test.tsx and useEntityFromUrl.test.tsx) and `yarn tsc` reports zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U20.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/resolveFormerEntityRef.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_007",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. ADD a test for the fix in user item 4 (see the hook's updated implementation in your context files): the hook must not report a not-found state while the former-ref resolution is still running.\n\nAdd cases asserting:\n  - For a STALE ref that will resolve: the hook never reports {loading: false, entity: undefined, error: undefined} at any point before the redirect — i.e. loading stays true from the direct lookup through resolution and navigation. Observe the sequence of states across renders (record them, as plugins/catalog/src/alpha/pages.test.tsx does with its status recorder) and assert that forbidden state never occurs.\n  - For an UNKNOWN ref whose resolution settles unresolved: loading is RELEASED (becomes false) and the hook reports no entity, so the ordinary not-found panel can render. This proves the fix cannot leave the page loading forever.\n\nKeep all four existing tests and their intentions: no extra request when the ref resolves directly; redirect preserving sub-path, query and fragment; unknown ref left on the not-found path; resolution attempted at most once per ref. Keep both apis registered (catalogApiRef and errorApiRef) — the hook calls useApi(errorApiRef) and an unregistered ref throws at render.\n\nRepo conventions: `screen` and `findBy*` over waitFor for DOM queries, no test IDs added to implementations, Apache 2.0 header year 2026 unchanged. Return the WHOLE file.\n\nAcceptance: `CI=1 yarn test plugins/catalog` passes with ZERO failures and `yarn tsc` reports zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U24.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        },
+        {
+          "id": "unit",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_008",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. ADD a test for user item 5. `buildFormerEntityRefQuery` is currently referenced only by its own definition, the `request/index.ts` barrel export, and test files — no production path reaches it. Meanwhile the predicate that production ACTUALLY uses is the one `resolveFormerEntityRef` (in @backstage/catalog-client) builds and sends through `CatalogApi.queryEntities`. So the real predicate has never been run against a real database.\n\nClose that gap: add a test that CAPTURES the query `resolveFormerEntityRef` sends, and then runs that exact captured filter against the real database through `DefaultEntitiesCatalog`.\n\nShape:\n  1. Build a stub object satisfying the `CatalogApi` surface `resolveFormerEntityRef` uses (it calls only `queryEntities`). In its `queryEntities` implementation, RECORD the `request.query` it receives and return an empty result.\n  2. Call `resolveFormerEntityRef(stub, '<some former ref>')` so the captured query is the genuine production predicate — do NOT hand-write the predicate in the test, the whole point is to use what production builds.\n  3. Feed that captured `query` as the filter of a real `queryEntities` call on a `DefaultEntitiesCatalog` backed by the real test database (use this file's existing `TestDatabases` harness and entity-insertion helpers exactly as the sibling former-ref tests in this file already do), with entities stitched via `buildEntitySearch` so the synthetic rows exist.\n  4. Assert it matches exactly the entity that declares that former ref, and does not match an unrelated entity.\n\nThis must run on every engine the file's existing harness covers. Mirror the existing former-ref test cases in this file for harness, naming and style — do not invent a new harness. Keep every existing test byte-identical. EXISTING file — keep its Apache 2.0 header year unchanged. Return the WHOLE file.\n\nAcceptance: `CI=1 yarn test plugins/catalog-backend` passes with ZERO failures and `yarn tsc` reports zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-client/src/resolveFormerEntityRef.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/request/formerEntityRefQuery.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r10_009",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "docs/features/software-catalog/well-known-annotations.md",
+    "instruction": "Fix `docs/features/software-catalog/well-known-annotations.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. FIX (user item 6). Document two adopter-relevant limitations of the former-entity-refs annotation that are currently undocumented.\n\nIn the section covering `backstage.io/former-entity-refs`, add clear prose stating:\n\n  1. **The live-entity and contested checks are viewer-relative.** Former-ref resolution runs through the same permissioned catalog lookup as any other read, so the 'a live entity holding the name always wins' rule and the 'a name claimed by two or more entities resolves to nothing' rule only consider entities THE VIEWER IS PERMITTED TO READ. A viewer who cannot read the entity that really holds a name may therefore be redirected by another entity's claim on it. This is a deliberate consequence of not using a privileged lookup: it is what guarantees the redirect never reveals an entity the viewer may not read. Write this for adopters deciding whether to rely on the feature, in plain language.\n  2. **Long refs are ignored.** A former ref is indexed under a synthetic search key built from the annotation name plus the full ref, and the catalog drops search keys longer than 200 characters. In practice a former ref longer than about 147 characters is silently ignored and will not redirect.\n\nFollow the repo's documentation style guide at docs/contribute/doc-style-guide.md and match this file's existing heading levels, table/prose conventions and tone exactly. Keep every other annotation entry byte-identical. Do not reference internal code symbols (function names, class names, variable names, file paths) — write for adopters in terms of observable behaviour. Return the WHOLE file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-catalog/well-known-annotations.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-catalog/well-known-annotations.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U31.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "docs/features/software-catalog/well-known-annotations.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]
