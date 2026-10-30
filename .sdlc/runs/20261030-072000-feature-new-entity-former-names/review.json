@@ -1,0 +1,78 @@
+{
+  "module": "entity-former-names (catalog-model, catalog-client, catalog-backend, catalog-react, catalog, techdocs)",
+  "verdict": "needs_changes",
+  "tool_calls": 25,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx",
+      "line": null,
+      "issue": "U26 was never applied: provenance records sha_before == sha_after for this file (packet tp_debug_r1_004 rewrote it with identical content), and `grep -rn formerEntityRef plugins/catalog/src/alpha` returns nothing. The alpha-system notice assertion required by AC-7 is absent, so neither alpha notice site (EntityLayout.tsx, EntityLayoutBui.tsx) has any test coverage — a regression that removed `<EntityRenamedNotice ui=\"bui\" />` would not fail any suite.",
+      "fix": "Extend the existing `renderLayout` helper with an optional `state?: unknown` passed through on the `initialRouteEntries` entry, and add one `it` to `describe('EntityLayoutBui')` asserting via `await screen.findByText` that the notice naming `component:default/old-name` appears when navigation state carries that formerEntityRef, and `queryByText` returns null when it does not."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "line": 53,
+      "issue": "`const requestedRef = stringifyEntityRef({ kind, namespace, name })` runs unconditionally on every render, above every guard. `useRouteRefParams` is just `useParams()` cast (packages/core-plugin-api/src/routing/useRouteRefParams.ts:28), so `kind`/`namespace` can be undefined — the pre-existing code tolerates that case explicitly via the `if (!name)` effect that posts an error and navigates to '/'. `stringifyEntityRef` does `kind.toLowerCase()` with no guard (packages/catalog-model/src/entity/ref.ts:157), so an absent `kind` now throws a TypeError during render instead of reaching the existing error path. This violates the fail-closed requirement that the lookup/render path never throws (AC-20).",
+      "fix": "Compute `requestedRef` lazily and defensively, e.g. `const requestedRef = kind && namespace && name ? stringifyEntityRef({ kind, namespace, name }) : undefined;` and add `!requestedRef` to the resolution gate and the redirect effect, so a malformed/absent param set falls back to the existing missing-name behaviour rather than throwing."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "line": 57,
+      "issue": "The resolution gate reads `loading`/`entity` from the direct lookup without checking that they belong to the ref currently being requested, so the binding rule 'resolution may only be attempted after a direct lookup has already missed' does not hold after the redirect. The route (`/catalog/:namespace/:kind/:name/*`) does not remount, so after `navigate(..., { replace: true })` the params change while `entity` is still the stale `undefined` and `loading` still the stale `false` from the old ref's lookup; `attemptedRefRef.current` is the old ref, so the gate passes and a second `resolveFormerEntityRef` query is issued for the destination ref before its own direct lookup has settled. With two entities each declaring the other's current ref as a former ref this chains redirects. Additionally, the redirect `useEffect` depends on `location.pathname/search/hash`, which change as a result of its own `navigate`, while `resolution.value` is still `'resolved'` — producing a second `navigate` to the same URL on the next commit.",
+      "fix": "Tag the direct lookup result with the ref it was fetched for (e.g. have the `useAsyncRetry` body return `{ ref: requestedRef, entity }`) and gate resolution on `settled.ref === requestedRef && !settled.entity`; and guard the redirect effect so it navigates at most once per resolved value (e.g. a `navigatedRefRef` holding the formerEntityRef already acted on), rather than re-deriving the target from a location its own navigation mutated."
+    },
+    {
+      "severity": "minor",
+      "file": "docs/features/software-catalog/well-known-annotations.md",
+      "line": 479,
+      "issue": "The privacy warning's markdown is malformed: `> **Warning** > \\`User\\` entities are excluded...` — the inline `>` in the middle of the line renders as a literal angle bracket instead of starting the quoted text, and the house style in this docs tree is `> **Note:**` / `> **Warning:**` with a colon (docs/features/software-catalog/api.md:17).",
+      "fix": "Rewrite the first line as `> **Warning:** \\`User\\` entities are excluded from this mechanism entirely. A former ref naming a` and keep the remaining `>`-prefixed continuation lines."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+      "line": 72,
+      "issue": "The `ui=\"bui\"` branch builds its dismiss control from `@material-ui/core/IconButton` + `@material-ui/icons/Close` inside a `@backstage/ui` Alert, which defeats the purpose of the `ui` prop (U23 chose `ui=\"bui\"` so the notice renders in @backstage/ui vocabulary rather than importing Material UI into the BUI path). The accessible name is also a hard-coded English literal `aria-label=\"close\"`, contrary to the rule that all user-visible text — including accessible names — comes from `useTranslationRef(catalogReactTranslationRef)`.",
+      "fix": "Use `ButtonIcon` (exported from `@backstage/ui`) for the BUI dismiss control, and source its accessible name from a new `entityRenamedNotice.dismiss` translation message instead of an inline literal."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+      "line": 45,
+      "issue": "The test replaces `useRouteRef` wholesale with `jest.mock('@backstage/core-plugin-api', ... useRouteRef: () => mockEntityRoute)`, so the redirect target is computed from a hand-written path template rather than the real `entityRouteRef`. U24 rule 7 required binding the route through `renderHook`'s wrapper with `mountedRoutes`, precisely so the sub-path prefix swap is proven against real route resolution; as written, a mismatch between the hook's assumed path shape and the actual entity route would not be caught.",
+      "fix": "Drop the `useRouteRef` mock and supply the route via the wrapper's `mountedRoutes: { '/catalog/:namespace/:kind/:name': entityRouteRef }` (keeping the `useNavigate` mock), so the asserted target URL is produced by the real route function."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+      "line": 2973,
+      "issue": "The User-exclusion block hand-writes the synthetic search key as the literal `'metadata.annotations.backstage.io/former-entity-refs.user:default/old-user'` in the filter, rather than composing it from `ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX`. If the prefix constant ever changes, this assertion silently stops testing the write-side gate (it would query a key nothing writes and still see zero rows, passing for the wrong reason).",
+      "fix": "Import `ANNOTATION_FORMER_ENTITY_REFS_SEARCH_KEY_PREFIX` from '../database/operations/stitcher/buildEntitySearch' and build the filter key from it, as formerEntityRefQuery.test.ts already does."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-backend/src/service/request/formerEntityRefQuery.ts",
+      "line": 37,
+      "issue": "The resolution predicate now exists in two independent implementations — here and in packages/catalog-client/src/resolveFormerEntityRef.ts — each rebuilding the `$all` / key-prefix / `$not kind user` shape from its own copy of the prefix (the client one derived from `ANNOTATION_FORMER_ENTITY_REFS`, the backend one from the stitcher constant). Nothing asserts the two stay byte-identical, and `buildFormerEntityRefQuery` has no production caller (grep shows only tests), so a divergence would surface only as a silently non-matching query in the client.",
+      "fix": "Add one cross-checking assertion — e.g. in plugins/catalog-backend/src/service/request/formerEntityRefQuery.test.ts compare `buildFormerEntityRefQuery(ref)` against the literal key built from `metadata.annotations.${ANNOTATION_FORMER_ENTITY_REFS}.<canonical ref>` — so the backend and client key constructions cannot drift apart unnoticed."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-react/report-alpha.api.md",
+      "line": null,
+      "issue": "The regenerated API reports carry unrelated churn beyond the new surface: translation-key reordering in plugins/catalog-react/report.api.md and report-alpha.api.md, plugins/catalog/report.api.md and report-alpha.api.md, plugins/techdocs/report-alpha.api.md, plus a reordering of the `EntityTableColumnTitle` return union. None of those keys or symbols were touched by this change; it is generator ordering nondeterminism landing in the diff and it obscures the two lines that matter (`EntityRenamedNotice`, `entityRenamedNotice.*`).",
+      "fix": "Restore the pre-existing ordering in the hunks unrelated to this feature (keep only the added `entityRenamedNotice.title`/`.description`, `EntityRenamedNotice`, `EntityRenamedNoticeProps`, `FormerEntityRefResolution`, `resolveFormerEntityRef`, `ANNOTATION_FORMER_ENTITY_REFS`, `FORMER_ENTITY_REFS_MAX_COUNT`, `parseFormerEntityRefs` entries) so the review surface stays scoped to the change."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+      "line": 58,
+      "issue": "The hook issues its own `catalogApi.getEntityByRef(entityRef)` for exactly the same ref that `useExternalRedirect` already fetched one line earlier in TechDocsReaderPage.tsx, so every docs page view now makes two identical catalog lookups. It also reads `location.pathname/search/hash` and `docsRoute` inside the `useAsync` body while declaring only `[entityKey, catalogApi]` as dependencies, so the target is built from whatever location was current when the async happened to run.",
+      "fix": "Have the two hooks share one entity lookup (pass the already-fetched entity, or `undefined`, into `useFormerRefRedirect`) and compute the target URL in the navigate `useEffect` from the then-current location rather than inside the async body, so the preserved sub-path cannot be taken from a stale location."
+    }
+  ],
+  "refinement_packets": []
+}

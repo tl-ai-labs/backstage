@@ -1,0 +1,59 @@
+[
+  {
+    "id": "tp_debug_r6_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-072000-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+    "instruction": "Fix `plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `yarn tsc` fails with 1 remaining error in this file:\n\n  plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx:71:11 - error TS2322: Type 'string' is not assignable to type 'ReactElement<any, string | JSXElementConstructor<any>>'.\n  71           icon=\"cross\"\n  packages/ui/src/components/ButtonIcon/types.ts:25:3\n    25   icon?: ReactElement;\n    The expected type comes from property 'icon' which is declared here\n\nCause: the `ButtonIcon` in the bui branch passes `icon=\"cross\"`, a string, but @backstage/ui's ButtonIcon `icon` prop is typed `ReactElement` — it takes a rendered icon element, not a name.\n\nFix: pass a close-icon ELEMENT. The repo convention is remixicon, e.g. `icon={<RiCloseLine />}` with `import { RiCloseLine } from '@remixicon/react';` — this is exactly how packages/ui/src/components/Dialog/Dialog.tsx and plugins/app/src/components/Toast/Toast.tsx do it, and `@remixicon/react` is ALREADY a dependency of plugins/catalog-react (package.json line 83), so no manifest change is needed (and package.json is off-limits in this run — do not touch it).\n\nAlso simplify one thing while you are in the file: @backstage/ui's Alert types declare `title?: ReactNode` and `description?: ReactNode` (packages/ui/src/components/Alert/types.ts:27-29), so the `<span>` wrapper around `description` added in a previous round is unnecessary — pass the string directly. Do this only if it keeps the file typechecking.\n\nChange NOTHING else: keep both UI vocabularies (legacy @material-ui/lab Alert with AlertTitle, and the bui branch), the dismiss-on-click behaviour, the aria-label on the dismiss control, the location.state reading that returns null when no former ref is present, the translation keys, and the Apache 2.0 header. The file's own tests currently pass and must keep passing, and `yarn tsc` must report zero errors.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-072000-feature-new-entity-former-names/briefs/U16.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/ui/src/components/ButtonIcon/types.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/ui/src/components/Alert/types.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint --no-error-on-unmatched-pattern '{path}'",
+          "fix": "yarn eslint --fix --no-error-on-unmatched-pattern '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]
