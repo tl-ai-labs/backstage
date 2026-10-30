@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import throttle from 'lodash/throttle';
 // @ts-ignore
 import RelativeTime from 'react-relative-time';
@@ -56,6 +56,8 @@ export type NotificationsTableProps = Pick<
   'onPageChange' | 'onRowsPerPageChange' | 'page' | 'totalCount' | 'title'
 > & {
   markAsReadOnLinkOpen?: boolean;
+  /** Id of a notification to highlight and scroll into view */
+  highlightedNotificationId?: string;
   isLoading?: boolean;
   isUnread: boolean;
   notifications?: Notification[];
@@ -68,6 +70,7 @@ export type NotificationsTableProps = Pick<
 export const NotificationsTable = ({
   title,
   markAsReadOnLinkOpen,
+  highlightedNotificationId,
   isLoading,
   notifications = [],
   isUnread,
@@ -83,6 +86,21 @@ export const NotificationsTable = ({
   const notificationsApi = useApi(notificationsApiRef);
   const toastApi = useApi(toastApiRef);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+  const scrolledIdRef = useRef<string | undefined>(undefined);
+  const highlightRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (
+        element &&
+        highlightedNotificationId &&
+        scrolledIdRef.current !== highlightedNotificationId
+      ) {
+        scrolledIdRef.current = highlightedNotificationId;
+        element.scrollIntoView?.({ block: 'center' });
+      }
+    },
+    [highlightedNotificationId],
+  );
 
   const [selectedNotifications, setSelectedNotifications] = useState(
     new Set<Notification['id']>(),
@@ -199,7 +217,17 @@ export const NotificationsTable = ({
         render: (notification: Notification) => {
           // Compact content
           return (
-            <Flex gap="4" align="center">
+            <Flex
+              gap="4"
+              align="center"
+              {...(notification.id === highlightedNotificationId
+                ? {
+                    ref: highlightRef,
+                    className: styles.highlighted,
+                    'aria-current': 'true',
+                  }
+                : {})}
+            >
               <div className={styles.severityItem}>
                 <NotificationIcon notification={notification} />
               </div>
@@ -290,6 +318,8 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    highlightedNotificationId,
+    highlightRef,
   ]);
 
   return (

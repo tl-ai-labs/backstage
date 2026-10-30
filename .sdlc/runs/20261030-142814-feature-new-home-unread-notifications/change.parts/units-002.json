@@ -1,0 +1,316 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U11",
+      "path": "plugins/notifications/src/alpha.test.ts",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Checks the new-frontend-system notifications plugin provides the page, the API and the unread notifications home widget.",
+      "rules": [
+        "1. import notificationsPlugin from './alpha'; one describe('notifications alpha plugin') with one it holding three expect(...).toBeDefined() assertions on getExtension('page:notifications'), getExtension('api:notifications') and getExtension('home-page-widget:notifications/unread-notifications')."
+      ],
+      "style_from": {
+        "path": "plugins/home/src/alpha.test.ts",
+        "lines": [1, 35],
+        "reason": "Plugin getExtension assertions for a new-system plugin."
+      },
+      "tests": [
+        {
+          "name": "provides the notifications page, API and unread notifications home widget",
+          "given": "the default export of ./alpha",
+          "expect": "getExtension returns a defined extension for 'page:notifications', 'api:notifications' and 'home-page-widget:notifications/unread-notifications'"
+        }
+      ],
+      "depends_on": ["U09"],
+      "covers": ["FR-10", "NFR-5"],
+      "checks": ["format", "lint", "test"]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the highlighted style for the deep-linked notification row.",
+      "rules": [
+        "1. Add a .highlighted rule inside the existing @layer components block: background-color: var(--bui-bg-neutral-2); border-radius: var(--bui-radius-2); box-shadow: inset 3px 0 0 var(--bui-border-info); padding: var(--bui-space-1);"
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 35,
+          "to": 35,
+          "first_line": "}",
+          "rule": "This line closes .notificationInfoRow:not(:first-child); insert a blank line and the .highlighted rule of rule 1 after it, indented two spaces inside the layer."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-12", "NFR-2"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds an optional highlightedNotificationId prop that marks the matching row as current, styles it and scrolls it into view once.",
+      "rules": [
+        "1. NotificationsTableProps gains highlightedNotificationId?: string with the TSDoc comment /** Id of a notification to highlight and scroll into view */.",
+        "2. const scrolledIdRef = useRef<string | undefined>(undefined); const highlightRef = useCallback((element: HTMLDivElement | null) => { if (element && highlightedNotificationId && scrolledIdRef.current !== highlightedNotificationId) { scrolledIdRef.current = highlightedNotificationId; element.scrollIntoView?.({ block: 'center' }); } }, [highlightedNotificationId]);",
+        "3. In the compact-data column, the outer <Flex gap=\"4\" align=\"center\"> gets, only when notification.id === highlightedNotificationId: ref={highlightRef}, className={styles.highlighted} and aria-current=\"true\"; other rows render exactly as before (no extra attributes).",
+        "4. When highlightedNotificationId is undefined or matches no row, the table behaves exactly as today (FR-13)."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsTableProps",
+          "kind": "type (changed)",
+          "params": [],
+          "returns": "adds highlightedNotificationId?: string"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "import { useCallback, useEffect, useMemo, useState } from 'react';",
+          "rule": "Add useRef to the named imports from 'react'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 58,
+          "to": 58,
+          "first_line": "markAsReadOnLinkOpen?: boolean;",
+          "rule": "Insert the documented highlightedNotificationId?: string field of rule 1."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Insert highlightedNotificationId, into the destructured props."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 85,
+          "to": 85,
+          "first_line": "const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);",
+          "rule": "Insert a blank line, scrolledIdRef and highlightRef of rule 2."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 202,
+          "to": 202,
+          "first_line": "<Flex gap=\"4\" align=\"center\">",
+          "rule": "Open the Flex with the conditional ref, className and aria-current of rule 3 (spread an object that is empty for non-matching rows)."
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 292,
+          "to": 292,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Add highlightedNotificationId, and highlightRef, to the compactColumns useMemo dependency list."
+        }
+      ],
+      "depends_on": ["U12"],
+      "covers": ["FR-12", "FR-13"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Reads the id query parameter and passes it to the table as the highlighted notification.",
+      "rules": [
+        "1. const [searchParams] = useSearchParams(); const highlightedNotificationId = searchParams.get('id') ?? undefined; using useSearchParams from 'react-router-dom'.",
+        "2. Pass highlightedNotificationId={highlightedNotificationId} to NotificationsTable; nothing else on the page changes (filters, fetch options and read state stay as today)."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useEffect, useMemo, useState } from 'react';",
+          "rule": "Insert: import { useSearchParams } from 'react-router-dom';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 81,
+          "to": 81,
+          "first_line": "} = props;",
+          "rule": "Insert a blank line and the two lines of rule 1."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 216,
+          "to": 216,
+          "first_line": "markAsReadOnLinkOpen={markAsReadOnLinkOpen}",
+          "rule": "Insert highlightedNotificationId={highlightedNotificationId}"
+        }
+      ],
+      "depends_on": ["U13"],
+      "covers": ["FR-12", "FR-13"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U15",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "jsdom tests for the page's ?id= deep-link highlight and its unchanged rendering without the parameter.",
+      "rules": [
+        "1. Render NfsNotificationsPage from './NotificationsPage' with renderInTestApp(<TestApiProvider apis={[[notificationsApiRef, notificationsApi], [toastApiRef, { post: jest.fn() }]]}>...</TestApiProvider>, { routeEntries: [...] }).",
+        "2. notificationsApi mock: getNotifications resolves { notifications: [n1, n2], totalCount: 2 } (ids 'n1' and 'n2', titles 'First notification' and 'Second notification', no payload.link), getStatus resolves { unread: 2, read: 0 }, getTopics resolves { topics: [] }, updateNotifications jest.fn().",
+        "3. beforeEach assigns Element.prototype.scrollIntoView = jest.fn() (jsdom lacks it); afterEach deletes it.",
+        "4. Find rows with await screen.findByText(title) and check the marker with .closest('[aria-current=\"true\"]'); no test ids."
+      ],
+      "style_from": {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "reason": "Same package's renderInTestApp test shape."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+          "lines": [95, 141],
+          "reason": "The three API calls the page makes, which the mock must answer."
+        }
+      ],
+      "tests": [
+        {
+          "name": "highlights and scrolls to the notification named by the id query parameter",
+          "given": "routeEntries ['/notifications?id=n1']",
+          "expect": "'First notification' is inside an element with aria-current=\"true\"; 'Second notification' is not; scrollIntoView was called once with { block: 'center' }"
+        },
+        {
+          "name": "renders without a highlight when the id is absent or unknown",
+          "given": "one render with routeEntries ['/notifications'], then after unmount one with ['/notifications?id=missing']",
+          "expect": "both titles render in each case, no element has aria-current=\"true\", and scrollIntoView was not called"
+        }
+      ],
+      "depends_on": ["U14"],
+      "covers": ["AC-6", "FR-12", "FR-13", "NFR-5"],
+      "checks": ["format", "lint", "test"]
+    },
+    {
+      "id": "U16",
+      "path": "plugins/notifications/README.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the unread notifications home-page card and the notification deep link.",
+      "rules": [
+        "1. New section '## Home page card': in the new frontend system the plugin provides the `home-page-widget:notifications/unread-notifications` extension, enabled by default, which appears in the home page **Add Widget** dialog and can be placed through `page:home` `defaultConfig` with component `HomePageUnreadNotifications` (yaml example under app.extensions).",
+        "2. The section states the card lists your five newest unread notifications, lets you mark each one as read, refreshes live when `@backstage/plugin-signals` is installed and otherwise checks for new notifications every 60 seconds; it shows how to turn it off with `- home-page-widget:notifications/unread-notifications: false`.",
+        "3. New section '## Linking to a notification': `/notifications?id=<notification id>` opens the notifications page and highlights that notification when it is in the displayed list; opening the link does not mark the notification as read."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 14,
+          "to": 14,
+          "first_line": "add `@backstage/plugin-signals` package to your installation.",
+          "rule": "Append a blank line and the two sections of rules 1 to 3 at the end of the file."
+        }
+      ],
+      "style_from": {
+        "path": "docs/getting-started/homepage.md",
+        "lines": [80, 130],
+        "reason": "How the repo documents home widgets, their extension IDs and app-config snippets."
+      },
+      "depends_on": ["U09", "U14"],
+      "covers": ["FR-16", "AC-10"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U17",
+      "path": "docs/notifications/usage.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds the home-page card and the notification deep link to the frontend usage guide.",
+      "rules": [
+        "1. New '### Home page card' subsection under '## Notifications Frontend': the extension ID `home-page-widget:notifications/unread-notifications`, enabled by default, requires the home plugin (`@backstage/plugin-home`); a yaml app-config example placing `HomePageUnreadNotifications` in `page:home` `defaultConfig`; the card shows your five newest unread notifications with **Mark as read**, refreshes through signals and falls back to checking every 60 seconds when signals are not installed (link to the '## Signals' section with [Signals](#signals)).",
+        "2. New '### Linking to a notification' subsection: `/notifications?id=<notification id>` highlights the notification on the notifications page when it is in the displayed list, the home-page card uses this link for each item, and opening it does not mark the notification as read.",
+        "3. Follow docs/contribute/doc-style-guide.md; do not change other sections."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+          "rule": "Insert a blank line and the two subsections of rules 1 and 2, before the existing '## Usage' heading."
+        }
+      ],
+      "style_from": {
+        "path": "docs/getting-started/homepage.md",
+        "lines": [80, 130],
+        "reason": "Home widget documentation tone and app-config examples."
+      },
+      "depends_on": ["U09", "U14"],
+      "covers": ["FR-16", "AC-10"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U18",
+      "path": ".changeset/notifications-unread-home-card.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-notifications.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-notifications': patch.",
+        "2. Body for adopters: the plugin now provides an Unread notifications home page widget for the new frontend system (extension `home-page-widget:notifications/unread-notifications`) that lists your latest unread notifications, lets you mark them as read and refreshes live through signals or every minute without them; the notifications page now highlights the notification given in the `id` query parameter, for example `/notifications?id=<id>`.",
+        "3. No internal function, component, prop or variable names."
+      ],
+      "style_from": {
+        "path": ".changeset/neat-notification-context.md",
+        "reason": "Changeset front matter and tone for this package."
+      },
+      "depends_on": ["U09", "U14"],
+      "covers": ["FR-17", "AC-10"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U19",
+      "path": ".changeset/home-react-card-fallback-without-app-context.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-home-react.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-home-react': patch.",
+        "2. Body for adopters: home page cards no longer need the legacy app context to show their loading indicator, so cards render in apps and tests that do not provide it.",
+        "3. No internal function, component or variable names."
+      ],
+      "style_from": {
+        "path": ".changeset/neat-notification-context.md",
+        "reason": "Changeset front matter and tone."
+      },
+      "depends_on": ["U01"],
+      "covers": ["FR-17", "AC-10"],
+      "checks": ["format"]
+    }
+  ],
+  "hashes": {
+    "plugins/home/src/alpha.test.ts": "f3495523421af250ab4f6dbe735b3bf44d989909e3bcb0f86455bab3d1aacf97",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css": "6a76ba9b1b187732c563ddae568a12b3522f0eef5615f464d28e4c5640bcc344",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx": "e5c70ee41407f8f1a66ff2bf61c697523e094df60b47c4cb6785daec1fda4584",
+    "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx": "5c82ffcf77e140195480bdc27eca15e49994f5b749d5b856fef28d4a8714d247",
+    "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx": "2e6bc2225e74af0543c1a2eac2ad73f195697aa407bae4e086f73f34ecd02566",
+    "plugins/notifications/README.md": "ffc5ea09c2c63e9aec0e6e88afcb34ccf1c7753bdda7950137037ff05e0d4d8f",
+    "docs/getting-started/homepage.md": "fa63fa4349ed16e0254cdc14b9e10ef0d52c2382265932c09abd09614a329fed",
+    "docs/notifications/usage.md": "0711ab89e89a57655c9ba1a49d129e8be887d8c56190794b1f7a68f36f11fdf8",
+    ".changeset/neat-notification-context.md": "3b95eabc31deb62cc019c0094650d52ca6f9698d94697c262abd0ad9017ddf20"
+  }
+}

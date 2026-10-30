@@ -1,0 +1,847 @@
+{
+  "header": {
+    "conventions": [
+      "Every new .ts/.tsx file starts with the Apache 2.0 header block exactly as in existing files, with the line 'Copyright 2026 The Backstage Authors'; never change the year on existing files.",
+      "Formatting is Prettier with the Backstage config (@backstage/cli/config/prettier): 2-space indent, single quotes, trailing commas, 80-column wrap, arrow-function parameters without parentheses when single (e.g. m => m.Content).",
+      "Never import React as a default import; import named hooks and types from 'react' (e.g. import { useCallback, useEffect, useState } from 'react').",
+      "plugins/notifications UI uses @backstage/ui (Flex, Text, ButtonIcon) and @remixicon/react icons, plus @backstage/core-components (Link, Progress); it does not add new Material UI imports.",
+      "plugins/notifications components translate with: import { useTranslationRef } from '@backstage/core-plugin-api/alpha'; and import { notificationsTranslationRef } from '../../translation'; then const { t } = useTranslationRef(notificationsTranslationRef).",
+      "plugins/notifications components read APIs with useApi from '@backstage/core-plugin-api', build routes with useRouteRef(rootRouteRef)() from '@backstage/core-plugin-api' and '../../routes', and post toasts through toastApiRef from '@backstage/frontend-plugin-api'.",
+      "plugins/home-react keeps Material UI v4 path imports (e.g. '@material-ui/core/IconButton') and @backstage/core-components; it adds no new runtime dependency.",
+      "Tests use Jest with React Testing Library: describe/it, jest.fn(), screen with findBy*/getBy*/queryBy* queries, fireEvent and act from '@testing-library/react'; prefer findBy* over waitFor; never add data-testid or test ids to implementation code; prefer fewer thorough tests with several assertions.",
+      "plugins/notifications tests render with renderInTestApp and TestApiProvider from '@backstage/test-utils' and mount rootRouteRef at '/notifications' through the mountedRoutes option; jest-dom matchers come from the package's src/setupTests.ts.",
+      "Every API a component under test calls is mocked through TestApiProvider (the repo rejects frontend network requests in tests).",
+      "Tests that use jest.useFakeTimers() restore real timers in an afterEach(() => jest.useRealTimers()).",
+      "Public exports carry a TSDoc release tag; nothing new is added to src/index.ts of either package; the generated report*.api.md, CHANGELOG.md and docs/releases files are never edited.",
+      "Changesets are hand-written .changeset/<kebab-slug>.md files with front matter '<package name>': patch and one or two sentences addressed to Backstage adopters that name no internal function, class or variable.",
+      "Documentation follows docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as 'you', code style for package names, extension IDs, paths and query parameters, bold for UI elements, yaml/tsx language tags on code blocks."
+    ],
+    "decisions": [
+      {
+        "topic": "Card placement and naming",
+        "choice": "The card lives in plugins/notifications/src/components/UnreadNotificationsCard/ (UnreadNotificationsCard.tsx exporting UnreadNotificationsCardContent, plus an index.ts barrel) and is not re-exported from src/components/index.ts or src/index.ts.",
+        "rejected": [
+          "a src/homePageComponents/<Name>/Content.tsx folder as in plugins/home",
+          "a public root export or legacy createCardExtension export"
+        ],
+        "reason": "Matches the notifications package's own components/<Name>/ layout, and Q1 keeps the card new-frontend-system only with no public API addition."
+      },
+      {
+        "topic": "Widget registration identity",
+        "choice": "HomePageWidgetBlueprint.make with name 'unread-notifications' (extension ID home-page-widget:notifications/unread-notifications), params.name 'HomePageUnreadNotifications', params.title 'Unread notifications', params.description 'Shows your latest unread notifications', enabled by default, no settings schema and no layout hints.",
+        "rejected": [
+          "disabled: true by default",
+          "configurable item limit or polling interval through card settings"
+        ],
+        "reason": "Follows the search-bar and home widgets (enabled, HomePage* component name) and Q2 fixes the limit and interval as constants."
+      },
+      {
+        "topic": "Fixed limits",
+        "choice": "Item limit is the exported constant UNREAD_NOTIFICATIONS_LIMIT = 5 and the polling interval is the exported constant UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS = 60000, both declared in UnreadNotificationsCard.tsx.",
+        "rejected": ["props or app-config values"],
+        "reason": "Q2 resolved to fixed constants; exporting them from the module (not the package) lets tests refer to the same numbers."
+      },
+      {
+        "topic": "How the card refreshes",
+        "choice": "A numeric refreshKey state is the only dependency of the card's useNotificationsApi call; a stable refresh callback (useCallback with []) increments it; signals, the polling timer and mark-as-read all call refresh.",
+        "rejected": [
+          "calling useAsyncRetry's retry from an effect",
+          "the page's throttled refresh-flag pattern"
+        ],
+        "reason": "retry changes identity whenever loading flips and is a no-op while loading, so effects depending on it loop or drop refreshes; a dependency change re-runs the fetch, discards stale results and never sets state after unmount."
+      },
+      {
+        "topic": "Signals versus polling",
+        "choice": "useSignal<NotificationSignal>('notifications') from '@backstage/plugin-signals-react'; an effect on [lastSignal, refresh] calls refresh when lastSignal?.action is set; a second effect on [isSignalsAvailable, refresh] starts setInterval(refresh, UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS) only when isSignalsAvailable is false and returns a cleanup that clears it.",
+        "rejected": [
+          "polling in addition to signals",
+          "throttling signal refreshes"
+        ],
+        "reason": "FR-6 to FR-8 and NFR-3: no polling when signals exist, one request per interval otherwise, timer cleared on unmount or when signals appear."
+      },
+      {
+        "topic": "Card title translation",
+        "choice": "The blueprint's params.title stays the literal 'Unread notifications' (blueprint params are static and cannot call hooks, as in every plugins/home widget); the translated unreadNotificationsCard.title is the aria-label of the card's list.",
+        "rejected": [
+          "dropping the InfoCard title and rendering a translated heading inside Content",
+          "a custom Renderer through componentProps"
+        ],
+        "reason": "Keeps the widget catalog listing and the home grid heading working while every string the card renders comes from notificationsTranslationRef."
+      },
+      {
+        "topic": "New translation keys",
+        "choice": "notificationsTranslationRef gains unreadNotificationsCard: { title: 'Unread notifications', emptyMessage: 'You have no unread notifications', markAsRead: 'Mark as read', errorMessage: 'Failed to load unread notifications', markAsReadFailed: 'Failed to mark notification as read' }, inserted between the sidebar and settings blocks; severity labels reuse the existing filters.severity.* keys.",
+        "rejected": [
+          "reusing sidebar.errors.markAsReadFailed",
+          "new severity label keys"
+        ],
+        "reason": "One namespace per UI surface as the ref already does; severity words already exist."
+      },
+      {
+        "topic": "Deep-link highlight mechanics",
+        "choice": "NotificationsPage reads id with useSearchParams from 'react-router-dom' and passes it as a new optional NotificationsTable prop highlightedNotificationId; the table marks the matching row's content Flex with aria-current=\"true\" and the CSS module class highlighted, and scrolls it into view once per id through a ref callback that calls element.scrollIntoView?.({ block: 'center' }).",
+        "rejected": [
+          "the table reading the URL itself",
+          "material-table rowStyle",
+          "a data-testid on the row"
+        ],
+        "reason": "The table is a public component other pages reuse, so the URL stays the page's concern; aria-current gives tests and assistive technology a semantic marker; the optional chaining keeps jsdom (no scrollIntoView) from throwing."
+      },
+      {
+        "topic": "Public API report drift",
+        "choice": "The new optional NotificationsTableProps field, the new translation messages and the new alpha widget change report.api.md and report-alpha.api.md of @backstage/plugin-notifications; this run does not regenerate them and the person runs yarn build:api-reports before a PR.",
+        "rejected": ["hand-editing report files"],
+        "reason": "Report files are off-limits and generated (Q3)."
+      },
+      {
+        "topic": "Mark-as-read failure",
+        "choice": "The card's mark-as-read calls notificationsApi.updateNotifications({ ids: [id], read: true }), then refresh when still mounted; on rejection it posts toastApi.post({ title: t('unreadNotificationsCard.markAsReadFailed'), status: 'danger' }).",
+        "rejected": [
+          "rendering an inline error",
+          "optimistic removal before the request resolves"
+        ],
+        "reason": "Matches NotificationsSidebarItem's toast handling and keeps the list sourced from the server."
+      },
+      {
+        "topic": "Card extension loading fallback",
+        "choice": "CardExtension in plugins/home-react uses Progress from '@backstage/core-components' as both Suspense fallbacks and no longer imports or calls useApp.",
+        "rejected": [
+          "Progress swappable component from '@backstage/frontend-plugin-api'",
+          "try/catch around useApp"
+        ],
+        "reason": "core-components is already a dependency and its Progress needs only a MUI theme, so a card renders with no app context and no API beyond what useTranslationRef needs; no export changes (FR-15)."
+      },
+      {
+        "topic": "home-react test dependencies",
+        "choice": "plugins/home-react/package.json gains devDependencies @backstage/test-utils workspace:^, @testing-library/dom ^10.0.0, @testing-library/jest-dom ^6.0.0 and @testing-library/react ^16.0.0, and its test file imports '@testing-library/jest-dom' itself; no setupTests.ts is added.",
+        "rejected": [
+          "adding src/setupTests.ts",
+          "testing through plugins/home"
+        ],
+        "reason": "home-react has no test tooling today; the lint rule for undeclared imports needs these declared, and one test file does not justify a setup file."
+      },
+      {
+        "topic": "Dependency install",
+        "choice": "After both package.json edits, one tooling step runs yarn install from the repo root and writes yarn.lock.",
+        "reason": "yarn.lock is the package manager's file, never typed."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "format",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "lint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "test",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "test-suite",
+        "run": "CI=true yarn test plugins/notifications plugins/home-react"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "plugins/home-react/src/extensions.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "CardExtension renders Progress from @backstage/core-components as its Suspense fallback instead of reading it from useApp(), so a card renders without old-system app context.",
+      "rules": [
+        "1. Both existing <Suspense fallback={<Progress />}> usages stay as they are; only the source of Progress changes.",
+        "2. No export is added, removed or re-typed (FR-15); createCardExtension and CardExtension keep their signatures."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { InfoCard } from '@backstage/core-components';",
+          "rule": "Import Progress alongside InfoCard: import { InfoCard, Progress } from '@backstage/core-components';"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 22,
+          "to": 22,
+          "first_line": "import { createReactExtension, useApp } from '@backstage/core-plugin-api';",
+          "rule": "Drop useApp from the import, keeping only createReactExtension."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 135,
+          "to": 136,
+          "first_line": "const app = useApp();",
+          "last_line": "const { Progress } = app.getComponents();",
+          "rule": "Remove the useApp call and the getComponents destructuring."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-14", "FR-15"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/home-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Declares the test tooling home-react's new jsdom test imports.",
+      "rules": [
+        "1. Add to devDependencies, keeping alphabetical order: \"@backstage/test-utils\": \"workspace:^\", \"@testing-library/dom\": \"^10.0.0\", \"@testing-library/jest-dom\": \"^6.0.0\", \"@testing-library/react\": \"^16.0.0\".",
+        "2. Nothing else in the file changes; version is not bumped."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 67,
+          "to": 67,
+          "first_line": "\"@backstage/cli\": \"workspace:^\",",
+          "rule": "Insert the four devDependency lines of rule 1 after @backstage/cli, each ending with a comma."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["AC-7"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/notifications/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Declares @backstage/plugin-home-react as a runtime dependency of the notifications plugin.",
+      "rules": [
+        "1. Add \"@backstage/plugin-home-react\": \"workspace:^\" to dependencies in alphabetical position (before @backstage/plugin-notifications-common).",
+        "2. Nothing else in the file changes; version is not bumped."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 58,
+          "to": 58,
+          "first_line": "\"@backstage/plugin-notifications-common\": \"workspace:^\",",
+          "rule": "Insert the line \"@backstage/plugin-home-react\": \"workspace:^\", before this line."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-11", "AC-9", "NFR-4"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U04",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Runs the workspace install so yarn.lock records the new notifications runtime dependency and the home-react devDependencies.",
+      "run": "yarn install",
+      "depends_on": ["U02", "U03"],
+      "covers": ["FR-11", "AC-9"]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/home-react/src/extensions.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "jsdom test proving CardExtension renders, including its Suspense loading fallback, with no app context.",
+      "rules": [
+        "1. Import '@testing-library/jest-dom' first (home-react has no setupTests.ts), then render and screen from '@testing-library/react', lazy from 'react', TestApiProvider, mockApis and MockErrorApi from '@backstage/test-utils', errorApiRef from '@backstage/core-plugin-api', translationApiRef from '@backstage/core-plugin-api/alpha', and CardExtension from './extensions'.",
+        "2. Render with plain render() (never renderInTestApp, which supplies app context) wrapped only in TestApiProvider with [translationApiRef, mockApis.translation()] and [errorApiRef, new MockErrorApi()].",
+        "3. The suspending case passes Content={() => <SuspendingContent />} where SuspendingContent is lazy(() => new Promise(() => {})) so the fallback stays shown.",
+        "4. One describe('CardExtension') block; no test ids."
+      ],
+      "style_from": {
+        "path": "plugins/home/src/homePageComponents/StarredEntities/Content.test.tsx",
+        "reason": "Header, import grouping and describe/it shape of a home widget test."
+      },
+      "uses": [
+        {
+          "path": "plugins/home-react/src/extensions.tsx",
+          "lines": [118, 202],
+          "reason": "CardExtension props and render paths under test."
+        }
+      ],
+      "tests": [
+        {
+          "name": "renders the card title and content without app context",
+          "given": "CardExtension with title 'Test card' and Content returning <div>Card content</div>, rendered without app context",
+          "expect": "screen.getByText('Test card') and await screen.findByText('Card content') are in the document and nothing throws"
+        },
+        {
+          "name": "renders a progress indicator while the content is loading without app context",
+          "given": "CardExtension with title 'Loading card' whose Content renders a lazy component that never resolves",
+          "expect": "await screen.findByRole('progressbar') is in the document"
+        }
+      ],
+      "depends_on": ["U01", "U04"],
+      "covers": ["AC-7", "FR-14", "NFR-1", "NFR-5"],
+      "checks": ["format", "lint", "test"]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/notifications/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the unreadNotificationsCard message block used by the home-page card.",
+      "rules": [
+        "1. Add unreadNotificationsCard: { title: 'Unread notifications', emptyMessage: 'You have no unread notifications', markAsRead: 'Mark as read', errorMessage: 'Failed to load unread notifications', markAsReadFailed: 'Failed to mark notification as read' } between the sidebar and settings blocks.",
+        "2. No existing key changes."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 105,
+          "to": 105,
+          "first_line": "},",
+          "rule": "This line closes the sidebar block; insert the unreadNotificationsCard block of rule 1 after it, indented like sidebar and ending with '},'."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-9"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Home-page card content listing the signed-in user's latest unread notifications with deep links, severity, relative time and a mark-as-read action, refreshed by signals or by polling when signals are unavailable.",
+      "rules": [
+        "1. Declare and export UNREAD_NOTIFICATIONS_LIMIT = 5 and UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS = 60000, and a module-private SeverityLabelKeys = { critical: 'filters.severity.critical', high: 'filters.severity.high', normal: 'filters.severity.normal', low: 'filters.severity.low' } as const.",
+        "2. State: const [refreshKey, setRefreshKey] = useState(0); const refresh = useCallback(() => setRefreshKey(k => k + 1), []); isMounted = useMountedState() from 'react-use/esm/useMountedState'.",
+        "3. Fetch with useNotificationsApi from '../../hooks': api => api.getNotifications({ read: false, limit: UNREAD_NOTIFICATIONS_LIMIT, sort: 'created', sortOrder: 'desc' }), deps [refreshKey].",
+        "4. const { lastSignal, isSignalsAvailable } = useSignal<NotificationSignal>('notifications') from '@backstage/plugin-signals-react' (NotificationSignal from '@backstage/plugin-notifications-common'); useEffect on [lastSignal, refresh] calls refresh() when lastSignal?.action is truthy.",
+        "5. useEffect on [isSignalsAvailable, refresh]: when isSignalsAvailable is true return without a timer; otherwise const handle = setInterval(refresh, UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS) and return () => clearInterval(handle).",
+        "6. onMarkAsRead(id) (useCallback): notificationsApi.updateNotifications({ ids: [id], read: true }).then(() => { if (isMounted()) refresh(); }).catch(() => toastApi.post({ title: t('unreadNotificationsCard.markAsReadFailed'), status: 'danger' })); notificationsApi via useApi(notificationsApiRef) from '../../api', toastApi via useApi(toastApiRef) from '@backstage/frontend-plugin-api'.",
+        "7. Render order: if error -> <Text color=\"danger\">{t('unreadNotificationsCard.errorMessage')}</Text>; else if loading and no value yet -> <Progress /> from '@backstage/core-components'; else if value.notifications is empty -> <Text color=\"secondary\">{t('unreadNotificationsCard.emptyMessage')}</Text>; else the list. Keep showing the previous list while a refresh is loading.",
+        "8. List: <Flex direction=\"column\" gap=\"3\" role=\"list\" aria-label={t('unreadNotificationsCard.title')}>; each item <Flex role=\"listitem\" key={id} justify=\"between\" align=\"center\"> holding a column Flex (gap 1) and a ButtonIcon.",
+        "9. Title: <Text variant=\"body-medium\"><Link to={`${notificationsRoute}?id=${encodeURIComponent(notification.id)}`}>{notification.payload.title}</Link></Text> with Link from '@backstage/core-components' and notificationsRoute = useRouteRef(rootRouteRef)() from '../../routes'.",
+        "10. Meta line: <Text variant=\"body-small\" color=\"secondary\"> containing <RelativeTime value={notification.created} /> (default import from 'react-relative-time' preceded by a // @ts-ignore line, as NotificationsTable does) and, only when payload.severity is set and not 'normal', ' • ' followed by t(SeverityLabelKeys[severity]).",
+        "11. Action: <ButtonIcon aria-label={t('unreadNotificationsCard.markAsRead')} icon={<RiCheckboxCircleLine size={16} />} variant=\"secondary\" onPress={() => onMarkAsRead(notification.id)} />, ButtonIcon/Flex/Text from '@backstage/ui', icon from '@remixicon/react'.",
+        "12. Translate with useTranslationRef from '@backstage/core-plugin-api/alpha' and notificationsTranslationRef from '../../translation'; no literal user-visible string in the component.",
+        "13. UnreadNotificationsCardContent carries a /** @alpha */ TSDoc comment stating it is the content of the unread notifications home-page widget."
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCardContent",
+          "kind": "function component",
+          "params": [],
+          "returns": "JSX.Element"
+        },
+        {
+          "name": "UNREAD_NOTIFICATIONS_LIMIT",
+          "kind": "const",
+          "params": [],
+          "returns": "number"
+        },
+        {
+          "name": "UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS",
+          "kind": "const",
+          "params": [],
+          "returns": "number"
+        }
+      ],
+      "import_line": "import { UnreadNotificationsCardContent, UNREAD_NOTIFICATIONS_LIMIT, UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS } from './UnreadNotificationsCard';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx",
+        "reason": "Same package's signals subscription, toast-on-failure mark-as-read, @backstage/ui and remixicon usage."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/hooks/useNotificationsApi.ts",
+          "reason": "Fetch hook signature (useAsyncRetry wrapper with deps)."
+        },
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "lines": [29, 90],
+          "reason": "GetNotificationsOptions and NotificationsApi method shapes."
+        },
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+          "lines": [16, 50],
+          "reason": "Import block including the ts-ignored react-relative-time import."
+        }
+      ],
+      "depends_on": ["U06"],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-9",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3"
+      ],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/index.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Barrel for the card folder, used by the lazy widget import.",
+      "rules": [
+        "1. Only line after the header: export { UnreadNotificationsCardContent } from './UnreadNotificationsCard';"
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCardContent",
+          "kind": "re-export",
+          "params": [],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import('./components/UnreadNotificationsCard')",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsPage/index.ts",
+        "reason": "Same package's component barrel shape."
+      },
+      "depends_on": ["U07"],
+      "covers": ["FR-10"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/notifications/src/alpha.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Registers the unread notifications card as a new-frontend-system home-page widget of the notifications plugin.",
+      "rules": [
+        "1. const unreadNotificationsWidget = HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: { name: 'HomePageUnreadNotifications', title: 'Unread notifications', description: 'Shows your latest unread notifications', components: () => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent })) } });",
+        "2. No disabled flag, layout, settings or componentProps.",
+        "3. The plugin's extensions array becomes [page, api, unreadNotificationsWidget]; the TODO comment above it stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 24,
+          "to": 24,
+          "first_line": "import { RiNotification3Line } from '@remixicon/react';",
+          "rule": "Insert: import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 47,
+          "to": 47,
+          "first_line": "});",
+          "rule": "This line closes the api ApiBlueprint.make call; insert a blank line and the unreadNotificationsWidget declaration of rule 1 after it."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "extensions: [page, api],",
+          "rule": "Replace with extensions: [page, api, unreadNotificationsWidget],"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/search/src/alpha.tsx",
+        "lines": [35, 114],
+        "reason": "Another plugin registering a HomePageWidgetBlueprint widget next to its page and API."
+      },
+      "depends_on": ["U08", "U04"],
+      "covers": ["FR-10"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "jsdom tests for the card: listing, deep links, severity, mark as read, signal refresh, polling fallback with cleanup, empty and error states.",
+      "rules": [
+        "1. Render with renderInTestApp(<TestApiProvider apis={...}><UnreadNotificationsCardContent /></TestApiProvider>, { mountedRoutes: { '/notifications': rootRouteRef } }); rootRouteRef from '../../routes', notificationsApiRef from '../../api', toastApiRef from '@backstage/frontend-plugin-api', signalApiRef from '@backstage/plugin-signals-react'.",
+        "2. Notifications API mock: { getNotifications: jest.fn(), updateNotifications: jest.fn().mockResolvedValue([]) }; toast mock { post: jest.fn() }; fixtures are Notification objects (id, user, created: new Date(), origin, payload { title, severity }) with ids 'n1' (severity 'high') and 'n2' (severity 'normal').",
+        "3. Signal API mock: { subscribe: jest.fn((_channel, onMessage) => { emit = onMessage; return { unsubscribe }; }) } where emit and unsubscribe = jest.fn() are per-test variables; omit signalApiRef from the providers to simulate signals being unavailable.",
+        "4. Fake-timer cases call jest.useFakeTimers() before rendering, wait for the first list with findByText, then advance with act(() => { jest.advanceTimersByTime(UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS); }); afterEach restores real timers.",
+        "5. Click the mark-as-read button with fireEvent.click(screen.getAllByRole('button', { name: 'Mark as read' })[0]) and wait for removal with waitForElementToBeRemoved.",
+        "6. Use the exported constants for the limit and interval; no test ids."
+      ],
+      "style_from": {
+        "path": "plugins/home/src/homePageComponents/StarredEntities/Content.test.tsx",
+        "reason": "renderInTestApp + TestApiProvider + mountedRoutes shape for a home widget content test."
+      },
+      "uses": [
+        {
+          "path": "plugins/signals-react/src/hooks/useSignal.ts",
+          "reason": "How the card subscribes, so the signal mock matches."
+        },
+        {
+          "path": "plugins/notifications-common/src/types.ts",
+          "lines": [60, 124],
+          "reason": "Notification and NotificationSignal shapes for fixtures and emitted signals."
+        }
+      ],
+      "tests": [
+        {
+          "name": "lists unread notifications with deep links and severity and marks one as read",
+          "given": "signals available; getNotifications resolves n1 and n2 first, then only n2",
+          "expect": "getNotifications called with objectContaining { read: false, limit: UNREAD_NOTIFICATIONS_LIMIT, sort: 'created', sortOrder: 'desc' }; links named after each title have href '/notifications?id=n1' and '/notifications?id=n2'; 'High' is shown and 'Normal' is not; after clicking the first Mark as read, updateNotifications was called with { ids: ['n1'], read: true }, n1's title is removed and getNotifications was called twice"
+        },
+        {
+          "name": "refreshes on a notifications signal and does not poll while signals are available",
+          "given": "fake timers, signals available, getNotifications always resolves n1",
+          "expect": "subscribe was called with 'notifications'; after emitting { action: 'new_notification', notification_id: 'n3' } inside act getNotifications was called twice; advancing by the polling interval leaves it at two calls; after unmount the unsubscribe mock was called"
+        },
+        {
+          "name": "polls when signals are unavailable and stops polling after unmount",
+          "given": "fake timers, no signal API, getNotifications always resolves n1",
+          "expect": "advancing by UNREAD_NOTIFICATIONS_POLLING_INTERVAL_MS makes getNotifications called twice; after unmount, advancing by twice the interval leaves it at two calls"
+        },
+        {
+          "name": "shows the empty state and the error state",
+          "given": "first render with getNotifications resolving { notifications: [], totalCount: 0 }, then after unmount a render with getNotifications rejecting new Error('boom')",
+          "expect": "await findByText('You have no unread notifications') for the first render and await findByText('Failed to load unread notifications') for the second"
+        }
+      ],
+      "depends_on": ["U07"],
+      "covers": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-8",
+        "FR-1",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "NFR-5"
+      ],
+      "checks": ["format", "lint", "test"]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/notifications/src/alpha.test.ts",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Checks the new-frontend-system notifications plugin provides the page, the API and the unread notifications home widget.",
+      "rules": [
+        "1. import notificationsPlugin from './alpha'; one describe('notifications alpha plugin') with one it holding three expect(...).toBeDefined() assertions on getExtension('page:notifications'), getExtension('api:notifications') and getExtension('home-page-widget:notifications/unread-notifications')."
+      ],
+      "style_from": {
+        "path": "plugins/home/src/alpha.test.ts",
+        "lines": [1, 35],
+        "reason": "Plugin getExtension assertions for a new-system plugin."
+      },
+      "tests": [
+        {
+          "name": "provides the notifications page, API and unread notifications home widget",
+          "given": "the default export of ./alpha",
+          "expect": "getExtension returns a defined extension for 'page:notifications', 'api:notifications' and 'home-page-widget:notifications/unread-notifications'"
+        }
+      ],
+      "depends_on": ["U09"],
+      "covers": ["FR-10", "NFR-5"],
+      "checks": ["format", "lint", "test"]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the highlighted style for the deep-linked notification row.",
+      "rules": [
+        "1. Add a .highlighted rule inside the existing @layer components block: background-color: var(--bui-bg-neutral-2); border-radius: var(--bui-radius-2); box-shadow: inset 3px 0 0 var(--bui-border-info); padding: var(--bui-space-1);"
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 35,
+          "to": 35,
+          "first_line": "}",
+          "rule": "This line closes .notificationInfoRow:not(:first-child); insert a blank line and the .highlighted rule of rule 1 after it, indented two spaces inside the layer."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-12", "NFR-2"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds an optional highlightedNotificationId prop that marks the matching row as current, styles it and scrolls it into view once.",
+      "rules": [
+        "1. NotificationsTableProps gains highlightedNotificationId?: string with the TSDoc comment /** Id of a notification to highlight and scroll into view */.",
+        "2. const scrolledIdRef = useRef<string | undefined>(undefined); const highlightRef = useCallback((element: HTMLDivElement | null) => { if (element && highlightedNotificationId && scrolledIdRef.current !== highlightedNotificationId) { scrolledIdRef.current = highlightedNotificationId; element.scrollIntoView?.({ block: 'center' }); } }, [highlightedNotificationId]);",
+        "3. In the compact-data column, the outer <Flex gap=\"4\" align=\"center\"> gets, only when notification.id === highlightedNotificationId: ref={highlightRef}, className={styles.highlighted} and aria-current=\"true\"; other rows render exactly as before (no extra attributes).",
+        "4. When highlightedNotificationId is undefined or matches no row, the table behaves exactly as today (FR-13)."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsTableProps",
+          "kind": "type (changed)",
+          "params": [],
+          "returns": "adds highlightedNotificationId?: string"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "import { useCallback, useEffect, useMemo, useState } from 'react';",
+          "rule": "Add useRef to the named imports from 'react'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 58,
+          "to": 58,
+          "first_line": "markAsReadOnLinkOpen?: boolean;",
+          "rule": "Insert the documented highlightedNotificationId?: string field of rule 1."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Insert highlightedNotificationId, into the destructured props."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 85,
+          "to": 85,
+          "first_line": "const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);",
+          "rule": "Insert a blank line, scrolledIdRef and highlightRef of rule 2."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 202,
+          "to": 202,
+          "first_line": "<Flex gap=\"4\" align=\"center\">",
+          "rule": "Open the Flex with the conditional ref, className and aria-current of rule 3 (spread an object that is empty for non-matching rows)."
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 292,
+          "to": 292,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Add highlightedNotificationId, and highlightRef, to the compactColumns useMemo dependency list."
+        }
+      ],
+      "depends_on": ["U12"],
+      "covers": ["FR-12", "FR-13"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Reads the id query parameter and passes it to the table as the highlighted notification.",
+      "rules": [
+        "1. const [searchParams] = useSearchParams(); const highlightedNotificationId = searchParams.get('id') ?? undefined; using useSearchParams from 'react-router-dom'.",
+        "2. Pass highlightedNotificationId={highlightedNotificationId} to NotificationsTable; nothing else on the page changes (filters, fetch options and read state stay as today)."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useEffect, useMemo, useState } from 'react';",
+          "rule": "Insert: import { useSearchParams } from 'react-router-dom';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 81,
+          "to": 81,
+          "first_line": "} = props;",
+          "rule": "Insert a blank line and the two lines of rule 1."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 216,
+          "to": 216,
+          "first_line": "markAsReadOnLinkOpen={markAsReadOnLinkOpen}",
+          "rule": "Insert highlightedNotificationId={highlightedNotificationId}"
+        }
+      ],
+      "depends_on": ["U13"],
+      "covers": ["FR-12", "FR-13"],
+      "checks": ["format", "lint"]
+    },
+    {
+      "id": "U15",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "jsdom tests for the page's ?id= deep-link highlight and its unchanged rendering without the parameter.",
+      "rules": [
+        "1. Render NfsNotificationsPage from './NotificationsPage' with renderInTestApp(<TestApiProvider apis={[[notificationsApiRef, notificationsApi], [toastApiRef, { post: jest.fn() }]]}>...</TestApiProvider>, { routeEntries: [...] }).",
+        "2. notificationsApi mock: getNotifications resolves { notifications: [n1, n2], totalCount: 2 } (ids 'n1' and 'n2', titles 'First notification' and 'Second notification', no payload.link), getStatus resolves { unread: 2, read: 0 }, getTopics resolves { topics: [] }, updateNotifications jest.fn().",
+        "3. beforeEach assigns Element.prototype.scrollIntoView = jest.fn() (jsdom lacks it); afterEach deletes it.",
+        "4. Find rows with await screen.findByText(title) and check the marker with .closest('[aria-current=\"true\"]'); no test ids."
+      ],
+      "style_from": {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "reason": "Same package's renderInTestApp test shape."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+          "lines": [95, 141],
+          "reason": "The three API calls the page makes, which the mock must answer."
+        }
+      ],
+      "tests": [
+        {
+          "name": "highlights and scrolls to the notification named by the id query parameter",
+          "given": "routeEntries ['/notifications?id=n1']",
+          "expect": "'First notification' is inside an element with aria-current=\"true\"; 'Second notification' is not; scrollIntoView was called once with { block: 'center' }"
+        },
+        {
+          "name": "renders without a highlight when the id is absent or unknown",
+          "given": "one render with routeEntries ['/notifications'], then after unmount one with ['/notifications?id=missing']",
+          "expect": "both titles render in each case, no element has aria-current=\"true\", and scrollIntoView was not called"
+        }
+      ],
+      "depends_on": ["U14"],
+      "covers": ["AC-6", "FR-12", "FR-13", "NFR-5"],
+      "checks": ["format", "lint", "test"]
+    },
+    {
+      "id": "U16",
+      "path": "plugins/notifications/README.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the unread notifications home-page card and the notification deep link.",
+      "rules": [
+        "1. New section '## Home page card': in the new frontend system the plugin provides the `home-page-widget:notifications/unread-notifications` extension, enabled by default, which appears in the home page **Add Widget** dialog and can be placed through `page:home` `defaultConfig` with component `HomePageUnreadNotifications` (yaml example under app.extensions).",
+        "2. The section states the card lists your five newest unread notifications, lets you mark each one as read, refreshes live when `@backstage/plugin-signals` is installed and otherwise checks for new notifications every 60 seconds; it shows how to turn it off with `- home-page-widget:notifications/unread-notifications: false`.",
+        "3. New section '## Linking to a notification': `/notifications?id=<notification id>` opens the notifications page and highlights that notification when it is in the displayed list; opening the link does not mark the notification as read."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 14,
+          "to": 14,
+          "first_line": "add `@backstage/plugin-signals` package to your installation.",
+          "rule": "Append a blank line and the two sections of rules 1 to 3 at the end of the file."
+        }
+      ],
+      "style_from": {
+        "path": "docs/getting-started/homepage.md",
+        "lines": [80, 130],
+        "reason": "How the repo documents home widgets, their extension IDs and app-config snippets."
+      },
+      "depends_on": ["U09", "U14"],
+      "covers": ["FR-16", "AC-10"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U17",
+      "path": "docs/notifications/usage.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds the home-page card and the notification deep link to the frontend usage guide.",
+      "rules": [
+        "1. New '### Home page card' subsection under '## Notifications Frontend': the extension ID `home-page-widget:notifications/unread-notifications`, enabled by default, requires the home plugin (`@backstage/plugin-home`); a yaml app-config example placing `HomePageUnreadNotifications` in `page:home` `defaultConfig`; the card shows your five newest unread notifications with **Mark as read**, refreshes through signals and falls back to checking every 60 seconds when signals are not installed (link to the '## Signals' section with [Signals](#signals)).",
+        "2. New '### Linking to a notification' subsection: `/notifications?id=<notification id>` highlights the notification on the notifications page when it is in the displayed list, the home-page card uses this link for each item, and opening it does not mark the notification as read.",
+        "3. Follow docs/contribute/doc-style-guide.md; do not change other sections."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+          "rule": "Insert a blank line and the two subsections of rules 1 and 2, before the existing '## Usage' heading."
+        }
+      ],
+      "style_from": {
+        "path": "docs/getting-started/homepage.md",
+        "lines": [80, 130],
+        "reason": "Home widget documentation tone and app-config examples."
+      },
+      "depends_on": ["U09", "U14"],
+      "covers": ["FR-16", "AC-10"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U18",
+      "path": ".changeset/notifications-unread-home-card.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-notifications.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-notifications': patch.",
+        "2. Body for adopters: the plugin now provides an Unread notifications home page widget for the new frontend system (extension `home-page-widget:notifications/unread-notifications`) that lists your latest unread notifications, lets you mark them as read and refreshes live through signals or every minute without them; the notifications page now highlights the notification given in the `id` query parameter, for example `/notifications?id=<id>`.",
+        "3. No internal function, component, prop or variable names."
+      ],
+      "style_from": {
+        "path": ".changeset/neat-notification-context.md",
+        "reason": "Changeset front matter and tone for this package."
+      },
+      "depends_on": ["U09", "U14"],
+      "covers": ["FR-17", "AC-10"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U19",
+      "path": ".changeset/home-react-card-fallback-without-app-context.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-home-react.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-home-react': patch.",
+        "2. Body for adopters: home page cards no longer need the legacy app context to show their loading indicator, so cards render in apps and tests that do not provide it.",
+        "3. No internal function, component or variable names."
+      ],
+      "style_from": {
+        "path": ".changeset/neat-notification-context.md",
+        "reason": "Changeset front matter and tone."
+      },
+      "depends_on": ["U01"],
+      "covers": ["FR-17", "AC-10"],
+      "checks": ["format"]
+    }
+  ]
+}

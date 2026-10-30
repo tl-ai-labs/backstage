@@ -1,0 +1,50 @@
+{
+  "module": "notifications-unread-home-card (plugins/notifications, plugins/home-react, docs/notifications)",
+  "verdict": "needs_changes",
+  "tool_calls": 5,
+  "findings": [
+    {
+      "severity": "blocker",
+      "file": ".changeset/notifications-unread-home-card.md",
+      "issue": "Unit U18 was never produced: the file is missing from provenance.json and from the working tree. @backstage/plugin-notifications is a published package and this run changes its behavior (new home-page widget, ?id= highlight, new NotificationsTableProps field, new translation keys, new runtime dependency). CLAUDE.md and change_plan.md (U18, FR-17) both require a changeset for it.",
+      "fix": "Create .changeset/notifications-unread-home-card.md with front matter '@backstage/plugin-notifications': patch. In the body, tell adopters that the plugin now provides an Unread notifications home page widget for the new frontend system (`home-page-widget:notifications/unread-notifications`), and that the notifications page highlights the notification named in the `id` query parameter. Do not name any internal symbols."
+    },
+    {
+      "severity": "major",
+      "file": "docs/notifications/usage.md",
+      "line": 472,
+      "issue": "The yaml example is not a valid config shape. It puts `defaultConfig` under `app.routes.page:home`, but `app.routes` only takes route bindings. It also uses `gridProps: { md, xs }`, which the `page:home` defaultConfig schema does not accept. That schema is in plugins/home/src/alpha.tsx:62-71 and requires component, column, row, width and height. Anyone who copies this snippet ends up with a config that is ignored or fails validation.",
+      "fix": "Use the shape documented in docs/getting-started/homepage.md:192-220: `app: extensions: - page:home: config: defaultConfig: - component: HomePageUnreadNotifications` with `column`, `row`, `width` and `height` values, for example 0, 0, 6, 4."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/notifications/README.md",
+      "line": 21,
+      "issue": "The defaultConfig yaml example only gives `component: HomePageUnreadNotifications`. The `page:home` defaultConfigItemSchema (plugins/home/src/alpha.tsx:62-71) requires numeric `column`, `row`, `width` and `height`, so this snippet fails extension config validation.",
+      "fix": "Add `column`, `row`, `width` and `height` to the example item, for example column: 0, row: 0, width: 6, height: 4, so it matches docs/getting-started/homepage.md."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "issue": "No test covers what happens when mark-as-read fails. That path (updateNotifications rejects, then toastApi.post is called with title 'Failed to mark notification as read' and status 'danger') is new error-handling code with no assertion. The plan did not ask for this test, but it is the card's only error path that has no test.",
+      "fix": "In the existing mark-as-read test, or in one more case, make updateNotifications reject once. Click Mark as read and assert, using findBy or an awaited flush, that toastApi.post was called with expect.objectContaining({ title: 'Failed to mark notification as read', status: 'danger' })."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "issue": "The API mocks are cast with `as any` in every render (notifications, toast and signal APIs), and `emit` is typed `(msg: any) => void`. This turns off type checking on the fixtures. NotificationsPage.test.tsx in the same run passes the same kind of mocks without casts.",
+      "fix": "Drop the `as any` casts where TestApiProvider accepts partial mocks, as NotificationsPage.test.tsx does. Type `emit` as `((msg: NotificationSignal) => void) | undefined`."
+    }
+  ],
+  "passing": [
+    "Correctness against change_plan.md: U01-U17 and U19 match their rules. The card covers refreshKey, signal-vs-polling effects, isMounted-guarded refresh, render order and deep links. The table highlight is applied only to matching rows and scrolls once per id. The page reads id via useSearchParams.",
+    "Type safety in source files: no new `any`. The severity key map uses `as const`. The optional prop is documented with TSDoc. yarn tsc passes.",
+    "Error handling: load error renders a translated message, mark-as-read failure posts a toast, nothing is swallowed silently, and no stack traces reach the UI.",
+    "Authz/PII: no new routes or server surface. The card only reads the signed-in user's notifications through the existing client.",
+    "Sensitive files: both package.json diffs only add the planned dependencies (no removals or downgrades). The yarn.lock delta is limited to those entries.",
+    "Headers/conventions: all new .ts/.tsx files carry the 2026 Apache header. No default React import. home-react changes keep exports unchanged.",
+    "Env fixtures: not applicable (frontend plugin, no validating config module introduced).",
+    "API reports: report.api.md and report-alpha.api.md drift is expected and deferred by plan decision (run `yarn build:api-reports` before a PR)."
+  ],
+  "refinement_packets": []
+}

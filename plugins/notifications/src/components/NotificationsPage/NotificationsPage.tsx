@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 import {
   Content,
@@ -79,6 +80,9 @@ function NotificationsPageContent(
     markAsReadOnLinkOpen,
     headerVariant,
   } = props;
+
+  const [searchParams] = useSearchParams();
+  const highlightedNotificationId = searchParams.get('id') ?? undefined;
 
   const [refresh, setRefresh] = useState(false);
   const { lastSignal } = useSignal('notifications');
@@ -214,6 +218,7 @@ function NotificationsPageContent(
             isLoading={loading}
             isUnread={isUnread}
             markAsReadOnLinkOpen={markAsReadOnLinkOpen}
+            highlightedNotificationId={highlightedNotificationId}
             notifications={notifications}
             onUpdate={onUpdate}
             setContainsText={setContainsText}

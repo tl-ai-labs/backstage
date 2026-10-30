@@ -1,0 +1,143 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-142814-feature-new-home-unread-notifications",
+    "artifact_path": "docs/notifications/usage.md",
+    "instruction": "Fix `docs/notifications/usage.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 472): The yaml example is not a valid config shape. It puts `defaultConfig` under `app.routes.page:home`, but `app.routes` only takes route bindings. It also uses `gridProps: { md, xs }`, which the `page:home` defaultConfig schema does not accept. That schema is in plugins/home/src/alpha.tsx:62-71 and requires component, column, row, width and height. Anyone who copies this snippet ends up with a config that is ignored or fails validation. — fix: Use the shape documented in docs/getting-started/homepage.md:192-220: `app: extensions: - page:home: config: defaultConfig: - component: HomePageUnreadNotifications` with `column`, `row`, `width` and `height` values, for example 0, 0, 6, 4.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/notifications/usage.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/notifications/usage.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-142814-feature-new-home-unread-notifications/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-142814-feature-new-home-unread-notifications/briefs/U17.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/notifications/usage.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-142814-feature-new-home-unread-notifications",
+    "artifact_path": "plugins/notifications/README.md",
+    "instruction": "Fix `plugins/notifications/README.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 21): The defaultConfig yaml example only gives `component: HomePageUnreadNotifications`. The `page:home` defaultConfigItemSchema (plugins/home/src/alpha.tsx:62-71) requires numeric `column`, `row`, `width` and `height`, so this snippet fails extension config validation. — fix: Add `column`, `row`, `width` and `height` to the example item, for example column: 0, row: 0, width: 6, height: 4, so it matches docs/getting-started/homepage.md.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/README.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/README.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-142814-feature-new-home-unread-notifications/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-142814-feature-new-home-unread-notifications/briefs/U16.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/README.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261030-142814-feature-new-home-unread-notifications",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: No test covers what happens when mark-as-read fails. That path (updateNotifications rejects, then toastApi.post is called with title 'Failed to mark notification as read' and status 'danger') is new error-handling code with no assertion. The plan did not ask for this test, but it is the card's only error path that has no test. — fix: In the existing mark-as-read test, or in one more case, make updateNotifications reject once. Click Mark as read and assert, using findBy or an awaited flush, that toastApi.post was called with expect.objectContaining({ title: 'Failed to mark notification as read', status: 'danger' }).\n2. minor: The API mocks are cast with `as any` in every render (notifications, toast and signal APIs), and `emit` is typed `(msg: any) => void`. This turns off type checking on the fixtures. NotificationsPage.test.tsx in the same run passes the same kind of mocks without casts. — fix: Drop the `as any` casts where TestApiProvider accepts partial mocks, as NotificationsPage.test.tsx does. Type `emit` as `((msg: NotificationSignal) => void) | undefined`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-142814-feature-new-home-unread-notifications/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-142814-feature-new-home-unread-notifications/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]
