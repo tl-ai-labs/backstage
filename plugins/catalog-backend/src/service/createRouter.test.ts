@@ -69,6 +69,7 @@ describe('createRouter readonly disabled', () => {
       entityAncestry: jest.fn(),
       facets: jest.fn(),
       queryEntities: jest.fn(),
+      resolveFormerEntityRef: jest.fn(),
     };
     locationService = {
       getLocation: jest.fn(),
@@ -554,6 +555,106 @@ describe('createRouter readonly disabled', () => {
     });
   });
 
+  describe('GET /entities/by-former-name/:kind/:namespace/:name', () => {
+    let auditor: ReturnType<typeof mockServices.auditor.mock>;
+    let logger: ReturnType<typeof mockServices.logger.mock>;
+
+    beforeEach(async () => {
+      auditor = mockServices.auditor.mock();
+      logger = mockServices.logger.mock();
+      const router = await createRouter({
+        entitiesCatalog,
+        locationService,
+        orchestrator,
+        logger,
+        refreshService,
+        config: new ConfigReader(undefined),
+        auth: mockServices.auth(),
+        httpAuth: mockServices.httpAuth(),
+        locationAnalyzer,
+        permissionsService,
+        auditor,
+      });
+      router.use(middleware.error());
+      app = await wrapServer(express().use(router));
+    });
+
+    it('returns the current ref of the single claimant', async () => {
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'resolved',
+        entityRef: 'component:default/new',
+      });
+
+      const response = await request(app).get(
+        '/entities/by-former-name/component/default/old',
+      );
+
+      expect(entitiesCatalog.resolveFormerEntityRef).toHaveBeenCalledWith({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.user(),
+      });
+      expect(response.status).toEqual(200);
+      expect(response.body).toEqual({ entityRef: 'component:default/new' });
+      expect(auditor.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'entity-fetch',
+          meta: {
+            queryType: 'by-former-name',
+            entityRef: 'component:default/old',
+          },
+        }),
+      );
+    });
+
+    it('responds 404 when the ref is current', async () => {
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'current',
+      });
+
+      const response = await request(app).get(
+        '/entities/by-former-name/component/default/old',
+      );
+
+      expect(entitiesCatalog.resolveFormerEntityRef).toHaveBeenCalledWith({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.user(),
+      });
+      expect(response.status).toEqual(404);
+      expect(response.text).toMatch(/current ref/);
+    });
+
+    it('responds with the same 404 for misses and conflicts', async () => {
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'none',
+      });
+      const missResponse = await request(app).get(
+        '/entities/by-former-name/component/default/old',
+      );
+
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'conflict',
+        entityRefs: ['component:default/a', 'component:default/b'],
+      });
+      const conflictResponse = await request(app).get(
+        '/entities/by-former-name/component/default/old',
+      );
+
+      expect(entitiesCatalog.resolveFormerEntityRef).toHaveBeenCalledTimes(2);
+      expect(entitiesCatalog.resolveFormerEntityRef).toHaveBeenCalledWith({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.user(),
+      });
+      expect(missResponse.status).toEqual(404);
+      expect(conflictResponse.status).toEqual(404);
+      expect(conflictResponse.body).toEqual(missResponse.body);
+      expect(conflictResponse.text).not.toContain('component:default/a');
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('component:default/a, component:default/b'),
+      );
+    });
+  });
+
   describe('DELETE /entities/by-uid/:uid', () => {
     it('can remove', async () => {
       entitiesCatalog.removeEntityByUid.mockResolvedValue(undefined);
@@ -878,6 +979,7 @@ describe('createRouter readonly disabled', () => {
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          resolveFormerEntityRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,
@@ -1392,6 +1494,7 @@ describe('createRouter readonly and raw json enabled', () => {
       entityAncestry: jest.fn(),
       facets: jest.fn(),
       queryEntities: jest.fn(),
+      resolveFormerEntityRef: jest.fn(),
     };
     locationService = {
       getLocation: jest.fn(),
@@ -1647,6 +1750,7 @@ describe.each(databases.eachSupportedId())(
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          resolveFormerEntityRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,

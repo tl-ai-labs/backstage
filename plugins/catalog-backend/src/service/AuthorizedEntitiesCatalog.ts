@@ -32,8 +32,10 @@ import {
   EntityAncestryResponse,
   EntityFacetsRequest,
   EntityFacetsResponse,
+  FormerEntityRefResolution,
   QueryEntitiesRequest,
   QueryEntitiesResponse,
+  ResolveFormerEntityRefRequest,
 } from '../catalog/types';
 import { FilterPredicate } from '@backstage/filter-predicates';
 import { basicEntityFilter, entityFilterToFilterPredicate } from './request';
@@ -127,6 +129,30 @@ export class AuthorizedEntitiesCatalog implements EntitiesCatalog {
     }
 
     return this.entitiesCatalog.entitiesBatch(request);
+  }
+
+  async resolveFormerEntityRef(
+    request: ResolveFormerEntityRefRequest,
+  ): Promise<FormerEntityRefResolution> {
+    const resolution = await this.entitiesCatalog.resolveFormerEntityRef(
+      request,
+    );
+    if (resolution.type === 'none' || resolution.type === 'conflict') {
+      return resolution;
+    }
+
+    const revealedRef =
+      resolution.type === 'current' ? request.formerRef : resolution.entityRef;
+
+    const { items } = await this.entitiesBatch({
+      entityRefs: [revealedRef],
+      credentials: request.credentials,
+    });
+    if (items.entities[0] === null) {
+      return { type: 'none' };
+    }
+
+    return resolution;
   }
 
   async queryEntities(

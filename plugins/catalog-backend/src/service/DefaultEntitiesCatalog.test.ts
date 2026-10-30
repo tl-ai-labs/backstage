@@ -909,6 +909,165 @@ describe.each(databases.eachSupportedId())(
       });
     });
 
+    describe('resolveFormerEntityRef', () => {
+      it('resolves a former ref to its single claimant', async () => {
+        await createDatabase();
+
+        await addEntity(
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'new-name',
+              annotations: {
+                'backstage.io/former-names': 'old-name',
+              },
+            },
+            spec: { type: 'service' },
+          },
+          [],
+        );
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerRef: 'component:default/Old-Name',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({
+          type: 'resolved',
+          entityRef: 'component:default/new-name',
+        });
+      });
+
+      it('reports refs that nobody claims', async () => {
+        await createDatabase();
+
+        await addEntity(
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'new-name',
+              annotations: {
+                'backstage.io/former-names': 'old-name',
+              },
+            },
+            spec: { type: 'service' },
+          },
+          [],
+        );
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerRef: 'component:default/unknown',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ type: 'none' });
+      });
+
+      it('never lets a claim hijack a live entity', async () => {
+        await createDatabase();
+
+        await addEntity(
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'new-name',
+              annotations: {
+                'backstage.io/former-names': 'live',
+              },
+            },
+            spec: { type: 'service' },
+          },
+          [],
+        );
+
+        await addEntity(
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'live',
+            },
+            spec: { type: 'service' },
+          },
+          [],
+        );
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerRef: 'component:default/live',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ type: 'current' });
+      });
+
+      it('reports conflicting claims', async () => {
+        await createDatabase();
+
+        await addEntity(
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'a',
+              annotations: {
+                'backstage.io/former-names': 'shared',
+              },
+            },
+            spec: { type: 'service' },
+          },
+          [],
+        );
+
+        await addEntity(
+          {
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'b',
+              annotations: {
+                'backstage.io/former-names': 'shared',
+              },
+            },
+            spec: { type: 'service' },
+          },
+          [],
+        );
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerRef: 'component:default/shared',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({
+          type: 'conflict',
+          entityRefs: ['component:default/a', 'component:default/b'],
+        });
+      });
+    });
+
     describe('queryEntities', () => {
       it('should return paginated entities and scroll the items accordingly', async () => {
         await createDatabase();

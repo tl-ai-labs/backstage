@@ -172,6 +172,29 @@ describe('<TechDocsReaderPage />', () => {
       await screen.findByTestId('techdocs-native-shadowroot'),
     ).toBeInTheDocument();
   });
+
+  it('shows the renamed notice after a former-name redirect', async () => {
+    await renderPage({
+      routePath: '/docs/:namespace/:kind/:name/*',
+      routeEntry:
+        '/docs/test-namespace/Component/test-name?renamedFrom=component%3Adefault%2Fold-name',
+      element: (
+        <TechDocsReaderPage
+          addonOptions={addonOptions}
+          withSearch={false}
+          withHeader={false}
+          withFeedbackLink={false}
+        />
+      ),
+    });
+
+    expect(
+      await screen.findByText(
+        /This entity was renamed from component:default\/old-name/,
+      ),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('ADDON_RENDERED')).toBeInTheDocument();
+  });
 });
 
 describe('<TechDocsEntityContent />', () => {

@@ -341,5 +341,31 @@ describe('buildEntitySearch', () => {
         `Entity has duplicate keys that vary only in casing, 'spec.owner', 'spec.lifecycle'`,
       );
     });
+
+    it('adds former entity refs', () => {
+      const rows = buildEntitySearch('eid', {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'n',
+          annotations: {
+            'backstage.io/former-names': 'Old, other/older, old',
+          },
+        },
+      });
+
+      const formerRows = rows.filter(r => r.key === 'former_entity_ref');
+      expect(formerRows.map(r => r.value)).toEqual([
+        'component:default/old',
+        'component:other/older',
+      ]);
+
+      const annotationRow = rows.find(
+        r =>
+          r.key === 'metadata.annotations.backstage.io/former-names' &&
+          r.value === 'old, other/older, old',
+      );
+      expect(annotationRow).toBeDefined();
+    });
   });
 });

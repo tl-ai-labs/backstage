@@ -1,0 +1,96 @@
+{
+  "module": "entity-former-names (catalog-model, catalog-client, catalog-backend, catalog, techdocs)",
+  "verdict": "needs_changes",
+  "tool_calls": 7,
+  "passing_checks": [
+    "Correctness vs change_plan: backend resolution, indexing, OpenAPI contract, client method, both frontend redirects and docs match the plan's decisions.",
+    "Authz: new route uses httpAuth.credentials like by-name; AuthorizedEntitiesCatalog re-checks the revealed ref through its own permissioned entitiesBatch; none/unreadable/conflict share one 404 body.",
+    "PII: none introduced; conflict claimants are logged server-side only, never in the response.",
+    "Error handling: parser never throws; validator names the offending item; frontend lookups swallow errors and fall back to not-found as planned.",
+    "Sensitive files: no package.json, .env.example, CLAUDE.md or settings files touched.",
+    "Env fixture check: not applicable (no validating config module, no new required config keys).",
+    "Changesets: one per package, minor bumps, adopter-facing text naming only public API."
+  ],
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "line": 157,
+      "issue": "The returned loading value (loading || formerLookup.loading || Boolean(redirectTo)) does not match when the former-ref lookup actually applies. (1) When getEntityByRef resolves to undefined, the render that commits first has loading=false and formerLookup.loading=false, because the previous no-op run already settled. useAsync only sets loading=true in its effect after commit, so 'Entity not found' flashes before the redirect. Plan rule 6 forbids this. (2) On every normal load and on every refresh(), the entity change re-runs the no-op lookup, which sets formerLookup.loading=true for one render, so EntityLayout flashes <Progress /> after the entity has loaded. Tests only assert the final state, so neither shows up. Confidence: high (react-use useAsyncFn sets loading:true inside the effect).",
+      "fix": "Compute `applicable = !!name && !loading && !error && !entity && !!catalogApi.getEntityRefByFormerRef`. Make the lookup always resolve to `{ fromRef, toRef | undefined }` for the current ref, including in the catch. Then return `loading: loading || (applicable && formerLookup.value?.fromRef !== currentRef) || Boolean(redirectTo)` and ignore formerLookup.loading when the lookup does not apply."
+    },
+    {
+      "severity": "major",
+      "file": "packages/catalog-model/report.api.md",
+      "issue": "API report not regenerated. ANNOTATION_FORMER_NAMES and parseFormerEntityRefs are new @public exports, but the report has no 'former' entry. The CI api-reports check fails, and CLAUDE.md requires `yarn build:api-reports` before a PR.",
+      "fix": "Run `yarn build:api-reports` from the repo root and commit the updated report."
+    },
+    {
+      "severity": "major",
+      "file": "packages/catalog-client/report.api.md",
+      "issue": "API report not regenerated for the new optional CatalogApi.getEntityRefByFormerRef and CatalogClient.getEntityRefByFormerRef (0 'former' matches in the report).",
+      "fix": "Regenerate with `yarn build:api-reports`; also covers report-testUtils.api.md (InMemoryCatalogClient.getEntityRefByFormerRef)."
+    },
+    {
+      "severity": "major",
+      "file": "packages/catalog-client/report-testUtils.api.md",
+      "issue": "InMemoryCatalogClient gained public method getEntityRefByFormerRef; report not updated.",
+      "fix": "Regenerate with `yarn build:api-reports`."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog/report-alpha.api.md",
+      "issue": "catalogTranslationRef gained 'entityPage.renamedNotice', and that ref's message keys are listed in report-alpha.api.md and report.api.md, but neither report was updated.",
+      "fix": "Regenerate with `yarn build:api-reports` (updates both plugins/catalog reports)."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/techdocs/report-alpha.api.md",
+      "issue": "techdocsTranslationRef gained 'redirectNotification.renamedEntity' and 'redirectNotification.dismiss'; the report that lists these keys was not updated.",
+      "fix": "Regenerate with `yarn build:api-reports`."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog/src/alpha/pages.test.tsx",
+      "line": 2736,
+      "issue": "'keeps the not-found page when nothing claims the ref' fails under full-suite load but passes alone. The not-found result now needs an extra async round (the former lookup) before it shows, and findByText's default 1s timeout is tight under load.",
+      "fix": "Pass a larger timeout to findByText('Entity not found', {}, { timeout: 3000 }), or rerun after the useEntityFromUrl loading fix, which may remove the extra round."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-backend/src/service/createRouter.ts",
+      "line": 552,
+      "issue": "For current/none/conflict the handler calls auditorEvent.success() and then throws NotFoundError inside the same try, so the catch also calls auditorEvent.fail(). Each 404 records both outcomes. The by-name route has the same pattern (writeSingleEntityResponse throws after success()), so this follows existing code, but it is still a double-terminated audit event.",
+      "fix": "For the 404 branches, call fail() only, or call success() and throw outside the try. Keep it consistent with whatever the maintainers prefer for by-name."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-backend/src/service/createRouter.ts",
+      "line": 555,
+      "issue": "logger.warn fires on every request for a conflicting former ref, so any authenticated caller can make repeated warn lines by hitting the endpoint.",
+      "fix": "Consider logger.debug, or rate-limit or de-duplicate the warning per ref (for example a small in-memory Set with TTL)."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRenamedNotice.tsx",
+      "line": 32,
+      "issue": "The notice text comes from the `renamedFrom` query param, so a crafted link shows 'This entity was renamed from <anything>' (text only, no XSS). In TechDocs the param is also never removed, so it stays in shared or bookmarked URLs and the notice comes back on every reload. The same spoofing applies to the catalog alert in useEntityFromUrl.ts, though catalog removes the param.",
+      "fix": "Remove renamedFrom after showing the notice (replace navigation), as the catalog hook does. Optionally carry the marker in navigation state instead of the query string so it cannot be forged by a link."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "line": 2958,
+      "issue": "`(catalogApiMock as any).getEntityRefByFormerRef = ...` uses an untyped cast and changes the shared mock without restoring it, so the method leaks into any later test in the file.",
+      "fix": "Declare getEntityRefByFormerRef: jest.fn() on the catalogApiMock object where it is defined, and reset it in the describe's beforeEach."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "line": 3049,
+      "issue": "`any` is used for mockViewTechdocLink args (`..._args: any[]`, `({ namespace, kind, name }: any)`) where the route params type is known.",
+      "fix": "Type the args as `{ namespace: string; kind: string; name: string }`."
+    }
+  ],
+  "refinement_packets": []
+}

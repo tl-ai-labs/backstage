@@ -1033,6 +1033,120 @@ describe.each(databases.eachSupportedId())(
   },
 );
 
+it.each(databases.eachSupportedId())(
+  'indexes former entity refs and keeps them in sync for %p',
+  async databaseId => {
+    const knex = await databases.init(databaseId);
+    await applyDatabaseMigrations(knex);
+    const logger = mockServices.logger.mock();
+
+    await knex<DbRefreshStateRow>('refresh_state').insert([
+      {
+        entity_id: 'my-id',
+        entity_ref: 'k:ns/n',
+        unprocessed_entity: JSON.stringify({}),
+        processed_entity: JSON.stringify({
+          apiVersion: 'a',
+          kind: 'k',
+          metadata: {
+            name: 'n',
+            namespace: 'ns',
+            annotations: {
+              'backstage.io/former-names': 'old, k:other/older',
+            },
+          },
+        }),
+        errors: '[]',
+        next_update_at: knex.fn.now(),
+        last_discovery_at: knex.fn.now(),
+      },
+    ]);
+
+    await markForStitching({
+      knex,
+      entityRefs: ['k:ns/n'],
+    });
+    await performStitching({
+      knex,
+      logger,
+      ...(await getStitchClaim(knex, 'k:ns/n')),
+    });
+
+    let formerRows = await knex<DbSearchRow>('search').where(
+      'key',
+      'former_entity_ref',
+    );
+    expect(
+      formerRows.map(r => r.value ?? '').sort((a, b) => a.localeCompare(b)),
+    ).toEqual(['k:ns/old', 'k:other/older']);
+
+    // Change annotation to 'renamed'
+    await knex<DbRefreshStateRow>('refresh_state')
+      .where('entity_id', 'my-id')
+      .update({
+        processed_entity: JSON.stringify({
+          apiVersion: 'a',
+          kind: 'k',
+          metadata: {
+            name: 'n',
+            namespace: 'ns',
+            annotations: {
+              'backstage.io/former-names': 'renamed',
+            },
+          },
+        }),
+      });
+
+    await markForStitching({
+      knex,
+      entityRefs: ['k:ns/n'],
+    });
+    await performStitching({
+      knex,
+      logger,
+      ...(await getStitchClaim(knex, 'k:ns/n')),
+    });
+
+    formerRows = await knex<DbSearchRow>('search').where(
+      'key',
+      'former_entity_ref',
+    );
+    expect(
+      formerRows.map(r => r.value ?? '').sort((a, b) => a.localeCompare(b)),
+    ).toEqual(['k:ns/renamed']);
+
+    // Remove annotation
+    await knex<DbRefreshStateRow>('refresh_state')
+      .where('entity_id', 'my-id')
+      .update({
+        processed_entity: JSON.stringify({
+          apiVersion: 'a',
+          kind: 'k',
+          metadata: {
+            name: 'n',
+            namespace: 'ns',
+          },
+        }),
+      });
+
+    await markForStitching({
+      knex,
+      entityRefs: ['k:ns/n'],
+    });
+    await performStitching({
+      knex,
+      logger,
+      ...(await getStitchClaim(knex, 'k:ns/n')),
+    });
+
+    formerRows = await knex<DbSearchRow>('search').where(
+      'key',
+      'former_entity_ref',
+    );
+    expect(formerRows).toEqual([]);
+  },
+);
+
 async function getStitchClaim(knex: import('knex').Knex, entityRef: string) {
   const claims = await getDeferredStitchableEntities({
     knex,

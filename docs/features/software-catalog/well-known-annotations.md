@@ -80,6 +80,46 @@ metadata:
     backstage.io/orphan: 'true'
 ```
 
+### backstage.io/former-names
+
+```yaml
+# Example:
+metadata:
+  name: new-service
+  annotations:
+    backstage.io/former-names: 'old-service, legacy/older-service'
+```
+
+The value of this annotation is a comma-separated list of entity refs that this
+entity was previously known as. Whitespace around items is ignored. When a
+short-form ref (such as just a name, or `namespace/name`) is provided, kind and
+namespace default to those of the declaring entity itself. Former entity refs
+are compared case-insensitively.
+
+Claim rules:
+
+- A former ref must have the same kind as the entity.
+- A former ref must not be the entity's own current ref.
+- A former ref must follow the usual entity naming rules.
+- A ref in another namespace is allowed.
+
+An invalid item is reported as a processing error on the entity that names the
+item.
+
+Opening the entity page or TechDocs URL of a former ref redirects to the entity's
+current URL and shows a notice that the entity was renamed. A live entity always
+keeps its own name, so if an entity currently holds the ref there is no redirect.
+If more than one entity claims the same former ref, there is no redirect and the
+catalog logs a warning.
+
+The redirect only happens when the user may read the entity that claims the ref;
+otherwise the page shows Entity not found, the same as when nothing claims the
+ref.
+
+You can also query former names through the catalog endpoint
+`GET /entities/by-former-name/<kind>/<namespace>/<name>`. See the
+[Catalog API documentation](api.md) for details.
+
 ### backstage.io/techdocs-ref
 
 ```yaml

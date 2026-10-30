@@ -1,0 +1,116 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=1 yarn test plugins/techdocs fails: useExternalRedirect > redirects a former ref to the renamed entity docs keeping the sub-path (line 327). Expected mockNavigate('/docs/default/component/new-name/sub/page?x=1&renamedFrom=component%3Adefault%2Fold-name#h', {replace: true}); Received '/docs/default/component/new-name/sub/page?renamedFrom=component%3Adefault%2Fold-name'. The hook is correct (it reads location.search and location.hash); the test never gives it that location: mockLocation is reset to { pathname: '/', search: '', hash: '' } in beforeEach (line 53) and this test does not override it. In this test only, before rendering the hook, set mockLocation = { pathname: '/docs/default/component/old-name/sub/page', search: '?x=1', hash: '#h' }. Change nothing else and keep the expected string as it is.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-feature-new-entity-former-names/briefs/U40.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "node_modules/.bin/prettier --check '{path}'",
+          "fix": "node_modules/.bin/prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "node_modules/.bin/eslint '{path}'",
+          "fix": "node_modules/.bin/eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 400,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261029-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=1 yarn test plugins/techdocs still fails: <TechDocsReaderPage /> > renamed entity redirect > shows the renamed notice after the redirect: \"Reached NotFound Page\" (NotFoundErrorPage of @backstage/test-utils appWrappers.tsx:75), so the FlatRoutes/Route setup with routeEntries ['/docs/test-namespace/test/test-name/?renamedFrom=...'] matches no route. Rewrite only this one test to render the page the way the passing tests at the top of this file do (lines ~185-200): <Wrapper><TechDocsReaderPage entityRef={{ name: 'test-name', namespace: 'test-namespace', kind: 'test' }} /></Wrapper> with { mountedRoutes, components: mockAppComponents, routeEntries: ['/?renamedFrom=component%3Adefault%2Fold-name'] } (no FlatRoutes, no Route), keeping catalogApiMock.getEntityByRef.mockResolvedValue(mockEntityMetadata) and the same two assertions (findByText /This entity was renamed from component:default\\/old-name/ and getByText('Dismiss')). Check against TechDocsReaderPage.tsx and TechDocsRenamedNotice.tsx how the notice reads renamedFrom (useLocation / useSearchParams) so the route entry supplies it. Do not change the other tests.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261029-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261029-feature-new-entity-former-names/briefs/U41.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRenamedNotice.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "node_modules/.bin/prettier --check '{path}'",
+          "fix": "node_modules/.bin/prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "node_modules/.bin/eslint '{path}'",
+          "fix": "node_modules/.bin/eslint --fix '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 400,
+      "max_retries": 2
+    }
+  }
+]

@@ -500,6 +500,18 @@ export const spec = {
         required: ['items'],
         additionalProperties: false,
       },
+      FormerEntityRefResponse: {
+        type: 'object',
+        properties: {
+          entityRef: {
+            type: 'string',
+            description:
+              'The current ref of the entity that claims the former ref.',
+          },
+        },
+        required: ['entityRef'],
+        additionalProperties: false,
+      },
       EntityFacet: {
         type: 'object',
         properties: {
@@ -1077,6 +1089,49 @@ export const spec = {
               'application/json': {
                 schema: {
                   $ref: '#/components/schemas/EntityAncestryResponse',
+                },
+              },
+            },
+          },
+          '400': {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+        },
+        security: [
+          {},
+          {
+            JWT: [],
+          },
+        ],
+        parameters: [
+          {
+            $ref: '#/components/parameters/kind',
+          },
+          {
+            $ref: '#/components/parameters/namespace',
+          },
+          {
+            $ref: '#/components/parameters/name',
+          },
+        ],
+      },
+    },
+    '/entities/by-former-name/{kind}/{namespace}/{name}': {
+      get: {
+        operationId: 'GetEntityRefByFormerName',
+        tags: ['Entity'],
+        description:
+          'Get the current entity ref of the entity that claims a former entity ref.',
+        responses: {
+          '200': {
+            description: 'Ok',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/FormerEntityRefResponse',
                 },
               },
             },

@@ -1,0 +1,285 @@
+{
+  "section": "units",
+  "source": "units-006.json",
+  "value": [
+    {
+      "id": "U35",
+      "path": "plugins/techdocs/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the renamed-entity notice strings to the TechDocs translation ref.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 51,
+          "to": 51,
+          "first_line": "redirectNow: 'Redirect now',",
+          "rule": "Add `renamedEntity: 'This entity was renamed from {{formerRef}}. Please update your links and bookmarks.',` and `dismiss: 'Dismiss',` inside redirectNotification."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-15"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U36",
+      "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Lets callers set the action button label so the same Snackbar serves the renamed notice; the default label stays 'Redirect now'.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 27,
+          "to": 27,
+          "first_line": "autoHideDuration: number;",
+          "rule": "Add `actionLabel?: string;` to the props type."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 40,
+          "to": 40,
+          "first_line": "autoHideDuration,",
+          "rule": "Destructure `actionLabel,`."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 65,
+          "to": 65,
+          "first_line": "{t('redirectNotification.redirectNow')}",
+          "rule": "Render `{actionLabel ?? t('redirectNotification.redirectNow')}`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-15"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U37",
+      "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRenamedNotice.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Shows the renamed notice after a former-name redirect in the TechDocs reader, using the existing redirect Snackbar.",
+      "rules": [
+        "1. formerRef = new URLSearchParams(useLocation().search).get('renamedFrom'); render null when it is not set.",
+        "2. Otherwise render <TechDocsRedirectNotification message={t('redirectNotification.renamedEntity', { formerRef })} actionLabel={t('redirectNotification.dismiss')} autoHideDuration={10000} handleButtonClick={() => {}} />; the Snackbar closes itself on the button and on timeout.",
+        "3. Internal component with a short doc comment and `@internal`; not exported from the package index."
+      ],
+      "exports": [
+        {
+          "name": "TechDocsRenamedNotice",
+          "kind": "component",
+          "params": [],
+          "returns": "JSX.Element | null"
+        }
+      ],
+      "import_line": "import { TechDocsRenamedNotice } from '../TechDocsRedirectNotification/TechDocsRenamedNotice';",
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx",
+        "reason": "Component, translation hook and import style of the notification."
+      },
+      "depends_on": ["U35", "U36"],
+      "covers": ["FR-15", "NFR-3"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U38",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "When the docs entity does not exist, resolves its ref as a former ref and returns a redirect URL to the current entity's docs, keeping the docs sub-path, query and hash and adding the renamedFrom marker.",
+      "rules": [
+        "1. Add useLocation and useParams from react-router-dom; splat = useParams()['*'] ?? ''; location = useLocation().",
+        "2. Inside the existing try, after getEntityByRef: when catalogEntity is undefined and catalogApi.getEntityRefByFormerRef exists, newRef = await catalogApi.getEntityRefByFormerRef(entityRef); when newRef is set and viewTechdocLink exists, parse it with parseEntityRef and build base = viewTechdocLink({ namespace, kind, name }) (lowercase parts from the parsed ref), params = copy of new URLSearchParams(location.search) with renamedFrom = stringifyEntityRef(entityRef), and return `${base}${splat ? `/${splat}` : ''}?${params}${location.hash}`.",
+        "3. The external-annotation branch, the catch that ignores errors, the useAsync dependency list, the navigate effect with replace and the shouldShowProgress logic stay as they are; the splat and location are read only inside the async callback, so sub-page navigation does not re-run the check.",
+        "4. Update the hook's doc comment to mention that it also redirects links to a former entity ref, as declared by the backstage.io/former-names annotation, to the current entity's docs.",
+        "5. Import parseEntityRef from '@backstage/catalog-model' next to the existing imports."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 104,
+          "first_line": "import { useEffect, useRef } from 'react';",
+          "last_line": "}",
+          "rule": "Rewrite the file body from the imports to the end of the hook per rules 1-5, keeping the signature and return shape of useExternalRedirect."
+        }
+      ],
+      "depends_on": ["U26"],
+      "covers": ["FR-14"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U39",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Renders the renamed notice in the reader page for every configuration; the alpha reader renders the same page through TechDocsReaderRouter.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 43,
+          "to": 43,
+          "first_line": "import { useExternalRedirect } from './useExternalRedirect';",
+          "rule": "Add `import { TechDocsRenamedNotice } from '../TechDocsRedirectNotification/TechDocsRenamedNotice';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 230,
+          "to": 230,
+          "first_line": "<ThemeProvider theme={readerPageTheme}>",
+          "rule": "Render `<TechDocsRenamedNotice />` as the first child of the ThemeProvider in the no-children branch."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 242,
+          "to": 242,
+          "first_line": "<ThemeProvider theme={readerPageTheme}>",
+          "rule": "Render `<TechDocsRenamedNotice />` as the first child of the ThemeProvider in the children branch."
+        }
+      ],
+      "depends_on": ["U37", "U38"],
+      "covers": ["FR-15"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U40",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the former-ref fallback of the docs redirect hook.",
+      "rules": [
+        "1. Add getEntityRefByFormerRef: jest.fn() to mockCatalogApi; mockViewTechdocLink returns `/docs/${namespace}/${kind}/${name}` for its argument in these cases.",
+        "2. The hook is rendered inside a MemoryRouter with initialEntries ['/docs/default/component/old-name/sub/page?x=1#h'] and a Route path '/docs/:namespace/:kind/:name/*' around the wrapper, so useParams and useLocation see the docs sub-path."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 38,
+          "to": 38,
+          "first_line": "getEntityByRef: jest.fn(),",
+          "rule": "Add `getEntityRefByFormerRef: jest.fn(),`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 282,
+          "to": 282,
+          "first_line": "});",
+          "rule": "Before the end of the describe, add a blank line and the cases listed in tests."
+        }
+      ],
+      "tests": [
+        {
+          "name": "redirects a former ref to the renamed entity's docs keeping the sub-path",
+          "given": "getEntityByRef resolves undefined and getEntityRefByFormerRef resolves 'component:default/new-name'",
+          "expect": "navigate called with '/docs/default/component/new-name/sub/page?x=1&renamedFrom=component%3Adefault%2Fold-name#h' and { replace: true }"
+        },
+        {
+          "name": "does not look up former refs for existing entities or when nothing claims the ref",
+          "given": "getEntityByRef resolves an entity; then resolves undefined while getEntityRefByFormerRef resolves undefined",
+          "expect": "getEntityRefByFormerRef not called in the first case; navigate not called in either"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+        "lines": [50, 105],
+        "reason": "renderHook cases in this file."
+      },
+      "depends_on": ["U38"],
+      "covers": ["AC-6", "FR-14"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U41",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Old frontend system tests: the reader redirects a former docs URL and shows the renamed notice after the redirect.",
+      "rules": [
+        "1. Reuse Wrapper, mountedRoutes and the mocked useNavigate; set catalogApiMock.getEntityByRef to resolve undefined and catalogApiMock.getEntityRefByFormerRef = jest.fn().mockResolvedValue('component:default/new-name') for the redirect case.",
+        "2. Render <Routes><Route path=\"/docs/:namespace/:kind/:name/*\" element={<TechDocsReaderPage />} /></Routes> with routeEntries set, so the route params and the docs sub-path come from the URL."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 450,
+          "to": 450,
+          "first_line": "});",
+          "rule": "Before the end of the top-level describe, add a blank line and describe('renamed entity redirect') with the cases listed in tests."
+        }
+      ],
+      "tests": [
+        {
+          "name": "navigates from a former docs URL to the current docs URL",
+          "given": "routeEntries ['/docs/default/component/old-name/sub/page']",
+          "expect": "mockNavigate called with '/docs/default/component/new-name/sub/page?renamedFrom=component%3Adefault%2Fold-name' and { replace: true }"
+        },
+        {
+          "name": "shows the renamed notice after the redirect",
+          "given": "getEntityByRef resolves the entity and routeEntries ['/docs/test-namespace/test/test-name?renamedFrom=component%3Adefault%2Fold-name']",
+          "expect": "screen.findByText matches 'This entity was renamed from component:default/old-name' and a 'Dismiss' button exists"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "lines": [310, 353],
+        "reason": "External redirect cases in this file."
+      },
+      "depends_on": ["U39"],
+      "covers": ["AC-6", "FR-14", "FR-15"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U42",
+      "path": "plugins/techdocs/src/alpha/components/TechDocsReaderPage.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "New frontend system test: the alpha reader shows the renamed notice after a former-name redirect.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 175,
+          "to": 175,
+          "first_line": "});",
+          "rule": "Inside describe('<TechDocsReaderPage />'), add a blank line and the case listed in tests, using the existing renderPage helper."
+        }
+      ],
+      "tests": [
+        {
+          "name": "shows the renamed notice after a former-name redirect",
+          "given": "routePath '/docs/:namespace/:kind/:name/*' and routeEntry '/docs/test-namespace/Component/test-name?renamedFrom=component%3Adefault%2Fold-name' with the same element as the existing case",
+          "expect": "screen.findByText matches 'This entity was renamed from component:default/old-name' and ADDON_RENDERED still shows"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/alpha/components/TechDocsReaderPage.test.tsx",
+        "lines": [155, 175],
+        "reason": "The existing reader case."
+      },
+      "depends_on": ["U39"],
+      "covers": ["AC-6", "FR-15"],
+      "checks": ["prettier", "eslint", "jest"]
+    }
+  ],
+  "hashes": {
+    "plugins/techdocs/src/translation.ts": "c24dada25e678926c3daa5957dde10534e6e15e29f7f4023f06d7ff7ff70499c",
+    "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx": "032b837f83cad115ea4dc4ff176456c65a355e74596266f1533e38ef591f7f29",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts": "bdc05b9ee057fe5b3efc5e10b7f0a3fc14adcc375137ca24f65d8887fdda8af1",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx": "99e696efcf13a98aa446135088dce6048957abb7dfc6d685b5232d47caa5661c",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx": "5f2227eec2ee7d7263c723bc1a7d43773b186553a951750d810f08b02646da4f",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx": "65e6ceb6441168ab8e28c589e9cfb50a12d70d4463134adf32c8250c53fa7e0d",
+    "plugins/techdocs/src/alpha/components/TechDocsReaderPage.test.tsx": "57961f7aa725fc722c387e70cdf9758642fa7e7a6e31c0ceb331c62719508770"
+  }
+}

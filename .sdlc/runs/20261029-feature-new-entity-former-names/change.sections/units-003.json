@@ -1,0 +1,260 @@
+[
+  {
+    "id": "U18",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds a stitching test proving former refs are indexed, updated and removed as the annotation changes.",
+    "rules": [
+      "1. New top-level it.each(databases.eachSupportedId()) case, same setup as 'runs the happy path for %p': init the database, apply migrations, insert one refresh_state row 'k:ns/n' whose processed_entity carries metadata.annotations['backstage.io/former-names'], then markForStitching and performStitching with getStitchClaim.",
+      "2. Read rows with knex<DbSearchRow>('search').where('key', 'former_entity_ref') and compare the sorted values.",
+      "3. Update processed_entity in refresh_state, mark and stitch again for each later step."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 1036,
+        "to": 1036,
+        "first_line": "async function getStitchClaim(knex: import('knex').Knex, entityRef: string) {",
+        "rule": "Insert the new it.each case followed by one blank line."
+      }
+    ],
+    "tests": [
+      {
+        "name": "indexes former entity refs and keeps them in sync for %p",
+        "given": "entity k:ns/n with former-names 'old, k:other/older'; then the annotation changed to 'renamed'; then removed",
+        "expect": "first ['k:ns/old', 'k:other/older']; then ['k:ns/renamed']; then no former_entity_ref rows"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+      "lines": [106, 160],
+      "reason": "Setup of the happy-path stitching case."
+    },
+    "depends_on": ["U07"],
+    "covers": ["AC-2", "FR-5", "NFR-4"],
+    "checks": ["prettier", "eslint", "jest"]
+  },
+  {
+    "id": "U19",
+    "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds database tests for DefaultEntitiesCatalog.resolveFormerEntityRef on every supported database.",
+    "rules": [
+      "1. Add entities with the existing addEntity(entity, []) helper, which writes search rows through buildEntitySearch, so former refs are indexed.",
+      "2. Construct the catalog as the neighbouring tests do with database: knex and logger: mockServices.logger.mock(); call it with credentials: mockCredentials.none()."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 910,
+        "to": 910,
+        "first_line": "});",
+        "rule": "After the entitiesBatch describe, add a blank line and describe('resolveFormerEntityRef') with the cases listed in tests."
+      }
+    ],
+    "tests": [
+      {
+        "name": "resolves a former ref to its single claimant",
+        "given": "component:default/new-name with former-names 'old-name'",
+        "expect": "formerRef 'component:default/Old-Name' gives { type: 'resolved', entityRef: 'component:default/new-name' }"
+      },
+      {
+        "name": "reports refs that nobody claims",
+        "given": "the same entity",
+        "expect": "formerRef 'component:default/unknown' gives { type: 'none' }"
+      },
+      {
+        "name": "never lets a claim hijack a live entity",
+        "given": "component:default/new-name claims 'live' and component:default/live exists",
+        "expect": "formerRef 'component:default/live' gives { type: 'current' }"
+      },
+      {
+        "name": "reports conflicting claims",
+        "given": "component:default/a and component:default/b both claim 'shared'",
+        "expect": "{ type: 'conflict', entityRefs: ['component:default/a', 'component:default/b'] }"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+      "lines": [783, 835],
+      "reason": "entitiesBatch cases with the addEntity helper."
+    },
+    "depends_on": ["U10"],
+    "covers": ["AC-3", "NFR-4"],
+    "checks": ["prettier", "eslint", "jest"]
+  },
+  {
+    "id": "U20",
+    "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds resolveFormerEntityRef to the fake catalog and tests the permission wrapper.",
+    "rules": [
+      "1. Permission outcomes are driven through fakePermissionApi.authorizeConditional as the entitiesBatch cases do; the fake catalog's entitiesBatch returns { items: { type: 'object', entities: [entity] } } when access is allowed."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 38,
+        "to": 38,
+        "first_line": "queryEntities: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),` to fakeCatalog."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 684,
+        "to": 684,
+        "first_line": "});",
+        "rule": "Add a blank line and describe('resolveFormerEntityRef') with the cases listed in tests, inside the top-level describe."
+      }
+    ],
+    "tests": [
+      {
+        "name": "returns the claimant when the caller may read it",
+        "given": "fake resolution { type: 'resolved', entityRef: 'component:default/new' } and ALLOW",
+        "expect": "the resolution is returned and entitiesBatch was asked for ['component:default/new']"
+      },
+      {
+        "name": "hides a claimant the caller may not read",
+        "given": "the same resolution and DENY",
+        "expect": "{ type: 'none' }"
+      },
+      {
+        "name": "hides a current entity the caller may not read",
+        "given": "fake resolution { type: 'current' } for 'component:default/old' and DENY",
+        "expect": "{ type: 'none' }"
+      },
+      {
+        "name": "passes conflicts and misses through",
+        "given": "fake resolutions { type: 'conflict', entityRefs: [...] } and { type: 'none' }",
+        "expect": "returned unchanged and no permission call is made"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+      "lines": [104, 163],
+      "reason": "entitiesBatch permission cases."
+    },
+    "depends_on": ["U11"],
+    "covers": ["AC-3", "NFR-5"],
+    "checks": ["prettier", "eslint", "jest"]
+  },
+  {
+    "id": "U21",
+    "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds resolveFormerEntityRef to every EntitiesCatalog mock and tests the new route, including the auditor event and the conflict warning.",
+    "rules": [
+      "1. The new describe has its own beforeEach that builds a router exactly like the top-level beforeEach but with local `auditor = mockServices.auditor.mock()` and `logger = mockServices.logger.mock()` so the test can assert on them; it reuses the outer entitiesCatalog mock.",
+      "2. Mocked resolutions are set with entitiesCatalog.resolveFormerEntityRef.mockResolvedValue.",
+      "3. Every request asserts resolveFormerEntityRef was called with { formerRef: 'component:default/old', credentials: mockCredentials.user() }."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 71,
+        "to": 71,
+        "first_line": "queryEntities: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 555,
+        "to": 555,
+        "first_line": "});",
+        "rule": "After the by-name describe add a blank line and describe('GET /entities/by-former-name/:kind/:namespace/:name') with the cases listed in tests."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 880,
+        "to": 880,
+        "first_line": "facets: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),`."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 1394,
+        "to": 1394,
+        "first_line": "queryEntities: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),`."
+      },
+      {
+        "id": "S5",
+        "at": "insert_after",
+        "from": 1649,
+        "to": 1649,
+        "first_line": "facets: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),`."
+      }
+    ],
+    "tests": [
+      {
+        "name": "returns the current ref of the single claimant",
+        "given": "resolution { type: 'resolved', entityRef: 'component:default/new' } and GET /entities/by-former-name/component/default/old",
+        "expect": "200 with body { entityRef: 'component:default/new' }; auditor.createEvent called with eventId 'entity-fetch' and meta { queryType: 'by-former-name', entityRef: 'component:default/old' }"
+      },
+      {
+        "name": "responds 404 when the ref is current",
+        "given": "resolution { type: 'current' }",
+        "expect": "404 whose text mentions that the ref is current"
+      },
+      {
+        "name": "responds with the same 404 for misses and conflicts",
+        "given": "resolution { type: 'none' }, then { type: 'conflict', entityRefs: ['component:default/a', 'component:default/b'] }",
+        "expect": "both 404 with identical bodies that do not contain 'component:default/a'; logger.warn called once naming both refs for the conflict"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+      "lines": [515, 555],
+      "reason": "Supertest cases of the by-name route."
+    },
+    "depends_on": ["U17"],
+    "covers": ["AC-3", "FR-7", "AC-7"],
+    "checks": ["prettier", "eslint", "jest"]
+  },
+  {
+    "id": "U22",
+    "path": "plugins/catalog-backend/src/tests/performance/query-battery/queries.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds scenario 15, the former entity ref lookup, with its method call, reference SQL, healthy plan and anti-patterns.",
+    "rules": [
+      "1. Heading '## 15. Former entity ref lookup (renamed entity redirect)'; user action: opening an old link to a renamed entity, which only happens after the by-ref lookup of scenario 6 found nothing.",
+      "2. Method call block: catalog.resolveFormerEntityRef({ formerRef: 'component:default/old-service', credentials }).",
+      "3. Reference SQL: first `SELECT final_entities.entity_ref FROM final_entities WHERE final_entities.entity_ref = 'component:default/old-service' AND final_entities.final_entity IS NOT NULL LIMIT 1;` then `SELECT final_entities.entity_ref FROM search INNER JOIN final_entities ON final_entities.entity_id = search.entity_id WHERE search.key = 'former_entity_ref' AND search.value = 'component:default/old-service' AND final_entities.final_entity IS NOT NULL ORDER BY final_entities.entity_ref ASC LIMIT 10;`.",
+      "4. Healthy plan: Index Scan on final_entities_entity_ref_uniq for the first query; Index Only Scan on search_key_value_entity_idx with a nested loop into final_entities_pkey for the second; well under 1ms each.",
+      "5. Anti-patterns: Seq Scan on search, any LIKE on search.value, a scan of metadata.annotations rows.",
+      "6. State that no baseline numbers are recorded yet in baseline.md; they are added when the battery is next run."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 631,
+        "to": 631,
+        "first_line": "## Global anti-patterns",
+        "rule": "Insert the scenario (rules 1-6), then a line `---` and a blank line, so the separator layout matches the other scenarios."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/tests/performance/query-battery/queries.md",
+      "lines": [227, 255],
+      "reason": "Scenario 6, the by-ref lookup."
+    },
+    "depends_on": ["U10"],
+    "covers": ["NFR-2", "AC-8"],
+    "checks": ["prettier"]
+  }
+]

@@ -479,6 +479,22 @@ export class CatalogClient implements CatalogApi {
     );
   }
 
+  /**
+   * {@inheritdoc CatalogApi.getEntityRefByFormerRef}
+   */
+  async getEntityRefByFormerRef(
+    formerRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<string | undefined> {
+    const response = await this.requestOptional(
+      await this.apiClient.getEntityRefByFormerName(
+        { path: parseEntityRef(formerRef) },
+        options,
+      ),
+    );
+    return response?.entityRef as string | undefined;
+  }
+
   // NOTE(freben): When we deprecate getEntityByName from the interface, we may
   // still want to leave this implementation in place for quite some time
   // longer, to minimize the risk for breakages. Suggested date for removal:

@@ -673,6 +673,20 @@ error if there was no entity with that reference triplet.
 
 Get an entity's ancestry by entity ref.
 
+### `GET /entities/by-former-name/<kind>/<namespace>/<name>`
+
+Resolves a former entity reference to the entity's current reference.
+
+The return type is JSON, on the form
+
+```json
+{
+  "entityRef": "component:default/my-service"
+}
+```
+
+Returns a 404 error when an entity currently holds the reference, when nothing claims the former reference through [`backstage.io/former-names`](./well-known-annotations.md#backstageioformer-names), when several entities claim it, or when the caller may not read the claimant entity. The 404 response body does not reveal which condition caused the lookup to fail.
+
 ### `POST /entities/by-refs`
 
 Gets a batch of entities by their entity refs. This is useful in contexts where

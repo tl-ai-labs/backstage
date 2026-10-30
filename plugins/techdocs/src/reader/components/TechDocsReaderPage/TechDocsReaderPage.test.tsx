@@ -97,7 +97,9 @@ const entityPresentationApiMock: jest.Mocked<
   }),
 };
 
-const catalogApiMock = catalogApiMockFactory.mock();
+const catalogApiMock = Object.assign(catalogApiMockFactory.mock(), {
+  getEntityRefByFormerRef: jest.fn(),
+});
 
 const fetchApiMock = {
   fetch: jest.fn().mockResolvedValue({
@@ -445,6 +447,69 @@ describe('<TechDocsReaderPage />', () => {
       expect(rendered.container.querySelector('header')).toBeInTheDocument();
       expect(rendered.container.querySelector('article')).toBeInTheDocument();
       expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('renamed entity redirect', () => {
+    beforeEach(() => {
+      mockNavigate.mockClear();
+      catalogApiMock.getEntityByRef.mockReset();
+      catalogApiMock.getEntityRefByFormerRef.mockReset();
+    });
+
+    it('navigates from a former docs URL to the current docs URL', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      catalogApiMock.getEntityRefByFormerRef.mockResolvedValue(
+        'component:default/new-name',
+      );
+
+      await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          routeEntries: ['/docs/default/component/old-name/sub/page'],
+        },
+      );
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/docs/default/component/new-name/sub/page?renamedFrom=component%3Adefault%2Fold-name',
+        { replace: true },
+      );
+    });
+
+    it('shows the renamed notice after the redirect', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(mockEntityMetadata);
+
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <TechDocsReaderPage
+            entityRef={{
+              name: 'test-name',
+              namespace: 'test-namespace',
+              kind: 'test',
+            }}
+          />
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/?renamedFrom=component%3Adefault%2Fold-name'],
+        },
+      );
+
+      expect(
+        await rendered.findByText(
+          /This entity was renamed from component:default\/old-name/,
+        ),
+      ).toBeInTheDocument();
+      expect(rendered.getByText('Dismiss')).toBeInTheDocument();
     });
   });
 });

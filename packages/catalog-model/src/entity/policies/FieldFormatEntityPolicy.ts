@@ -22,6 +22,7 @@ import {
   Validators,
 } from '../../validation';
 import { Entity } from '../Entity';
+import { validateFormerEntityRefs } from '../formerNames';
 
 /**
  * Ensures that the format of individual fields of the entity envelope
@@ -141,6 +142,8 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
       require(`annotations.${k}`, k, this.validators.isValidAnnotationKey);
       require(`annotations.${k}`, v, this.validators.isValidAnnotationValue);
     }
+
+    validateFormerEntityRefs(entity, this.validators);
 
     const tags = entity.metadata.tags ?? [];
 

@@ -30,8 +30,10 @@ import {
   EntityFacetsResponse,
   EntityOrder,
   EntityPagination,
+  FormerEntityRefResolution,
   QueryEntitiesRequest,
   QueryEntitiesResponse,
+  ResolveFormerEntityRefRequest,
   TotalItemsMode,
 } from '../catalog/types';
 import {
@@ -43,6 +45,7 @@ import {
   DbSearchRow,
 } from '../database/tables';
 import { markForStitching } from '../database/operations/stitcher/markForStitching';
+import { FORMER_ENTITY_REF_SEARCH_KEY } from '../database/operations/stitcher/buildEntitySearch';
 
 import {
   isQueryEntitiesCursorRequest,
@@ -364,6 +367,52 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
     const items = request.entityRefs.map(ref => lookup.get(ref) ?? null);
 
     return { items: await processRawEntitiesResult(items, request.fields) };
+  }
+
+  async resolveFormerEntityRef(
+    request: ResolveFormerEntityRefRequest,
+  ): Promise<FormerEntityRefResolution> {
+    const ref = request.formerRef.toLocaleLowerCase('en-US');
+
+    const currentEntity = await this.database<DbFinalEntitiesRow>(
+      'final_entities',
+    )
+      .where('entity_ref', ref)
+      .whereNotNull('final_entity')
+      .select('entity_ref')
+      .first();
+
+    if (currentEntity) {
+      return { type: 'current' };
+    }
+
+    const claimants = await this.database('search')
+      .innerJoin(
+        'final_entities',
+        'final_entities.entity_id',
+        'search.entity_id',
+      )
+      .where('search.key', FORMER_ENTITY_REF_SEARCH_KEY)
+      .where('search.value', ref)
+      .whereNotNull('final_entities.final_entity')
+      .select<{ entityRef: string }[]>({
+        entityRef: 'final_entities.entity_ref',
+      })
+      .orderBy('final_entities.entity_ref', 'asc')
+      .limit(10);
+
+    if (claimants.length === 0) {
+      return { type: 'none' };
+    }
+
+    if (claimants.length === 1) {
+      return { type: 'resolved', entityRef: claimants[0].entityRef };
+    }
+
+    return {
+      type: 'conflict',
+      entityRefs: claimants.map(c => c.entityRef),
+    };
   }
 
   async queryEntities(

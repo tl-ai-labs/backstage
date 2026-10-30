@@ -14,10 +14,17 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
+import {
+  DEFAULT_NAMESPACE,
+  Entity,
+  parseFormerEntityRefs,
+} from '@backstage/catalog-model';
 import { InputError } from '@backstage/errors';
 import { DbSearchRow } from '../../tables';
 import { NULL_SENTINEL } from './util';
+
+// The search key under which the former entity refs of an entity are indexed.
+export const FORMER_ENTITY_REF_SEARCH_KEY = 'former_entity_ref';
 
 // These are excluded in the generic loop, either because they do not make sense
 // to index, or because they are special-case always inserted whether they are
@@ -30,6 +37,7 @@ const SPECIAL_KEYS = [
   'metadata.namespace',
   'metadata.uid',
   'metadata.etag',
+  FORMER_ENTITY_REF_SEARCH_KEY,
 ];
 
 // The maximum length allowed for search values. These columns are indexed, and
@@ -208,6 +216,14 @@ export function buildEntitySearch(
     raw.push({
       key: `relations.${relation.type}`,
       value: relation.targetRef,
+    });
+  }
+
+  // Visit former entity refs
+  for (const ref of parseFormerEntityRefs(entity)) {
+    raw.push({
+      key: FORMER_ENTITY_REF_SEARCH_KEY,
+      value: ref,
     });
   }
 

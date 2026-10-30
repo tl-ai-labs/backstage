@@ -85,6 +85,16 @@ namespace) _only_ apply for the entity input YAML data. In protocols, storage
 systems, or when referring to entities externally, the entity ref always
 consists of all three parts.
 
+## Renaming an entity
+
+Because an entity's URL is built from its kind, namespace and name, a rename
+breaks existing links. You can add the old entity ref to the
+[`backstage.io/former-names`](well-known-annotations.md#backstageioformer-names)
+annotation on the renamed entity so that visits to old entity page and TechDocs
+URLs redirect to its new location. Note that references held by other entities,
+such as `spec.owner`, are not rewritten automatically and must be updated by
+hand.
+
 ## Compound References
 
 This is a more verbose version of a reference, where each part of the
