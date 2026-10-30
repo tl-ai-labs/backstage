@@ -1,0 +1,51 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261030-152500-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn build:api-reports fails the package's no-warnings gate (\"Error: The API Report for packages/catalog-model is not allowed to have warnings\"). The generated packages/catalog-model/report.api.md now carries exactly one warning line, introduced by this run, on the enforce member of FieldFormatEntityPolicy:\n\n  // Warning: (ae-unresolved-link) The @link reference could not be resolved: The package \"@backstage/catalog-model\" does not have an export \"Error\"\n\nThe cause is in the TSDoc block added to the enforce method at line 61 of this file:\n\n  * @throws An {@link Error} on the first validation failure, naming the failing\n\n{@link Error} points at the global JavaScript Error constructor, which is not an export of @backstage/catalog-model, so API Extractor cannot resolve it. A {@link ...} in this package may only target an export of this package (e.g. {@link Entity}) or a URL ({@link https://...}).\n\nFix: in the @throws text of enforce, refer to the error in plain prose with no {@link} wrapper around Error — write the word Error (or `Error`) as plain text instead of {@link Error}. Change nothing else: keep the rest of the @throws sentence and every other line of the block exactly as it is, keep the tag order (description, @remarks, release tag, @param, @throws), keep @param entity - with its hyphen, add no release tag to this member (it is a member of a documented class), and do not alter the copyright header or its year. This is a comment-only change; the method body must not change.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-152500-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-152500-docs-catalog-model-tsdoc/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]
