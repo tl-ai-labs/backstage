@@ -1,0 +1,238 @@
+{
+  "section": "units",
+  "source": "units-006.json",
+  "value": [
+    {
+      "id": "U27",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "When a docs reader URL's entity does not exist, resolves its ref as a former ref and navigates to the renamed entity's docs URL preserving the docs sub-path, query and fragment.",
+      "rules": [
+        "1. Export one hook, `useFormerRefRedirect(entityRef: CompoundEntityRef)`, returning `{ shouldShowProgress: boolean }`. Mark it `@internal`: it is not part of the package's public API.",
+        "2. Model it directly on the sibling `useExternalRedirect` in this same directory, including its `checkedEntityRef` useRef guard against remount flicker and its `entityKey = stringifyEntityRef(entityRef)` stable dependency. Do not modify useExternalRedirect itself — the two concerns are distinct and must not share one useAsync.",
+        "3. Inside a single `useAsync` keyed on `[entityKey, catalogApi]`: first call `catalogApi.getEntityByRef(entityRef)` inside a try/catch. If it returns a truthy entity, return `undefined` — the entity exists, so this hook does nothing and the ordinary docs flow proceeds. This is what keeps genuine 'docs not built' behaviour unchanged: CONTENT_NOT_FOUND for an entity that DOES exist never reaches this code.",
+        "4. Only when the entity is absent, call `resolveFormerEntityRef(catalogApi, entityKey)`. On status 'resolved', return the computed target URL plus the former ref; on 'unknown', return `undefined` so the existing behaviour is untouched.",
+        "5. Swallow every error from both calls and return `undefined`, exactly as useExternalRedirect does: this is a render path and it must never throw.",
+        "6. TARGET URL, preserving the docs sub-path: get `docsRoute = useRouteRef(rootDocsRouteRef)`. Compute `oldBase = docsRoute({ namespace, kind, name })` from the requested ref and `newBase = docsRoute(...)` from the resolved entity's kind, namespace and name, lowercased the way rootDocsRouteRef params are built elsewhere in this plugin. Take `useLocation()`'s pathname; if it starts with `oldBase`, the target is `newBase` plus the remainder after `oldBase`; otherwise `newBase` alone. Append `location.search` and `location.hash` verbatim. This makes a stale /docs/default/component/old-name/some/page land on /docs/default/component/new-name/some/page.",
+        "7. In a `useEffect`, when the async value holds a target, call `navigate(target, { replace: true, state: { formerEntityRef } })` — the same navigation-state carrier the catalog redirect uses, so the one notice component serves both. When the async settles with no target, set `checkedEntityRef.current = entityKey` so a sub-page navigation within the same entity does not re-check.",
+        "8. `shouldShowProgress` follows useExternalRedirect's formula: true while checking a not-yet-checked entity, or whenever a target exists and navigation is pending.",
+        "9. Import resolveFormerEntityRef from '@backstage/catalog-client' (already a dependency of this package), CompoundEntityRef and stringifyEntityRef from '@backstage/catalog-model', catalogApiRef from '@backstage/plugin-catalog-react', and rootDocsRouteRef from '../../../routes'.",
+        "10. Apache 2.0 header with year 2026."
+      ],
+      "exports": [
+        {
+          "name": "useFormerRefRedirect",
+          "kind": "hook",
+          "params": [
+            {
+              "name": "entityRef",
+              "type": "CompoundEntityRef"
+            }
+          ],
+          "returns": "{ shouldShowProgress: boolean }"
+        }
+      ],
+      "import_line": "import { useFormerRefRedirect } from './useFormerRefRedirect';",
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+        "reason": "The sibling hook this one mirrors: its imports, its entityKey/checkedEntityRef guard, its useAsync-plus-useEffect shape and its shouldShowProgress formula are to be followed closely."
+      },
+      "uses": [
+        {
+          "path": "plugins/techdocs/src/routes.ts",
+          "lines": [
+            17,
+            31
+          ],
+          "reason": "rootDocsRouteRef's exact id and params order, which the target-URL construction passes."
+        }
+      ],
+      "depends_on": [
+        "U13"
+      ],
+      "covers": [
+        "FR-17",
+        "FR-18",
+        "AC-19"
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ]
+    },
+    {
+      "id": "U28",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Wires the former-ref docs redirect into the single reader-page component both frontend systems render through.",
+      "rules": [
+        "1. Call `useFormerRefRedirect(memoizedEntityRef)` immediately after the existing `useExternalRedirect(memoizedEntityRef)` call, destructuring its result under a distinct name so the two progress flags do not collide.",
+        "2. Combine the two flags with `||` at the existing `if (shouldShowProgress) return <Progress />;` guard, so the page shows the spinner while either redirect is being decided and never flashes a 404 before redirecting.",
+        "3. This one call site reaches BOTH frontend systems: the legacy Router renders TechDocsReaderPage directly, and the alpha reader page renders it through TechDocsReaderRouter. Do not add a second call site in src/alpha.",
+        "4. Change nothing else in this file — not the four documented reader-page configurations, not the theme wiring, not the 2022 copyright year."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 43,
+          "first_line": "import { useExternalRedirect } from './useExternalRedirect';",
+          "rule": "Keep this import and add the useFormerRefRedirect import from './useFormerRefRedirect' on the following line."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 200,
+          "to": 201,
+          "first_line": "// Check for external TechDocs redirects and handle navigation",
+          "last_line": "const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef);",
+          "rule": "Keep the existing call, renaming its destructured field to a distinct local name, and add the useFormerRefRedirect call beside it with its own distinct local name. Update the comment to say both redirect checks are performed here."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 223,
+          "to": 225,
+          "first_line": "if (shouldShowProgress) {",
+          "last_line": "}",
+          "rule": "Change the condition to the disjunction of the two progress flags, keeping the early <Progress /> return and the explanatory comment above it unchanged."
+        }
+      ],
+      "style_from": {
+        "unit": "U27",
+        "reason": "The hook being wired in; its returned shape determines the destructuring at this call site."
+      },
+      "depends_on": [
+        "U27"
+      ],
+      "covers": [
+        "FR-17",
+        "FR-18"
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ]
+    },
+    {
+      "id": "U29",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Proves the docs redirect fires only for a non-existent entity, preserves the docs sub-path, leaves docs-not-built untouched, and never throws.",
+      "rules": [
+        "1. Mirror the sibling useExternalRedirect.test.tsx exactly in setup: renderHook with a TestApiProvider wrapper supplying catalogApiRef, plus the jest.mock of react-router-dom's useNavigate and of core-plugin-api's useRouteRef.",
+        "2. At most four thorough `it` blocks.",
+        "3. Block one, docs-not-built is untouched (FR-18): getEntityByRef returns an existing entity. Assert navigate was never called, queryEntities was never called, and shouldShowProgress settles false — so a CONTENT_NOT_FOUND for a real entity behaves exactly as before.",
+        "4. Block two, the redirect and sub-path preservation (FR-17, AC-19): getEntityByRef returns undefined and the former-ref query returns one renamed entity. Drive it from a docs location with a sub-path, a query string and a fragment, and assert navigate was called once with `{ replace: true }`, with state carrying the former ref, and with a target holding the new ref plus the same sub-path, query and fragment.",
+        "5. Block three, unknown ref changes nothing: getEntityByRef undefined and the query returning zero items yields no navigate and shouldShowProgress settling false, so the existing docs 404 surfaces as it does today.",
+        "6. Block four, guarded and safe: repeated re-renders for the same ref issue the lookup only once (the checkedEntityRef guard), and a getEntityByRef that rejects yields no navigate and no thrown error.",
+        "7. Do not add a test id. Apache 2.0 header with year 2026."
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+        "reason": "The sibling test for the sibling hook: its mocks, wrapper and assertion style are to be copied directly."
+      },
+      "depends_on": [
+        "U27"
+      ],
+      "covers": [
+        "AC-8",
+        "AC-19",
+        "AC-20",
+        "FR-17",
+        "FR-18"
+      ],
+      "tests": [
+        {
+          "name": "does nothing when the docs entity exists",
+          "given": "getEntityByRef returning an entity for the docs URL's ref",
+          "expect": "no navigate, no former-ref query, progress settling false — docs-not-built behaviour unchanged"
+        },
+        {
+          "name": "redirects a stale docs URL preserving the sub-path",
+          "given": "a docs URL with a sub-path, query and fragment whose entity is absent and whose former-ref query returns one renamed entity",
+          "expect": "navigate called once with replace true, state carrying the former ref, and a target holding the new ref plus the identical sub-path, query and fragment"
+        },
+        {
+          "name": "leaves an unknown docs ref alone",
+          "given": "an absent entity and a former-ref query returning zero items",
+          "expect": "no navigate and progress settling false, so the existing docs 404 surfaces unchanged"
+        },
+        {
+          "name": "checks once per entity and survives a failing lookup",
+          "given": "repeated re-renders for one ref, and separately a getEntityByRef that rejects",
+          "expect": "a single lookup across re-renders, and no navigate and no throw on rejection"
+        }
+      ],
+      "checks": [
+        "format",
+        "lint",
+        "unit"
+      ]
+    },
+    {
+      "id": "U30",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Asserts in jsdom that a stale TechDocs URL lands on the renamed entity's docs with the rename notice.",
+      "rules": [
+        "1. Append one nested `describe('former ref redirect')` block inside the existing `describe('<TechDocsReaderPage />')`, as a sibling of the existing `describe('external TechDocs redirect')` block. Modify no existing test.",
+        "2. Reuse the file's existing fixtures exactly: the `Wrapper` component, the `mountedRoutes` object, the module-level `mockNavigate` jest.fn and the `catalogApiMock` whose `getEntityByRef` the sibling block already drives. Introduce no new wrapper or API registry. Add a `queryEntities` jest.fn to that same catalog mock if it does not already carry one.",
+        "3. Give the block a `beforeEach` mirroring the sibling's: clear mockNavigate and reset getEntityByRef, then set getEntityByRef to resolve undefined so the entity is absent.",
+        "4. One thorough `it` block: with getEntityByRef resolving undefined and queryEntities resolving one renamed entity, render TechDocsReaderPage inside Wrapper at a docs route carrying a sub-path, and assert `mockNavigate` was called once with the renamed entity's docs URL INCLUDING the preserved sub-path and with `{ replace: true, state: { formerEntityRef: ... } }`. Assert on the navigate target, as the sibling block does, rather than on rendered docs content: the content comes from the techdocs storage API and is not what this test is about.",
+        "5. In the same block, assert the negative: with getEntityByRef resolving a real entity, mockNavigate is not called — the docs-not-built path is untouched.",
+        "6. Do not add a test id. Do not change the file's existing copyright year."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 449,
+          "to": 449,
+          "first_line": "  });",
+          "rule": "Insert a blank line and the new nested describe('former ref redirect') block here, after the existing describe('external TechDocs redirect') block's closing line and before line 450's `});` which closes describe('<TechDocsReaderPage />'). Indent to two spaces, matching that sibling."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "lines": [
+          310,
+          360
+        ],
+        "reason": "The existing describe('external TechDocs redirect') block is the exact sibling pattern to copy: its beforeEach, its Wrapper and mountedRoutes usage, and its mockNavigate assertion shape."
+      },
+      "depends_on": [
+        "U28"
+      ],
+      "covers": [
+        "AC-8",
+        "AC-19",
+        "FR-17"
+      ],
+      "tests": [
+        {
+          "name": "a stale docs URL lands on the renamed entity's docs with the sub-path preserved",
+          "given": "a docs route whose entity is absent and whose former-ref query returns one renamed entity, with a docs sub-path in the URL; and separately the same route with the entity present",
+          "expect": "a single replace-navigation to the renamed entity's docs URL with the same sub-path and the former ref in navigation state; and no navigation at all when the entity exists"
+        }
+      ],
+      "checks": [
+        "format",
+        "lint",
+        "unit"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts": "bdc05b9ee057fe5b3efc5e10b7f0a3fc14adcc375137ca24f65d8887fdda8af1",
+    "plugins/techdocs/src/routes.ts": "b9ba74ad2d323333e97649b515bea6a54661ce7cd9f9c707e468ca3e4d42d0e6",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx": "99e696efcf13a98aa446135088dce6048957abb7dfc6d685b5232d47caa5661c",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx": "5f2227eec2ee7d7263c723bc1a7d43773b186553a951750d810f08b02646da4f",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx": "65e6ceb6441168ab8e28c589e9cfb50a12d70d4463134adf32c8250c53fa7e0d"
+  }
+}

@@ -1,0 +1,309 @@
+[
+  {
+    "id": "U20",
+    "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "After a direct entity lookup misses, attempts former-ref resolution once and redirects to the renamed entity's URL preserving the sub-path, query and fragment, carrying the former ref in navigation state.",
+    "rules": [
+      "1. This hook is the SINGLE shared seam: both frontend systems import it (legacy components/CatalogEntityPage/CatalogEntityPage.tsx and alpha alpha/components/CatalogEntityPage.tsx), so one implementation serves both. Do not move this logic into a component — a component reaches only one system.",
+      "2. Keep the existing `useAsyncRetry` direct lookup exactly as it is, and keep the hook's return type `EntityLoadingStatus` and its four returned fields unchanged. A URL that resolves normally must issue NO additional request: every new step below is gated on `entity` being undefined after loading finished.",
+      "3. Add a `useRef<string | null>(null)` named `attemptedRefRef`, holding the stringified ref the hook has already attempted resolution for. Compute the current requested ref once with `stringifyEntityRef({ kind, namespace, name })`. This mirrors the `checkedEntityRef` guard in plugins/techdocs useExternalRedirect and prevents a duplicate attempt across the remounts a replace-navigation causes.",
+      "4. Add a second `useAsync` (not useAsyncRetry) whose body returns `undefined` immediately unless ALL of: `name` is set, `loading` is false, `error` is undefined, `entity` is undefined, and `attemptedRefRef.current !== requestedRef`. Otherwise it sets `attemptedRefRef.current = requestedRef` and returns `await resolveFormerEntityRef(catalogApi, requestedRef)`. Its dependency array is `[catalogApi, requestedRef, entity, loading, error]`.",
+      "5. In a `useEffect` watching that second async's value: when the value's status is 'resolved', compute the target URL and call `navigate(target, { replace: true, state: { formerEntityRef: value.formerEntityRef } })`. When the status is 'unknown' or the value is undefined, do nothing at all — no navigate, no state, so the existing not-found UI renders unchanged.",
+      "6. TARGET URL CONSTRUCTION, preserving the sub-path: get `entityRoute = useRouteRef(entityRouteRef)`; compute `oldBase = entityRoute({ kind, namespace, name })` and `newBase = entityRoute(entityRouteParams(value.entity))`. Take `location.pathname` from `useLocation()`; if it starts with `oldBase`, the target pathname is `newBase` followed by the remainder after `oldBase`; otherwise fall back to `newBase` alone. Append `location.search` and `location.hash` verbatim. This is what makes /catalog/default/component/old-name/docs land on /catalog/default/component/new-name/docs. Import entityRouteParams and entityRouteRef from '@backstage/plugin-catalog-react'.",
+      "7. NO REDIRECT LOOP: the destination's direct lookup succeeds, so the gate in rule 4 is false there and resolution is never entered again for it. Do not add a counter or a URL parameter.",
+      "8. Carry the former ref ONLY in navigation state, never as a query parameter — the URL the user may re-share must stay clean, and the notice must not reappear on a direct reload.",
+      "9. Leave the existing `useEffect` that posts an error and navigates to '/' when `name` is missing exactly as it is.",
+      "10. Import resolveFormerEntityRef from '@backstage/catalog-client' and stringifyEntityRef from '@backstage/catalog-model'; both are already dependencies of this package. Do not change the file's 2022 copyright year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 29,
+        "first_line": "import {",
+        "last_line": "import useAsyncRetry from 'react-use/esm/useAsyncRetry';",
+        "rule": "Rewrite the import block to add: useRouteRef to the core-plugin-api import; entityRouteParams to the plugin-catalog-react import; stringifyEntityRef from '@backstage/catalog-model'; resolveFormerEntityRef from '@backstage/catalog-client'; useRef to the react import; useLocation to the react-router-dom import; and useAsync from 'react-use/esm/useAsync'. Keep every existing import and the @backstage-first ordering."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 31,
+        "to": 45,
+        "first_line": "export const useEntityFromUrl = (): EntityLoadingStatus => {",
+        "last_line": "  );",
+        "rule": "Keep this header and the existing useAsyncRetry direct lookup byte-for-byte in behaviour, and add after them: the useRouteRef(entityRouteRef) call, the useLocation() call, the requestedRef computation, the attemptedRefRef useRef, and the second gated useAsync described in rules 3 and 4."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 52,
+        "to": 52,
+        "first_line": "  }, [errorApi, navigate, error, loading, entity, name]);",
+        "rule": "Insert a blank line and the redirect useEffect from rules 5 and 6 after the existing missing-name effect, before the return statement."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+      "lines": [40, 95],
+      "reason": "The repo's existing precedent for exactly this pattern: a gated useAsync plus a useRef remount guard plus a useEffect that navigates with { replace: true }."
+    },
+    "uses": [
+      {
+        "path": "plugins/catalog-react/src/routes.ts",
+        "lines": [17, 90],
+        "reason": "entityRouteRef's params and entityRouteParams' exact signature and lowercasing behaviour, which the target-URL construction depends on."
+      }
+    ],
+    "depends_on": ["U13"],
+    "covers": ["FR-12", "FR-14", "FR-15", "FR-16", "NFR-1", "AC-19"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U21",
+    "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Renders the rename notice at the legacy not-found decision site so the legacy frontend system shows it on arrival.",
+    "rules": [
+      "1. Render `<EntityRenamedNotice />` immediately BEFORE the `{entity && <RoutedTabs routes={routes} />}` line, so it appears above the tab content when the redirect succeeded. It must NOT go inside the `!loading && !error && !entity` not-found branch: by the time the notice is wanted, the redirect has already happened and `entity` IS set.",
+      "2. The component is prop-less here (it defaults to the legacy Material UI rendering) and returns null when no former ref is in navigation state, so this one line is inert on every ordinary page load.",
+      "3. Add EntityRenamedNotice to the existing named import from '@backstage/plugin-catalog-react', keeping the names alphabetically ordered in the braces.",
+      "4. Change nothing else in this file — not the not-found WarningPanel, not the error branch, not the 2020 copyright year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 43,
+        "to": 54,
+        "first_line": "import {",
+        "last_line": "} from '@backstage/plugin-catalog-react';",
+        "rule": "Add EntityRenamedNotice to this named import, alphabetically after EntityRefLinks and before entityRouteRef."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 378,
+        "to": 378,
+        "first_line": "{entity && <RoutedTabs routes={routes} />}",
+        "rule": "Insert `<EntityRenamedNotice />` and a following blank line immediately before this line, at the same indentation."
+      }
+    ],
+    "depends_on": ["U18"],
+    "covers": ["FR-13", "FR-14", "AC-6"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U22",
+    "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Renders the rename notice at the alpha EntityLayout not-found decision site.",
+    "rules": [
+      "1. Render `<EntityRenamedNotice />` immediately before the `{entity && (<EntityTabs ... />)}` block, matching the placement chosen in the legacy layout. Not inside the not-found branch, for the same reason: the notice shows when the entity IS loaded.",
+      "2. Prop-less, so it uses the Material UI rendering that matches this file's existing @material-ui/lab Alert vocabulary.",
+      "3. Add EntityRenamedNotice to the existing named import from '@backstage/plugin-catalog-react'.",
+      "4. Change nothing else, including the 2020 copyright year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 30,
+        "to": 33,
+        "first_line": "import {",
+        "last_line": "} from '@backstage/plugin-catalog-react';",
+        "rule": "Add EntityRenamedNotice to this named import, alphabetically before entityRouteRef."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 99,
+        "to": 99,
+        "first_line": "{entity && (",
+        "rule": "Insert `<EntityRenamedNotice />` and a following blank line immediately before this line, at the same indentation."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx",
+      "lines": [92, 112],
+      "reason": "The file's own render body shows the indentation and the JSX block boundaries the inserted element must sit between."
+    },
+    "depends_on": ["U18"],
+    "covers": ["FR-13", "FR-14", "AC-7"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U23",
+    "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Renders the rename notice in @backstage/ui vocabulary at the alpha BUI layout, which is the default alpha rendering path.",
+    "rules": [
+      "1. This is the THIRD notice site and it is required, not optional: alpha's CatalogEntityPage renders EntityLayoutBui whenever a HeaderComponent is present or no legacy header is configured, which is the default. Covering only the two sites in EntityLayout.tsx would leave the ordinary alpha user without a notice.",
+      "2. Inside `EntityLayoutContent`, in the `else if (entity)` branch, render `<EntityRenamedNotice ui=\"bui\" />` before `props.content`, wrapped in the same `Container` the branch already uses — either by adding it inside the existing Container or by placing it in a fragment alongside. Pass `ui=\"bui\"` so the notice uses the @backstage/ui Alert with `status=`, matching this file's existing vocabulary rather than importing Material UI into it.",
+      "3. Do not touch the `error` branch or the `!loading` not-found branch.",
+      "4. Add EntityRenamedNotice to the existing named import from '@backstage/plugin-catalog-react', keeping alphabetical order in the braces.",
+      "5. Change nothing else, including the 2026 copyright year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 29,
+        "to": 34,
+        "first_line": "import {",
+        "last_line": "} from '@backstage/plugin-catalog-react';",
+        "rule": "Add EntityRenamedNotice to this named import, alphabetically after entityRouteRef and before InspectEntityDialog."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 117,
+        "to": 118,
+        "first_line": "} else if (entity) {",
+        "last_line": "content = <Container>{props.content ?? <NotFoundErrorPage />}</Container>;",
+        "rule": "Rewrite this branch so the Container also holds `<EntityRenamedNotice ui=\"bui\" />` ahead of the existing `props.content ?? <NotFoundErrorPage />` expression, preserving that fallback exactly."
+      }
+    ],
+    "depends_on": ["U18"],
+    "covers": ["FR-13", "FR-14", "AC-7", "NFR-6"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U24",
+    "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Proves the hook redirects a stale ref to the renamed entity preserving the sub-path, query and fragment, issues no extra request on the happy path, and leaves an unknown ref alone.",
+    "rules": [
+      "1. Render the hook with `renderHook` from '@testing-library/react' inside a wrapper that supplies `catalogApiRef` via TestApiProvider, and mock `react-router-dom`'s `useNavigate` and `useRouteRef` the way the sibling useExternalRedirect.test.tsx does, so the navigate target is directly assertable.",
+      "2. At most four thorough `it` blocks.",
+      "3. Block one, the happy path costs nothing (FR-16, NFR-1): when getEntityByRef returns an entity, assert the hook returns it, assert `queryEntities` was NEVER called, and assert navigate was never called. This is the guard that an ordinary lookup issues no additional request.",
+      "4. Block two, the redirect and sub-path preservation (FR-12, AC-19): getEntityByRef returns undefined and queryEntities returns exactly one renamed entity. Assert navigate was called once, with `{ replace: true }`, with a state object carrying the canonicalized former ref, and with a target that carries the NEW ref AND the original sub-path, search string and fragment. Drive this from an initial route of the form `/catalog/default/component/old-name/docs?tab=x#frag` so all three carried parts are exercised in one assertion set.",
+      "5. Block three, unknown ref ends on not-found (FR-15, AC-9): getEntityByRef returns undefined and queryEntities returns zero items. Assert navigate was never called, the hook's returned entity is undefined, and loading settles to false — so the caller renders the existing not-found UI.",
+      "6. Block four, one attempt per ref: with getEntityByRef returning undefined and queryEntities returning zero items, re-render the hook several times for the same ref and assert queryEntities was called exactly once, proving the useRef guard holds across remounts.",
+      "7. Bind the route ref through renderHook's wrapper using `mountedRoutes` with entityRouteRef, so the route function the hook calls resolves real paths rather than a stub, per the repo's route-ref convention.",
+      "8. Do not add a test id to the implementation. Apache 2.0 header with year 2026."
+    ],
+    "style_from": {
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "lines": [15, 80],
+      "reason": "The repo's existing test for a navigate-on-resolve hook: its renderHook wrapper, its useNavigate mock and its assertion idiom are exactly what this test needs."
+    },
+    "depends_on": ["U20"],
+    "covers": ["FR-12", "FR-15", "FR-16", "NFR-1", "AC-9", "AC-19"],
+    "tests": [
+      {
+        "name": "issues no extra request when the ref resolves directly",
+        "given": "getEntityByRef returning an entity for the URL's ref",
+        "expect": "the entity returned, queryEntities never called, navigate never called"
+      },
+      {
+        "name": "redirects a stale ref preserving sub-path, query and fragment",
+        "given": "a URL of /catalog/default/component/old-name/docs?tab=x#frag whose direct lookup misses and whose former-ref query returns one renamed entity",
+        "expect": "navigate called once with replace true, state carrying the canonicalized former ref, and a target holding the new ref plus the same /docs sub-path, query and fragment"
+      },
+      {
+        "name": "leaves an unknown ref on the not-found path",
+        "given": "a direct miss and a former-ref query returning zero items",
+        "expect": "navigate never called, entity undefined, loading settled false"
+      },
+      {
+        "name": "attempts resolution at most once per ref",
+        "given": "repeated re-renders of the hook for the same unresolvable ref",
+        "expect": "queryEntities called exactly once"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  },
+  {
+    "id": "U25",
+    "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Asserts in the LEGACY frontend system that a redirected arrival shows the rename notice naming the former ref, and that an ordinary arrival does not.",
+    "rules": [
+      "1. Append one `describe('EntityLayout - rename notice')` block at the end of the file. Modify no existing test.",
+      "2. This assertion exists independently of the alpha one because the two not-found decision sites are separate components; a hook-level test alone would not prove the notice renders in this system (FR-14, AC-6).",
+      "3. One thorough `it` block: render EntityLayout through renderInTestApp with an entity supplied via AsyncEntityProvider, with `initialRouteEntries` whose entry carries navigation state `{ formerEntityRef: 'component:default/old-name' }`, and `mountedRoutes` binding entityRouteRef. Assert with `await screen.findByText` that the notice text naming 'component:default/old-name' is present, and in the same block assert that rendering without that state shows no such text, using queryByText returning null.",
+      "4. Reuse the file's existing `apis` TestApiRegistry and mockEntity patterns rather than inventing new fixtures.",
+      "5. Do not add a test id. Query by visible text and role only."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 460,
+        "to": 460,
+        "first_line": "});",
+        "rule": "Insert a blank line and the new top-level describe('EntityLayout - rename notice') block here, after the first describe block's closing line and before the 'EntityLayout - inspect dialog' describe on line 462."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+      "lines": [15, 60],
+      "reason": "The file's own imports, TestApiRegistry setup and renderInTestApp options are the fixtures this block reuses."
+    },
+    "depends_on": ["U21"],
+    "covers": ["AC-6", "FR-13", "FR-14"],
+    "tests": [
+      {
+        "name": "shows the rename notice only on a redirected arrival",
+        "given": "the legacy EntityLayout rendered with an entity, once at a location whose state carries a formerEntityRef and once without",
+        "expect": "the notice naming that exact former ref appears in the first case and is absent in the second"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  },
+  {
+    "id": "U26",
+    "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Asserts in the NEW (alpha) frontend system that a redirected arrival shows the rename notice naming the former ref.",
+    "rules": [
+      "1. Append one `it` block to the existing `describe('EntityLayoutBui')`. Modify no existing test.",
+      "2. Reuse the file's existing `renderLayout` helper. Extend it minimally so the caller can supply navigation state on the initial route entry — change its `initialRouteEntries` to accept an entry object carrying `state` when an added `state` option is given, keeping the existing string form when it is not, so every existing call site is unaffected.",
+      "3. The block asserts both directions in one test: with state `{ formerEntityRef: 'component:default/old-name' }` the notice naming that ref is found via `await screen.findByText`; without it, queryByText for the same text returns null.",
+      "4. This is the alpha-system assertion AC-7 requires, held separately from the legacy one because the layouts are separate components. EntityLayoutBui is the right file because it is the default alpha rendering path.",
+      "5. Do not add a test id. Do not change the file's 2026 copyright year."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 46,
+        "to": 46,
+        "first_line": "async function renderLayout(options: {",
+        "rule": "Extend this helper's options type with an optional `state?: unknown` field, and inside the body pass it through on the initialRouteEntries entry as described in rule 2."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 161,
+        "to": 161,
+        "first_line": "  });",
+        "rule": "Insert a blank line and the new it block here, after the last existing it block's closing line and before line 162's `});` which closes describe('EntityLayoutBui'). Indent to two spaces like its siblings."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx",
+      "lines": [46, 110],
+      "reason": "The renderLayout helper and its renderInTestApp options, including mountedRoutes and initialRouteEntries, are what the new block extends and reuses."
+    },
+    "depends_on": ["U23"],
+    "covers": ["AC-7", "FR-13", "FR-14"],
+    "tests": [
+      {
+        "name": "shows the rename notice on a redirected arrival in the alpha layout",
+        "given": "EntityLayoutBui rendered with an entity, once at a location whose state carries a formerEntityRef and once without",
+        "expect": "the notice naming that exact former ref appears in the first case and is absent in the second"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  }
+]

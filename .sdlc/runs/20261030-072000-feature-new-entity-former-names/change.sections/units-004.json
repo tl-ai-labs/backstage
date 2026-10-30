@@ -1,0 +1,169 @@
+[
+  {
+    "id": "U15",
+    "path": "plugins/catalog-react/src/translation.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the translation messages for the entity-renamed notice.",
+    "rules": [
+      "1. Add one `entityRenamedNotice` key to the `messages` object, placed last, after `missingAnnotationEmptyState`.",
+      "2. It holds exactly two messages: `title` with the value 'Entity renamed', and `description` with the value 'This entity was previously known as {{formerEntityRef}}. You were redirected from its former location.'",
+      "3. Use the `{{formerEntityRef}}` interpolation placeholder spelled exactly that way; the component passes a variable of that name.",
+      "4. Do not change the ref id, the file's copyright year, or any existing message."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 187,
+        "to": 187,
+        "first_line": "},",
+        "rule": "Insert the entityRenamedNotice block here, after the missingAnnotationEmptyState block's closing line and before line 188's `},` which closes the messages object."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-react/src/translation.ts",
+      "lines": [178, 187],
+      "reason": "The missingAnnotationEmptyState block immediately above shows the nesting, quoting and interpolation-placeholder style to copy."
+    },
+    "depends_on": [],
+    "covers": ["FR-13"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U16",
+    "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Renders a dismissible notice naming the former entity ref when the current page was arrived at via a former-ref redirect, and renders nothing otherwise.",
+    "rules": [
+      "1. Export one React component, `EntityRenamedNotice`, marked `@public`, taking a single optional prop `ui?: 'legacy' | 'bui'` that defaults to 'legacy'. It reads the former ref itself rather than taking it as a prop, so each of its three call sites is one self-contained element; the `ui` prop exists only so the alpha BUI site renders in @backstage/ui vocabulary instead of Material UI, which the repo's per-package style parity rule requires. Also export the prop type as `EntityRenamedNoticeProps`, marked `@public`.",
+      "2. Read the former ref from react-router's navigation state via `useLocation()`: `const formerEntityRef = (useLocation().state as { formerEntityRef?: string } | null)?.formerEntityRef`. Navigation state is the carrier because it survives the redirect's remount, is consumed once, does not appear in the URL, and is absent on a reload — so the notice never reappears for a URL the user re-opens directly.",
+      "3. Return `null` when `formerEntityRef` is absent or not a non-empty string. Guard defensively: location.state is `any` at runtime and may be any shape at all.",
+      "4. For `ui === 'legacy'` (the default), render a @material-ui/lab Alert with `severity=\"info\"`, an AlertTitle carrying the `entityRenamedNotice.title` message, and the `entityRenamedNotice.description` message interpolated with `{ formerEntityRef }` as its body. Import Alert and AlertTitle as deep default imports (`import Alert from '@material-ui/lab/Alert'`), matching this package's established legacy-UI import style; do not use a named import from '@material-ui/lab'. This is the form the legacy EntityLayout and the alpha EntityLayout both use, since both already import @material-ui/lab Alert.",
+      "5. For `ui === 'bui'`, render the @backstage/ui Alert instead, imported as a NAMED import (`import { Alert as BuiAlert } from '@backstage/ui'`), with `status=\"info\"` — note `status`, not `severity` — and the same two messages passed as its `title` and `description` props. @backstage/ui is already a dependency of this package.",
+      "6. Make both forms dismissible with one shared local `useState`: an `onClose` handler that hides the notice. The Material UI Alert renders a close button when `onClose` is supplied; give the @backstage/ui Alert an equivalent dismiss control through its `customActions` prop with an accessible name. Do not add a test id — the tests query by role and text.",
+      "7. All user-visible text comes from `useTranslationRef(catalogReactTranslationRef)`. No inline literal strings.",
+      "8. The notice contains only the former ref the viewer already supplied in the URL plus a fixed sentence, so it discloses nothing the viewer did not already have.",
+      "9. Apache 2.0 header with year 2026."
+    ],
+    "exports": [
+      {
+        "name": "EntityRenamedNotice",
+        "kind": "component",
+        "params": [{ "name": "props", "type": "EntityRenamedNoticeProps" }],
+        "returns": "JSX.Element | null"
+      },
+      {
+        "name": "EntityRenamedNoticeProps",
+        "kind": "type",
+        "params": [],
+        "returns": "{ ui?: 'legacy' | 'bui' }"
+      }
+    ],
+    "import_line": "import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';",
+    "style_from": {
+      "path": "plugins/catalog-react/src/components/MissingAnnotationEmptyState/MissingAnnotationEmptyState.tsx",
+      "lines": [15, 45],
+      "reason": "The sibling component shows this package's header, deep @material-ui default imports, useTranslationRef wiring and @public tagging."
+    },
+    "depends_on": ["U15"],
+    "covers": ["FR-13", "NFR-4", "NFR-6"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U17",
+    "path": "plugins/catalog-react/src/components/EntityRenamedNotice/index.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Barrel for the EntityRenamedNotice component directory.",
+    "rules": [
+      "1. A single `export * from './EntityRenamedNotice';` line under the Apache 2.0 header with year 2026.",
+      "2. Copy the exact file shape of the sibling MissingAnnotationEmptyState/index.ts: header block, then the star export with no blank line between them."
+    ],
+    "exports": [
+      {
+        "name": "EntityRenamedNotice",
+        "kind": "re-export",
+        "params": [],
+        "returns": "JSX.Element | null"
+      }
+    ],
+    "import_line": "import { EntityRenamedNotice } from './EntityRenamedNotice';",
+    "style_from": {
+      "path": "plugins/catalog-react/src/components/MissingAnnotationEmptyState/index.ts",
+      "reason": "This is the exact file to copy, changing only the module name and the year."
+    },
+    "depends_on": ["U16"],
+    "covers": ["FR-13"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U18",
+    "path": "plugins/catalog-react/src/components/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Registers the notice component in the components barrel so it reaches the package's public API.",
+    "rules": [
+      "1. Append exactly one line: `export * from './EntityRenamedNotice';`, after the final existing export.",
+      "2. Touch no other line. This barrel is star-exported by src/index.ts, so this one line is what makes the component public."
+    ],
+    "exports": [
+      {
+        "name": "EntityRenamedNotice",
+        "kind": "re-export",
+        "params": [],
+        "returns": "JSX.Element | null"
+      }
+    ],
+    "import_line": "import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 38,
+        "to": 38,
+        "first_line": "export * from './EntityInfoCard';",
+        "rule": "Append the star export of './EntityRenamedNotice' on the line after this last existing export."
+      }
+    ],
+    "depends_on": ["U17"],
+    "covers": ["FR-13"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U19",
+    "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Proves the notice names the former ref when navigation state carries one, renders nothing otherwise, and tolerates a junk state shape.",
+    "rules": [
+      "1. One thorough `it` block is enough here, plus one for the negative cases — at most two blocks total, each with several assertions.",
+      "2. Render through `renderInTestApp` from '@backstage/test-utils'. Supply the navigation state by rendering inside a MemoryRouter whose `initialEntries` carry a `{ pathname, state }` entry, which is how location.state is populated without a real navigation.",
+      "3. The positive block asserts the notice is present and that its text names the exact former ref supplied, queried via `await screen.findByText` with a matcher that includes the ref string. Assert this for BOTH `ui` values — default/legacy and 'bui' — so the Material UI and @backstage/ui renderings are each covered. Also assert the alert is dismissible: find the close control by its role and accessible name, click it, and assert the notice is gone with `expect(screen.queryByText(...)).toBeNull()`.",
+      "4. The negative block asserts nothing renders for: no state at all, state that is an empty object, state whose formerEntityRef is the empty string, and state that is a plain string rather than an object. Assert with queryBy* returning null. The junk-state case is the fail-closed guarantee on the render path (AC-20).",
+      "5. Do NOT add or query a data-testid; query by role and visible text only.",
+      "6. Apache 2.0 header with year 2026."
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/components/CatalogTable/OffsetPaginatedCatalogTable.test.tsx",
+      "lines": [1, 60],
+      "reason": "A frontend test in this repo showing the renderInTestApp + screen idiom and the import grouping these tests use."
+    },
+    "depends_on": ["U16"],
+    "covers": ["FR-13", "AC-20", "NFR-8"],
+    "tests": [
+      {
+        "name": "names the former ref and can be dismissed in both UI vocabularies",
+        "given": "the component rendered at a location whose state carries a formerEntityRef, once with the default legacy ui and once with ui='bui'",
+        "expect": "the notice text includes that exact ref in both renderings, and clicking its close control removes it"
+      },
+      {
+        "name": "renders nothing without a usable former ref in state",
+        "given": "no location state, an empty object, an empty-string formerEntityRef, and a non-object state value",
+        "expect": "no notice rendered in any case and no error thrown"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  }
+]

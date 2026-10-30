@@ -1,0 +1,254 @@
+{
+  "conventions": [
+    "Every NEW .ts/.tsx file starts with the 13-line Apache 2.0 header block, copied verbatim from a neighbouring file in the same package, with the year 2026. NEVER change the year on an existing file.",
+    "Prettier governs all formatting: single quotes, trailing commas, 80-col print width, arrow parens avoided. Do not hand-format; the lint fix command rewrites the file.",
+    "Import order: @backstage/* scoped packages first, then third-party, then relative ./ and ../ paths. No path aliases exist in this repo.",
+    "Tests sit NEXT TO their subject: Foo.ts -> Foo.test.ts, Foo.tsx -> Foo.test.tsx. There is no separate test/ tree.",
+    "File naming: PascalCase.ts when the main export is a class or React component; camelCase.ts for factory functions and helper modules. No .service.ts/.controller.ts suffixes.",
+    "Test runner is Jest with describe/it. Repo rule: FEWER, THOROUGH, multi-assertion tests. Do not write one it() per assertion.",
+    "React Testing Library: use renderInTestApp from @backstage/test-utils, query via screen, prefer await screen.findBy* over waitFor. NEVER add a data-testid to an implementation file.",
+    "Route-ref binding in frontend tests goes through renderInTestApp's mountedRoutes option; alpha tests wrap legacy refs with convertLegacyRouteRef.",
+    "Errors a caller observes come from @backstage/errors (InputError, NotFoundError, ConflictError, ForwardedError), never a bare `throw new Error`.",
+    "Entity refs are built only with parseEntityRef / stringifyEntityRef / getCompoundEntityRef from @backstage/catalog-model. Never hand-format a `kind:ns/name` string.",
+    "zod import path is per-layer and must match the neighbouring file: `zod/v3` in plugins/catalog-backend, `zod/v4` in new-frontend alpha source. Do not normalize. No unit in this change needs zod at all.",
+    "Legacy UI uses @material-ui/core deep default imports (e.g. `import Box from '@material-ui/core/Box'`) and @material-ui/lab Alert with `severity=`. Alpha BUI uses @backstage/ui named imports and Alert with `status=` (one of info|success|warning|danger).",
+    "User-facing strings go through the package's translation ref (catalogTranslationRef, catalogReactTranslationRef, techdocsTranslationRef) via useTranslationRef, never inline literals.",
+    "TSDoc on every exported symbol, with an explicit release tag: `@public` for a stable public export, `@internal` for a non-exported-from-index helper.",
+    "Match the style of the individual file being edited over any repo-wide preference."
+  ],
+  "decisions": [
+    {
+      "topic": "Annotation key for the former-refs declaration",
+      "choice": "backstage.io/former-entity-refs — a well-known backstage.io-prefixed key, valid by construction under isValidAnnotationKey, exported as ANNOTATION_FORMER_ENTITY_REFS from packages/catalog-model/src/entity/constants.ts.",
+      "rejected": [
+        "backstage.io/former-names (names alone cannot express a namespace or kind move, which AC-18 requires)",
+        "backstage.io/previous-refs (no repo precedent for 'previous'; 'former' is the brief's word)",
+        "a new metadata field outside annotations (CON-2: annotation keys are unconstrained and already flattened into the search table; a new metadata field needs schema and index work NFR-3 forbids)"
+      ],
+      "reason": "The declared value is a list of entity REFS, not bare names (AC-18 needs namespace moves), and the backstage.io/ prefix is the established well-known namespace (CON-2, FR-1)."
+    },
+    {
+      "topic": "Delimiter and escaping rule for the annotation value",
+      "choice": "Comma. Entries are split on ',', each entry is trimmed, empty entries after trimming are dropped. There is NO escape mechanism: a comma can never appear inside an entity ref because parseEntityRef's grammar is [<kind>:][<namespace>/]<name> over DNS-label characters, so no entry can legitimately contain one.",
+      "rejected": [
+        "Semicolon or whitespace delimiter (no repo precedent; comma is the precedent per CON-2 and parseEntityFilterString already splits annotation-shaped strings on comma)",
+        "A backslash or quoting escape scheme (unreachable code: no valid ref contains a comma, so an escape rule would only ever add a parsing branch no input can exercise)",
+        "JSON array inside the annotation string (CON-2 allows it but it is hostile to hand-authored YAML and has no repo precedent)"
+      ],
+      "reason": "CON-2 names comma as the repo's precedent for delimited annotation values, and D-3 requires whitespace tolerance. Ref grammar makes escaping unnecessary rather than merely unspecified."
+    },
+    {
+      "topic": "Fail-closed semantics for a malformed annotation value",
+      "choice": "PER-ENTRY fail-closed, never whole-value. parseFormerEntityRefs catches the throw from parseEntityRef per entry and drops only that entry; valid sibling entries still resolve. The function never throws and returns [] for undefined, empty, all-malformed or over-limit input.",
+      "rejected": [
+        "Whole-value rejection on any bad entry (a single typo would silently kill every working redirect on that entity, which is worse for the adopter and harder to diagnose)",
+        "Throwing an InputError for the caller to handle (AC-20 requires it to throw nothing on both the backend lookup path and the frontend render path)"
+      ],
+      "reason": "FR-3 and AC-20 require 'yields no resolution candidate and never throws'. Per-entry containment maximises the surviving redirects while still never throwing."
+    },
+    {
+      "topic": "Bound on the number of former refs one entity may claim",
+      "choice": "20, as the exported constant FORMER_ENTITY_REFS_MAX_COUNT. parseFormerEntityRefs returns [] (the whole declaration, not a prefix) when the de-duplicated parsed list exceeds 20.",
+      "rejected": [
+        "No bound (NFR-5 forbids it: the annotation would be an index-flood vector)",
+        "Silently truncating to the first 20 (an adopter who declares 25 refs would get 20 working and 5 silently dead links with no signal; refusing the whole declaration is a visible, diagnosable failure)"
+      ],
+      "reason": "NFR-5 requires a bound. 20 is far above any real rename history and far below a flood. Whole-declaration refusal rather than truncation keeps the failure legible."
+    },
+    {
+      "topic": "Whether a new catalog-backend HTTP route is needed",
+      "choice": "NO new route. Former-ref resolution is composed entirely from the EXISTING POST /entities/by-query endpoint, reached through CatalogApi.queryEntities with a `query` FilterPredicate. No change to openapi.yaml, no regeneration of src/schema/openapi/generated/**, no `generate` tooling step.",
+      "rejected": [
+        "A new GET /entities/resolve-ref route (CON-3: hand-edited OpenAPI spec plus a generate step for both the router and the client, and the generated dir is off-limits in the write contract anyway)",
+        "A new CatalogApi member (D-1, CON-1, AC-21 forbid it outright)"
+      ],
+      "reason": "CON-3 makes a route expensive and CON-5 makes it unnecessary: annotations are already flattened into the `search` table and already queryable through the FilterPredicate path. D-1 forbids a new interface member, so the lookup ships as a plain exported function over queryEntities."
+    },
+    {
+      "topic": "Where former-ref resolution is implemented so no CatalogApi member is added",
+      "choice": "A plain exported async function resolveFormerEntityRef(catalogApi, formerRef) in packages/catalog-client/src/resolveFormerEntityRef.ts, taking a CatalogApi as its FIRST ARGUMENT and calling only existing members (queryEntities). Exported from the package index as a free function.",
+      "rejected": [
+        "A required or optional CatalogApi interface member (D-1, CON-1, FR-11, AC-21: CatalogService/CatalogServiceMock in plugins/catalog-node and the `as CatalogApi` cast in plugins/catalog-import are outside the write contract and would fail yarn tsc)",
+        "A subclass or wrapper of CatalogClient (re-types the surface and still breaks the mocks)"
+      ],
+      "reason": "FR-10/FR-11 require the lookup without touching the interface. A free function over an injected CatalogApi leaves CatalogApi, CatalogClient, CatalogService, CatalogServiceMock and InMemoryCatalogClient byte-identical."
+    },
+    {
+      "topic": "The predicate shape the resolution query uses",
+      "choice": "THE SHAPE TO USE, the only one any unit may emit: a single queryEntities call with query = { $all: [ { [key]: true }, { $not: { kind: 'user' } } ] } and limit: 2, where `key` is the synthetic per-entry search key `metadata.annotations.backstage.io/former-entity-refs.<normalized-full-ref>`, always composed from the exported key-prefix constant and never hand-formatted. Those per-entry rows are written inside buildEntitySearch (see that unit). REJECTED ALTERNATIVE — DO NOT COPY: { 'metadata.annotations.backstage.io/former-entity-refs': { $contains: <formerRef> } }; a primitive $contains target compiles to an exact `value` match (applyPredicateEntityFilterToQuery.ts:186-190) against the ONE row holding the entire comma-delimited string, so matching one entry inside that string is impossible.",
+      "rejected": [
+        "$contains on the raw annotation value (matches only an entity whose entire annotation value equals the one ref — breaks AC-18's multi-ref case)",
+        "$hasPrefix on the raw value (matches only when the wanted ref is the FIRST entry, and would mis-match a ref that is a string prefix of another)",
+        "A client-side scan over all entities carrying the annotation (NFR-2 forbids a scan)"
+      ],
+      "reason": "CON-5 gives the index for free but only at exact (key, value). Per-entry synthetic rows are what make an index-backed exact match possible for every entry (NFR-2, AC-18), and they are written inside buildEntitySearch, which performStitching already calls at the one choke point (CON-4) — no new table, no migration, no new query shape (NFR-3, CON-10)."
+    },
+    {
+      "topic": "Exact synthetic search key and value for a per-entry former-ref row",
+      "choice": "key = `metadata.annotations.backstage.io/former-entity-refs.<normalized-full-ref>` and value = `true`, mirroring buildEntitySearch's existing array-item convention (`metadata.tags.java` -> true). The ref is the lowercased full `kind:namespace/name` produced by stringifyEntityRef. Rows whose key exceeds the existing MAX_KEY_LENGTH of 200 are dropped by mapToRows, which is already the correct fail-closed behaviour.",
+      "rejected": [
+        "A fresh top-level key namespace such as `former-refs.<ref>` (invents a key space outside the metadata.annotations.* tree, which breaks the mental model that every search key is a path into the entity)",
+        "key = the annotation path with value = the ref (collides with the row buildEntitySearch already emits for the raw annotation string, whose value is the whole delimited list, and the (entity_id, key, value) unique index makes the two indistinguishable in intent)"
+      ],
+      "reason": "Reusing the existing `<path>.<item>` -> true convention means the row is indistinguishable in shape from a tag row, is served by the existing search_key_value_entity_idx, and is matched by the existing $contains-on-primitive compilation with zero changes to applyPredicateEntityFilterToQuery."
+    },
+    {
+      "topic": "How kind: User is excluded structurally (D-2, FR-22, AC-17)",
+      "choice": "TWO independent structural gates, both required. (1) WRITE side: buildEntitySearch emits no per-entry former-ref row at all when entity.kind lowercases to 'user', so a User's own declaration is never indexed. (2) READ side: resolveFormerEntityRef refuses before issuing any request when the requested former ref parses to kind 'user', and its predicate carries { $not: { kind: 'user' } } so a non-User entity cannot launder a User former ref.",
+      "rejected": [
+        "Read-side check only (a User's rows would sit in the index, so any future caller composing its own predicate re-enables the disclosure — D-2 requires that no later caller can)",
+        "Write-side check only (a Component could claim `user:default/old-name` as its former ref and capture the redirect)",
+        "A documentation warning (D-2 explicitly rejects this: 'Not a documentation warning')"
+      ],
+      "reason": "FR-22 requires the exclusion be enforced so that 'no adopter misconfiguration, and no later caller, can re-enable it'. One gate cannot deliver that; the write gate keeps the data out and the read gate keeps the query honest."
+    },
+    {
+      "topic": "Ambiguity and live-entity precedence (FR-5, FR-6, FR-7)",
+      "choice": "resolveFormerEntityRef requests limit: 2 and returns { status: 'unknown' } whenever the result count is not exactly 1 — zero means nothing claims it, two or more means contested. It is called ONLY after a direct lookup has already missed, so a live holder of the ref always wins by never reaching this code (FR-5). A claim on a ref a live entity holds is inert because the direct lookup succeeds first (FR-7).",
+      "rejected": [
+        "Ordering the candidates and picking the first (FR-6 requires ambiguous -> nothing, not arbitrary choice)",
+        "Checking the ref's liveness inside resolveFormerEntityRef before querying (an extra round trip on every miss; the caller already knows the direct lookup missed, which is the only reason it calls this at all — NFR-1, FR-16)"
+      ],
+      "reason": "limit: 2 makes 'exactly one' decidable in a single query. Post-miss-only invocation is what keeps the hot path untouched (NFR-1) and makes live-entity precedence structural rather than a comparison."
+    },
+    {
+      "topic": "Permission equivalence and information leak (FR-8, NFR-4)",
+      "choice": "Resolution issues no privileged call: queryEntities runs through AuthorizedEntitiesCatalog exactly as every other read does, which ANDs the CONDITIONAL permission predicate as { $all: [permissionFilter, requestFilter] }. A caller who may not read the target gets zero rows, which resolveFormerEntityRef reports as { status: 'unknown' } — byte-identical to a ref nothing claims. The notice text names only the former ref the viewer already typed, plus the target they are now permitted to load.",
+      "rejected": [
+        "A dedicated resolution endpoint with its own permission check (CON-3 cost, and a second authorization path is a second place for the two cases to diverge)",
+        "Returning a distinguishable 'forbidden' status (NFR-4 forbids a distinct error message or a redirect to a URL the viewer cannot load)"
+      ],
+      "reason": "Q3 and FR-8 require the two cases be indistinguishable BY CONSTRUCTION. Reusing the ordinary read path with a single result shape for both achieves that without a branch that could be got wrong."
+    },
+    {
+      "topic": "Where the redirect decision lives so both frontend systems get it",
+      "choice": "In the hook: plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts. It gains a second conditional step that runs ONLY when the direct getEntityByRef resolved to undefined, and on success calls navigate(targetUrl, { replace: true }). Both systems already import this one hook (legacy CatalogEntityPage.tsx, alpha alpha/components/CatalogEntityPage.tsx), so one implementation serves both (CON-6, D-6, FR-14).",
+      "rejected": [
+        "A new wrapper component around EntityLayout (CON-6: logic in a component does NOT reach both systems — legacy renders components/EntityLayout, alpha renders alpha/components/EntityLayout and EntityLayoutBui)",
+        "A change in plugins/catalog-react's AsyncEntityProvider (it has no router or route-ref access and is consumed far beyond the entity page)"
+      ],
+      "reason": "CON-6 and D-6 settle this: the hook is the single shared seam. The notice still renders per-system, which is why the notice is a separate catalog-react component used at two sites."
+    },
+    {
+      "topic": "How the sub-path, query and fragment survive the entity-page redirect (D-4, FR-12, AC-19)",
+      "choice": "useEntityFromUrl computes the target by taking the CURRENT location.pathname, computing the old entity's own route path via the entityRouteRef route function for the URL's params, and replacing that prefix with the new entity's route path; location.search and location.hash are appended verbatim. The former ref is handed to the destination through a transient navigation state field (navigate(target, { replace: true, state: { formerEntityRef } })), NOT a query parameter.",
+      "rejected": [
+        "Rebuilding the target from scratch and dropping the sub-path (AC-19 requires .../old-name/docs -> .../new-name/docs)",
+        "Appending a ?formerRef= query parameter (pollutes a URL the user may re-share, and would survive a copy-paste as a permanent query arg)",
+        "A module-level or context variable (does not survive the remount the navigation causes)"
+      ],
+      "reason": "Prefix substitution is the only construction that preserves an arbitrary tab sub-path, and react-router navigation state is the idiomatic carrier for a one-shot arrival signal that must not pollute the URL (FR-15's no-loop requirement falls out: state is consumed once and absent on reload)."
+    },
+    {
+      "topic": "No redirect loop (FR-15)",
+      "choice": "Three structural guards. (1) The resolution step runs only when the direct lookup returned undefined, so the destination — where the direct lookup succeeds — never enters it. (2) A useRef keyed on the stringified requested ref, in the useExternalRedirect manner, ensures at most one resolution attempt per ref per mount (CON-7). (3) An unknown ref sets no state and performs no navigate, so the existing not-found UI renders unchanged (AC-9).",
+      "rejected": [
+        "A redirect counter or a depth query parameter (observable in the URL and a weaker guarantee than 'the destination resolves directly')"
+      ],
+      "reason": "FR-15 requires the destination never re-trigger resolution for the same ref. Guard (1) makes that true by construction; (2) additionally prevents duplicate in-flight requests across the remounts a replace-navigation causes."
+    },
+    {
+      "topic": "Shape of the rename notice component and where it renders",
+      "choice": "ONE new component in plugins/catalog-react, EntityRenamedNotice, exported from the package's public API. It reads the former ref from react-router location.state itself and renders null when absent, so each call site is a single prop-less element. It is rendered at THREE sites: the legacy WarningPanel block in plugins/catalog/src/components/EntityLayout/EntityLayout.tsx, the alpha block in plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx, and the alpha BUI block in EntityLayoutBui.tsx. EntityNotFound is NOT exported or revived (D-5, CON-8).",
+      "rejected": [
+        "Exporting EntityNotFound and routing the not-found path through it (D-5 and CON-8 forbid it: it has no render site, is in neither report file, and exporting it adds a public-API line for no benefit)",
+        "Duplicating the notice markup at each site (three copies of the same string and the same state read)",
+        "Passing the former ref down as a prop from the hook (the hook and the layout are not in a parent-child relationship the prop could travel; the layouts read the entity from context, not from the hook's return)"
+      ],
+      "reason": "The notice must render after a successful redirect, when `entity` IS set — so it sits beside, not inside, the not-found branch. One self-contained component reading navigation state keeps the three call sites to one line each and keeps the only copy of the message in one package. EntityLayoutBui is the third site because alpha's CatalogEntityPage renders EITHER EntityLayout or EntityLayoutBui depending on header configuration, so covering only the two sites CON-8 names would leave the default alpha path without a notice."
+    },
+    {
+      "topic": "Where the TechDocs redirect lives (FR-17, FR-18, CON-7)",
+      "choice": "A new hook plugins/techdocs/src/reader/components/TechDocsReaderPage/useFormerRefRedirect.ts, modelled directly on the sibling useExternalRedirect including its checkedEntityRef remount guard, called from TechDocsReaderPage.tsx. It attempts resolution only when getEntityByRef for the URL's ref returns undefined, and navigates to the rootDocsRouteRef path for the resolved entity with the docs sub-path, search and hash preserved, { replace: true }.",
+      "rejected": [
+        "Extending useExternalRedirect itself (it is a different concern — an annotation-driven external hop versus a rename — and overloading it would make its single useAsync serve two unrelated decisions)",
+        "Putting it in TechDocsReaderPageContent (the content component is below the point where a 404 is already being rendered, and the alpha reader layout composes a different content tree)"
+      ],
+      "reason": "CON-7 names useExternalRedirect as the precedent and TechDocsReaderPage.tsx is the single component BOTH the legacy Router and the alpha TechDocsReaderPage render through (via TechDocsReaderRouter), so one call site reaches both systems. FR-18 is preserved because the hook only acts when the entity does not exist; CONTENT_NOT_FOUND for an entity that does exist is untouched."
+    },
+    {
+      "topic": "Result type of the resolution function",
+      "choice": "A discriminated union FormerEntityRefResolution = { status: 'resolved'; entity: Entity; formerEntityRef: string } | { status: 'unknown' }. No entity is fabricated for an unknown ref and the resolved case always carries the real entity.",
+      "rejected": [
+        "Entity | undefined (loses the former ref the notice must name, and makes 'unknown' and 'resolved to nothing' share a representation the caller cannot act on)",
+        "Throwing NotFoundError for unknown (AC-20 requires the lookup path throw nothing)"
+      ],
+      "reason": "FR-10 requires the result 'distinguish resolved to a different ref from unknown, and must not fabricate an entity for an unknown ref'. A two-arm discriminated union is the minimal encoding of exactly that."
+    },
+    {
+      "topic": "Changeset coverage and bump levels (FR-20, AC-15)",
+      "choice": "ONE changeset file, .changeset/entity-former-entity-refs.md, naming all five published packages at `minor`: @backstage/catalog-model, @backstage/catalog-client, @backstage/plugin-catalog-backend, @backstage/plugin-catalog, @backstage/plugin-techdocs. @backstage/plugin-catalog-react is ALSO named at minor because it gains a public component. Adopter-facing prose; no symbol names.",
+      "rejected": [
+        "A separate changeset per package (the single adopter-facing behaviour is one feature; six files repeating one sentence is noise)",
+        "patch (FR-20 and the repo rule: a new feature on a >= 1.0.0 package is minor)"
+      ],
+      "reason": "FR-20 requires coverage of every published package changed at the correct level. All six are >= 1.0.0 and all gain new surface or behaviour, so one minor changeset naming all six is both correct and minimal."
+    },
+    {
+      "topic": "API report regeneration (NFR-7, AC-13)",
+      "choice": "A single `tooling` unit running `yarn build:api-reports` scoped to exactly the six changed package paths, last among the codegen units and after every unit that changes an exported surface. The report*.api.md files are written by that command, never typed by a unit.",
+      "rejected": [
+        "Hand-editing the report files (they are generated; the write contract's allowlist includes them only so the tool's output can land)",
+        "An unscoped `yarn build:api-reports` (regenerates all 236 workspaces; slow and risks unrelated diffs)"
+      ],
+      "reason": "AC-13 requires no uncommitted diff. The command accepts package paths (buildApiReports(paths, opts)), so scoping is both supported and necessary on a 236-workspace repo."
+    },
+    {
+      "topic": "Documentation placement (FR-19)",
+      "choice": "Both files the write contract allows: docs/features/software-catalog/well-known-annotations.md gains the annotation's reference entry, and descriptor-format.md gains a short pointer in its annotations discussion. The User-entity privacy warning goes in the well-known-annotations entry.",
+      "rejected": [
+        "README-only documentation (repo rule: feature concepts and configuration guides belong in /docs, not package READMEs)"
+      ],
+      "reason": "FR-19 names both files and the design is annotation-driven, which is the condition both were listed under."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "lint",
+      "run": "yarn eslint --no-error-on-unmatched-pattern {path}",
+      "fix": "yarn eslint --fix --no-error-on-unmatched-pattern {path}",
+      "timeout_s": 180
+    },
+    {
+      "id": "format",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 120
+    },
+    {
+      "id": "unit",
+      "run": "CI=1 yarn test {path}",
+      "timeout_s": 420
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "typecheck",
+      "run": "yarn tsc"
+    },
+    {
+      "id": "test-catalog-model",
+      "run": "CI=1 yarn test packages/catalog-model"
+    },
+    {
+      "id": "test-catalog-client",
+      "run": "CI=1 yarn test packages/catalog-client"
+    },
+    {
+      "id": "test-catalog-backend",
+      "run": "CI=1 yarn test plugins/catalog-backend"
+    },
+    {
+      "id": "test-catalog-react",
+      "run": "CI=1 yarn test plugins/catalog-react"
+    },
+    {
+      "id": "test-catalog",
+      "run": "CI=1 yarn test plugins/catalog"
+    },
+    {
+      "id": "test-techdocs",
+      "run": "CI=1 yarn test plugins/techdocs"
+    }
+  ]
+}

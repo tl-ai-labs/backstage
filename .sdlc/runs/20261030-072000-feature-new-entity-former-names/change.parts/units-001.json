@@ -1,0 +1,282 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "packages/catalog-model/src/entity/constants.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the well-known former-entity-refs annotation key constant and the bound on how many former refs one entity may claim.",
+      "rules": [
+        "1. Append both new exports at the end of the file, after ANNOTATION_KUBERNETES_AUTH_PROVIDER. Do not reorder or touch any existing export, and do not change the file's 2020 copyright year.",
+        "2. Export `ANNOTATION_FORMER_ENTITY_REFS` with the exact literal value 'backstage.io/former-entity-refs'. Declare it with `export const` and no explicit type annotation, exactly as the neighbouring ANNOTATION_* constants do, so its type narrows to the string literal.",
+        "3. Its TSDoc is a one-line summary stating it is the annotation holding a comma-separated list of entity refs that the entity was previously known by, followed by a blank comment line and `@public`. Match the comment shape of ANNOTATION_VIEW_URL above it.",
+        "4. Export `FORMER_ENTITY_REFS_MAX_COUNT` with the numeric value 20, TSDoc'd as the maximum number of former entity refs a single entity may declare, with `@public`.",
+        "5. Add no import. Both are plain literals."
+      ],
+      "exports": [
+        {
+          "name": "ANNOTATION_FORMER_ENTITY_REFS",
+          "kind": "const",
+          "params": [],
+          "returns": "'backstage.io/former-entity-refs'"
+        },
+        {
+          "name": "FORMER_ENTITY_REFS_MAX_COUNT",
+          "kind": "const",
+          "params": [],
+          "returns": "number"
+        }
+      ],
+      "import_line": "import { ANNOTATION_FORMER_ENTITY_REFS, FORMER_ENTITY_REFS_MAX_COUNT } from './constants';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 62,
+          "to": 62,
+          "first_line": "'kubernetes.io/auth-provider';",
+          "rule": "Insert a blank line, then the two new TSDoc'd exports, after the final existing constant."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/constants.ts",
+        "lines": [
+          23,
+          36
+        ],
+        "reason": "ANNOTATION_VIEW_URL and ANNOTATION_EDIT_URL are the exact TSDoc + export const shape the two new constants must copy."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-5"
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/catalog-model/src/entity/formerEntityRefs.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Parses the comma-delimited former-entity-refs annotation value into a normalized, de-duplicated, order-stable list of full entity refs, failing closed per entry and never throwing.",
+      "rules": [
+        "1. Export one function, `parseFormerEntityRefs(value: string | undefined)`, returning `string[]`. It MUST NOT throw for any input whatsoever, including undefined, null cast as the parameter type, the empty string, and arbitrary junk.",
+        "2. Return `[]` immediately when `value` is not a non-empty string after trimming.",
+        "3. Split the value on the ',' character. There is NO escape syntax: a valid entity ref can never contain a comma because parseEntityRef's grammar is [<kind>:][<namespace>/]<name> over DNS-label characters. Do not implement quoting or backslash handling.",
+        "4. For each split entry: trim leading and trailing whitespace; skip the entry when the trimmed result is empty.",
+        "5. For each surviving entry, call `parseEntityRef(entry)` inside a try/catch with NO default kind and NO default namespace context argument, so an entry that omits the kind is rejected rather than silently defaulted to some unrelated kind. On a thrown error, skip ONLY that entry and continue with the rest — never abandon the whole value.",
+        "6. Canonicalize each successfully parsed entry through `stringifyEntityRef`, which is the only lowercasing function in the package, producing a full lowercase `kind:namespace/name` string.",
+        "7. De-duplicate the canonicalized refs while preserving first-occurrence order. Use a Set for membership and build the result array in encounter order; do not sort.",
+        "8. After de-duplication, if the result length exceeds FORMER_ENTITY_REFS_MAX_COUNT, return `[]` — the whole declaration is refused, not truncated to a prefix, so an over-budget declaration fails visibly rather than leaving some refs silently dead.",
+        "9. TSDoc the function with `@public`, a summary, and a `@remarks` block stating explicitly that it never throws, that malformed entries are dropped individually, and that a declaration exceeding the maximum count resolves to nothing.",
+        "10. Import parseEntityRef and stringifyEntityRef from './ref' and the two constants from './constants'. Apache 2.0 header with year 2026."
+      ],
+      "exports": [
+        {
+          "name": "parseFormerEntityRefs",
+          "kind": "function",
+          "params": [
+            {
+              "name": "value",
+              "type": "string | undefined"
+            }
+          ],
+          "returns": "string[]"
+        }
+      ],
+      "import_line": "import { parseFormerEntityRefs } from './formerEntityRefs';",
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/ref.ts",
+        "lines": [
+          45,
+          60
+        ],
+        "reason": "getCompoundEntityRef in the sibling ref.ts shows the package's TSDoc shape (@public, @param, @returns) and the plain exported-function style this file must match."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/ref.ts",
+          "lines": [
+            60,
+            150
+          ],
+          "reason": "parseEntityRef's exact signature, its context defaulting behaviour, and what it throws for a malformed ref; plus stringifyEntityRef's lowercasing contract."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "packages/catalog-model/src/entity/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Re-exports the former-refs parser from the entity barrel so it reaches the package's public API.",
+      "rules": [
+        "1. Add exactly one line: a named export of `parseFormerEntityRefs` from './formerEntityRefs'.",
+        "2. Place it after the `export * from './constants';` line, keeping the file's rough alphabetical-by-module ordering. The two new constants from U01 need no line here because './constants' is already a star export.",
+        "3. Use a value export (`export { ... }`), not `export type`: the parser is a function."
+      ],
+      "exports": [
+        {
+          "name": "parseFormerEntityRefs",
+          "kind": "re-export",
+          "params": [
+            {
+              "name": "value",
+              "type": "string | undefined"
+            }
+          ],
+          "returns": "string[]"
+        }
+      ],
+      "import_line": "import { parseFormerEntityRefs } from '@backstage/catalog-model';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18,
+          "first_line": "export * from './constants';",
+          "rule": "Insert the named export of parseFormerEntityRefs from './formerEntityRefs' on the following line."
+        }
+      ],
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-3"
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "packages/catalog-model/src/kinds/annotations.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Registers the former-entity-refs annotation in the alpha well-known-annotations model layer with a description.",
+      "rules": [
+        "1. Add ANNOTATION_FORMER_ENTITY_REFS to the existing named import from '../entity' on line 18, keeping the names alphabetically ordered within the braces. Prettier will wrap the import across lines once it exceeds the print width; let the fix command do that rather than hand-wrapping.",
+        "2. Add one `model.addAnnotation({ ... })` call as the LAST call inside the builder, after the ANNOTATION_EDIT_URL registration, using `name: ANNOTATION_FORMER_ENTITY_REFS`.",
+        "3. Its `description` is a single sentence stating that it holds a comma-separated list of entity refs the entity was previously known by, used to redirect links from the entity's former refs. Match the sentence style and terminal period of the neighbouring descriptions.",
+        "4. Do not change the layerId, the file's 2026 copyright year, or any existing registration."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { ANNOTATION_EDIT_URL, ANNOTATION_VIEW_URL } from '../entity';",
+          "rule": "Add ANNOTATION_FORMER_ENTITY_REFS to this named import, alphabetically before ANNOTATION_VIEW_URL."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 57,
+          "to": 57,
+          "first_line": "});",
+          "rule": "Insert the new model.addAnnotation({ name: ANNOTATION_FORMER_ENTITY_REFS, description: '...' }); call here, as the last registration inside the builder, before the builder's closing brace on line 58."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/kinds/annotations.ts",
+        "lines": [
+          48,
+          57
+        ],
+        "reason": "The ANNOTATION_VIEW_URL and ANNOTATION_EDIT_URL registrations are the exact addAnnotation call shape and description wording style to copy."
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-2"
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "packages/catalog-model/src/entity/formerEntityRefs.test.ts",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Proves the former-refs parser handles empty, single, multiple, duplicate, whitespace-padded, malformed and over-limit values deterministically and never throws.",
+      "rules": [
+        "1. Follow the repo rule of FEWER, THOROUGH tests: write at most four `it` blocks inside one `describe('parseFormerEntityRefs')`, each asserting several related cases, rather than one case per block.",
+        "2. One block covers the empty and degenerate inputs together: undefined, '', '   ', ',', ',,,' — every one must equal [].",
+        "3. One block covers the happy path: a single full ref; several refs separated by commas; entries padded with spaces and tabs; mixed-case input canonicalized to lowercase; a ref differing from another only by namespace retained as a distinct entry; duplicates collapsed to one occurrence with first-occurrence order preserved. Assert the exact returned array, not just its length.",
+        "4. One block covers fail-closed: a value where one entry is malformed and the others are valid must return exactly the valid canonicalized entries, proving per-entry containment rather than whole-value rejection. Include an entry with no kind (bare 'old-name'), an entry with an empty kind (':default/x'), and an entry with an empty name ('component:default/'); assert the function does not throw by calling it directly inside the expect rather than wrapping in a try.",
+        "5. One block covers the bound: a value with FORMER_ENTITY_REFS_MAX_COUNT distinct refs returns all of them, and a value with one more returns []. Build the input programmatically from the imported constant, never from a hard-coded 20, so the test tracks the constant if it changes.",
+        "6. Import parseFormerEntityRefs from './formerEntityRefs' and FORMER_ENTITY_REFS_MAX_COUNT from './constants'. Apache 2.0 header with year 2026."
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/ref.test.ts",
+        "reason": "The sibling test for the ref helpers shows this package's plain describe/it layout, its import style and its assertion idiom."
+      },
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "AC-10",
+        "AC-20",
+        "FR-3",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "returns an empty list for absent and degenerate values",
+          "given": "undefined, the empty string, whitespace only, and values made up only of commas",
+          "expect": "[] in every case, with no throw"
+        },
+        {
+          "name": "normalizes, de-duplicates and order-stabilizes a delimited list",
+          "given": "one ref; several comma-separated refs; whitespace-padded entries; mixed-case entries; two refs differing only by namespace; a repeated ref",
+          "expect": "the exact array of lowercase full kind:namespace/name refs, duplicates collapsed, first-occurrence order preserved, namespace variants kept distinct"
+        },
+        {
+          "name": "fails closed per entry without throwing",
+          "given": "a value mixing valid refs with a kindless entry, an empty-kind entry and an empty-name entry",
+          "expect": "exactly the valid canonicalized refs returned and nothing thrown, proving a bad entry does not void its siblings"
+        },
+        {
+          "name": "refuses a declaration over the maximum count",
+          "given": "a list of exactly FORMER_ENTITY_REFS_MAX_COUNT distinct refs, then one of that many plus one",
+          "expect": "all refs for the first, [] for the second — the whole declaration refused rather than truncated"
+        }
+      ],
+      "checks": [
+        "format",
+        "lint",
+        "unit"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-model/src/entity/constants.ts": "efa7abef43133b613f72dfe6d7e7d27edb24ca4af5b26595e6e8e89d1abab604",
+    "packages/catalog-model/src/entity/ref.ts": "38d54bd3c0d0727564473fa004251922d164aa67ce9b58d7b52b6ea7590faffe",
+    "packages/catalog-model/src/entity/index.ts": "11ba0287585235444856eab6033f8cc69f23059347dfe13fdd33289410172c05",
+    "packages/catalog-model/src/kinds/annotations.ts": "61a542b2fcaf17daf2b0677d4055e4b429b898088f29a43879b8c5c3734b3318",
+    "packages/catalog-model/src/entity/ref.test.ts": "9343ce004a55105691578f4ef14766d20e4ea4e671f0a783b9fa5ce5ec3cc7e1"
+  }
+}

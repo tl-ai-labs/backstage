@@ -1,0 +1,146 @@
+[
+  {
+    "id": "U12",
+    "path": "packages/catalog-client/src/resolveFormerEntityRef.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Resolves a possibly-former entity ref to the live entity now claiming it, composed entirely from the existing CatalogApi.queryEntities member so no interface member is added anywhere.",
+    "rules": [
+      "1. Export the discriminated-union result type `FormerEntityRefResolution` with exactly two arms: `{ status: 'resolved'; entity: Entity; formerEntityRef: string }` and `{ status: 'unknown' }`. No third arm, and no arm that carries a fabricated entity. Mark it `@public`.",
+      "2. Export one async function, `resolveFormerEntityRef(catalogApi, formerEntityRef, options?)`, returning `Promise<FormerEntityRefResolution>`. `catalogApi` is typed `CatalogApi` and is the FIRST parameter — this is a free function over an injected client, NOT a member of CatalogApi. Adding a member to CatalogApi, required or optional, is forbidden: CatalogService and CatalogServiceMock mirror it method-for-method from a package outside this change's scope, and plugins/catalog-import casts an object literal directly to CatalogApi.",
+      "3. `options` is `{ token?: string } | undefined`, i.e. the existing `CatalogRequestOptions` type, forwarded verbatim to queryEntities so the caller's credentials travel with the request.",
+      "4. Parse `formerEntityRef` with parseEntityRef inside a try/catch with no defaulting context. On a throw, return `{ status: 'unknown' }`. STRUCTURAL USER REFUSAL: also return `{ status: 'unknown' }` without issuing any request when the parsed kind lowercases to 'user'.",
+      "5. Canonicalize through stringifyEntityRef and build the predicate key as the string `metadata.annotations.backstage.io/former-entity-refs.` followed by the canonical ref. Define that prefix as a module-level const in this file built from ANNOTATION_FORMER_ENTITY_REFS imported from '@backstage/catalog-model', so the literal appears nowhere. This package cannot import the backend's copy of the prefix — catalog-client does not depend on plugins/catalog-backend — so the one shared source of truth is the annotation constant itself.",
+      "6. Issue exactly ONE call: `catalogApi.queryEntities({ query: { $all: [ { [key]: true }, { $not: { kind: 'user' } } ] }, limit: 2 }, options)`. Use `limit: 2`, never 1: two is the smallest limit that distinguishes 'exactly one claimant' from 'contested'.",
+      "7. Wrap the call in try/catch. On any thrown error — network failure, a backend too old to understand the predicate, anything — return `{ status: 'unknown' }`. This function must never throw and never reject: it sits on a render path.",
+      "8. Return `{ status: 'resolved', entity, formerEntityRef }` only when `items.length === 1`. For 0 items (nothing claims it, or the caller may not read the claimant) and for 2 or more (contested), return `{ status: 'unknown' }`. The zero case being identical for 'absent' and 'forbidden' is the whole point: a caller who may not read the target gets the same answer as for a ref that does not exist, because queryEntities already runs through the backend's authorization, which ANDs the permission predicate into the same query.",
+      "9. `formerEntityRef` in the resolved arm is the CANONICALIZED ref, so the notice names a stable lowercase form regardless of URL casing.",
+      "10. Do NOT call getEntityByRef or getEntitiesByRefs first to check whether the ref is live. The caller invokes this only after its own direct lookup has already missed; a liveness check here would add a round trip to every miss and would duplicate work the caller has already done.",
+      "11. TSDoc both exports `@public`, with a `@remarks` block on the function recording: that it never throws; that it must be called only after a direct lookup has missed, which is what makes a live holder of the name win unconditionally; that 'unknown' deliberately conflates absent, forbidden and contested; and that kind: User is refused outright for privacy. Apache 2.0 header with year 2026."
+    ],
+    "exports": [
+      {
+        "name": "FormerEntityRefResolution",
+        "kind": "type",
+        "params": [],
+        "returns": "{ status: 'resolved'; entity: Entity; formerEntityRef: string } | { status: 'unknown' }"
+      },
+      {
+        "name": "resolveFormerEntityRef",
+        "kind": "function",
+        "params": [
+          { "name": "catalogApi", "type": "CatalogApi" },
+          { "name": "formerEntityRef", "type": "string" },
+          { "name": "options", "type": "CatalogRequestOptions | undefined" }
+        ],
+        "returns": "Promise<FormerEntityRefResolution>"
+      }
+    ],
+    "import_line": "import { resolveFormerEntityRef } from './resolveFormerEntityRef';",
+    "style_from": {
+      "path": "packages/catalog-client/src/utils.ts",
+      "lines": [17, 50],
+      "reason": "This package's existing free-function module: the import grouping, the TSDoc with explicit release tag, and the plain exported-function shape."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-client/src/types/api.ts",
+        "lines": [436, 520],
+        "reason": "The exact QueryEntitiesInitialRequest shape (that `query` takes a FilterPredicate and that `limit` is supported) and QueryEntitiesResponse's `items` field the result count is read from."
+      }
+    ],
+    "depends_on": ["U03"],
+    "covers": ["FR-4", "FR-5", "FR-6", "FR-8", "FR-10", "FR-11", "FR-22", "NFR-4", "AC-21"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/catalog-client/src/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Exports the former-ref resolution function and its result type from the package's public API, without touching any existing export.",
+    "rules": [
+      "1. Add one value export for `resolveFormerEntityRef` and one `export type` for `FormerEntityRefResolution`, both from './resolveFormerEntityRef'.",
+      "2. Place them after the existing CatalogClient export and before `export * from './types';`, keeping the file's shape.",
+      "3. Do NOT modify the CatalogClient export line or the types star export. CatalogApi, CatalogClient and InMemoryCatalogClient must come out of this change source-identical."
+    ],
+    "exports": [
+      {
+        "name": "resolveFormerEntityRef",
+        "kind": "re-export",
+        "params": [
+          { "name": "catalogApi", "type": "CatalogApi" },
+          { "name": "formerEntityRef", "type": "string" },
+          { "name": "options", "type": "CatalogRequestOptions | undefined" }
+        ],
+        "returns": "Promise<FormerEntityRefResolution>"
+      },
+      {
+        "name": "FormerEntityRefResolution",
+        "kind": "re-export-type",
+        "params": [],
+        "returns": "FormerEntityRefResolution"
+      }
+    ],
+    "import_line": "import { resolveFormerEntityRef, type FormerEntityRefResolution } from '@backstage/catalog-client';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 23,
+        "to": 23,
+        "first_line": "export { CatalogClient } from './CatalogClient';",
+        "rule": "Insert the value export of resolveFormerEntityRef and the type export of FormerEntityRefResolution on the lines after this one."
+      }
+    ],
+    "depends_on": ["U12"],
+    "covers": ["FR-10", "FR-11"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/catalog-client/src/resolveFormerEntityRef.test.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Proves the resolution function issues exactly one correctly-shaped query, distinguishes resolved from unknown, treats absent, forbidden and contested identically, refuses User refs without a request, and never throws.",
+    "rules": [
+      "1. Drive it with a hand-rolled mock whose only member used is `queryEntities: jest.fn()`, cast to CatalogApi. Do NOT use InMemoryCatalogClient here: the point is to assert the exact request shape that reaches the client, and to prove no other member is called.",
+      "2. At most four thorough `it` blocks in one describe.",
+      "3. Block one, the resolved path and the request shape: queryEntities resolving to one item yields status 'resolved' with that entity and the canonicalized former ref. Assert queryEntities was called exactly ONCE, with limit 2, and with the predicate carrying the annotation-derived key built from ANNOTATION_FORMER_ENTITY_REFS and the $not kind user clause. Also assert the options argument is forwarded through. Also assert that a mixed-case input ref produces the same key and the lowercase formerEntityRef in the result.",
+      "4. Block two, the three unknown cases are indistinguishable: zero items (nothing claims it), zero items standing in for a caller who may not read the claimant, and two items (contested) each yield exactly `{ status: 'unknown' }` with no extra field — asserted by deep equality so a future divergence in the three answers fails the test.",
+      "5. Block three, the structural User refusal: a 'user:default/x' ref and a 'User:default/X' ref each return unknown AND leave queryEntities uncalled, proving no request is issued and nothing leaks.",
+      "6. Block four, never throws: a malformed ref ('', a kindless name, 'component:default/') returns unknown with queryEntities uncalled; and a queryEntities that REJECTS yields unknown rather than a rejection. Assert with `await expect(...).resolves.toEqual({ status: 'unknown' })` so a rejection fails loudly.",
+      "7. Never hand-write the predicate key string; build the expected key from ANNOTATION_FORMER_ENTITY_REFS imported from '@backstage/catalog-model'.",
+      "8. Apache 2.0 header with year 2026."
+    ],
+    "style_from": {
+      "path": "packages/catalog-client/src/utils.test.ts",
+      "reason": "The sibling unit test for this package's free functions: its header, import grouping and describe/it layout."
+    },
+    "depends_on": ["U12"],
+    "covers": ["AC-4", "AC-17", "AC-20", "FR-6", "FR-8", "FR-10", "NFR-4"],
+    "tests": [
+      {
+        "name": "resolves a single claimant and issues one correctly shaped query",
+        "given": "queryEntities returning exactly one entity, for a lowercase and a mixed-case former ref, with request options supplied",
+        "expect": "status resolved with that entity and the canonicalized former ref; queryEntities called once with limit 2, the annotation-derived key, the $not kind user clause and the options forwarded"
+      },
+      {
+        "name": "reports absent, forbidden and contested identically as unknown",
+        "given": "queryEntities returning zero items, zero items for an unauthorized caller, and two items",
+        "expect": "exactly { status: 'unknown' } by deep equality in all three cases"
+      },
+      {
+        "name": "refuses a User ref without issuing a request",
+        "given": "a lowercase and a mixed-case User former ref",
+        "expect": "unknown in both cases and queryEntities never called"
+      },
+      {
+        "name": "never throws for a malformed ref or a failing backend",
+        "given": "an empty, kindless and empty-name ref; and a queryEntities that rejects",
+        "expect": "the promise resolves to unknown every time and never rejects; no request issued for the malformed refs"
+      }
+    ],
+    "checks": ["format", "lint", "unit"]
+  }
+]

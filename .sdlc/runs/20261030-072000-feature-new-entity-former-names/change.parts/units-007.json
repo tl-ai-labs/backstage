@@ -1,0 +1,182 @@
+{
+  "section": "units",
+  "source": "units-007.json",
+  "value": [
+    {
+      "id": "U31",
+      "path": "docs/features/software-catalog/well-known-annotations.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the former-entity-refs annotation as a well-known annotation, including the privacy warning against recording personal former names.",
+      "rules": [
+        "1. Add one `### backstage.io/former-entity-refs` section as the LAST entry under `## Annotations`, immediately before the `## Deprecated Annotations` heading. Do not reorder any existing entry.",
+        "2. Follow the house entry shape exactly: a fenced `yaml` block introduced by a `# Example:` comment showing a `metadata.annotations` fragment, then prose. Copy the shape of the `### vault.io/secrets-path` entry directly above.",
+        "3. The example shows a multi-ref value, e.g. a component declaring two former refs, one of which differs by namespace, so the comma delimiter and the multi-value capability are both visible at a glance. Quote the value in the YAML so the comma is unambiguous to a reader.",
+        "4. The prose states, in this order: what the annotation records; that the value is a comma-separated list of entity refs; that surrounding whitespace around each entry is ignored; that an entry which is not a valid entity ref is ignored rather than failing the entity; that a maximum of 20 refs may be declared and a longer list is ignored entirely; that a former ref which a live entity currently holds has no effect, because the live entity always wins; and that when two entities claim the same former ref, neither resolves.",
+        "5. The prose then states the effect: opening a URL for one of the declared former refs redirects to the entity's current URL, preserving the sub-path, and shows a notice naming the former ref. Name the catalog entity page and TechDocs as the surfaces that do this.",
+        "6. PRIVACY WARNING, required and explicit: a clearly marked warning that `User` entities are excluded from this mechanism entirely — a former ref naming a User never resolves and a User's own declaration never produces a redirect — and that adopters must not record a person's former name anywhere in catalog metadata, because a previous user name can disclose a legal name change. State that the exclusion is enforced by the catalog, not merely advised.",
+        "7. Follow the doc style guide at docs/contribute/doc-style-guide.md: sentence-case prose, second person, no future tense for present behaviour, no marketing language.",
+        "8. Add nothing to the `## Links` section and do not touch the deprecated list."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 458,
+          "to": 458,
+          "first_line": "## Deprecated Annotations",
+          "rule": "Insert the new `### backstage.io/former-entity-refs` section and a following blank line immediately before this heading, as the last entry under `## Annotations`."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/well-known-annotations.md",
+        "lines": [
+          445,
+          457
+        ],
+        "reason": "The vault.io/secrets-path entry immediately above is the exact heading, example-block and prose shape to copy."
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-19"
+      ],
+      "checks": [
+        "format"
+      ]
+    },
+    {
+      "id": "U32",
+      "path": "docs/features/software-catalog/descriptor-format.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Points readers of the annotations reference at the former-entity-refs annotation.",
+      "rules": [
+        "1. Add exactly one short paragraph at the end of the `### annotations [optional]` section, after the existing sentence about well-known annotations and before the `### tags [optional]` heading.",
+        "2. It states in one or two sentences that an entity can record the refs it was previously known by using the `backstage.io/former-entity-refs` annotation, so links to its old location keep working, and links to the well-known-annotations.md entry for the details.",
+        "3. Link with a relative markdown link to `well-known-annotations.md`, matching how the existing sentence in this section links to it.",
+        "4. Do not restate the delimiter, the bound or the privacy rules here — this is a pointer, and the reference entry in U31 is the single source of truth. Duplicated rules drift.",
+        "5. Change nothing else in this file."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 355,
+          "to": 355,
+          "first_line": "anybody is free to add more annotations as they see fit.",
+          "rule": "Insert a blank line and the new pointer paragraph here, after this sentence and before the `### tags [optional]` heading."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/descriptor-format.md",
+        "lines": [
+          330,
+          356
+        ],
+        "reason": "The surrounding annotations section shows the prose register and the relative-link style the new paragraph must match."
+      },
+      "depends_on": [
+        "U31"
+      ],
+      "covers": [
+        "FR-19"
+      ],
+      "checks": [
+        "format"
+      ]
+    },
+    {
+      "id": "U33",
+      "path": ".changeset/entity-former-entity-refs.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "The single changeset covering every published package this change touches, at minor, in adopter-facing language.",
+      "rules": [
+        "1. The frontmatter is a `---`-delimited block listing exactly these six packages, each at `minor`, one per line, each name single-quoted: '@backstage/catalog-model', '@backstage/catalog-client', '@backstage/plugin-catalog-backend', '@backstage/plugin-catalog-react', '@backstage/plugin-catalog', '@backstage/plugin-techdocs'. All six are at or above 1.0.0 and all gain new surface or behaviour, so minor is the correct level for a new feature.",
+        "2. The body is two or three sentences of adopter-facing prose. It must name NO internal code symbol — no function names, no type names, no file names, no class names. The annotation key itself is adopter-facing configuration and IS allowed.",
+        "3. The body says: an entity can now record the refs it was previously known by, using the new `backstage.io/former-entity-refs` annotation; links to the entity's former catalog page or TechDocs URL now land on its current location, with the sub-path preserved and a notice naming the former ref; and `User` entities are excluded from this for privacy.",
+        "4. Write the file by hand. The changeset CLI is forbidden in this repo, including for inspection.",
+        "5. Match the formatting of an existing changeset exactly: frontmatter, a blank line, then the prose as a single paragraph with no heading and no trailing list."
+      ],
+      "style_from": {
+        "path": ".changeset/backend-defaults-cli-node-dev.md",
+        "reason": "An existing changeset in this repo showing the exact frontmatter quoting, the blank line and the single adopter-facing paragraph."
+      },
+      "depends_on": [
+        "U31"
+      ],
+      "covers": [
+        "FR-20",
+        "AC-15"
+      ],
+      "checks": [
+        "format"
+      ]
+    },
+    {
+      "id": "U34",
+      "path": ".gitignore",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Ignores the .sdlc/ run-artifact directory so run output is not visible to git add -A.",
+      "rules": [
+        "1. Append a single `.sdlc/` line at the very end of the file, preceded by a blank line and a `# ...` section comment naming it as local SDLC run artifacts, matching how every other section in this file is introduced.",
+        "2. Do not reorder, remove or alter any existing pattern, including the existing .env entries and the trailing personal-allow-patterns section."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 193,
+          "to": 193,
+          "first_line": ".claude/worktrees/",
+          "rule": "Append a blank line, a `# Local SDLC run artifacts` comment and the `.sdlc/` pattern after this final line of the file."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-21"
+      ],
+      "checks": []
+    },
+    {
+      "id": "U35",
+      "path": "packages/catalog-model/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates the public API report files for the six changed packages, which is the only way those reports may be written.",
+      "rules": [
+        "1. This is a generator step, not a typed file. The report*.api.md files under the six package directories are written by this command and must never be hand-edited.",
+        "2. It is scoped to exactly the six changed package paths. An unscoped run would process all 236 workspaces and risk unrelated diffs.",
+        "3. It runs LAST among the codegen units, after every unit that changes an exported surface: the catalog-model constants and parser, the catalog-client resolution function and index, the catalog-react notice component and barrel, and the catalog and techdocs edits.",
+        "4. Its recorded path, packages/catalog-model/report.api.md, is one representative of the several report files it writes, named for the orchestrator's revert bookkeeping. The command also rewrites the report files of the other five packages. No unit types any of them.",
+        "5. Being last in the codegen order, this unit is also where the whole-project gates land: after it runs, the header's project_checks are what prove them — `yarn tsc` at the repo root with no options (AC-11), the path-scoped `CI=1 yarn test <path>` for each of the six changed package paths with no regression against the recorded HEAD baseline (AC-12, never a pathless run on a 236-workspace repo), and the per-file lint check every unit carries, which is what makes `yarn lint --fix` clean over the changed files (AC-14). These are verification gates over the finished change, not extra work for this step."
+      ],
+      "run": "yarn build:api-reports packages/catalog-model packages/catalog-client plugins/catalog-backend plugins/catalog-react plugins/catalog plugins/techdocs",
+      "depends_on": [
+        "U13",
+        "U18",
+        "U20",
+        "U23",
+        "U28",
+        "U09"
+      ],
+      "covers": [
+        "NFR-7",
+        "AC-13",
+        "AC-11",
+        "AC-12",
+        "AC-14"
+      ],
+      "checks": []
+    }
+  ],
+  "hashes": {
+    "docs/features/software-catalog/well-known-annotations.md": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056",
+    "docs/features/software-catalog/descriptor-format.md": "475531fedf3000c436592cf2f5552aa16734367c7befbef2c538992d45b0f8e0",
+    ".changeset/backend-defaults-cli-node-dev.md": "a224b9c32080da67ac4dc48f180062bd46cd824c60b5977707b59f2fbf763c7b",
+    ".gitignore": "8ba83d2a79973faef40691131335781b0353cd056c893651bc4bd9d359dc8c74"
+  }
+}
