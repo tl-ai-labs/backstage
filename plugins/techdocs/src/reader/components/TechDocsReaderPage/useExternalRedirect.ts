@@ -15,12 +15,13 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useAsync from 'react-use/esm/useAsync';
 import { useApi, useRouteRef } from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import {
   CompoundEntityRef,
+  parseEntityRef,
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { buildTechDocsURL } from '@backstage/plugin-techdocs-react';
@@ -30,7 +31,9 @@ import { rootDocsRouteRef } from '../../../routes';
 /**
  * Hook to handle external TechDocs redirects based on entity annotations.
  * Checks if an entity has the `backstage.io/techdocs-entity` annotation and
- * redirects to the external TechDocs URL if present.
+ * redirects to the external TechDocs URL if present. Also redirects links to a
+ * former entity ref, as declared by the `backstage.io/former-names` annotation,
+ * to the current entity's docs.
  *
  * @param entityRef - The entity reference to check for external redirects
  * @returns Object containing loading state and whether a redirect is in progress
@@ -44,6 +47,8 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
   const catalogApi = useApi(catalogApiRef);
   const navigate = useNavigate();
   const viewTechdocLink = useRouteRef(rootDocsRouteRef);
+  const splat = useParams()['*'] ?? '';
+  const location = useLocation();
 
   // Create a stable string key for the entity to use as a dependency.
   // This ensures the useAsync hook only re-runs when the entity changes,
@@ -63,6 +68,21 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
         catalogEntity?.metadata?.annotations?.[TECHDOCS_EXTERNAL_ANNOTATION]
       ) {
         return buildTechDocsURL(catalogEntity, viewTechdocLink);
+      }
+
+      if (!catalogEntity && catalogApi.getEntityRefByFormerRef) {
+        const newRef = await catalogApi.getEntityRefByFormerRef(entityRef);
+        if (newRef && viewTechdocLink) {
+          const parsed = parseEntityRef(newRef);
+          const base = viewTechdocLink({
+            namespace: parsed.namespace.toLocaleLowerCase('en-US'),
+            kind: parsed.kind.toLocaleLowerCase('en-US'),
+            name: parsed.name.toLocaleLowerCase('en-US'),
+          });
+          const params = new URLSearchParams(location.search);
+          params.set('renamedFrom', stringifyEntityRef(entityRef));
+          return `${base}${splat ? `/${splat}` : ''}?${params}${location.hash}`;
+        }
       }
     } catch (error) {
       // Ignore errors and allow the current entity's TechDocs to load.

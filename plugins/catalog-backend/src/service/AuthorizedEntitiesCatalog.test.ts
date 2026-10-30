@@ -36,6 +36,7 @@ describe('AuthorizedEntitiesCatalog', () => {
     refresh: jest.fn(),
     listAncestors: jest.fn(),
     queryEntities: jest.fn(),
+    resolveFormerEntityRef: jest.fn(),
   };
   const fakePermissionApi = {
     authorize: jest.fn(),
@@ -680,6 +681,107 @@ describe('AuthorizedEntitiesCatalog', () => {
         facets: ['a'],
         credentials: mockCredentials.none(),
       });
+    });
+  });
+
+  describe('resolveFormerEntityRef', () => {
+    it('returns the claimant when the caller may read it', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'resolved',
+        entityRef: 'component:default/new',
+      });
+      fakeCatalog.entitiesBatch.mockResolvedValue({
+        items: {
+          type: 'object',
+          entities: [
+            {
+              apiVersion: 'backstage.io/v1alpha1',
+              kind: 'Component',
+              metadata: { name: 'new', namespace: 'default' },
+            },
+          ],
+        },
+      });
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.ALLOW },
+      ]);
+      const catalog = createCatalog();
+
+      const result = await catalog.resolveFormerEntityRef({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(result).toEqual({
+        type: 'resolved',
+        entityRef: 'component:default/new',
+      });
+      expect(fakeCatalog.entitiesBatch).toHaveBeenCalledWith({
+        entityRefs: ['component:default/new'],
+        credentials: mockCredentials.none(),
+      });
+    });
+
+    it('hides a claimant the caller may not read', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'resolved',
+        entityRef: 'component:default/new',
+      });
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog();
+
+      const result = await catalog.resolveFormerEntityRef({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(result).toEqual({ type: 'none' });
+    });
+
+    it('hides a current entity the caller may not read', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValue({
+        type: 'current',
+      });
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog();
+
+      const result = await catalog.resolveFormerEntityRef({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(result).toEqual({ type: 'none' });
+    });
+
+    it('passes conflicts and misses through', async () => {
+      fakeCatalog.resolveFormerEntityRef
+        .mockResolvedValueOnce({
+          type: 'conflict',
+          entityRefs: ['component:default/a', 'component:default/b'],
+        })
+        .mockResolvedValueOnce({ type: 'none' });
+      const catalog = createCatalog();
+
+      const conflictResult = await catalog.resolveFormerEntityRef({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.none(),
+      });
+      const noneResult = await catalog.resolveFormerEntityRef({
+        formerRef: 'component:default/old',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(conflictResult).toEqual({
+        type: 'conflict',
+        entityRefs: ['component:default/a', 'component:default/b'],
+      });
+      expect(noneResult).toEqual({ type: 'none' });
+      expect(fakePermissionApi.authorizeConditional).not.toHaveBeenCalled();
+      expect(fakeCatalog.entitiesBatch).not.toHaveBeenCalled();
     });
   });
 });

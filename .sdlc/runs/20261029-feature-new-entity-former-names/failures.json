@@ -1,0 +1,20 @@
+[
+  {
+    "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "problem": "yarn tsc fails after the last fix:\nuseEntityFromUrl.ts:76:27 - error TS2722: Cannot invoke an object which is possibly 'undefined'.\nuseEntityFromUrl.ts:76:27 - error TS18048: 'catalogApi.getEntityRefByFormerRef' is possibly 'undefined'.\nuseEntityFromUrl.ts:89:9 - error TS18048: 'formerLookup.value' is possibly 'undefined'.\nThe narrowing of the optional catalogApi.getEntityRefByFormerRef is lost inside the async callback (it is checked in a separate boolean such as lookupApplies). Capture the method in a local const and check it directly before calling (e.g. const getFormer = catalogApi.getEntityRefByFormerRef; if (!lookupApplies || !getFormer) return ...; await getFormer.call(catalogApi, {kind, namespace, name})), and guard formerLookup.value with optional chaining or an explicit check at line 89. Keep the behaviour of the previous fix: loading stays true until the former lookup for the current ref has resolved, with no not-found flash and no spinner flash on normal loads; renamedFrom carries the OLD ref.",
+    "context_paths": [
+      "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx"
+    ]
+  },
+  {
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+    "problem": "yarn tsc fails: useExternalRedirect.test.tsx:297:7 - error TS2345: Argument of type '({ namespace, kind, name, }: { namespace: string; kind: string; name: string; }) => string' is not assignable to parameter of type '(args_0?: { namespace: string; kind: string; name: string; } | undefined) => string'. The mock's parameter is optional in its declared type; make the implementation accept an optional argument, e.g. (args?: { namespace: string; kind: string; name: string }) => `/docs/${args?.namespace}/${args?.kind}/${args?.name}`, without changing what any test asserts."
+  },
+  {
+    "path": "plugins/catalog-backend/src/service/createRouter.ts",
+    "problem": "CI=1 yarn test plugins/catalog-backend fails: createRouter readonly disabled > GET /entities/by-former-name/:kind/:namespace/:name > responds with the same 404 for misses and conflicts (createRouter.test.ts:651): expect(logger.warn).toHaveBeenCalledTimes(1), received 0 calls. The last fix changed the conflict log from logger.warn to logger.debug, but requirement FR-6 (approved at Gate 1) requires a warning naming the conflicting refs. In the 'conflict' branch use logger.warn again with the same message (it must contain the claimant refs joined by ', ', e.g. 'component:default/a, component:default/b'). Keep the other part of the last fix as it is (the auditor event records only fail() on a 404, never success() then fail()).",
+    "context_paths": [
+      "plugins/catalog-backend/src/service/createRouter.test.ts"
+    ]
+  }
+]

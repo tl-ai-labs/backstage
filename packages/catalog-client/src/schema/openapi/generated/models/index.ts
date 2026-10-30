@@ -35,6 +35,7 @@ export * from '../models/EntityRelation.model';
 export * from '../models/ErrorError.model';
 export * from '../models/ErrorRequest.model';
 export * from '../models/ErrorResponse.model';
+export * from '../models/FormerEntityRefResponse.model';
 export * from '../models/GetEntitiesByRefsRequest.model';
 export * from '../models/GetLocations200ResponseInner.model';
 export * from '../models/GetLocationsByQueryRequest.model';

@@ -1,0 +1,235 @@
+{
+  "section": "units",
+  "source": "units-007.json",
+  "value": [
+    {
+      "id": "U43",
+      "path": "docs/features/software-catalog/well-known-annotations.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents backstage.io/former-names: format, claim rules, conflict behaviour and permissions.",
+      "rules": [
+        "1. Section heading '### backstage.io/former-names' followed by a YAML example: metadata.name new-service with annotation backstage.io/former-names: 'old-service, legacy/older-service'.",
+        "2. Format: a comma-separated list of entity refs; whitespace around items is ignored; a short form (name or namespace/name) takes the entity's own kind and namespace; refs are compared case-insensitively.",
+        "3. Claim rules as a list: a former ref must have the same kind as the entity; it must not be the entity's own current ref; it must follow the usual naming rules; a ref in another namespace is allowed. An invalid item is reported as a processing error on the entity that names the item.",
+        "4. Behaviour: opening the entity page or TechDocs URL of a former ref redirects to the entity's current URL and shows a notice that the entity was renamed. A live entity always keeps its own name, so if an entity currently holds the ref there is no redirect. If more than one entity claims the same former ref, there is no redirect and the catalog logs a warning.",
+        "5. Permissions: the redirect only happens when the user may read the entity that claims the ref; otherwise the page shows Entity not found, the same as when nothing claims the ref.",
+        "6. Mention the catalog endpoint GET /entities/by-former-name/<kind>/<namespace>/<name> with a link to api.md."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 82,
+          "to": 82,
+          "first_line": "",
+          "rule": "After the orphan section and its blank line, insert the new section (rules 1-6) followed by a blank line, before '### backstage.io/techdocs-ref'."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/well-known-annotations.md",
+        "lines": [59, 82],
+        "reason": "Section layout of a well-known annotation."
+      },
+      "depends_on": ["U01"],
+      "covers": ["FR-16", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U44",
+      "path": "docs/features/software-catalog/references.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds a short 'Renaming an entity' section that links to the annotation docs.",
+      "rules": [
+        "1. '## Renaming an entity': because an entity's URL is built from its kind, namespace and name, a rename breaks existing links. Add the old ref to backstage.io/former-names on the renamed entity so old entity page and TechDocs links redirect to it; link to well-known-annotations.md#backstageioformer-names. Note that refs held by other entities, such as spec.owner, are not rewritten and must be updated by hand."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 88,
+          "to": 88,
+          "first_line": "## Compound References",
+          "rule": "Insert the section (rule 1) and a blank line."
+        }
+      ],
+      "depends_on": ["U43"],
+      "covers": ["FR-16"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U45",
+      "path": "docs/features/software-catalog/api.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the GET /entities/by-former-name endpoint.",
+      "rules": [
+        "1. '### `GET /entities/by-former-name/<kind>/<namespace>/<name>`': returns JSON { \"entityRef\": \"<current ref>\" } for the entity that claims the given former ref through backstage.io/former-names; returns 404 when an entity currently holds the ref, when nothing claims it, when several entities claim it, or when the caller may not read the claimant; the 404 body does not say which."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 675,
+          "to": 675,
+          "first_line": "",
+          "rule": "After the ancestry section, insert the new section (rule 1) and a blank line, before '### `POST /entities/by-refs`'."
+        }
+      ],
+      "depends_on": ["U43"],
+      "covers": ["FR-16"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U46",
+      "path": "docs/features/software-catalog/audit-events.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Lists the new by-former-name query type of entity-fetch.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 21,
+          "to": 21,
+          "first_line": "- **`ancestry`**: Fetching the ancestry of an entity. (GET `/entities/by-name/:kind/:namespace/:name/ancestry`)",
+          "rule": "Add `  - **`by-former-name`**: Resolving a former entity ref to the current ref of the entity that claims it. (GET `/entities/by-former-name/:kind/:namespace/:name`)` with the same indentation."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7", "FR-16"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U47",
+      "path": "docs/features/techdocs/FAQ.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds an FAQ entry on what happens to TechDocs links when an entity is renamed.",
+      "rules": [
+        "1. Question '#### What happens to TechDocs links when an entity is renamed?'; answer: when the renamed entity lists its old ref in backstage.io/former-names, a TechDocs URL for the old ref redirects to the docs of the renamed entity, keeping the page path within the docs, and the reader shows a notice that the entity was renamed. Link to ../software-catalog/well-known-annotations.md#backstageioformer-names for the claim rules and permissions.",
+        "2. Add the matching item to the Technology list at the top, linking to #what-happens-to-techdocs-links-when-an-entity-is-renamed."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 16,
+          "to": 16,
+          "first_line": "- [Is it possible for users to suggest changes or provide feedback on a TechDocs page?](#is-it-possible-for-users-to-suggest-changes-or-provide-feedback-on-a-techdocs-page)",
+          "rule": "Add the list item of rule 2."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 54,
+          "to": 54,
+          "first_line": "",
+          "rule": "After the techdocs-entity answer and its blank line, insert the question and answer of rule 1 and a blank line."
+        }
+      ],
+      "depends_on": ["U43"],
+      "covers": ["FR-16", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U48",
+      "path": ".changeset/catalog-model-former-names.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/catalog-model.",
+      "rules": [
+        "1. Front matter `'@backstage/catalog-model': minor`.",
+        "2. Text: Added the `backstage.io/former-names` well-known annotation (`ANNOTATION_FORMER_NAMES`) and the `parseFormerEntityRefs` helper. Entities can list the refs they were previously known by, and the default entity validation reports invalid items, such as a former ref of a different kind or the entity's own ref, as processing errors."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [],
+      "covers": ["FR-17", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U49",
+      "path": ".changeset/catalog-client-former-names.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/catalog-client.",
+      "rules": [
+        "1. Front matter `'@backstage/catalog-client': minor`.",
+        "2. Text: Added the optional `getEntityRefByFormerRef` method to `CatalogApi`, implemented by `CatalogClient` and `InMemoryCatalogClient`. It resolves a former entity ref, as declared with the `backstage.io/former-names` annotation, to the current ref of the renamed entity, or `undefined` when there is no unambiguous match."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [],
+      "covers": ["FR-17", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U50",
+      "path": ".changeset/catalog-backend-former-names.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-catalog-backend.",
+      "rules": [
+        "1. Front matter `'@backstage/plugin-catalog-backend': minor`.",
+        "2. Text: The catalog now indexes the refs listed in the `backstage.io/former-names` annotation and adds the `GET /entities/by-former-name/:kind/:namespace/:name` endpoint, which returns the current ref of the entity that claims a former ref. It responds with 404 when a live entity holds the ref, when nothing claims it, when several entities claim it (a warning is logged), or when the caller may not read the claimant. Existing lookups are unchanged and no database migration is needed."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [],
+      "covers": ["FR-17", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U51",
+      "path": ".changeset/catalog-former-names-redirect.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-catalog.",
+      "rules": [
+        "1. Front matter `'@backstage/plugin-catalog': minor`.",
+        "2. Text: When an entity page URL does not match any entity, the page now checks whether a renamed entity lists that ref in its `backstage.io/former-names` annotation. If so, it redirects to the entity's current URL, keeping the selected tab and query parameters, and shows a notice that the entity was renamed. This works in both the old and the new frontend system, and normal page loads make no extra request."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [],
+      "covers": ["FR-17", "AC-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U52",
+      "path": ".changeset/techdocs-former-names-redirect.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-techdocs.",
+      "rules": [
+        "1. Front matter `'@backstage/plugin-techdocs': minor`.",
+        "2. Text: The TechDocs reader now redirects links for an entity that was renamed to the docs of its current ref, when the entity lists its old ref in the `backstage.io/former-names` annotation. The page path within the docs, the query string and the anchor are kept, and the reader shows a notice that the entity was renamed. This works in both the old and the new frontend system."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [],
+      "covers": ["FR-17", "AC-8"],
+      "checks": ["prettier"]
+    }
+  ],
+  "hashes": {
+    "docs/features/software-catalog/well-known-annotations.md": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056",
+    "docs/features/software-catalog/references.md": "63bca613bfc4cf9aa6be3c036f7978802a15717d77057918bd03a3df37674ad5",
+    "docs/features/software-catalog/api.md": "ec934fc7bf0d9e7ccfadd9dfe7034e7a7c6f5c77892095f7e7e49404917c0587",
+    "docs/features/software-catalog/audit-events.md": "f7f7c09de587f945aed084b05d8e4036b0697031afcc3cc723add5123c2daa1b",
+    "docs/features/techdocs/FAQ.md": "3f0495de5fb9b2fa6def134d75ac5738834757787e62bf4c011393138d925b52",
+    ".changeset/calm-catalog-placeholders.md": "7ec2fa9f79e5eff6ffc6d2d373d628dbecd6de1b8d3db28f421bba0e9c5d3d33"
+  }
+}

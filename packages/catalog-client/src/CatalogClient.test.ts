@@ -1169,6 +1169,61 @@ describe('CatalogClient', () => {
     });
   });
 
+  describe('getEntityRefByFormerRef', () => {
+    let recordedAuthHeader: string | null = null;
+
+    beforeEach(() => {
+      recordedAuthHeader = null;
+      server.use(
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/component/default/old`,
+          ({ request }) => {
+            recordedAuthHeader = request.headers.get('authorization');
+            return HttpResponse.json({ entityRef: 'component:default/new' });
+          },
+        ),
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/component/default/missing`,
+          () => {
+            return new HttpResponse(null, { status: 404 });
+          },
+        ),
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/component/default/broken`,
+          () => {
+            return HttpResponse.json(
+              { error: { message: 'Internal Server Error' } },
+              { status: 500 },
+            );
+          },
+        ),
+      );
+    });
+
+    it('resolves a former ref by string and compound form and passes the token', async () => {
+      await expect(
+        client.getEntityRefByFormerRef('component:default/old', { token }),
+      ).resolves.toBe('component:default/new');
+      expect(recordedAuthHeader).toBe(`Bearer ${token}`);
+
+      await expect(
+        client.getEntityRefByFormerRef(
+          { kind: 'Component', namespace: 'default', name: 'old' },
+          { token },
+        ),
+      ).resolves.toBe('component:default/new');
+    });
+
+    it('returns undefined for 404s and throws for other errors', async () => {
+      await expect(
+        client.getEntityRefByFormerRef('component:default/missing'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.getEntityRefByFormerRef('component:default/broken'),
+      ).rejects.toThrow();
+    });
+  });
+
   describe('getLocations', () => {
     const defaultResponse = [
       {

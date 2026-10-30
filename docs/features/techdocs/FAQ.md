@@ -14,6 +14,7 @@ This page answers frequently asked questions about [TechDocs](README.md).
 - [Does TechDocs support file formats other than Markdown (e.g. RST, AsciiDoc)?](#does-techdocs-support-file-formats-other-than-markdown-eg-rst-asciidoc)
 - [What should be the value of `backstage.io/techdocs-ref` when using external build and storage?](#what-should-be-the-value-of-backstageiotechdocs-ref-when-using-external-build-and-storage)
 - [Is it possible for users to suggest changes or provide feedback on a TechDocs page?](#is-it-possible-for-users-to-suggest-changes-or-provide-feedback-on-a-techdocs-page)
+- [What happens to TechDocs links when an entity is renamed?](#what-happens-to-techdocs-links-when-an-entity-is-renamed)
 
 #### What static site generator is TechDocs using?
 
@@ -51,6 +52,10 @@ entity.
 #### What happens when you navigate to a TechDocs URL for an entity uses the `backstage.io/techdocs-entity` annotation?
 
 If you navigate to a TechDocs URL in the format `docs/{namespace}/{kind}/{name}` for an entity that has the `backstage.io/techdocs-entity` annotation (instead of the `backstage.io/techdocs-ref` annotation), then Backstage will redirect to the TechDocs page of the entity referenced in the value of that annotation.
+
+#### What happens to TechDocs links when an entity is renamed?
+
+When the renamed entity lists its old ref in `backstage.io/former-names`, a TechDocs URL for the old ref redirects to the docs of the renamed entity, keeping the page path within the docs, and the reader shows a notice that the entity was renamed. See [`backstage.io/former-names`](../software-catalog/well-known-annotations.md#backstageioformer-names) for the claim rules and permissions.
 
 #### Is it possible for users to suggest changes or provide feedback on a TechDocs page?
 

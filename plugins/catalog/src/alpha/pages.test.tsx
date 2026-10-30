@@ -19,6 +19,7 @@ import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createExtensionTester,
+  mockApis,
   renderInTestApp,
 } from '@backstage/frontend-test-utils';
 import { catalogEntityPage } from './pages';
@@ -1285,5 +1286,88 @@ describe('Entity page', () => {
         expect(screen.queryByText('Should Not Render')).not.toBeInTheDocument();
       },
     );
+  });
+
+  describe('Renamed entities', () => {
+    const renamedEntity: Entity = {
+      ...entityMock,
+      metadata: {
+        ...entityMock.metadata,
+        name: 'new-name',
+        annotations: {
+          ...entityMock.metadata.annotations,
+          'backstage.io/former-names': 'old-name',
+        },
+      },
+    };
+
+    it('redirects a former URL and shows the renamed notice', async () => {
+      const alertApi = mockApis.alert();
+      const tester = createExtensionTester(
+        Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+      ).add(overviewEntityContent);
+
+      await renderInTestApp(tester.reactElement(), {
+        apis: [
+          catalogApiMock({ entities: [renamedEntity] }),
+          [starredEntitiesApiRef, mockStarredEntitiesApi],
+          alertApi,
+        ],
+        mountPath: '/catalog/:namespace/:kind/:name',
+        initialRouteEntries: ['/catalog/default/component/old-name/overview'],
+        config: {
+          app: {
+            title: 'Custom app',
+          },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountedRoutes: {
+          '/catalog': convertLegacyRouteRef(rootRouteRef),
+          '/catalog/:namespace/:kind/:name':
+            convertLegacyRouteRef(entityRouteRef),
+        },
+      });
+
+      expect(
+        await screen.findByText('Mock Overview content'),
+      ).toBeInTheDocument();
+
+      const alerts = alertApi.getAlerts();
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0].message).toContain('component:default/old-name');
+    });
+
+    it('keeps the not-found page when nothing claims the ref', async () => {
+      const alertApi = mockApis.alert();
+      const tester = createExtensionTester(
+        Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+      ).add(overviewEntityContent);
+
+      await renderInTestApp(tester.reactElement(), {
+        apis: [
+          catalogApiMock({ entities: [renamedEntity] }),
+          [starredEntitiesApiRef, mockStarredEntitiesApi],
+          alertApi,
+        ],
+        mountPath: '/catalog/:namespace/:kind/:name',
+        initialRouteEntries: ['/catalog/default/component/unknown'],
+        config: {
+          app: {
+            title: 'Custom app',
+          },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountedRoutes: {
+          '/catalog': convertLegacyRouteRef(rootRouteRef),
+          '/catalog/:namespace/:kind/:name':
+            convertLegacyRouteRef(entityRouteRef),
+        },
+      });
+
+      expect(
+        await screen.findByText('Entity not found', {}, { timeout: 3000 }),
+      ).toBeInTheDocument();
+      expect(alertApi.getAlerts()).toHaveLength(0);
+    });
   });
 });

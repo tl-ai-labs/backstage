@@ -628,6 +628,58 @@ wasted scanning entries before a deep cursor.
 
 ---
 
+## 15. Former entity ref lookup (renamed entity redirect)
+
+**User action**: Opening an old link to a renamed entity, which only happens
+after the by-ref lookup of scenario 6 found nothing.
+
+**Method call**:
+
+```ts
+catalog.resolveFormerEntityRef({
+  formerRef: 'component:default/old-service',
+  credentials,
+});
+```
+
+**Reference SQL**:
+
+```sql
+SELECT final_entities.entity_ref
+FROM final_entities
+WHERE final_entities.entity_ref = 'component:default/old-service'
+  AND final_entities.final_entity IS NOT NULL
+LIMIT 1;
+```
+
+then
+
+```sql
+SELECT final_entities.entity_ref
+FROM search
+INNER JOIN final_entities ON final_entities.entity_id = search.entity_id
+WHERE search.key = 'former_entity_ref'
+  AND search.value = 'component:default/old-service'
+  AND final_entities.final_entity IS NOT NULL
+ORDER BY final_entities.entity_ref ASC
+LIMIT 10;
+```
+
+**Healthy plan**: Index Scan on `final_entities_entity_ref_uniq` for the first
+query; Index Only Scan on `search_key_value_entity_idx` with a nested loop into
+`final_entities_pkey` for the second; well under 1ms each.
+
+**Anti-patterns**:
+
+- Seq Scan on `search`
+- Any LIKE on `search.value`
+- A scan of `metadata.annotations` rows
+
+No baseline numbers are recorded yet in `baseline.md`; they are added when the
+battery is next run.
+
+---
+
 ## Global anti-patterns
 
 These should NEVER appear in any of the above queries:

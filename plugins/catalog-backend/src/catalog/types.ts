@@ -146,6 +146,51 @@ export interface EntityFacetsResponse {
   facets: Record<string, Array<{ value: string; count: number }>>;
 }
 
+/**
+ * Request shape for {@link EntitiesCatalog.resolveFormerEntityRef}.
+ */
+export interface ResolveFormerEntityRefRequest {
+  /**
+   * The former entity ref to resolve, in full stringified form.
+   */
+  formerRef: string;
+  /**
+   * The credentials that authorizes the action.
+   */
+  credentials: BackstageCredentials;
+}
+
+/**
+ * Result of resolving a former entity ref via {@link EntitiesCatalog.resolveFormerEntityRef}.
+ */
+export type FormerEntityRefResolution =
+  | {
+      /**
+       * An entity currently holds the requested ref.
+       */
+      type: 'current';
+    }
+  | {
+      /**
+       * No entity claims the requested ref, or the caller may not see the answer.
+       */
+      type: 'none';
+    }
+  | {
+      /**
+       * Several entities claim the requested ref.
+       */
+      type: 'conflict';
+      entityRefs: string[];
+    }
+  | {
+      /**
+       * Exactly one entity claims the requested ref.
+       */
+      type: 'resolved';
+      entityRef: string;
+    };
+
 export interface EntitiesCatalog {
   /**
    * Fetch entities.
@@ -193,6 +238,14 @@ export interface EntitiesCatalog {
    * @param request - Request options
    */
   facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;
+
+  /**
+   * Resolves a former entity ref, as declared by the backstage.io/former-names
+   * annotation, to the current ref of the entity that claims it.
+   */
+  resolveFormerEntityRef(
+    request: ResolveFormerEntityRefRequest,
+  ): Promise<FormerEntityRefResolution>;
 }
 
 /**

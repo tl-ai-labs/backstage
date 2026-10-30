@@ -1,0 +1,176 @@
+{
+  "section": "units",
+  "source": "units-005.json",
+  "value": [
+    {
+      "id": "U31",
+      "path": "plugins/catalog/src/alpha/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the renamed-entity notice text to the catalog translation ref.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 30,
+          "to": 30,
+          "first_line": "notFoundLinkText: 'kind, namespace, and name',",
+          "rule": "Add `renamedNotice: 'This entity was renamed from {{formerRef}}. Please update your links and bookmarks.',` inside entityPage."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-12"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U32",
+      "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "On the not-found path only, resolves the URL's ref as a former ref and redirects to the current entity URL with a renamedFrom marker; when an entity loads with the marker, posts a dismissible renamed notice and drops the marker.",
+      "rules": [
+        "1. Keep the existing entity fetch (useAsyncRetry over catalogApi.getEntityByRef) and the missing-name effect exactly as they are.",
+        "2. New hooks: useLocation and useParams from react-router-dom (splat = useParams()['*'] ?? ''), alertApiRef via useApi, entityRoute = useRouteRef(entityRouteRef), t from useTranslationRef(catalogTranslationRef) imported from '@backstage/core-plugin-api/alpha' and '../../alpha/translation'.",
+        "3. Former lookup with useAsync from 'react-use/esm/useAsync', deps [catalogApi, kind, namespace, name, loading, error, entity]: return undefined unless name is set, loading is false, error is unset, entity is undefined and catalogApi.getEntityRefByFormerRef exists; otherwise return await catalogApi.getEntityRefByFormerRef({ kind, namespace, name }) inside try/catch, returning undefined on any error. A normal load therefore makes no extra request (FR-13).",
+        "4. A useEffect navigates when the lookup yields a ref: target path is entityRoute(entityRouteParams(newRef, { encodeParams: true })) plus `/${splat}` when splat is non-empty; search params are a copy of new URLSearchParams(location.search) with renamedFrom set to stringifyEntityRef({ kind, namespace, name }); then the hash. Call navigate(`${path}?${params}${location.hash}`, { replace: true }).",
+        "5. A second useEffect runs when an entity is loaded and new URLSearchParams(location.search).get('renamedFrom') is set: unless a useRef already holds that value, store it, call alertApi.post({ message: t('entityPage.renamedNotice', { formerRef }), severity: 'info' }), then remove renamedFrom from a copy of the params and navigate(`${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`, { replace: true }).",
+        "6. Returned loading is loading || formerLookup.loading || Boolean(formerLookup.value), so the not-found UI never flashes before a redirect; entity, error and refresh are returned as today. When the lookup yields nothing or throws, the existing not-found UI shows unchanged.",
+        "7. Imports from '@backstage/plugin-catalog-react' add entityRouteParams; from '@backstage/catalog-model' import stringifyEntityRef; from '@backstage/core-plugin-api' add alertApiRef and useRouteRef; from 'react' add useRef."
+      ],
+      "exports": [
+        {
+          "name": "useEntityFromUrl",
+          "kind": "hook",
+          "params": [],
+          "returns": "EntityLoadingStatus"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 55,
+          "first_line": "import {",
+          "last_line": "};",
+          "rule": "Rewrite the imports and the hook body per rules 1-7, keeping `export const useEntityFromUrl = (): EntityLoadingStatus =>`."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+        "lines": [40, 104],
+        "reason": "An async lookup that drives a replace navigation from a hook."
+      },
+      "uses": [
+        {
+          "path": "plugins/catalog/src/components/EntityOrphanWarning/EntityOrphanWarning.tsx",
+          "lines": [16, 50],
+          "reason": "How this package imports catalogTranslationRef and useTranslationRef."
+        }
+      ],
+      "depends_on": ["U26", "U31"],
+      "covers": ["FR-11", "FR-12", "FR-13", "NFR-6"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U33",
+      "path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Old frontend system tests for the entity page redirect, the renamed notice and the unchanged not-found and normal paths.",
+      "rules": [
+        "1. Render with renderInTestApp from '@backstage/test-utils' and routeEntries; the tree is <TestApiProvider apis={[[catalogApiRef, api], [alertApiRef, alertApi]]}><Routes><Route path=\"/catalog/:namespace/:kind/:name/*\" element={<CatalogEntityPage />}><Route path=\"*\" element={<Probe />} /></Route></Routes></TestApiProvider>, with mountedRoutes { '/catalog/:namespace/:kind/:name': entityRouteRef }.",
+        "2. Probe uses useAsyncEntity and useLocation and renders `entity: <name>` or `not found` once loading is false, plus the pathname and the search string in separate elements.",
+        "3. alertApi is mockApis.alert() from '@backstage/frontend-test-utils'; the catalog API is catalogApiMock({ entities }) from '@backstage/plugin-catalog-react/testUtils' for the redirect case, and a plain object { getEntityByRef: jest.fn(), getEntityRefByFormerRef: jest.fn() } for the call-count cases."
+      ],
+      "tests": [
+        {
+          "name": "redirects an old URL to the renamed entity and shows the notice",
+          "given": "component:default/new-name declaring former-names 'old-name'; route entry /catalog/default/component/old-name/docs?x=1",
+          "expect": "'entity: new-name' shows; pathname is /catalog/default/component/new-name/docs and search is ?x=1 (marker removed); alertApi.getAlerts() has one message containing 'component:default/old-name'"
+        },
+        {
+          "name": "keeps the not-found result when the lookup finds nothing",
+          "given": "plain mock with getEntityByRef resolving undefined and getEntityRefByFormerRef resolving undefined, then rejecting",
+          "expect": "'not found' shows, pathname unchanged, no alert"
+        },
+        {
+          "name": "makes no former-ref call on a normal load",
+          "given": "plain mock with getEntityByRef resolving component:default/new-name",
+          "expect": "'entity: new-name' shows, getEntityByRef called once, getEntityRefByFormerRef never called"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog/src/components/EntityOrphanWarning/EntityOrphanWarning.test.tsx",
+        "reason": "Test scaffolding and imports in this package."
+      },
+      "uses": [
+        {
+          "path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.tsx",
+          "reason": "The component under test, which renders an Outlet inside AsyncEntityProvider."
+        }
+      ],
+      "depends_on": ["U28", "U32"],
+      "covers": ["AC-5", "FR-11", "FR-12", "FR-13", "NFR-3"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U34",
+      "path": "plugins/catalog/src/alpha/pages.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "New frontend system tests for the entity page redirect and renamed notice.",
+      "rules": [
+        "1. The describe renders like the existing cases: createExtensionTester(Object.assign({ namespace: 'catalog' }, catalogEntityPage)).add(overviewEntityContent), renderInTestApp with mountPath '/catalog/:namespace/:kind/:name', the same config and mountedRoutes, and apis [catalogApiMock({ entities: [renamedEntity] }), [starredEntitiesApiRef, mockStarredEntitiesApi], alertApi].",
+        "2. renamedEntity is a copy of entityMock with metadata.name 'new-name' and annotation 'backstage.io/former-names': 'old-name'; alertApi is mockApis.alert() imported from '@backstage/frontend-test-utils'."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 22,
+          "to": 22,
+          "first_line": "renderInTestApp,",
+          "rule": "Import mockApis next to renderInTestApp from '@backstage/frontend-test-utils' (`mockApis,` then `renderInTestApp,`)."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 1288,
+          "to": 1288,
+          "first_line": "});",
+          "rule": "Before the end of the top-level describe('Entity page'), add a blank line and describe('Renamed entities') with the cases listed in tests."
+        }
+      ],
+      "tests": [
+        {
+          "name": "redirects a former URL and shows the renamed notice",
+          "given": "initialRouteEntries ['/catalog/default/component/old-name/overview']",
+          "expect": "'Mock Overview content' shows for the renamed entity; alertApi.getAlerts() has one message containing 'component:default/old-name'"
+        },
+        {
+          "name": "keeps the not-found page when nothing claims the ref",
+          "given": "initialRouteEntries ['/catalog/default/component/unknown']",
+          "expect": "'Entity not found' shows and no alert is posted"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "lines": [206, 243],
+        "reason": "Existing extension-tester cases in this file."
+      },
+      "depends_on": ["U28", "U32"],
+      "covers": ["AC-5", "FR-11", "FR-12"],
+      "checks": ["prettier", "eslint", "jest"]
+    }
+  ],
+  "hashes": {
+    "plugins/catalog/src/alpha/translation.ts": "e1cccbc5729475d7afa9bd9a528c8aa86b4e741e1899cc10438a297d120d00a9",
+    "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts": "c659ba5c0fee40019b6fce9cf59baeff2c52312935e1eecac48b32346cfba669",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts": "bdc05b9ee057fe5b3efc5e10b7f0a3fc14adcc375137ca24f65d8887fdda8af1",
+    "plugins/catalog/src/components/EntityOrphanWarning/EntityOrphanWarning.tsx": "d0f53c19c2ae3a8c96767e39f16990f77869e6ec1867dca79f43b5ecf65cb1f3",
+    "plugins/catalog/src/components/EntityOrphanWarning/EntityOrphanWarning.test.tsx": "5274fa2cf51570b7ba8f9cc51f0d5f6583ade05484149cd8804140d9b61526d1",
+    "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.tsx": "32b922f01cb29f431a412b03a5cc203ecdf4d276b0e969ecfeb16c5f8ac721b9",
+    "plugins/catalog/src/alpha/pages.test.tsx": "6d445a718716433ee53ae35b022399767ca7196cc7b2174e22af7edb7e2c9419"
+  }
+}

@@ -1,0 +1,518 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U07",
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Indexes each former entity ref of an entity as a search row with key 'former_entity_ref', so stitching adds, updates and removes them with the rest of the search index.",
+      "rules": [
+        "1. FORMER_ENTITY_REF_SEARCH_KEY is exported with a one-line comment: the search key under which the former entity refs of an entity are indexed.",
+        "2. The rows come from parseFormerEntityRefs(entity), which already returns lowercase, de-duplicated full refs and never throws.",
+        "3. Pushing them before the duplicate-key check keeps the existing validation and de-duplication unchanged."
+      ],
+      "exports": [
+        {
+          "name": "FORMER_ENTITY_REF_SEARCH_KEY",
+          "kind": "const",
+          "params": [],
+          "returns": "'former_entity_ref'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';",
+          "rule": "Import DEFAULT_NAMESPACE, Entity and parseFormerEntityRefs from '@backstage/catalog-model'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { NULL_SENTINEL } from './util';",
+          "rule": "Add a blank line, the comment and `export const FORMER_ENTITY_REF_SEARCH_KEY = 'former_entity_ref';` (rule 1)."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "'metadata.etag',",
+          "rule": "Add `FORMER_ENTITY_REF_SEARCH_KEY,` to SPECIAL_KEYS so a raw root field of that name is never indexed under the reserved key."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 212,
+          "to": 212,
+          "first_line": "}",
+          "rule": "After the relations loop add a blank line, the comment `// Visit former entity refs` and a loop pushing { key: FORMER_ENTITY_REF_SEARCH_KEY, value: ref } for each ref of parseFormerEntityRefs(entity)."
+        }
+      ],
+      "depends_on": ["U03"],
+      "covers": ["FR-5", "NFR-1", "NFR-2"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Adds a case proving that former entity refs become 'former_entity_ref' search rows.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 343,
+          "to": 343,
+          "first_line": "});",
+          "rule": "After the 'rejects duplicate keys' case, inside the inner describe('buildEntitySearch'), add the new it() case listed in tests."
+        }
+      ],
+      "tests": [
+        {
+          "name": "adds former entity refs",
+          "given": "kind 'Component', metadata { name: 'n', annotations: { 'backstage.io/former-names': 'Old, other/older, old' } }",
+          "expect": "rows with key 'former_entity_ref' are exactly values 'component:default/old' and 'component:other/older'; the raw annotation row under 'metadata.annotations.backstage.io/former-names' is still present"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+        "lines": [258, 275],
+        "reason": "Shape of the neighbouring buildEntitySearch cases."
+      },
+      "depends_on": ["U07"],
+      "covers": ["AC-2"],
+      "checks": ["prettier", "eslint", "jest"]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/catalog-backend/src/catalog/types.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the former-ref resolution request and result types and the resolveFormerEntityRef method to EntitiesCatalog.",
+      "rules": [
+        "1. ResolveFormerEntityRefRequest is an interface { formerRef: string; credentials: BackstageCredentials } with doc comments: formerRef is a full entity ref; credentials are the caller's.",
+        "2. FormerEntityRefResolution is the union { type: 'current' } | { type: 'none' } | { type: 'conflict'; entityRefs: string[] } | { type: 'resolved'; entityRef: string }, with a doc comment per variant: current means an entity currently holds the ref; none means no entity claims it, or the caller may not see the answer; conflict means several entities claim it; resolved carries the current ref of the single claimant.",
+        "3. The interface method doc says: Resolves a former entity ref, as declared by the backstage.io/former-names annotation, to the current ref of the entity that claims it."
+      ],
+      "exports": [
+        {
+          "name": "ResolveFormerEntityRefRequest",
+          "kind": "interface",
+          "params": [],
+          "returns": "{ formerRef: string; credentials: BackstageCredentials }"
+        },
+        {
+          "name": "FormerEntityRefResolution",
+          "kind": "type",
+          "params": [],
+          "returns": "{ type: 'current' } | { type: 'none' } | { type: 'conflict'; entityRefs: string[] } | { type: 'resolved'; entityRef: string }"
+        },
+        {
+          "name": "EntitiesCatalog.resolveFormerEntityRef",
+          "kind": "method",
+          "params": [
+            {
+              "name": "request",
+              "type": "ResolveFormerEntityRefRequest"
+            }
+          ],
+          "returns": "Promise<FormerEntityRefResolution>"
+        }
+      ],
+      "import_line": "import { FormerEntityRefResolution, ResolveFormerEntityRefRequest } from '../catalog/types';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 147,
+          "to": 147,
+          "first_line": "}",
+          "rule": "After EntityFacetsResponse add a blank line, then ResolveFormerEntityRefRequest and FormerEntityRefResolution with doc comments (rules 1-2)."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 195,
+          "to": 195,
+          "first_line": "facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;",
+          "rule": "Add a blank line, the doc comment (rule 3) and `resolveFormerEntityRef(request: ResolveFormerEntityRefRequest): Promise<FormerEntityRefResolution>;`."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/catalog/types.ts",
+        "lines": [78, 147],
+        "reason": "Request and response type layout with doc comments."
+      },
+      "depends_on": [],
+      "covers": ["FR-6"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Implements resolveFormerEntityRef over all entities with two exact-match indexed lookups; existing methods are not touched.",
+      "rules": [
+        "1. ref = request.formerRef.toLocaleLowerCase('en-US').",
+        "2. Current check: this.database<DbFinalEntitiesRow>('final_entities').where('entity_ref', ref).whereNotNull('final_entity').select('entity_ref').first(); when a row exists return { type: 'current' }.",
+        "3. Claimants: from 'search' innerJoin 'final_entities' on final_entities.entity_id = search.entity_id, where search.key = FORMER_ENTITY_REF_SEARCH_KEY and search.value = ref and final_entities.final_entity is not null, select { entityRef: 'final_entities.entity_ref' }, orderBy final_entities.entity_ref asc, limit 10.",
+        "4. No claimant -> { type: 'none' }; exactly one -> { type: 'resolved', entityRef }; more than one -> { type: 'conflict', entityRefs } in that order.",
+        "5. Never use LIKE and never read entity JSON; both queries are exact matches on indexed columns (NFR-2)."
+      ],
+      "exports": [
+        {
+          "name": "DefaultEntitiesCatalog.resolveFormerEntityRef",
+          "kind": "method",
+          "params": [
+            {
+              "name": "request",
+              "type": "ResolveFormerEntityRefRequest"
+            }
+          ],
+          "returns": "Promise<FormerEntityRefResolution>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "EntityPagination,",
+          "rule": "Add `FormerEntityRefResolution,` to the '../catalog/types' import."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 34,
+          "to": 34,
+          "first_line": "QueryEntitiesResponse,",
+          "rule": "Add `ResolveFormerEntityRefRequest,` to the same import."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 45,
+          "to": 45,
+          "first_line": "import { markForStitching } from '../database/operations/stitcher/markForStitching';",
+          "rule": "Add `import { FORMER_ENTITY_REF_SEARCH_KEY } from '../database/operations/stitcher/buildEntitySearch';`."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 367,
+          "to": 367,
+          "first_line": "}",
+          "rule": "After entitiesBatch add a blank line and `async resolveFormerEntityRef(request: ResolveFormerEntityRefRequest): Promise<FormerEntityRefResolution>` implementing rules 1-5."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+        "lines": [322, 367],
+        "reason": "Knex query style of entitiesBatch in this class."
+      },
+      "uses": [
+        {
+          "path": "plugins/catalog-backend/src/database/tables.ts",
+          "lines": [16, 120],
+          "reason": "DbFinalEntitiesRow and DbSearchRow column names."
+        }
+      ],
+      "depends_on": ["U07", "U09"],
+      "covers": ["FR-5", "FR-6", "NFR-1", "NFR-2", "NFR-4"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Wraps resolveFormerEntityRef so that only an entity the caller may read is ever revealed, using the same permissioned entitiesBatch path.",
+      "rules": [
+        "1. resolution = await this.entitiesCatalog.resolveFormerEntityRef(request).",
+        "2. When resolution.type is 'none' or 'conflict', return it unchanged.",
+        "3. revealedRef is request.formerRef for 'current' and resolution.entityRef for 'resolved'.",
+        "4. const { items } = await this.entitiesBatch({ entityRefs: [revealedRef], credentials: request.credentials }); when items.entities[0] is null return { type: 'none' }, otherwise return resolution."
+      ],
+      "exports": [
+        {
+          "name": "AuthorizedEntitiesCatalog.resolveFormerEntityRef",
+          "kind": "method",
+          "params": [
+            {
+              "name": "request",
+              "type": "ResolveFormerEntityRefRequest"
+            }
+          ],
+          "returns": "Promise<FormerEntityRefResolution>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 34,
+          "to": 34,
+          "first_line": "EntityFacetsResponse,",
+          "rule": "Add `FormerEntityRefResolution,` to the '../catalog/types' import."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 36,
+          "to": 36,
+          "first_line": "QueryEntitiesResponse,",
+          "rule": "Add `ResolveFormerEntityRefRequest,` to the same import."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 130,
+          "to": 130,
+          "first_line": "}",
+          "rule": "After entitiesBatch add a blank line and `async resolveFormerEntityRef(request: ResolveFormerEntityRefRequest): Promise<FormerEntityRefResolution>` implementing rules 1-4."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts",
+        "lines": [100, 130],
+        "reason": "Method layout of the permission wrapper."
+      },
+      "depends_on": ["U09"],
+      "covers": ["FR-6", "NFR-5"],
+      "checks": ["prettier", "eslint"]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/catalog-backend/src/schema/openapi.yaml",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Documents GET /entities/by-former-name/{kind}/{namespace}/{name} and its FormerEntityRefResponse schema.",
+      "rules": [
+        "1. Schema FormerEntityRefResponse: type object; properties.entityRef { type: string, description: 'The current ref of the entity that claims the former ref.' }; required [entityRef]; additionalProperties false.",
+        "2. Path /entities/by-former-name/{kind}/{namespace}/{name} with get: operationId GetEntityRefByFormerName; tags [Entity]; description 'Get the current entity ref of the entity that claims a former entity ref.'; responses '200' (description Ok, application/json schema $ref '#/components/schemas/FormerEntityRefResponse'), '400' and default $ref '#/components/responses/ErrorResponse'; security [{}, {JWT: []}]; parameters kind, namespace, name by $ref, exactly as the by-name path."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 557,
+          "to": 557,
+          "first_line": "additionalProperties: false",
+          "rule": "After the EntitiesBatchResponse schema add the FormerEntityRefResponse schema at the same indentation (rule 1)."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 1022,
+          "to": 1022,
+          "first_line": "- $ref: '#/components/parameters/name'",
+          "rule": "After the ancestry path, before /entities/by-refs, add the new path (rule 2)."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/schema/openapi.yaml",
+        "lines": [975, 1022],
+        "reason": "The by-name and ancestry path definitions."
+      },
+      "depends_on": [],
+      "covers": ["FR-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/catalog-backend/src/schema/openapi/generated/router.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Mirrors the new schema and path into the generated spec object, so it deep-equals openapi.yaml.",
+      "rules": [
+        "1. The added objects carry exactly the same keys and string values as the YAML added by U12, written in the generated style (quoted keys only where needed, $ref keys quoted as '$ref' like the neighbours)."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 502,
+          "to": 502,
+          "first_line": "},",
+          "rule": "After the EntitiesBatchResponse entry of components.schemas add the FormerEntityRefResponse entry."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 1109,
+          "to": 1109,
+          "first_line": "},",
+          "rule": "After the ancestry path entry, before '/entities/by-refs', add the '/entities/by-former-name/{kind}/{namespace}/{name}' entry."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/schema/openapi/generated/router.ts",
+        "lines": [1026, 1110],
+        "reason": "Generated form of the by-name and ancestry paths."
+      },
+      "depends_on": ["U12"],
+      "covers": ["FR-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/catalog-backend/src/schema/openapi/generated/models/FormerEntityRefResponse.model.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Generated model for the FormerEntityRefResponse schema.",
+      "rules": [
+        "1. License header with year 2026, the empty '//' line and the AUTOGENERATED banner, exactly as EntityFacet.model.ts.",
+        "2. `/** @public */`-style block then `export interface FormerEntityRefResponse` with a doc comment 'The current ref of the entity that claims the former ref.' on `entityRef: string;`."
+      ],
+      "exports": [
+        {
+          "name": "FormerEntityRefResponse",
+          "kind": "interface",
+          "params": [],
+          "returns": "{ entityRef: string }"
+        }
+      ],
+      "import_line": "import { FormerEntityRefResponse } from '../models/FormerEntityRefResponse.model';",
+      "style_from": {
+        "path": "plugins/catalog-backend/src/schema/openapi/generated/models/EntitiesBatchResponse.model.ts",
+        "reason": "Generated model with a documented property."
+      },
+      "depends_on": ["U12"],
+      "covers": ["FR-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U15",
+      "path": "plugins/catalog-backend/src/schema/openapi/generated/models/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Exports the new generated model.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 37,
+          "to": 37,
+          "first_line": "export * from '../models/ErrorResponse.model';",
+          "rule": "Add `export * from '../models/FormerEntityRefResponse.model';`."
+        }
+      ],
+      "depends_on": ["U14"],
+      "covers": ["FR-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U16",
+      "path": "plugins/catalog-backend/src/schema/openapi/generated/apis/Api.server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the GetEntityRefByFormerName endpoint type and its EndpointMap entry so the typed router accepts the new route.",
+      "rules": [
+        "1. GetEntityRefByFormerName = { path: { kind: string; namespace: string; name: string }; response: FormerEntityRefResponse | Error | Error; } with the `/** @public */` block like its neighbours."
+      ],
+      "exports": [
+        {
+          "name": "GetEntityRefByFormerName",
+          "kind": "type",
+          "params": [],
+          "returns": "{ path: { kind: string; namespace: string; name: string }; response: FormerEntityRefResponse | Error | Error }"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { EntityFacetsResponse } from '../models/EntityFacetsResponse.model';",
+          "rule": "Add `import { FormerEntityRefResponse } from '../models/FormerEntityRefResponse.model';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 124,
+          "to": 124,
+          "first_line": "};",
+          "rule": "After GetEntityFacets add the `/** @public */` block and the GetEntityRefByFormerName type (rule 1)."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 249,
+          "to": 249,
+          "first_line": "'#get|/entity-facets': GetEntityFacets;",
+          "rule": "Add a blank line and `'#get|/entities/by-former-name/{kind}/{namespace}/{name}': GetEntityRefByFormerName;`."
+        }
+      ],
+      "depends_on": ["U14"],
+      "covers": ["FR-8"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U17",
+      "path": "plugins/catalog-backend/src/service/createRouter.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds GET /entities/by-former-name/:kind/:namespace/:name, resolving a former ref through the permissioned catalog and emitting an entity-fetch auditor event.",
+      "rules": [
+        "1. formerRef = stringifyEntityRef({ kind, namespace, name }) from req.params.",
+        "2. auditorEvent = await auditor.createEvent({ eventId: 'entity-fetch', request: req, meta: { queryType: 'by-former-name', entityRef: formerRef } }).",
+        "3. Inside try: resolution = await entitiesCatalog.resolveFormerEntityRef({ formerRef, credentials: await httpAuth.credentials(req) }).",
+        "4. For 'resolved' call await auditorEvent?.success({ meta: { currentEntityRef: resolution.entityRef } }); for every other type call await auditorEvent?.success().",
+        "5. For 'conflict' call logger.warn(`Former entity ref '${formerRef}' is claimed by more than one entity and is not redirected: ${resolution.entityRefs.join(', ')}`).",
+        "6. 'resolved' -> res.status(200).json({ entityRef: resolution.entityRef }). 'current' -> throw new NotFoundError(`The entity ref '${formerRef}' is the current ref of an entity, not a former one`). 'none' and 'conflict' -> throw new NotFoundError(`No entity has the former name '${name}', with kind '${kind}' in namespace '${namespace}'`).",
+        "7. catch (err): await auditorEvent?.fail({ error: err }); throw err; exactly as the by-name route."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 32,
+          "to": 32,
+          "first_line": "import { InputError, serializeError } from '@backstage/errors';",
+          "rule": "Import InputError, NotFoundError and serializeError from '@backstage/errors'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 455,
+          "to": 455,
+          "first_line": "})",
+          "rule": "After the by-name handler chain `.get('/entities/by-former-name/:kind/:namespace/:name', async (req, res) => { ... })` implementing rules 1-7."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/src/service/createRouter.ts",
+        "lines": [422, 455],
+        "reason": "The by-name route with its auditor event."
+      },
+      "depends_on": ["U09", "U16"],
+      "covers": ["FR-6", "FR-7", "NFR-5"],
+      "checks": ["prettier", "eslint"]
+    }
+  ],
+  "hashes": {
+    "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts": "35418e41f42e35b8e814a67d49a98861336363f2e57fcf949231aafbacf219d0",
+    "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts": "779b4ba54e14528ecd82c22aec3a47a934e768941050fdd7bee0bf59f7a7f31c",
+    "plugins/catalog-backend/src/catalog/types.ts": "2259187bf405b52a4c4ce79001538f2855a062d6b99eec018bbe80e2f98d820f",
+    "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts": "f71ddf1617331f791cf4d8792c91d35a0dc439c3d92c95b75ba02031d9780f51",
+    "plugins/catalog-backend/src/database/tables.ts": "1f6f6a726f7866734b9f69ad88c23a9056bf35274f942eaacd4ba9022ae72996",
+    "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts": "ccefdb5eae4dec5d99898e104cc29f69ff05150f6f9ff0b94cc3ca2ddcdbe93b",
+    "plugins/catalog-backend/src/schema/openapi.yaml": "cf26233702b7e9a356ad00edc75b52b57cfc9fad72d39de3d5f37c23a8900719",
+    "plugins/catalog-backend/src/schema/openapi/generated/router.ts": "528fd4b83549f239e5d1473b3ea53feda1f5ef98515c9933e57692b8aad50ef5",
+    "plugins/catalog-backend/src/schema/openapi/generated/models/EntitiesBatchResponse.model.ts": "eebffdff6c2d12960f0b5b0150c67afbfc23d82b46a716f6750445faad6849c1",
+    "plugins/catalog-backend/src/schema/openapi/generated/models/index.ts": "8ee6b192b5554793424badab8555dbef679428b3bd9088f9c4923f01ae9003b0",
+    "plugins/catalog-backend/src/schema/openapi/generated/apis/Api.server.ts": "5e1db4aed79e83cfecab1bf57300f3e6c6b11e02c69976f3f03bce26f2ee514a",
+    "plugins/catalog-backend/src/service/createRouter.ts": "e9f7ea913cd77b0d92a06343c44bc0c6004780c0db470061d14d96bb8ef24f9b"
+  }
+}

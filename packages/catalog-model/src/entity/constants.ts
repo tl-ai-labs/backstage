@@ -60,3 +60,12 @@ export const ANNOTATION_KUBERNETES_API_SERVER_CA =
  */
 export const ANNOTATION_KUBERNETES_AUTH_PROVIDER =
   'kubernetes.io/auth-provider';
+
+/**
+ * Annotation that lists the former entity refs of an entity, as a
+ * comma-separated list, so that links to a renamed entity can be redirected to
+ * its current ref. Kind and namespace default to those of the entity itself.
+ *
+ * @public
+ */
+export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names';

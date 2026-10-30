@@ -1,0 +1,204 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/catalog-model/src/entity/constants.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the well-known annotation constant ANNOTATION_FORMER_NAMES = 'backstage.io/former-names' with public TSDoc.",
+    "rules": [
+      "1. Declare `export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names';` after the last constant in the file, separated by one blank line.",
+      "2. Its TSDoc says: Annotation that lists the former entity refs of an entity, as a comma-separated list, so that links to a renamed entity can be redirected to its current ref. Kind and namespace default to those of the entity itself. Then a blank doc line and `@public`."
+    ],
+    "exports": [
+      {
+        "name": "ANNOTATION_FORMER_NAMES",
+        "kind": "const",
+        "params": [],
+        "returns": "'backstage.io/former-names'"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 62,
+        "to": 62,
+        "first_line": "'kubernetes.io/auth-provider';",
+        "rule": "Insert a blank line, the TSDoc block and the ANNOTATION_FORMER_NAMES export (rules 1-2)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/constants.ts",
+      "lines": [24, 36],
+      "reason": "TSDoc and export shape of the other annotation constants."
+    },
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/catalog-model/src/entity/formerNames.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Parses and validates the backstage.io/former-names annotation of an entity.",
+    "rules": [
+      "1. Imports: Entity from './Entity'; ANNOTATION_FORMER_NAMES and DEFAULT_NAMESPACE from './constants'; parseEntityRef and stringifyEntityRef from './ref'; type Validators from '../validation'.",
+      "2. A private helper splits the annotation value: when entity.metadata.annotations?.[ANNOTATION_FORMER_NAMES] is not a string, there are no items; otherwise split on ',', trim each item and drop empty items.",
+      "3. parseFormerEntityRefs(entity) never throws. For each item: parseEntityRef(item, { defaultKind: entity.kind, defaultNamespace: entity.metadata.namespace ?? DEFAULT_NAMESPACE }) inside try/catch, skipping the item when it throws; skip it when parsed.kind.toLocaleLowerCase('en-US') differs from entity.kind.toLocaleLowerCase('en-US'); compute ref = stringifyEntityRef(parsed) (already lowercase); skip it when ref equals stringifyEntityRef(entity); skip duplicates. Return the refs in first-seen order.",
+      "4. parseFormerEntityRefs has TSDoc: Returns the former entity refs that an entity declares in the backstage.io/former-names annotation, as lowercase full refs (kind:namespace/name). Short forms take the kind and namespace of the entity. Items that cannot be parsed, that have a different kind, or that equal the entity's own ref are left out; duplicates are removed. Tag @public; document @param entity and @returns.",
+      "5. validateFormerEntityRefs(entity, validators) returns void and throws a plain Error for the first invalid item, in this order of checks per item: parseEntityRef with the same defaults throws -> reason 'it is not a valid entity ref'; kinds differ case-insensitively -> reason `it must have the same kind as the entity, \"${entity.kind}\"`; validators.isValidKind(kind), validators.isValidNamespace(namespace) or validators.isValidEntityName(name) is false -> reason 'it does not follow the entity naming rules'; stringifyEntityRef(parsed) equals stringifyEntityRef(entity) -> reason 'it is the current ref of the entity'.",
+      "6. The thrown message is `\"annotations.backstage.io/former-names\" item \"${item}\" is not valid; ${reason}` using the trimmed item text, so the processing error names the item.",
+      "7. validateFormerEntityRefs has a short internal doc comment and no release tag; it is not exported from the package index."
+    ],
+    "exports": [
+      {
+        "name": "parseFormerEntityRefs",
+        "kind": "function",
+        "params": [{ "name": "entity", "type": "Entity" }],
+        "returns": "string[]"
+      },
+      {
+        "name": "validateFormerEntityRefs",
+        "kind": "function",
+        "params": [
+          { "name": "entity", "type": "Entity" },
+          { "name": "validators", "type": "Validators" }
+        ],
+        "returns": "void"
+      }
+    ],
+    "import_line": "import { parseFormerEntityRefs, validateFormerEntityRefs } from './formerNames';",
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/ref.ts",
+      "reason": "License header, import style and TSDoc layout of entity ref helpers in this package."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/validation/types.ts",
+        "reason": "The Validators interface (isValidKind, isValidNamespace, isValidEntityName)."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": ["FR-2", "FR-3", "NFR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/catalog-model/src/entity/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Re-exports parseFormerEntityRefs from the entity barrel so it is public API of @backstage/catalog-model.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 20,
+        "to": 20,
+        "first_line": "export type { EntityEnvelope } from './EntityEnvelope';",
+        "rule": "Add `export { parseFormerEntityRefs } from './formerNames';` (validateFormerEntityRefs stays internal)."
+      }
+    ],
+    "depends_on": ["U02"],
+    "covers": ["FR-2"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Validates the backstage.io/former-names annotation as part of the default field format policy, so an invalid item becomes a processing error on the entity.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 24,
+        "to": 24,
+        "first_line": "import { Entity } from '../Entity';",
+        "rule": "Add `import { validateFormerEntityRefs } from '../formerNames';`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 143,
+        "to": 143,
+        "first_line": "}",
+        "rule": "After the annotations loop, add a blank line and `validateFormerEntityRefs(entity, this.validators);` so it runs only after every annotation key and value passed the generic checks."
+      }
+    ],
+    "depends_on": ["U02"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U05",
+    "path": "packages/catalog-model/src/kinds/annotations.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Registers backstage.io/former-names with a description in the well-known annotations model layer.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 18,
+        "to": 18,
+        "first_line": "import { ANNOTATION_EDIT_URL, ANNOTATION_VIEW_URL } from '../entity';",
+        "rule": "Import ANNOTATION_EDIT_URL, ANNOTATION_FORMER_NAMES and ANNOTATION_VIEW_URL from '../entity' (Prettier wraps it if needed)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 57,
+        "to": 57,
+        "first_line": "});",
+        "rule": "Add model.addAnnotation({ name: ANNOTATION_FORMER_NAMES, description: 'A comma-separated list of entity refs that the entity was previously known by. Links to a former ref are redirected to the entity, as long as no current entity holds that ref and no other entity claims it.' })."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": ["FR-4"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/catalog-model/src/entity/formerNames.test.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Tests the former-names parser and the validation that FieldFormatEntityPolicy applies.",
+    "rules": [
+      "1. Import parseFormerEntityRefs from './formerNames', FieldFormatEntityPolicy from './policies', ANNOTATION_FORMER_NAMES from './constants' and type Entity from './Entity'.",
+      "2. Build entities with a small local helper taking the annotation value; the base entity is apiVersion 'backstage.io/v1alpha1', kind 'Component', metadata { name: 'new-name', namespace: 'team-a' }.",
+      "3. Validation cases call new FieldFormatEntityPolicy().enforce(entity) and assert rejects.toThrow with a regex that contains the offending item text."
+    ],
+    "tests": [
+      {
+        "name": "parses full and short refs with defaults",
+        "given": "annotation ' component:default/Old-One , old-two,, other-ns/old-three '",
+        "expect": "['component:default/old-one', 'component:team-a/old-two', 'component:other-ns/old-three']"
+      },
+      {
+        "name": "ignores missing values, duplicates and refs it cannot claim",
+        "given": "no annotation; then 'old, Old, component:team-a/old, group:default/x, new-name, component:'",
+        "expect": "[] for no annotation; ['component:team-a/old'] for the list"
+      },
+      {
+        "name": "accepts valid former names in the policy",
+        "given": "annotation 'old-two, component:default/old-one'",
+        "expect": "enforce resolves to the entity"
+      },
+      {
+        "name": "rejects invalid former names in the policy",
+        "given": "separately 'group:default/team', 'new-name', 'component:' and 'Bad Name!'",
+        "expect": "each rejects with an error naming that item"
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts",
+      "lines": [16, 60],
+      "reason": "Test layout and async rejects assertions used in this package."
+    },
+    "depends_on": ["U02", "U03", "U04"],
+    "covers": ["AC-1"],
+    "checks": ["prettier", "eslint", "jest"]
+  }
+]

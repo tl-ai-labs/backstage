@@ -890,6 +890,57 @@ describe('InMemoryCatalogClient', () => {
     });
   });
 
+  describe('getEntityRefByFormerRef', () => {
+    it('resolves single claims and refuses current refs and conflicts', async () => {
+      const newEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new',
+          namespace: 'default',
+          annotations: {
+            'backstage.io/former-names': 'old, live, shared',
+          },
+        },
+      };
+      const liveEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'live',
+          namespace: 'default',
+        },
+      };
+      const otherEntity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'other',
+          namespace: 'default',
+          annotations: {
+            'backstage.io/former-names': 'shared',
+          },
+        },
+      };
+      const client = new InMemoryCatalogClient({
+        entities: [newEntity, liveEntity, otherEntity],
+      });
+
+      await expect(
+        client.getEntityRefByFormerRef('component:default/OLD'),
+      ).resolves.toBe('component:default/new');
+      await expect(
+        client.getEntityRefByFormerRef('component:default/live'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.getEntityRefByFormerRef('component:default/shared'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.getEntityRefByFormerRef('component:default/unknown'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('removeEntityByUid', () => {
     it('removes an entity by uid', async () => {
       const client = new InMemoryCatalogClient({ entities });

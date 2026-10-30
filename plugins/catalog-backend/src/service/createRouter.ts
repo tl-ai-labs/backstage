@@ -29,7 +29,7 @@ import {
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
-import { InputError, serializeError } from '@backstage/errors';
+import { InputError, NotFoundError, serializeError } from '@backstage/errors';
 import { LocationAnalyzer } from '@backstage/plugin-catalog-node';
 import express from 'express';
 import yn from 'yn';
@@ -453,6 +453,58 @@ export async function createRouter(
         throw err;
       }
     })
+    .get(
+      '/entities/by-former-name/:kind/:namespace/:name',
+      async (req, res) => {
+        const { kind, namespace, name } = req.params;
+        const formerRef = stringifyEntityRef({ kind, namespace, name });
+
+        const auditorEvent = await auditor.createEvent({
+          eventId: 'entity-fetch',
+          request: req,
+          meta: {
+            queryType: 'by-former-name',
+            entityRef: formerRef,
+          },
+        });
+
+        try {
+          const resolution = await entitiesCatalog.resolveFormerEntityRef({
+            formerRef,
+            credentials: await httpAuth.credentials(req),
+          });
+
+          if (resolution.type === 'resolved') {
+            await auditorEvent?.success({
+              meta: { currentEntityRef: resolution.entityRef },
+            });
+            res.status(200).json({ entityRef: resolution.entityRef });
+            return;
+          }
+
+          if (resolution.type === 'conflict') {
+            logger.warn(
+              `Former entity ref '${formerRef}' is claimed by more than one entity and is not redirected: ${resolution.entityRefs.join(
+                ', ',
+              )}`,
+            );
+          }
+
+          if (resolution.type === 'current') {
+            throw new NotFoundError(
+              `The entity ref '${formerRef}' is the current ref of an entity, not a former one`,
+            );
+          }
+
+          throw new NotFoundError(
+            `No entity has the former name '${name}', with kind '${kind}' in namespace '${namespace}'`,
+          );
+        } catch (err) {
+          await auditorEvent?.fail({ error: err });
+          throw err;
+        }
+      },
+    )
     .get(
       '/entities/by-name/:kind/:namespace/:name/ancestry',
       async (req, res) => {
