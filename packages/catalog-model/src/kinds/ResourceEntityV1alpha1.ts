@@ -29,8 +29,25 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ResourceEntityV1alpha1 extends Entity {
+  /**
+   * The versions of the entity format this kind accepts:
+   * 'backstage.io/v1alpha1' or 'backstage.io/v1beta1'.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The discriminator that marks the entity as a Resource, fixed to the literal
+   * 'Resource'.
+   */
   kind: 'Resource';
+  /**
+   * The Resource's own data.
+   *
+   * @remarks
+   *
+   * Includes its type, the entity reference of its owner, and optional
+   * references to the entities it depends on or is a dependency of and the
+   * system it belongs to.
+   */
   spec: {
     type: string;
     owner: string;

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "tp_debug_r5_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261030-152500-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Person's review decision at Gate 4 (reject) — the enforce method's @remarks and @returns are both factually wrong for an empty string and for null. BOTH tags must be corrected; fixing only one is not the fix.\n\nWhat the code actually does. The guard is `if (entity.metadata.namespace) { return entity; }` and the fallthrough is `lodash.merge({ metadata: { namespace: this.namespace } }, entity)`. Empty string and null are FALSY, so they do not take the early return: they fall through into lodash.merge, which returns a NEW object in which the entity's own '' / null wins over the default. So the copy is returned but the default is NOT applied. Verified empirically against the real lodash.merge for every input:\n\n  absent        same object? no    resulting namespace: 'default'   default applied? yes\n  undefined     same object? no    resulting namespace: 'default'   default applied? yes\n  empty string  same object? no    resulting namespace: ''          default applied? no\n  null          same object? no    resulting namespace: null        default applied? no\n  non-empty     same object? YES   resulting namespace: 'mine'       default applied? no\n\nOnly a NON-EMPTY namespace returns the identical incoming object.\n\nWhy the current text is wrong. The @returns says 'The incoming entity unchanged if metadata.namespace was already set, or a merged copy with the default namespace applied'. An empty string and null ARE 'already set', yet they still produce a merged copy — so that clause is wrong for exactly those two inputs. The @remarks has the same defect: it says such a value 'stays in the returned copy' without ever saying that a non-empty value is the ONLY case that returns the incoming object itself.\n\nFix: rewrite the @remarks body and the @returns text of the enforce block so that BOTH convey:\n  - a non-empty metadata.namespace returns the incoming entity unchanged (the same object);\n  - anything else returns a merged copy, in which an absent or undefined namespace receives the configured default, while an empty string or null stays exactly as it was.\nKeep the existing accurate statement that the incoming entity is never mutated. Keep the callers-cannot-assume-a-non-empty-namespace point, which is true and useful.\n\nSTRICT SCOPE: COMMENT-ONLY. Change no code: do not alter the truthiness guard, the lodash.merge call, the imports, the constructor or any other executable line; add, remove and reorder nothing executable. The task is to describe the behaviour that exists, NOT to change it. Keep the copyright header and its year exactly as they are. Keep the tag order (description, @remarks, release tag, @param, @returns). The @param keeps its 'entity - ...' hyphen form. This is a member of a documented class, so it carries NO release tag of its own. Keep every comment line at or under about 80 columns, wrapping onto new ' * ' continuation lines. Touch no other member or comment in this file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261030-152500-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261030-152500-docs-catalog-model-tsdoc/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

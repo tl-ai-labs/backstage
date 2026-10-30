@@ -40,6 +40,30 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * Validates the format of individual fields of the entity.
+   *
+   * @remarks
+   * The fields checked are:
+   * - `apiVersion` and `kind` (required)
+   * - `metadata.name` (required)
+   * - `metadata.namespace` (checked only when present)
+   * - every key and value in `metadata.labels`
+   * - every key and value in `metadata.annotations`
+   * - every entry in `metadata.tags`
+   * - for each entry in `metadata.links`, the `url` is required, while `title` and
+   *   `icon` are checked only when present
+   *
+   * Required fields holding `undefined` or `null` fail as missing values.
+   * For optional fields, `undefined` skips the check while `null` fails as a
+   * missing value, including for `metadata.namespace`, `links[].title`, and
+   * `links[].icon`.
+   *
+   * @param entity - The entity to apply the policy to
+   * @returns The entity unchanged
+   * @throws An Error on the first validation failure, naming the failing
+   *   field and, where known, the expected format
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,

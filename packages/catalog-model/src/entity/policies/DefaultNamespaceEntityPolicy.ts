@@ -31,6 +31,22 @@ export class DefaultNamespaceEntityPolicy implements EntityPolicy {
     this.namespace = namespace;
   }
 
+  /**
+   * Applies a default namespace when the entity has none.
+   *
+   * @remarks
+   * If metadata.namespace contains a non-empty string, the incoming entity is
+   * returned unchanged as the exact same object. Otherwise, a merged copy is
+   * returned without mutating the original entity. In the returned copy, an
+   * absent or undefined namespace receives the configured default, while an
+   * empty string or null is preserved as it was, so callers cannot assume a
+   * non-empty namespace.
+   *
+   * @param entity - The entity to apply the policy to
+   * @returns The incoming entity unchanged if metadata.namespace was a
+   *          non-empty string, or a merged copy with default applied when
+   *          absent or undefined, preserving empty or null values
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.metadata.namespace) {
       return entity;

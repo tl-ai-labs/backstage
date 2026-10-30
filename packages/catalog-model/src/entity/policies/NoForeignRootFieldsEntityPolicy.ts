@@ -31,6 +31,19 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
     this.knownFields = knownFields;
   }
 
+  /**
+   * Ensures that the entity has no foreign root fields.
+   *
+   * @remarks
+   * Every own root key of the entity is compared against the accepted set,
+   * which defaults to `apiVersion`, `kind`, `metadata`, and `spec` unless the
+   * constructor was given another list. Note that `relations` is not in the
+   * default accepted set.
+   *
+   * @param entity - The entity to apply the policy to
+   * @returns The incoming entity unchanged when every root key is accepted
+   * @throws An Error naming the first unaccepted field
+   */
   async enforce(entity: Entity): Promise<Entity> {
     for (const field of Object.keys(entity)) {
       if (!this.knownFields.includes(field)) {
