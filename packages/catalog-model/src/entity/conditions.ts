@@ -27,49 +27,81 @@ import {
 import { Entity } from './Entity';
 
 /**
+ * Type guard that narrows an entity to an {@link ApiEntity} if its kind
+ * matches 'API' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isApiEntity(entity: Entity): entity is ApiEntity {
   return entity.kind.toUpperCase() === 'API';
 }
 /**
+ * Type guard that narrows an entity to a {@link ComponentEntity} if its kind
+ * matches 'Component' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isComponentEntity(entity: Entity): entity is ComponentEntity {
   return entity.kind.toUpperCase() === 'COMPONENT';
 }
 /**
+ * Type guard that narrows an entity to a {@link DomainEntity} if its kind
+ * matches 'Domain' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isDomainEntity(entity: Entity): entity is DomainEntity {
   return entity.kind.toUpperCase() === 'DOMAIN';
 }
 /**
+ * Type guard that narrows an entity to a {@link GroupEntity} if its kind
+ * matches 'Group' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isGroupEntity(entity: Entity): entity is GroupEntity {
   return entity.kind.toUpperCase() === 'GROUP';
 }
 /**
+ * Type guard that narrows an entity to a {@link LocationEntity} if its kind
+ * matches 'Location' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isLocationEntity(entity: Entity): entity is LocationEntity {
   return entity.kind.toUpperCase() === 'LOCATION';
 }
 /**
+ * Type guard that narrows an entity to a {@link ResourceEntity} if its kind
+ * matches 'Resource' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isResourceEntity(entity: Entity): entity is ResourceEntity {
   return entity.kind.toUpperCase() === 'RESOURCE';
 }
 /**
+ * Type guard that narrows an entity to a {@link SystemEntity} if its kind
+ * matches 'System' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isSystemEntity(entity: Entity): entity is SystemEntity {
   return entity.kind.toUpperCase() === 'SYSTEM';
 }
 /**
+ * Type guard that narrows an entity to a {@link UserEntity} if its kind
+ * matches 'User' case-insensitively.
+ *
  * @public
+ * @param entity - The entity to check
  */
 export function isUserEntity(entity: Entity): entity is UserEntity {
   return entity.kind.toUpperCase() === 'USER';

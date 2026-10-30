@@ -26,6 +26,15 @@ import { CommonValidatorFunctions } from './CommonValidatorFunctions';
  * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
  */
 export class KubernetesValidatorFunctions {
+  /**
+   * Checks that the value is either a `<suffix>` or `<prefix>/<suffix>`, where
+   * the prefix is a valid DNS subdomain
+   * ({@link CommonValidatorFunctions.isValidDnsSubdomain}) and the suffix is 1
+   * to 63 alphanumeric characters.
+   *
+   * @param value - The value to check
+   * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/names/
+   */
   static isValidApiVersion(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -35,6 +44,12 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a string of 1 to 63 characters starting with a
+   * letter and containing only alphanumeric characters.
+   *
+   * @param value - The value to check
+   */
   static isValidKind(value: unknown): boolean {
     return (
       typeof value === 'string' &&
@@ -44,6 +59,13 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a string of 1 to 63 characters beginning and
+   * ending with an alphanumeric character and containing dashes, underscores,
+   * and dots in between, accepting uppercase letters.
+   *
+   * @param value - The value to check
+   */
   static isValidObjectName(value: unknown): boolean {
     return (
       typeof value === 'string' &&
@@ -53,10 +75,26 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid DNS label ({@link CommonValidatorFunctions.isValidDnsLabel})
+   * of 1 to 63 lowercase alphanumeric characters in dash-separated groups.
+   *
+   * @param value - The value to check
+   * @see https://tools.ietf.org/html/rfc1123
+   */
   static isValidNamespace(value: unknown): boolean {
     return CommonValidatorFunctions.isValidDnsLabel(value);
   }
 
+  /**
+   * Checks that the value is either `<name>` or `<prefix>/<name>`, where the
+   * prefix is a valid DNS subdomain
+   * ({@link CommonValidatorFunctions.isValidDnsSubdomain}) and the name
+   * satisfies {@link KubernetesValidatorFunctions.isValidObjectName}.
+   *
+   * @param value - The value to check
+   * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+   */
   static isValidLabelKey(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -66,12 +104,28 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is either the empty string or satisfies
+   * {@link KubernetesValidatorFunctions.isValidObjectName}.
+   *
+   * @param value - The value to check
+   * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+   */
   static isValidLabelValue(value: unknown): boolean {
     return (
       value === '' || KubernetesValidatorFunctions.isValidObjectName(value)
     );
   }
 
+  /**
+   * Checks that the value is either `<name>` or `<prefix>/<name>`, where the
+   * prefix is a valid DNS subdomain
+   * ({@link CommonValidatorFunctions.isValidDnsSubdomain}) and the name
+   * satisfies {@link KubernetesValidatorFunctions.isValidObjectName}.
+   *
+   * @param value - The value to check
+   * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
+   */
   static isValidAnnotationKey(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -81,6 +135,18 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is any string, including the empty string, with no
+   * length or character restrictions.
+   *
+   * @remarks
+   * The value is accepted as-is and is neither bounded nor escaped, so code
+   * that renders or interpolates it must do that itself.
+   *
+   * @param value - The value to check
+   * @see The Kubernetes rules, which this function does not enforce:
+   * https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
+   */
   static isValidAnnotationValue(value: unknown): boolean {
     return typeof value === 'string';
   }

@@ -1,0 +1,371 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the ApiEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface (apiEntityV1alpha1Validator and apiEntityModel are untouched)."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'API';",
+        "rule": "Document it as the discriminator that marks the entity as an API, fixed to the literal 'API'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "One short line: the API's own data — the format of its definition and its lifecycle stage, the entity reference of its owner, the definition document itself, and optionally the system it belongs to."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/Entity.ts",
+      "lines": [19, 54],
+      "reason": "The package's pattern for documented members of an entity type: a multi-line block per member, no release tag on members, release tag on the enclosing declaration only."
+    },
+    "depends_on": [],
+    "covers": ["FR-3", "FR-6", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/catalog-model/src/kinds/ComponentEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the ComponentEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'Component';",
+        "rule": "Document it as the discriminator that marks the entity as a Component, fixed to the literal 'Component'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "One short line: the component's own data — its type and lifecycle stage, the entity reference of its owner, and optional references to the component it is part of, the APIs it provides and consumes, the entities it depends on or is a dependency of, and the system it belongs to."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3", "AC-10"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/catalog-model/src/kinds/DomainEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the DomainEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'Domain';",
+        "rule": "Document it as the discriminator that marks the entity as a Domain, fixed to the literal 'Domain'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "One short line: the domain's own data — the entity reference of its owner, and optionally the domain it is a subdomain of and a free-form domain type."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3", "AC-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/catalog-model/src/kinds/GroupEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the GroupEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 28,
+        "to": 28,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "kind: 'Group';",
+        "rule": "Document it as the discriminator that marks the entity as a Group, fixed to the literal 'Group'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 30,
+        "to": 30,
+        "first_line": "spec: {",
+        "rule": "One short line: the group's own data — its type, the list of child groups, an optional display profile, an optional parent group and the optional users that are its direct members."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U05",
+    "path": "packages/catalog-model/src/kinds/LocationEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the LocationEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 28,
+        "to": 28,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "kind: 'Location';",
+        "rule": "Document it as the discriminator that marks the entity as a Location, fixed to the literal 'Location'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 30,
+        "to": 30,
+        "first_line": "spec: {",
+        "rule": "One short line: the location's own data — the optional location type shared by its targets, a single target or a list of targets, and whether the target's presence is required or optional; every field is optional here."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/catalog-model/src/kinds/ResourceEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the ResourceEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'Resource';",
+        "rule": "Document it as the discriminator that marks the entity as a Resource, fixed to the literal 'Resource'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "One short line: the resource's own data — its type, the entity reference of its owner, and optional references to the entities it depends on or is a dependency of and the system it belongs to."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U07",
+    "path": "packages/catalog-model/src/kinds/SystemEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the SystemEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 32,
+        "to": 32,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 33,
+        "to": 33,
+        "first_line": "kind: 'System';",
+        "rule": "Document it as the discriminator that marks the entity as a System, fixed to the literal 'System'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "spec: {",
+        "rule": "One short line: the system's own data — the entity reference of its owner, and optionally the domain it belongs to and a free-form system type."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U08",
+    "path": "packages/catalog-model/src/kinds/UserEntityV1alpha1.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds member TSDoc to the apiVersion, kind and spec members of the UserEntityV1alpha1 interface, clearing three (undocumented) markers.",
+    "rules": [
+      "1. Add exactly three comment blocks, one per site, each a multi-line block directly above the member it documents.",
+      "2. No release tag in any of the three blocks; the interface's own block with its @public stays byte-identical.",
+      "3. No @param and no @returns in a member block; a property is not a function.",
+      "4. Change no type, no literal, no member order and nothing below the interface."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 28,
+        "to": 28,
+        "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+        "rule": "Document it as the versions of the entity format this kind is defined against, naming both accepted literals 'backstage.io/v1alpha1' and 'backstage.io/v1beta1'; state no semantics beyond the accepted literals."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "kind: 'User';",
+        "rule": "Document it as the discriminator that marks the entity as a User, fixed to the literal 'User'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 30,
+        "to": 30,
+        "first_line": "spec: {",
+        "rule": "One short line: the user's own data — an optional display profile and the groups the user is a direct member of; both fields are optional on the type."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "The same three members on a sibling kind interface; keep the wording shape identical across the eight kinds."
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  }
+]

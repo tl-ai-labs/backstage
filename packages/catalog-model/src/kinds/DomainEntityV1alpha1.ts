@@ -29,8 +29,24 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface DomainEntityV1alpha1 extends Entity {
+  /**
+   * The versions of the entity format this kind accepts:
+   * 'backstage.io/v1alpha1' or 'backstage.io/v1beta1'.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The discriminator that marks the entity as a Domain, fixed to the literal
+   * 'Domain'.
+   */
   kind: 'Domain';
+  /**
+   * The Domain's own data.
+   *
+   * @remarks
+   *
+   * Includes the entity reference of its owner, and optionally the domain it
+   * is a subdomain of and a free-form domain type.
+   */
   spec: {
     owner: string;
     subdomainOf?: string;
