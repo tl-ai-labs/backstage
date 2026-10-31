@@ -1,0 +1,892 @@
+{
+  "header": {
+    "conventions": [
+      "BINDING RUN CONSTRAINT (user instruction): do not look at upstream PR backstage/backstage#36008, its merge commit (ffa4c39...), or the master / origin/master branch; never run `gh pr view` or `gh pr diff` on #36008 and never run `git show`, `git log` or `git diff` against master or origin/master; do not base anything on that PR's file list. Work only from this branch's code and this spec. Reading issue #35932's description is allowed. This binds every typist and delegated agent, the Gemini agent worker included.",
+      "Formatting is Prettier with the repo config (@backstage/cli/config/prettier): single quotes, trailing commas, 2-space indent, 80-column wrap, `arrow-parens: avoid`. Code must pass `yarn prettier --check` and `yarn eslint` on the file unchanged.",
+      "Match the existing style of each file you edit (import grouping, comment style, naming). Never change the copyright year of an existing file. No new source files are created in this change; if one were, it would need the Apache 2.0 header with the year 2026.",
+      "Do not add dependencies to any package.json. `@backstage/core-plugin-api` must not import `@internal/frontend` or `@backstage/frontend-app-api`; it only reaches the shared signal through `useApi(routeResolutionApiRef)` from `@backstage/frontend-plugin-api`.",
+      "Do not use React `useSyncExternalStore` (React 17 and 18 are both supported). Subscriptions use `useState` + `useEffect`, following `useTranslationRef` in packages/frontend-plugin-api/src/translation/useTranslationRef.ts.",
+      "`react-hooks/exhaustive-deps` is an error in this repo and flags unused `useMemo` deps. Where a `useMemo` lists the `finalized` state only to re-run resolution, put `// eslint-disable-next-line react-hooks/exhaustive-deps` on the line directly above the line that holds the deps array, as packages/frontend-plugin-api/src/breadcrumbs/useBreadcrumbEntries.tsx line 83 does.",
+      "Tests run on Jest via `CI=true yarn test <file>` with React Testing Library. Prefer fewer, thorough tests with several assertions each. Query with `screen` and `findBy*` (`await expect(screen.findByText(...)).resolves.toBeInTheDocument()` as the file already does); never use `waitFor`; never add test IDs to tests or implementation.",
+      "Every new test case name contains the exact phrase `across finalization`; the red check filters on it with `-t 'across finalization'`, and no existing test name contains it.",
+      "Wrap anything that finalizes the app or fires the finalization signal from a test in `act`: `await act(async () => { await finalizedAppPromise; });` for app finalization, `act(() => { ... })` for firing mock listeners.",
+      "API reports (report.api.md, report-alpha.api.md) are regenerated only by `yarn build:api-reports` in the project checks; never type them. core-plugin-api's public API does not change, so its reports stay untouched.",
+      "Never run `yarn build`, `yarn changesets version`, `yarn release`, or the changeset CLI. Run `yarn prettier --write` only on files this change touches.",
+      "Changesets are written for Backstage adopters in plain language: describe the behavior change and name no code symbols at all (no hook, interface, class, method, function or variable names, public or internal). Package names in the frontmatter are the only identifiers.",
+      "Docs follow docs/contribute/doc-style-guide.md: U.S. English, friendly but precise, short paragraphs, code identifiers in backticks."
+    ],
+    "decisions": [
+      {
+        "topic": "Shape of the shared finalization signal (FR-1)",
+        "choice": "Two optional members on the public `RouteResolutionApi` interface in frontend-plugin-api: `isFinalized?(): boolean` (false while the app is still in bootstrap) and `onFinalized?(listener: () => void): () => void` (calls the listener once when the app is finalized; returns an unsubscribe function).",
+        "rejected": [
+          "a separate lifecycle Utility API ref (core-compat-api and adopters would need a second implementation, and core-plugin-api would need another lookup)",
+          "module-level state in @internal/frontend (each package inlines its own copy, and core-plugin-api does not import it)",
+          "an `isBootstrapping` flag (absent members must read as finalized, which `isFinalized` expresses without negation)"
+        ],
+        "reason": "Both hooks already hold the same `RouteResolutionApiProxy` object via `useApi(routeResolutionApiRef)`; optional members keep `CompatRouteResolutionApi` and adopter implementations compiling unchanged (NFR-1)."
+      },
+      {
+        "topic": "How an implementation without the members is read",
+        "choice": "An API object is treated as finalized unless both `isFinalized` and `onFinalized` are functions and `isFinalized()` returns false; a missing API object (legacy app) is also finalized. Finalized-at-mount means no subscription and no extra render.",
+        "rejected": [
+          "treating a lone `isFinalized` without `onFinalized` as bootstrap (it could never leave bootstrap)"
+        ],
+        "reason": "FR-1 and FR-6: implementations lacking the members behave exactly as today."
+      },
+      {
+        "topic": "Where bootstrap ends",
+        "choice": "`RouteResolutionApiProxy` gets a new `markFinalized(): void` method. `initialize()` is unchanged and never finalizes, so the startup call from treeLifecycle.tsx keeps the API in bootstrap. prepareSpecializedApp.tsx calls `options.phase.routeResolutionApi.markFinalized()` directly after each of its two `instantiateAndInitializePhaseTree(...)` calls (the normal finalization at line 689 and the bootstrap-error finalization at line 758), before the root element check.",
+        "rejected": [
+          "a `finalize` flag on `initialize()` or on `instantiateAndInitializePhaseTree` (spreads the lifecycle into the shared helper that the startup path also uses)",
+          "marking after the root element check (the 689 path would not fire when its element check throws, contradicting AC-7's 689-then-758 case)"
+        ],
+        "reason": "Keeps treeLifecycle.tsx (outside the allowlist) untouched and makes the two finalization sites explicit."
+      },
+      {
+        "topic": "Firing semantics",
+        "choice": "`markFinalized()` is a no-op once `#finalized` is true. Otherwise it sets `#finalized = true`, copies the listener set into an array, clears the set, then calls each listener synchronously in registration order. `onFinalized()` called when already finalized registers nothing and returns a no-op unsubscribe; the hooks re-check `isFinalized()` after subscribing.",
+        "reason": "The signal fires at most once for the life of the API object even when both finalization paths run (FR-1, AC-7), and listeners are released."
+      },
+      {
+        "topic": "Hook subscription pattern (FR-2, FR-4, FR-5)",
+        "choice": "Each hook file gets its own private (non-exported) `useRouteResolutionFinalized(api)` hook: `const [signalled, setSignalled] = useState(false)`; `finalized = signalled || isRouteResolutionFinalized(api)` computed every render; a `useEffect` on `[api, finalized]` that returns `undefined` when `finalized` is true or the API lacks the members, otherwise subscribes with `api.onFinalized(() => setSignalled(true))`, then re-checks `api.isFinalized()` and calls `setSignalled(true)` if it is already true, and returns the unsubscribe. The returned boolean is added to the resolution `useMemo` deps so it re-runs exactly once at finalization.",
+        "rejected": [
+          "a shared helper in @internal/frontend (core-plugin-api cannot import it)",
+          "a numeric version counter (a boolean is enough because the signal fires once)"
+        ],
+        "reason": "At most one extra render per mounted hook, none when finalized at mount, no missed signal for components that mount during finalization, unsubscribe on unmount."
+      },
+      {
+        "topic": "Legacy hook value during bootstrap (FR-3)",
+        "choice": "A module-level constant `bootstrapRouteFunc = () => ''` in packages/core-plugin-api/src/routing/useRouteRef.tsx, returned (cast to `RouteFunc<Params>`) only when the route resolution API path was taken, the ref is non-optional, the resolved value is undefined, and the `finalized` boolean from the private hook (the same value that keyed the memo) is false. With `finalized` true the existing `throw new Error(`No path for ${routeRef}`)` is kept.",
+        "rejected": [
+          "returning undefined (breaks the non-optional overload types and callers that call the result)",
+          "calling `isFinalized()` again at the throw site (it is not necessarily the value the memoized resolution used)"
+        ],
+        "reason": "A banner that calls the link during render keeps rendering with an empty link until finalization, then gets the real one."
+      },
+      {
+        "topic": "Changesets (NFR-4, AC-5)",
+        "choice": "Three new files, one package each, all `patch`: `.changeset/route-ref-app-root-finalization.md` (`@backstage/frontend-plugin-api`), `.changeset/app-root-route-resolution-finalization.md` (`@backstage/frontend-app-api`), `.changeset/legacy-route-ref-app-root-bootstrap.md` (`@backstage/core-plugin-api`, whose public API does not change).",
+        "rejected": [
+          "one changeset for all three packages (the legacy placeholder and the new optional API members are not relevant to every package)"
+        ],
+        "reason": "Each message is relevant to every package it names; both new-system packages are below 1.0 so new optional members are a patch."
+      },
+      {
+        "topic": "Reproducing tests and red filter",
+        "choice": "Three test files get new cases whose names contain `across finalization`: createSpecializedApp.test.tsx (AC-1 and AC-7), frontend-plugin-api useRouteRef.test.tsx and core-plugin-api useRouteRef.test.tsx (AC-4 and the FR-3/FR-5 edge cases). Each new case fails on the current code. The red check is `CI=true yarn test {path} -t 'across finalization'`.",
+        "reason": "The red check fails only because of the new cases, and the existing cases keep passing."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "lint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 300
+      },
+      {
+        "id": "test-new",
+        "run": "CI=true yarn test {path} -t 'across finalization'",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "main-suite",
+        "run": "CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api && yarn tsc && yarn lint:all && yarn build:api-reports"
+      },
+      {
+        "id": "core-plugin-api-suite",
+        "run": "CI=true yarn test packages/core-plugin-api"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Reproduces #35932 end to end: app root elements that call either useRouteRef hook render during bootstrap and show the real page link after finalization (normal and bootstrap-error paths), and the finalization signal fires once.",
+      "rules": [
+        "Add exactly three new `it` blocks (the first one an `it.each` with two rows) at the end of the existing `describe('prepareSpecializedApp')` block; every new test name contains `across finalization`. Change nothing else in the file except the two import sites.",
+        "Create every route ref inside the test body (never at module or describe scope), so each test registers fresh refs.",
+        "Legacy refs come from `createLegacyRouteRef({ id: '...' })` (core-plugin-api); pass them where the new system expects a `RouteRef` (plugin `routes`, `PageBlueprint` `routeRef`, `coreExtensionData.routeRef`) directly, since they are structurally compatible; add an `as` cast only where TypeScript rejects a specific assignment.",
+        "Root element components render their text as one template literal, `<div>{`Link: [${link}]`}</div>`, so `screen.findByText` matches the whole string.",
+        "Copy the sign-in capture pattern of 'should defer app root children until finalize' (an override of `sign-in-page:app` whose `SignInPage` stores `props.onSignInSuccess` and renders 'Custom Sign In', plus the same `identityApi` literal).",
+        "For a sign-in-free app, build `noSignInAppPlugin` with `appPluginOriginal.withOverrides` overriding `app/layout` to render `<div>App Layout</div>` and `sign-in-page:app` with `{ disabled: true }`.",
+        "Wrap the sign-in trigger in `act(() => ...)` and every wait for a finalization that a mounted React tree observes in `await act(async () => { await finalizedAppPromise; })`; then assert with `await expect(screen.findByText(...)).resolves.toBeInTheDocument()`. No `waitFor`, no test IDs.",
+        "Call the optional members with optional chaining (`api.onFinalized?.(listener)`, `api.isFinalized?.()`), so the file runs (and fails on its assertions) before the members exist."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 33,
+          "first_line": "import {",
+          "last_line": "} from '@backstage/frontend-plugin-api';",
+          "rule": "Keep every existing named import in its order and append `AppRootElementBlueprint`, `PageBlueprint` and `routeResolutionApiRef` before the closing brace."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 42,
+          "to": 47,
+          "first_line": "import {",
+          "last_line": "} from '@backstage/core-plugin-api';",
+          "rule": "Keep `configApiRef`, `featureFlagsApiRef`, `IdentityApi`, `identityApiRef` and add `createRouteRef as createLegacyRouteRef` and `useRouteRef as useLegacyRouteRef`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 1913,
+          "to": 1913,
+          "first_line": "});",
+          "rule": "Insert the three new tests listed in `tests` here, after the last existing `it` and before the line that closes `describe('prepareSpecializedApp')`, separated by blank lines."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "lines": [
+          1419,
+          1490
+        ],
+        "reason": "Sign-in capture, prepareSpecializedApp feature setup and finalization flow the new tests copy."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+          "lines": [
+            1660,
+            1750
+          ],
+          "reason": "Pattern for app/root.elements extensions with an `if` predicate that are deferred to finalization."
+        },
+        {
+          "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+          "lines": [
+            636,
+            781
+          ],
+          "reason": "The two finalization paths (normal and bootstrap error) the tests drive."
+        },
+        {
+          "path": "packages/frontend-app-api/src/wiring/predicates.ts",
+          "lines": [
+            60,
+            150
+          ],
+          "reason": "The predicate loader rejects when the API with id `plugin.permission.api` rejects in `authorize`, which drives the bootstrap-error path."
+        },
+        {
+          "path": "packages/frontend-plugin-api/src/blueprints/AppRootElementBlueprint.tsx",
+          "reason": "Params of the root element blueprint (`element`)."
+        },
+        {
+          "path": "packages/frontend-defaults/src/createApp.tsx",
+          "lines": [
+            147,
+            171
+          ],
+          "reason": "`PreparedAppRoot` swaps the bootstrap element for the finalized element in one React tree; the AC-1 test mirrors it so root elements stay mounted."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "AC-1",
+        "AC-7",
+        "NFR-3"
+      ],
+      "tests": [
+        {
+          "name": "it.each([['new frontend system', 'Link: [pending]', 'Link: [/new-page]'], ['legacy', 'Link: []', 'Link: [/legacy-page]']])('should resolve %s route refs in app root elements across finalization', async (hook, bootstrapText, finalizedText) => ...)",
+          "given": "In the test body: `newPageRouteRef = createRouteRef()`, `legacyPageRouteRef = createLegacyRouteRef({ id: 'legacy-page' })`; `NewLink` renders `useRouteRef(newPageRouteRef)?.() ?? 'pending'` and `LegacyLink` renders `useLegacyRouteRef(legacyPageRouteRef)()`, both as `Link: [${link}]`; `LinkElement = hook === 'legacy' ? LegacyLink : NewLink`. `prepareSpecializedApp` with the describe-level `appPlugin`, a `createFrontendModule({ pluginId: 'app' })` holding the capturing `sign-in-page:app` override, and `createFrontendPlugin({ pluginId: 'test', routes: { newPage: newPageRouteRef, legacyPage: legacyPageRouteRef } })` with `PageBlueprint.make` pages `new-page` (path '/new-page', routeRef newPageRouteRef, loader rendering 'New Page') and `legacy-page` (path '/legacy-page', routeRef legacyPageRouteRef, loader rendering 'Legacy Page') and `AppRootElementBlueprint.make({ name: 'link', params: { element: <LinkElement /> } })`. Render `<PreparedAppRoot preparedApp={preparedApp} />`, a component declared in the test body as `function PreparedAppRoot(props: { preparedApp: PreparedSpecializedApp })` with `useState<FinalizedSpecializedApp>()`, `useEffect(() => props.preparedApp.onFinalized(setFinalizedApp), [props.preparedApp])`, returning `finalizedApp?.element ?? props.preparedApp.getBootstrapApp().element` (the same swap as createApp.tsx, so root elements stay mounted).",
+          "expect": "'Custom Sign In' and `bootstrapText` are found during bootstrap. After `finalizedAppPromise = waitForFinalizedApp(preparedApp)`, the sign-in trigger in `act`, and `await act(async () => { await finalizedAppPromise; })`: 'App Layout' is found, `finalizedText` is found, and `bootstrapText` is no longer in the document. Before the fix the legacy row fails during bootstrap (the hook throws and the boundary renders nothing) and the new-system row fails after finalization (it stays 'Link: [pending]')."
+        },
+        {
+          "name": "should re-resolve app root element route refs across finalization after a bootstrap error",
+          "given": "`errorRouteRef = createLegacyRouteRef({ id: 'error-route' })`; `rejectingPermissionApiRef = createApiRef<{ authorize(): Promise<never> }>({ id: 'plugin.permission.api' })`. Features: `noSignInAppPlugin`; `createFrontendPlugin({ pluginId: 'test', routes: { errorRoute: errorRouteRef } })` with a `createExtension({ name: 'deferred-route', attachTo: { id: 'app/root', input: 'elements' }, if: { permissions: { $contains: 'test.permission' } }, output: [coreExtensionData.reactElement, coreExtensionData.routePath, coreExtensionData.routeRef] })` yielding `<div />`, '/error-route' and errorRouteRef, plus `AppRootElementBlueprint.make({ name: 'link' })` whose element renders `useLegacyRouteRef(errorRouteRef)()` as `Link: [${link}]`; and `createFrontendModule({ pluginId: 'app' })` with `ApiBlueprint.make({ name: 'permission' })` defining `rejectingPermissionApiRef` with `deps: {}` and a factory whose `authorize` is `async () => { throw new Error('Permission backend unavailable'); }`. Before rendering: `api = preparedApp.getBootstrapApp().apis.get(routeResolutionApiRef)!`, `listener = jest.fn()`, `api.onFinalized?.(listener)`.",
+          "expect": "Right after `getBootstrapApp()` (the startup initialize), `api.isFinalized?.()` is `false` and `listener` was not called. `renderPreparedBootstrap(preparedApp)` shows 'Link: []'. After `await act(async () => { await waitForFinalizedApp(preparedApp); })`, `listener` was called exactly once, `api.isFinalized?.()` is `true`, and 'Link: [/error-route]' is found in the still-mounted bootstrap render."
+        },
+        {
+          "name": "should signal route resolution finalization once across finalization when the error path follows normal finalization",
+          "given": "`let appRootCalls = 0`; `prepareSpecializedApp({ features: [noSignInAppPlugin], advanced: { extensionFactoryMiddleware(originalFactory, { node }) { ... } } })` where the middleware increments `appRootCalls` when `node.spec.id === 'app/root'`, throws `new Error('Finalization failure')` when that count reaches 2 (the normal finalization pass), and otherwise returns `originalFactory()`. Then `api = preparedApp.getBootstrapApp().apis.get(routeResolutionApiRef)!`, `listener = jest.fn()`, `api.onFinalized?.(listener)`. No React render.",
+          "expect": "Before finalizing, `api.isFinalized?.()` is `false` and `listener` was not called. After `const finalizedApp = await waitForFinalizedApp(preparedApp)`: `appRootCalls` is 3 (bootstrap, failed normal finalization, bootstrap-error finalization), `finalizedApp.errors` is `undefined` (the bootstrap-error app), `listener` was called exactly once, and `api.isFinalized?.()` is `true`."
+        }
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ],
+      "red_checks": [
+        "test-new"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Hook-level tests for the new-system useRouteRef: one re-resolution and one extra render at finalization, none without the optional members, no missed signal, unsubscribe on unmount.",
+      "rules": [
+        "Add two new `it` blocks at the end of the existing `describe('v1 consumer')`; both names contain `across finalization`.",
+        "Build mock APIs as `RouteResolutionApi` object literals with `TestApiProvider` and `MemoryRouter initialEntries={['/my-page']}` wrappers, as the existing tests do.",
+        "Count renders with a closure counter inside the `renderHook` callback (`renders += 1; return useRouteRef(routeRef);`).",
+        "Fire mock listeners inside `act(() => { ... })`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { renderHook } from '@testing-library/react';",
+          "rule": "Import `act` and `renderHook` from '@testing-library/react'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { routeResolutionApiRef } from '../apis';",
+          "rule": "Import `routeResolutionApiRef` and `RouteResolutionApi` from '../apis'."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 208,
+          "to": 208,
+          "first_line": "});",
+          "rule": "Insert the two new tests listed in `tests` here, after the last existing `it` and before the closing of `describe('v1 consumer')`."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+        "lines": [
+          59,
+          97
+        ],
+        "reason": "renderHook with TestApiProvider and MemoryRouter wrappers."
+      },
+      "depends_on": [],
+      "covers": [
+        "AC-4",
+        "FR-2",
+        "FR-5"
+      ],
+      "tests": [
+        {
+          "name": "should re-resolve once across finalization and not re-render for APIs without finalization support",
+          "given": "A mock API with `let finalized = false`, `listeners = new Set<() => void>()`, `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`, `isFinalized: () => finalized`, `onFinalized: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }`, rendered with a render counter; then a second hook rendered against `{ resolve: jest.fn(() => () => '/plain') }` with its own counter, plus a third hook mounted against a fresh API built the same way (its own listener set) and unmounted before any signal.",
+          "expect": "Mounted in bootstrap: result is `undefined`, `resolve` called once, 1 render, 1 listener. After `act(() => { finalized = true; listeners.forEach(l => l()); })`: `result.current?.()` is '/ready', `resolve` called twice, exactly 2 renders, and the listener set is empty. The plain API: result returns '/plain', 1 render, `resolve` called once after `await act(async () => {})`. The third hook had one listener while mounted and its listener set is empty after `unmount()`."
+        },
+        {
+          "name": "should not miss a finalization that happens while subscribing across finalization",
+          "given": "Mock API A: `let finalized = false`, `isFinalized: jest.fn(() => finalized)`, `onFinalized: jest.fn(() => { finalized = true; return () => {}; })` (finalizes during subscription without calling the listener), `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`. Mock API B: `isFinalized: () => true`, `onFinalized: jest.fn()`, `resolve: jest.fn(() => () => '/done')`. Each rendered with a render counter.",
+          "expect": "A: `onFinalized` was called once and `result.current?.()` is '/ready' after the effects flush, with at most 2 renders. B (finalized at mount): `onFinalized` was never called, `result.current?.()` is '/done', exactly 1 render."
+        }
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ],
+      "red_checks": [
+        "test-new"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Hook-level tests for the legacy useRouteRef with the new route resolution API: empty-string placeholder during bootstrap, one re-resolution at finalization, unchanged throw once finalized, bounded renders.",
+      "rules": [
+        "Add two new `it` blocks at the end of the existing `describe('new app system')`; both names contain `across finalization`.",
+        "Use `createRouteRef({ id: 'ref1' })` and `createExternalRouteRef({ id: 'external-ref', optional: true })` from the local modules, and mock APIs typed as `RouteResolutionApi`, wrapped like the existing 'new app system' tests.",
+        "Assert a render-time throw with `withLogCollector(['error'], () => { expect(() => renderHook(...)).toThrow('No path for routeRef{type=absolute,id=ref1}'); })` so React's error log stays quiet.",
+        "Fire mock listeners inside `act(() => { ... })`; count renders with a closure counter in the `renderHook` callback."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { renderHook } from '@testing-library/react';",
+          "rule": "Import `act` and `renderHook` from '@testing-library/react'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "import { TestApiProvider } from '@backstage/test-utils';",
+          "rule": "Import `TestApiProvider` and `withLogCollector` from '@backstage/test-utils'."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 218,
+          "to": 218,
+          "first_line": "});",
+          "rule": "Insert the two new tests listed in `tests` here, after 'should handle optional external route refs' and before the closing of `describe('new app system')`."
+        }
+      ],
+      "style_from": {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+        "lines": [
+          167,
+          218
+        ],
+        "reason": "Mock RouteResolutionApi wrappers of the 'new app system' tests."
+      },
+      "depends_on": [],
+      "covers": [
+        "AC-4",
+        "FR-3",
+        "FR-4"
+      ],
+      "tests": [
+        {
+          "name": "should return an empty link during bootstrap and re-resolve across finalization",
+          "given": "A mock API with `let finalized = false`, a listener set, `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`, `isFinalized: () => finalized`, and an `onFinalized` that adds to the set and returns a delete; a render-counted hook for the non-optional ref against it; a second hook for the optional external ref against its own bootstrap API (`resolve: () => undefined`, `isFinalized: () => false`, `onFinalized: () => () => {}`); then a finalized API (`isFinalized: () => true`, `onFinalized: jest.fn()`, `resolve: () => undefined`) and a plain API (`{ resolve: () => undefined }`).",
+          "expect": "In bootstrap the non-optional hook does not throw, `result.current()` returns '' (also when called again), 1 render; the optional hook returns `undefined`. After `act(() => { finalized = true; listeners.forEach(l => l()); })`: `result.current()` is '/ready', `resolve` called twice for that hook, exactly 2 renders. Against the finalized API and against the plain API, rendering the non-optional hook throws 'No path for routeRef{type=absolute,id=ref1}'."
+        },
+        {
+          "name": "should keep renders bounded across finalization",
+          "given": "Mock API A finalizes during subscription (`let finalized = false`, `isFinalized: jest.fn(() => finalized)`, `onFinalized: jest.fn(() => { finalized = true; return () => {}; })`, `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`); mock API B `{ resolve: jest.fn(() => () => '/plain') }` without the optional members; each hook render-counted.",
+          "expect": "A: no throw, `onFinalized` called once, and `result.current()` is '/ready' after the effects flush with at most 2 renders. B: `result.current()` is '/plain', exactly 1 render and 1 `resolve` call after `await act(async () => {})`."
+        }
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ],
+      "red_checks": [
+        "test-new"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the two optional finalization members to the public RouteResolutionApi interface.",
+      "rules": [
+        "Both members are optional method signatures (`isFinalized?(): boolean;` and `onFinalized?(listener: () => void): () => void;`); `resolve` stays exactly as it is and no member becomes required.",
+        "Give each member a TSDoc comment in the style of the `sourcePath` comment: `isFinalized` returns false while the app is still in its bootstrap phase, before page routes are known, and an implementation without it is treated as finalized; `onFinalized` registers a listener called once when the app is finalized and route resolution can see all routes, returns a function that removes the listener, and does not call the listener if the app is already finalized.",
+        "No new imports and no other changes."
+      ],
+      "exports": [
+        {
+          "name": "RouteResolutionApi.isFinalized",
+          "kind": "optional interface method",
+          "params": [],
+          "returns": "boolean"
+        },
+        {
+          "name": "RouteResolutionApi.onFinalized",
+          "kind": "optional interface method",
+          "params": [
+            {
+              "name": "listener",
+              "type": "() => void"
+            }
+          ],
+          "returns": "() => void"
+        }
+      ],
+      "import_line": "import { RouteResolutionApi } from '@backstage/frontend-plugin-api';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 60,
+          "to": 60,
+          "first_line": "): RouteFunc<TParams> | undefined;",
+          "rule": "Insert a blank line, then the documented `isFinalized?(): boolean;` member, a blank line, and the documented `onFinalized?(listener: () => void): () => void;` member, inside the interface before its closing brace."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [
+          44,
+          61
+        ],
+        "reason": "Interface member and TSDoc layout."
+      },
+      "depends_on": [
+        "U01",
+        "U02",
+        "U03"
+      ],
+      "covers": [
+        "FR-1",
+        "NFR-1",
+        "NFR-5",
+        "AC-2"
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "RouteResolutionApiProxy tracks bootstrap vs finalized, lets callers subscribe to finalization, and fires its listeners once when finalization marks it.",
+      "rules": [
+        "New private fields: `#finalized = false;` and `#finalizedListeners = new Set<() => void>();`.",
+        "`isFinalized()` returns `this.#finalized`.",
+        "`onFinalized(listener)`: when `#finalized` is true return a no-op function without registering; otherwise add the listener to the set and return a function that deletes it from the set.",
+        "`markFinalized()`: return at once when `#finalized` is true; otherwise set `#finalized = true`, copy the set into an array, clear the set, then call each listener in registration order.",
+        "`initialize()` and `resolve()` stay unchanged: initialize never finalizes, so the startup initialize from treeLifecycle.tsx leaves the proxy in bootstrap.",
+        "Add a one-line comment above `markFinalized` saying it is called by the finalization paths only, at most once in effect."
+      ],
+      "exports": [
+        {
+          "name": "RouteResolutionApiProxy.isFinalized",
+          "kind": "method",
+          "params": [],
+          "returns": "boolean"
+        },
+        {
+          "name": "RouteResolutionApiProxy.onFinalized",
+          "kind": "method",
+          "params": [
+            {
+              "name": "listener",
+              "type": "() => void"
+            }
+          ],
+          "returns": "() => void"
+        },
+        {
+          "name": "RouteResolutionApiProxy.markFinalized",
+          "kind": "method",
+          "params": [],
+          "returns": "void"
+        }
+      ],
+      "import_line": "import { RouteResolutionApiProxy } from './phaseApis';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 115,
+          "to": 115,
+          "first_line": "#routeObjects: BackstageRouteObject[] | undefined;",
+          "rule": "Add the two private fields `#finalized` and `#finalizedListeners`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 164,
+          "to": 164,
+          "first_line": "}",
+          "rule": "After `getRouteObjects()` and before the class's closing brace, add a blank line and the `isFinalized`, `onFinalized` and `markFinalized` methods, separated by blank lines."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "lines": [
+          112,
+          165
+        ],
+        "reason": "Private field and method style of the proxy class."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-app-api/src/wiring/treeLifecycle.tsx",
+          "lines": [
+            48,
+            101
+          ],
+          "reason": "The startup initialize that must not finalize."
+        }
+      ],
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-1",
+        "NFR-2"
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Both finalization paths mark the route resolution API finalized right after the finalized tree is instantiated and route resolution is re-initialized.",
+      "rules": [
+        "Each insertion is exactly `options.phase.routeResolutionApi.markFinalized();` preceded by a one-line comment saying that this lets mounted route ref hooks re-resolve now that page routes are known.",
+        "Do not touch `createBootstrapApp`, the early `if (options.finalized)` returns, or the root element checks."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 698,
+          "to": 698,
+          "first_line": "});",
+          "rule": "In `finalizeFromSessionState`, directly after the `instantiateAndInitializePhaseTree({...});` call and before `const element = ...`, insert the comment and the `markFinalized()` call."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 766,
+          "to": 766,
+          "first_line": "});",
+          "rule": "In `finalizeFromBootstrapError`, directly after the `instantiateAndInitializePhaseTree({...});` call and before `const element = ...`, insert the same comment and `markFinalized()` call."
+        }
+      ],
+      "uses": [
+        {
+          "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+          "lines": [
+            683,
+            772
+          ],
+          "reason": "The two finalization call sites and their surroundings."
+        }
+      ],
+      "depends_on": [
+        "U05"
+      ],
+      "covers": [
+        "FR-1",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The new-system useRouteRef re-resolves once when the route resolution API reports finalization, with an unchanged public signature and return contract.",
+      "rules": [
+        "Add a private function `isRouteResolutionFinalized(api: RouteResolutionApi): boolean` returning true unless `typeof api.isFinalized === 'function'`, `typeof api.onFinalized === 'function'` and `api.isFinalized()` is false.",
+        "Add a private hook `useRouteResolutionFinalized(api: RouteResolutionApi): boolean` per the header decision: `const [signalled, setSignalled] = useState(false)`; `const finalized = signalled || isRouteResolutionFinalized(api)`; a `useEffect` on `[api, finalized]` that returns `undefined` when `finalized` is true or either member is missing, else subscribes with `api.onFinalized(() => setSignalled(true))`, then calls `setSignalled(true)` when `api.isFinalized()` already returns true, and returns the unsubscribe; the hook returns `finalized`.",
+        "Place both private functions above the `useRouteRef` TSDoc block, without TSDoc release tags (they are not exported).",
+        "In `useRouteRef`, call `const finalized = useRouteResolutionFinalized(routeResolutionApi);` after `useApi`, and make the memo deps `[routeResolutionApi, routeRef, pathname, finalized]` with `// eslint-disable-next-line react-hooks/exhaustive-deps` on the line above the deps line.",
+        "Extend the `@returns` text: the result is `undefined` while the app is still being bootstrapped (for example in app root elements before sign-in completes) and updates to the real link once the app is finalized."
+      ],
+      "exports": [
+        {
+          "name": "useRouteRef",
+          "kind": "function (behavior change only)",
+          "params": [
+            {
+              "name": "routeRef",
+              "type": "RouteRef<TParams> | SubRouteRef<TParams> | ExternalRouteRef<TParams>"
+            }
+          ],
+          "returns": "RouteFunc<TParams> | undefined"
+        }
+      ],
+      "import_line": "import { useRouteRef } from '@backstage/frontend-plugin-api';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Import `useEffect`, `useMemo` and `useState` from 'react'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 23,
+          "to": 23,
+          "first_line": "import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';",
+          "rule": "Import `RouteFunc`, `RouteResolutionApi`, `routeResolutionApiRef` and `useApi` from '../apis'; then a blank line and the two private functions."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 33,
+          "to": 33,
+          "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`, or `undefined` if the route is not available.",
+          "rule": "Keep the existing sentence and append the bootstrap sentence from the rules, wrapped as TSDoc lines."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 42,
+          "to": 50,
+          "first_line": "const { pathname } = useLocation();",
+          "last_line": "return routeFunc;",
+          "rule": "Keep `useLocation` and `useApi`, add the `finalized` line, and add `finalized` to the memo deps with the eslint-disable comment; keep `return routeFunc;`."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-plugin-api/src/translation/useTranslationRef.ts",
+        "lines": [
+          38,
+          84
+        ],
+        "reason": "In-package useState + useEffect subscription pattern FR-5 names."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-plugin-api/src/breadcrumbs/useBreadcrumbEntries.tsx",
+          "lines": [
+            78,
+            86
+          ],
+          "reason": "Placement of the exhaustive-deps disable comment."
+        }
+      ],
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-2",
+        "FR-5",
+        "FR-6"
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The legacy useRouteRef returns an empty-string link function during bootstrap for unresolvable non-optional refs and re-resolves once at finalization; after finalization and for APIs without the members it throws as before.",
+      "rules": [
+        "Add a private function `isRouteResolutionFinalized(api: RouteResolutionApi | undefined): boolean` returning true when `api` is undefined, and otherwise true unless both members are functions and `api.isFinalized()` is false.",
+        "Add a private hook `useRouteResolutionFinalized(api: RouteResolutionApi | undefined): boolean` identical in logic to the frontend-plugin-api one (header decision), using optional access on `api`.",
+        "Add `const bootstrapRouteFunc = () => '';` at module level with a one-line comment: used while the app is still being bootstrapped and page routes are not known yet.",
+        "In the hook body call `const finalized = useRouteResolutionFinalized(routeResolutionApi);` right after `useRouteResolutionApi()`; add `finalized` to the deps of the `newRouteFunc` memo with the exhaustive-deps disable comment above the deps line; the `legacyRouteFunc` memo is unchanged.",
+        "In the `newRouteFunc !== null` branch, when `!newRouteFunc && !isOptional`: return `bootstrapRouteFunc as RouteFunc<Params>` if `!finalized`, else throw `new Error(`No path for ${routeRef}`)` as today. Optional refs still return `newRouteFunc` (undefined).",
+        "The legacy routing-context path (after the branch) stays exactly as it is.",
+        "Leave the overload signatures and all TSDoc blocks unchanged, so the public API reports of core-plugin-api do not change. The new private functions get no TSDoc release tags."
+      ],
+      "exports": [
+        {
+          "name": "useRouteRef",
+          "kind": "function (behavior change only)",
+          "params": [
+            {
+              "name": "routeRef",
+              "type": "RouteRef<Params> | SubRouteRef<Params> | ExternalRouteRef<Params, any>"
+            }
+          ],
+          "returns": "RouteFunc<Params> | undefined"
+        }
+      ],
+      "import_line": "import { useRouteRef } from '@backstage/core-plugin-api';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Import `useEffect`, `useMemo` and `useState` from 'react'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52,
+          "first_line": "}",
+          "rule": "After `useRouteResolutionApi`, add a blank line, `isRouteResolutionFinalized`, `useRouteResolutionFinalized`, and the commented `bootstrapRouteFunc` constant, separated by blank lines."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 101,
+          "to": 134,
+          "first_line": "const { pathname } = useLocation();",
+          "last_line": "}",
+          "rule": "Rewrite from `const { pathname }` through the end of the `if (newRouteFunc !== null)` block: add the `finalized` line, the extra memo dep with its disable comment, and the bootstrap return before the throw; keep the versioned context lookup, the try/catch in the memo and the `legacyRouteFunc` memo as they are."
+        }
+      ],
+      "style_from": {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+        "lines": [
+          46,
+          150
+        ],
+        "reason": "Private helper placement and the hook body being edited."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-plugin-api/src/translation/useTranslationRef.ts",
+          "lines": [
+            38,
+            84
+          ],
+          "reason": "The useState + useEffect subscription pattern FR-5 names."
+        }
+      ],
+      "depends_on": [
+        "U04",
+        "U07"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "lint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "docs/frontend-system/architecture/10-app.md",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Documents that app root elements render during bootstrap and how both useRouteRef hooks behave before and after finalization.",
+      "rules": [
+        "One new paragraph, plus a short `tsx` example, in the 'Preparing an App in Phases' section.",
+        "The paragraph says: elements attached to `app/root.elements` (for example a global banner) render during bootstrap, before the app is finalized and before page routes are known; during that time `useRouteRef` from `@backstage/frontend-plugin-api` returns `undefined` for routes it cannot resolve yet, and `useRouteRef` from `@backstage/core-plugin-api` returns a link function that returns an empty string; both update to the real link once the app is finalized, without a remount or a navigation.",
+        "The example is a small banner component using the new-system hook and handling `undefined` (for example `const link = useRouteRef(catalogRouteRef);` and rendering the link only when `link` is defined).",
+        "Follow docs/contribute/doc-style-guide.md: U.S. English, second person, no filler, identifiers in backticks."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 95,
+          "to": 95,
+          "first_line": "Utility APIs that are first materialized during bootstrap are frozen for the lifetime of that app instance. Finalization may still add new APIs and may override existing API refs that were not materialized during bootstrap, but any deferred override of an already materialized bootstrap API is ignored and reported as an app error.",
+          "rule": "Insert a blank line, the new paragraph, a blank line and the `tsx` example, before the blank line that precedes '## Plugin Info Resolution'."
+        }
+      ],
+      "uses": [
+        {
+          "path": "docs/contribute/doc-style-guide.md",
+          "reason": "Documentation style rules."
+        }
+      ],
+      "depends_on": [
+        "U07",
+        "U08"
+      ],
+      "covers": [
+        "AC-6",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": ".changeset/route-ref-app-root-finalization.md",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Changeset for @backstage/frontend-plugin-api.",
+      "rules": [
+        "Frontmatter is exactly one line `'@backstage/frontend-plugin-api': patch` between `---` lines, then a blank line and the message.",
+        "Message (one or two sentences, adopter wording, no code symbols): route links used in app root elements, such as a global banner, now update to the correct link once the app has finished loading after sign-in, instead of staying unresolved; route resolution API implementations can now optionally report whether the app is still starting up and notify when it is ready."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/calm-dogs-list.md",
+        "reason": "Changeset frontmatter and message layout."
+      },
+      "depends_on": [
+        "U07"
+      ],
+      "covers": [
+        "AC-5",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": ".changeset/app-root-route-resolution-finalization.md",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Changeset for @backstage/frontend-app-api.",
+      "rules": [
+        "Frontmatter is exactly one line `'@backstage/frontend-app-api': patch` between `---` lines, then a blank line and the message.",
+        "Message (one sentence, adopter wording, no code symbols): apps now notify already rendered app root elements when the app is finalized, including when finalization follows a startup error, so their route links resolve without a remount."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/calm-dogs-list.md",
+        "reason": "Changeset frontmatter and message layout."
+      },
+      "depends_on": [
+        "U06"
+      ],
+      "covers": [
+        "AC-5",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": ".changeset/legacy-route-ref-app-root-bootstrap.md",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Changeset for @backstage/core-plugin-api.",
+      "rules": [
+        "Frontmatter is exactly one line `'@backstage/core-plugin-api': patch` between `---` lines, then a blank line and the message.",
+        "Message (one or two sentences, adopter wording, no code symbols): in apps built with the new frontend system, app root elements that build route links no longer fail with a 'No path for' error before sign-in completes; the link points nowhere (an empty string) until the app has finished loading and then updates to the correct path."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/calm-dogs-list.md",
+        "reason": "Changeset frontmatter and message layout."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "AC-5",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ]
+}
