@@ -1,0 +1,41 @@
+{
+  "module": "plugins/scaffolder-react (cross-step conditions)",
+  "mode": "brownfield",
+  "intent": "feature-extend",
+  "verdict": "needs_changes",
+  "tool_calls": 7,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "line": 911,
+      "issue": "The new Stepper tests only use a top-level if/then on the earlier-step key. The change plan says rjsf already evaluated that against the whole form data before this change, so these tests would pass without liftCrossStepDependencies. Nothing renders a step whose `dependencies` entry is keyed on an earlier-step field, which is the path the new helper adds. That path has only shape tests (schema.test.ts and the useTemplateSchema hook test). No test shows rjsf actually showing and requiring the lifted field, yet the changeset and docs promise this.",
+      "fix": "Add a case to describe('conditions on earlier steps') where step 2 has `dependencies: { isMobile: { oneOf: [{ properties: { isMobile: { const: true }, sdkName: {...} }, required: ['sdkName'] }] } }`. Assert that SDK name is hidden and not required when the flag is unset, and shown and required when it is set."
+    },
+    {
+      "severity": "minor",
+      "file": "docs/features/software-templates/input-examples.md",
+      "line": 408,
+      "issue": "The note says `dependencies` keyed on an earlier-step field 'work the same way'. That is misleading: a plain (non-oneOf) dependency applies whenever the earlier field has any answer, including `false`. The example's `isMobileSdk` has `default: false`, so a plain dependency keyed on it would always apply.",
+      "fix": "Say that a plain `dependencies` entry applies as soon as the earlier field has any answer, including `false`. To act on a specific value, use `oneOf` branches with a `const` on the earlier field, or use `if`/`then`."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "line": 855,
+      "issue": "isKeyDeclaredInNode uses `Object.hasOwn`, while the sibling helper added in the same change (lib/schema.ts liftCrossStepDependencies) and the change plan use `Object.prototype.hasOwnProperty.call`. This is an inconsistent own-key check within one change set.",
+      "fix": "Use `Object.prototype.hasOwnProperty.call(node.properties, key)` to match lib/schema.ts and the plan's convention."
+    }
+  ],
+  "passing_checks": [
+    "Correctness vs change_plan: U01-U13 implemented as specified (lift rules 1-10, hook wiring, findSchemaForKey/isKeyDeclaredInSchemas, ReviewState three-case flatMap, no barrel or API report change).",
+    "Type safety: no `any`; JsonObject/JsonValue guards used throughout; tsc passes.",
+    "Error handling: getSchema JsonError results are now treated as no match instead of truthy; I probed json-schema-library 9.3.5 and a non-matching dependency/root oneOf still resolves declared keys, so no regression was found.",
+    "Authz: not applicable (no routes).",
+    "PII: password-widget masking on the review step is still applied to fields from conditional branches (ReviewState test asserts 'Sdk Token ******'); onCreate payload unchanged as decided.",
+    "Changeset: new file only, minor bump for @backstage/plugin-scaffolder-react (3.0.0-next.0, >=1.0), adopter-facing wording, no code symbols.",
+    "Env fixtures: not applicable (frontend plugin, no validating config module touched).",
+    "Sensitive files: none touched."
+  ],
+  "refinement_packets": []
+}

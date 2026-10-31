@@ -1,0 +1,148 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261031-0945-feature-extend-scaffolder-cross-step-conditions",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 911): The new Stepper tests only use a top-level if/then on the earlier-step key. The change plan says rjsf already evaluated that against the whole form data before this change, so these tests would pass without liftCrossStepDependencies. Nothing renders a step whose `dependencies` entry is keyed on an earlier-step field, which is the path the new helper adds. That path has only shape tests (schema.test.ts and the useTemplateSchema hook test). No test shows rjsf actually showing and requiring the lifted field, yet the changeset and docs promise this. — fix: Add a case to describe('conditions on earlier steps') where step 2 has `dependencies: { isMobile: { oneOf: [{ properties: { isMobile: { const: true }, sdkName: {...} }, required: ['sdkName'] }] } }`. Assert that SDK name is hidden and not required when the flag is unset, and shown and required when it is set.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-0945-feature-extend-scaffolder-cross-step-conditions/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-0945-feature-extend-scaffolder-cross-step-conditions/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261031-0945-feature-extend-scaffolder-cross-step-conditions",
+    "artifact_path": "docs/features/software-templates/input-examples.md",
+    "instruction": "Fix `docs/features/software-templates/input-examples.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 408): The note says `dependencies` keyed on an earlier-step field 'work the same way'. That is misleading: a plain (non-oneOf) dependency applies whenever the earlier field has any answer, including `false`. The example's `isMobileSdk` has `default: false`, so a plain dependency keyed on it would always apply. — fix: Say that a plain `dependencies` entry applies as soon as the earlier field has any answer, including `false`. To act on a specific value, use `oneOf` branches with a `const` on the earlier field, or use `if`/`then`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-templates/input-examples.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-templates/input-examples.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-0945-feature-extend-scaffolder-cross-step-conditions/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-0945-feature-extend-scaffolder-cross-step-conditions/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261031-0945-feature-extend-scaffolder-cross-step-conditions",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/util.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 855): isKeyDeclaredInNode uses `Object.hasOwn`, while the sibling helper added in the same change (lib/schema.ts liftCrossStepDependencies) and the change plan use `Object.prototype.hasOwnProperty.call`. This is an inconsistent own-key check within one change set. — fix: Use `Object.prototype.hasOwnProperty.call(node.properties, key)` to match lib/schema.ts and the plan's convention.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-0945-feature-extend-scaffolder-cross-step-conditions/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-0945-feature-extend-scaffolder-cross-step-conditions/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 90,
+      "max_retries": 2
+    }
+  }
+]

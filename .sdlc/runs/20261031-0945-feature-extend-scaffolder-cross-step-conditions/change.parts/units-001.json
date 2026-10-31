@@ -1,0 +1,218 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds liftCrossStepDependencies, a pure helper that rewrites a step's dependencies keyed on a property the step does not define (an earlier-step answer) into equivalent allOf if/then entries, so rjsf and json-schema-library evaluate them against the whole wizard form data.",
+      "rules": [
+        "1. Signature: export const liftCrossStepDependencies = (schema: JsonObject): JsonObject; it never mutates its input or any nested object of it (build new objects with spread).",
+        "2. If schema.dependencies is not an object (use the file's isObject guard) or schema.properties is not an object, return the input schema itself (same reference).",
+        "3. Walk Object.entries(schema.dependencies) in order. An entry whose key is an own key of schema.properties (Object.prototype.hasOwnProperty.call) stays in the remaining dependencies untouched.",
+        "4. For any other key k: an array value D becomes one lifted entry { if: { required: [k] }, then: { required: D } }.",
+        "5. For any other key k: an object value without an array oneOf becomes one lifted entry { if: { required: [k] }, then: <the dependency value> }.",
+        "6. For any other key k: an object value with an array oneOf becomes, for each oneOf branch that is an object whose properties object has own key k, one entry { if: { properties: { [k]: branch.properties[k] }, required: [k] }, then: <branch copy whose properties omit k> }; branches without k are skipped; if the dependency value has keys other than oneOf, add one more entry { if: { required: [k] }, then: <those other keys> } after the branch entries.",
+        "7. Any other value type (boolean, string) for key k stays in the remaining dependencies untouched.",
+        "8. If nothing was lifted, return the input schema itself (same reference).",
+        "9. Otherwise return { ...schema, allOf: [...existing schema.allOf entries when schema.allOf is an array, ...lifted entries in walk order] } with dependencies set to the remaining entries, and with the dependencies key removed entirely when none remain.",
+        "10. Put it after extractSchemaFromStep, with a TSDoc comment explaining that rjsf skips dependencies whose trigger is not one of the step's own properties; give it no release tag and do not add it to lib/index.ts (it stays internal)."
+      ],
+      "exports": [
+        {
+          "name": "liftCrossStepDependencies",
+          "kind": "const arrow function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        }
+      ],
+      "import_line": "import { liftCrossStepDependencies } from '../lib/schema';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 134,
+          "to": 134,
+          "first_line": "};",
+          "rule": "Insert a blank line and then the liftCrossStepDependencies helper with its TSDoc comment, before the createFieldValidation TSDoc block."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+          "lines": [280, 389],
+          "reason": "The existing case with a step that has dependencies and no properties must stay unchanged by the helper (rule 2)."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-1", "FR-2", "FR-6", "FR-13", "NFR-1", "NFR-2", "NFR-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Runs each manifest step schema through liftCrossStepDependencies once while parsing, and uses the lifted schema both as mergedSchema and as the input to extractSchemaFromStep.",
+      "rules": [
+        "1. The lifted schema is computed inside the existing manifest.steps.map callback, once per step, before any feature-flag filtering.",
+        "2. mergedSchema is the lifted schema (it keeps its ui:* keys) and the spread ...extractSchemaFromStep(...) receives the same lifted schema.",
+        "3. Everything after the map (step and property feature-flag filtering, title stripping, the properties defaulting branch) stays exactly as it is.",
+        "4. Import both helpers from '../lib/schema' in one import line; the public lib barrel is not changed."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 21,
+          "to": 21,
+          "first_line": "import { extractSchemaFromStep } from '../lib';",
+          "rule": "Replace with: import { extractSchemaFromStep, liftCrossStepDependencies } from '../lib/schema';"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 48,
+          "to": 53,
+          "first_line": "const steps = manifest.steps.map(({ title, description, schema }) => ({",
+          "last_line": "}));",
+          "rule": "Turn the map callback into a block body: const liftedSchema = liftCrossStepDependencies(schema); then return { title, description, mergedSchema: liftedSchema, ...extractSchemaFromStep(liftedSchema) }."
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": ["FR-1", "FR-2", "FR-5", "FR-6", "FR-10", "NFR-4"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "findSchemaForKey resolves each step schema against every other answer of the form, and a new isKeyDeclaredInSchemas reports whether a key is defined anywhere in a step schema, including inactive conditional branches.",
+      "rules": [
+        "1. findSchemaForKey keeps its name, parameters and return type; for each step in order it builds data as a copy of formState without the looked-up key (lodash omit) and calls new JSONSchema(step.mergedSchema).getSchema({ pointer: `#/${key}`, data }).",
+        "2. A step matches only when the result is truthy and not a JsonError (isJsonError from json-schema-library); return the first matching step, else null.",
+        "3. Replace the old block comment with one explaining why the key itself is left out of data (json-schema-library would otherwise invent a schema from its value) while all other answers, from this or earlier steps, drive if/then/else, allOf and dependencies.",
+        "4. Add export function isKeyDeclaredInSchemas(key: string, schemas: ParsedTemplateSchema[]): boolean, true when any step's mergedSchema declares key.",
+        "5. A schema node declares key when it is a JSON object (isJsonObject) whose properties object has own key key, or when any entry of its allOf, anyOf or oneOf arrays, its then or else, or any value of its dependencies object declares key (recursive; do not descend into nested properties or items).",
+        "6. Keep isJsonObject and formatKey unchanged."
+      ],
+      "exports": [
+        {
+          "name": "findSchemaForKey",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "ParsedTemplateSchema | null"
+        },
+        {
+          "name": "isKeyDeclaredInSchemas",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            }
+          ],
+          "returns": "boolean"
+        }
+      ],
+      "import_line": "import { isJsonObject, formatKey, findSchemaForKey, isKeyDeclaredInSchemas } from './util';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { startCase } from 'lodash';",
+          "rule": "Replace with: import { omit, startCase } from 'lodash';"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Replace with: import { Draft07 as JSONSchema, isJsonError } from 'json-schema-library';"
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 35,
+          "to": 76,
+          "first_line": "export function findSchemaForKey(",
+          "last_line": "}",
+          "rule": "Replace the whole findSchemaForKey function with the new version (rules 1-3), followed by a blank line, a private recursive helper for rule 5, and the exported isKeyDeclaredInSchemas (rule 4)."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7", "FR-8", "FR-9"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The review step leaves out an answer whose field is defined only in a conditional branch that is not active for the final answers; every other answer is listed as today.",
+      "rules": [
+        "1. In the flatMap callback: when findSchemaForKey returns a step, return processSchema(key, value, schema, props.formState) unchanged.",
+        "2. When it returns null and isKeyDeclaredInSchemas(key, props.schemas) is true, return an empty array so the answer is not listed.",
+        "3. When it returns null and the key is declared nowhere, keep returning [[formatKey(key), value]].",
+        "4. processSchema, the props type and the StructuredMetadataTable rendering stay unchanged; formState values passed to onCreate are not touched anywhere."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Add isKeyDeclaredInSchemas to the named imports from './util'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 96,
+          "to": 99,
+          "first_line": "const schema = findSchemaForKey(key, props.schemas, props.formState);",
+          "last_line": ": [[formatKey(key), value]];",
+          "rule": "Replace the ternary with the three cases of rules 1-3, keeping the flatMap return type [string, JsonValue | undefined][]."
+        }
+      ],
+      "depends_on": ["U03"],
+      "covers": ["FR-7", "FR-8", "FR-9"],
+      "checks": ["eslint", "prettier"]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.ts": "1dd5faea67e4b4b4fba22f446ff8765efcac6c7bb60529ca1868f1c38be82d88",
+    "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx": "f4e2ad5e9318fb32f1a2875ede0094f02566dac18c105690619ca9be383503d3",
+    "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts": "156eda16f208e855f6227da053f4e93e3364f23abe095f86acbf1f2ed52d4d54",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.ts": "f189db9a2fe73997bc229936fccca5e15dd296098f624c17cf2ecaa6218384aa",
+    "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx": "e5fc61cbd0724835ab12912a10cba89446923eb0467feb83ba70aa7575943343"
+  }
+}

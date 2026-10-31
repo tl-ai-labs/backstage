@@ -538,4 +538,59 @@ describe('createAsyncValidators', () => {
 
     expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();
   });
+
+  it('should only validate fields of the active branch of a condition on an earlier-step answer', async () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+        },
+      },
+      if: {
+        properties: {
+          isMobile: { const: true },
+        },
+        required: ['isMobile'],
+      },
+      then: {
+        properties: {
+          sdkName: {
+            type: 'string',
+            'ui:field': 'SdkNameField',
+          },
+        },
+      },
+    };
+
+    const validatorsInactive = { SdkNameField: jest.fn() };
+    const validateInactive = createAsyncValidators(schema, validatorsInactive, {
+      apiHolder: { get: jest.fn() },
+    });
+
+    await validateInactive({
+      isMobile: false,
+      name: 'a',
+      sdkName: 'x',
+    });
+
+    expect(validatorsInactive.SdkNameField).not.toHaveBeenCalled();
+
+    const validatorsActive = { SdkNameField: jest.fn() };
+    const validateActive = createAsyncValidators(schema, validatorsActive, {
+      apiHolder: { get: jest.fn() },
+    });
+
+    await validateActive({
+      isMobile: true,
+      name: 'a',
+      sdkName: 'x',
+    });
+
+    expect(validatorsActive.SdkNameField).toHaveBeenCalledWith(
+      'x',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
 });

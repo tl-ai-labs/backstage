@@ -17,7 +17,12 @@ import { StructuredMetadataTable } from '@backstage/core-components';
 import { JsonObject, JsonValue } from '@backstage/types';
 import { Draft07 as JSONSchema } from 'json-schema-library';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
-import { isJsonObject, formatKey, findSchemaForKey } from './util';
+import {
+  isJsonObject,
+  formatKey,
+  findSchemaForKey,
+  isKeyDeclaredInSchemas,
+} from './util';
 
 /**
  * The props for the {@link ReviewState} component.
@@ -94,9 +99,13 @@ export const ReviewState = (props: ReviewStateProps) => {
     Object.entries(props.formState)
       .flatMap(([key, value]) => {
         const schema = findSchemaForKey(key, props.schemas, props.formState);
-        return schema
-          ? processSchema(key, value, schema, props.formState)
-          : [[formatKey(key), value]];
+        if (schema) {
+          return processSchema(key, value, schema, props.formState);
+        }
+        if (isKeyDeclaredInSchemas(key, props.schemas)) {
+          return [];
+        }
+        return [[formatKey(key), value]];
       })
       .filter(prop => prop.length > 0),
   );

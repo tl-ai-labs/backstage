@@ -1,0 +1,102 @@
+{
+  "conventions": [
+    "TypeScript, formatted by the repo Prettier config (@backstage/cli/config/prettier): single quotes, trailing commas, 2-space indent, 80-column wrap, arrow parens avoided for single params (x => x).",
+    "Every file in this change already exists except the changeset; never touch the Apache 2.0 header or its year in an existing file. A new .ts/.tsx file would need the header with year 2026, but this change adds none.",
+    "Match the file being edited: in plugins/scaffolder-react/src/next, arrow-function const exports for helpers and hooks, plain function declarations where the file already uses them (ReviewState/util.ts), JsonObject/JsonValue from @backstage/types with local isObject/isJsonObject type guards.",
+    "Imports: keep each file's existing import order and only add names to existing import statements or add one new import line where a site says so; no new npm dependencies (reuse lodash, json-schema-library, @rjsf/*).",
+    "No public API change: do not add anything to plugins/scaffolder-react/src/next/lib/index.ts, hooks/index.ts, components/index.ts or any barrel, and do not edit report*.api.md.",
+    "Tests run on Jest through backstage-cli (describe/it, expect matchers, jest.fn). Prefer fewer, thorough tests with several assertions each. In React Testing Library tests use screen and findBy*/queryBy* queries, not waitFor, and add no test IDs to implementation code.",
+    "Stepper tests render with renderInTestApp from @backstage/test-utils inside <SecretsContextProvider>, and wrap clicks that submit a step (Next, Review, Back, Create) in await act(async () => { fireEvent.click(...) }) exactly as the existing Stepper tests do.",
+    "Docs follow docs/contribute/doc-style-guide.md: U.S. English, second person, bold for UI elements, code style for keywords and parameter names, fenced code blocks tagged yaml, Prettier-formatted Markdown.",
+    "Changesets: add a new file only, never edit an existing .changeset file, never use the changeset CLI; write for adopters in plain language with no function, class or variable names.",
+    "Never run yarn build, yarn changesets version or yarn release."
+  ],
+  "decisions": [
+    {
+      "topic": "How a step's dependencies on an earlier-step answer reach the form",
+      "choice": "At parse time in useTemplateSchema, a new pure helper liftCrossStepDependencies in lib/schema.ts rewrites each dependencies entry whose trigger key is not in the step's own properties into an equivalent allOf if/then entry; the rewritten schema feeds both mergedSchema and extractSchemaFromStep.",
+      "rejected": [
+        "Injecting hidden stub properties for earlier-step keys into the step schema",
+        "Resolving every condition ourselves with retrieveSchema before handing the schema to rjsf",
+        "Changing Stepper.tsx to pass a merged multi-step schema to the Form"
+      ],
+      "reason": "rjsf skips a dependency whose trigger is not in the step's properties, while if/then is already evaluated against the whole formData (stepsState); lifting only those skipped entries fixes cross-step dependencies without changing same-step behaviour."
+    },
+    {
+      "topic": "Which dependencies are lifted",
+      "choice": "Only entries where the step schema has a properties object and the dependency key is not an own key of it; steps without properties, same-step dependencies and boolean dependency values stay untouched.",
+      "rejected": [
+        "Lift every dependency",
+        "Lift only when the key is defined in an earlier step"
+      ],
+      "reason": "This is exactly the set rjsf silently skips today, so no template that works today changes, and the existing useTemplateSchema test for a step with dependencies and no properties keeps passing."
+    },
+    {
+      "topic": "Lifted shapes",
+      "choice": "Array dependency D on key k becomes {if: {required: [k]}, then: {required: D}}; schema dependency S without oneOf becomes {if: {required: [k]}, then: S}; schema dependency with oneOf becomes one {if: {properties: {k: branch.properties[k]}, required: [k]}, then: branch without properties[k]} per branch that defines properties[k], plus {if: {required: [k]}, then: rest} when the dependency has keys besides oneOf.",
+      "reason": "Matches rjsf and JSON Schema dependency semantics (applies when the trigger has an answer; a oneOf branch applies when its trigger subschema matches) using keywords both rjsf and json-schema-library already resolve against data."
+    },
+    {
+      "topic": "Stepper and alpha pages",
+      "choice": "No change to Stepper.tsx, createAsyncValidators.ts, Workflow or any file in plugins/scaffolder.",
+      "reason": "The Form already receives formData={stepsState} and handleNext validates the full submitted formData, so with the lifted schema both rjsf and createAsyncValidators resolve conditions against all earlier answers; TemplateWizardPage and TemplateEditorForm render the shared Workflow/Stepper (FR-10)."
+    },
+    {
+      "topic": "Review step lookup",
+      "choice": "findSchemaForKey resolves each step's mergedSchema with getSchema against the full form state minus the looked-up key; a key found in no step but declared in some step's conditional branch (isKeyDeclaredInSchemas) is dropped from Review; a key declared nowhere is still listed under formatKey(key).",
+      "rejected": [
+        "Keep passing only the dependency keys as data",
+        "Pass the full form state including the key"
+      ],
+      "reason": "Removing the key itself stops json-schema-library from inventing a schema from the value, while every other answer (same step or earlier step) drives if/then/else, allOf and dependencies, so active branch fields get their title and review options and inactive ones disappear."
+    },
+    {
+      "topic": "Values of fields whose condition stopped holding",
+      "choice": "Dropped from the Review step only; onCreate still receives them unchanged.",
+      "reason": "Resolved at Gate 1 to the default; keeps the change narrow and does not alter what existing templates submit."
+    },
+    {
+      "topic": "Changeset",
+      "choice": "One new file .changeset/scaffolder-cross-step-conditions.md with a minor bump for @backstage/plugin-scaffolder-react only.",
+      "reason": "scaffolder-react is >=1.0 and gains a feature; @backstage/plugin-scaffolder is not changed."
+    },
+    {
+      "topic": "Docs location",
+      "choice": "A new H3 section 'Conditional fields based on an earlier step' in docs/features/software-templates/input-examples.md under 'Use parameters as conditional for fields', and a short H3 'Conditional fields across steps' pointer in writing-templates.md linking to it.",
+      "reason": "input-examples.md already hosts the same-step conditional examples; writing-templates.md is where authors read about spec.parameters steps."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "eslint",
+      "run": "yarn eslint {path}",
+      "fix": "yarn eslint --fix {path}",
+      "timeout_s": 90
+    },
+    {
+      "id": "prettier",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "jest",
+      "run": "CI=1 yarn test {path}",
+      "timeout_s": 300
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "test-scaffolder",
+      "run": "CI=true yarn test plugins/scaffolder-react plugins/scaffolder"
+    },
+    {
+      "id": "tsc",
+      "run": "yarn tsc"
+    },
+    {
+      "id": "lint-all",
+      "run": "yarn lint:all"
+    }
+  ]
+}

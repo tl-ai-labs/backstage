@@ -613,4 +613,92 @@ describe('ReviewState', () => {
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
   });
+
+  it('should list conditional fields only while their condition holds', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobile: {
+              type: 'boolean',
+              title: 'Mobile',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+            },
+          },
+          if: {
+            properties: {
+              isMobile: {
+                const: true,
+              },
+            },
+            required: ['isMobile'],
+          },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+                title: 'SDK name',
+              },
+              sdkToken: {
+                type: 'string',
+                'ui:widget': 'password',
+              },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const { queryByRole, rerender } = render(
+      <ReviewState
+        formState={{
+          isMobile: true,
+          name: 'app',
+          sdkName: 'my-sdk',
+          sdkToken: 't',
+          extra: 'x',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(queryByRole('row', { name: 'SDK name my-sdk' })).toBeInTheDocument();
+    expect(
+      queryByRole('row', { name: 'Sdk Token ******' }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <ReviewState
+        formState={{
+          isMobile: false,
+          name: 'app',
+          sdkName: 'my-sdk',
+          sdkToken: 't',
+          extra: 'x',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(queryByRole('row', { name: /sdk name/i })).not.toBeInTheDocument();
+    expect(queryByRole('row', { name: /sdk token/i })).not.toBeInTheDocument();
+    expect(queryByRole('row', { name: 'Name app' })).toBeInTheDocument();
+    expect(queryByRole('row', { name: 'Extra x' })).toBeInTheDocument();
+  });
 });

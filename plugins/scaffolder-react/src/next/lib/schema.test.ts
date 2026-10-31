@@ -15,7 +15,7 @@
  */
 
 import { JsonObject } from '@backstage/types';
-import { extractSchemaFromStep } from './schema';
+import { extractSchemaFromStep, liftCrossStepDependencies } from './schema';
 
 describe('extractSchemaFromStep', () => {
   it('transforms deep schema', () => {
@@ -597,5 +597,208 @@ describe('extractSchemaFromStep', () => {
       schema: expectedSchema,
       uiSchema: expectedUiSchema,
     });
+  });
+});
+
+describe('liftCrossStepDependencies', () => {
+  it('leaves schemas without cross-step dependencies untouched', () => {
+    const sameStepSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      dependencies: {
+        name: ['other'],
+      },
+    };
+    const noPropsSchema: JsonObject = {
+      type: 'object',
+      dependencies: {
+        isMobile: ['name'],
+      },
+    };
+    const noDepsSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+    };
+
+    expect(liftCrossStepDependencies(sameStepSchema)).toBe(sameStepSchema);
+    expect(liftCrossStepDependencies(noPropsSchema)).toBe(noPropsSchema);
+    expect(liftCrossStepDependencies(noDepsSchema)).toBe(noDepsSchema);
+  });
+
+  it('lifts array and plain schema dependencies on an earlier-step key', () => {
+    const inputSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      allOf: [
+        {
+          properties: {
+            existing: { type: 'string' },
+          },
+        },
+      ],
+      dependencies: {
+        isMobile: ['name'],
+        platform: {
+          properties: {
+            sdkName: {
+              type: 'string',
+              'ui:widget': 'textarea',
+            },
+          },
+          required: ['sdkName'],
+        },
+      },
+    };
+    const inputClone = structuredClone(inputSchema);
+
+    const result = liftCrossStepDependencies(inputSchema);
+
+    expect(result).toEqual({
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      allOf: [
+        {
+          properties: {
+            existing: { type: 'string' },
+          },
+        },
+        {
+          if: { required: ['isMobile'] },
+          then: { required: ['name'] },
+        },
+        {
+          if: { required: ['platform'] },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+                'ui:widget': 'textarea',
+              },
+            },
+            required: ['sdkName'],
+          },
+        },
+      ],
+    });
+    expect(result).not.toHaveProperty('dependencies');
+    expect(inputSchema).toEqual(inputClone);
+  });
+
+  it('lifts oneOf dependency branches into one if/then per branch', () => {
+    const inputSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      dependencies: {
+        isMobile: {
+          oneOf: [
+            {
+              properties: {
+                isMobile: { const: true },
+                sdkName: { type: 'string' },
+              },
+              required: ['sdkName'],
+            },
+            {
+              properties: {
+                isMobile: { const: false },
+              },
+            },
+            {
+              properties: {
+                other: { type: 'string' },
+              },
+            },
+          ],
+        },
+        name: ['isMobile'],
+      },
+    };
+
+    const result = liftCrossStepDependencies(inputSchema);
+
+    expect(result).toEqual({
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      dependencies: {
+        name: ['isMobile'],
+      },
+      allOf: [
+        {
+          if: {
+            properties: { isMobile: { const: true } },
+            required: ['isMobile'],
+          },
+          then: {
+            properties: { sdkName: { type: 'string' } },
+            required: ['sdkName'],
+          },
+        },
+        {
+          if: {
+            properties: { isMobile: { const: false } },
+            required: ['isMobile'],
+          },
+          then: {
+            properties: {},
+          },
+        },
+      ],
+    });
+  });
+
+  it('keeps ui options of lifted branches extractable', () => {
+    const inputSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        repoUrl: { type: 'string' },
+      },
+      dependencies: {
+        owner: {
+          oneOf: [
+            {
+              properties: {
+                owner: { const: 'custom' },
+                entity: {
+                  type: 'string',
+                  'ui:field': 'EntityPicker',
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const lifted = liftCrossStepDependencies(inputSchema);
+    const extracted = extractSchemaFromStep(lifted);
+
+    expect(extracted.uiSchema).toEqual({
+      repoUrl: {},
+      entity: {
+        'ui:field': 'EntityPicker',
+      },
+    });
+
+    const liftedThenProperties = (
+      (lifted.allOf as JsonObject[])[0].then as JsonObject
+    ).properties as JsonObject;
+    expect(liftedThenProperties.entity).toHaveProperty('ui:field');
+
+    const extractedThenProperties = (
+      (extracted.schema.allOf as JsonObject[])[0].then as JsonObject
+    ).properties as JsonObject;
+    expect(extractedThenProperties.entity).not.toHaveProperty('ui:field');
   });
 });

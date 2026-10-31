@@ -401,6 +401,10 @@ When a task is created without the required secrets, the API returns a `400` err
 
 If you find that the default layout of the form used in a particular step does not meet your needs then you can supply your own [custom step layout](./writing-custom-step-layouts.md).
 
+### Conditional fields across steps
+
+When `parameters` is split into multiple steps, conditional rules such as `if`/`then`/`else` and `dependencies` in a step can evaluate answers provided in earlier steps. Fields displayed conditionally are only required and included in the **Review** step while the condition holds. For complete examples, see [input examples](./input-examples.md#conditional-fields-based-on-an-earlier-step).
+
 ### Remove sections or fields based on feature flags
 
 Based on feature flags you can hide sections or even only fields of your
