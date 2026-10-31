@@ -14,13 +14,55 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
 import { SubRouteRef } from './SubRouteRef';
 import { ExternalRouteRef } from './ExternalRouteRef';
-import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
+import {
+  RouteFunc,
+  RouteResolutionApi,
+  routeResolutionApiRef,
+  useApi,
+} from '../apis';
+
+function isRouteResolutionFinalized(api: RouteResolutionApi): boolean {
+  if (
+    typeof api.isFinalized === 'function' &&
+    typeof api.onFinalized === 'function'
+  ) {
+    return api.isFinalized();
+  }
+  return true;
+}
+
+function useRouteResolutionFinalized(api: RouteResolutionApi): boolean {
+  const [signalled, setSignalled] = useState(false);
+  const finalized = signalled || isRouteResolutionFinalized(api);
+
+  useEffect(() => {
+    if (
+      finalized ||
+      typeof api.isFinalized !== 'function' ||
+      typeof api.onFinalized !== 'function'
+    ) {
+      return undefined;
+    }
+
+    const unsubscribe = api.onFinalized(() => {
+      setSignalled(true);
+    });
+
+    if (api.isFinalized()) {
+      setSignalled(true);
+    }
+
+    return unsubscribe;
+  }, [api, finalized]);
+
+  return finalized;
+}
 
 /**
  * React hook for constructing URLs to routes.
@@ -31,6 +73,7 @@ import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`, or `undefined` if the route is not available.
+ * The result is `undefined` while the app is still being bootstrapped (for example in app root elements before sign-in completes) and updates to the real link once the app is finalized.
  * @public
  */
 export function useRouteRef<TParams extends AnyRouteRefParams>(
@@ -41,10 +84,12 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const finalized = useRouteResolutionFinalized(routeResolutionApi);
 
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, finalized],
   );
 
   return routeFunc;

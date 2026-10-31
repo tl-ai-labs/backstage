@@ -1,0 +1,46 @@
+{
+  "module": "approot-routeref (frontend-plugin-api, frontend-app-api, core-plugin-api)",
+  "mode": "brownfield",
+  "intent": "bugfix",
+  "verdict": "approved",
+  "tool_calls": 11,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "issue": "In 'should re-resolve once across finalization and not re-render for APIs without finalization support', the act() block calls listeners.clear() right after firing the listeners. That makes the later expect(listeners.size).toBe(0) pass no matter what, so the test never checks that the hook unsubscribes once finalization has fired (the change plan expects the set to be empty because of the hook's cleanup).",
+      "fix": "Remove listeners.clear() from the act() block, so the size-0 assertion checks that the hook's effect cleanup unsubscribed after the signal."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "issue": "Four new 'as any' casts pass legacy route refs into the new system: routes.legacyPage, PageBlueprint routeRef, routes.errorRoute, and coreExtensionData.routeRef(errorRouteRef). Plan rule 3 allows a cast only where TypeScript rejects that specific assignment. The base file had 1 'as any' and now has 5. Every cast was added without checking whether it was needed, and 'any' is wider than necessary.",
+      "fix": "Remove each cast and run tsc. Where TypeScript does reject the assignment, use a narrow cast such as 'as unknown as RouteRef' instead of 'as any'."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "issue": "markFinalized() sets #finalized = true and clears the listener set before it calls the listeners, and it does not guard each call. If one listener throws, the rest are never called. The error then escapes finalizeFromSessionState and sends the app down the bootstrap-error path, where markFinalized() does nothing, so those components stay in bootstrap state for good. The hooks' own listeners only call setState, so the risk is low, but onFinalized is now on the public interface and anyone can register a listener.",
+      "fix": "Wrap each listener() call in try/catch and keep going (optionally report the error), so one bad listener cannot block the others or change which finalization path runs."
+    },
+    {
+      "severity": "minor",
+      "file": ".changeset/app-root-route-resolution-finalization.md",
+      "issue": "The message leaves out the clause U11 asks for, 'including when finalization follows a startup error'. AC-7 adds behavior that adopters can see on the bootstrap-error path, and the changeset does not mention it.",
+      "fix": "Add that the notification also happens when finalization follows a startup error, for example: '...when the app is finalized, including when finalization follows a startup error, so their route links resolve without a remount.'"
+    }
+  ],
+  "passing_checks": [
+    "Correctness: RouteResolutionApi has two optional members with TSDoc. The proxy implements isFinalized, onFinalized and markFinalized, firing once with the set copied, then cleared, then listeners called. markFinalized runs after the root element check on both finalization paths, and initialize() is unchanged. Both hooks follow the useState + useEffect subscription design, re-check after subscribing, and add finalized to the memo deps with the eslint-disable comment. The legacy bootstrapRouteFunc keys off the same finalized value and the throw is kept once finalized. This matches change_plan.md.",
+    "Type safety: no new 'any' in source. typeof guards narrow the optional members. bootstrapRouteFunc is cast to RouteFunc<Params>, as the plan specifies.",
+    "Compat: absent members, or a missing API object, read as finalized, and core-plugin-api imports nothing new. The report diff contains only the two optional members.",
+    "Error handling: no errors are swallowed in new code. The legacy throw message is unchanged.",
+    "Authz/PII: not applicable (client-side routing hooks)",
+    "Tests: AC-1 (both hooks, sign-in path), AC-7 (bootstrap-error path, plus fire-once when the error path follows a failed normal pass), and hook-level cases for bounded renders, no missed signal, unsubscribe on unmount, and the legacy placeholder then throw. All are named 'across finalization', and no waitFor or test IDs are used.",
+    "Docs: the paragraph and tsx example are in 'Preparing an App in Phases'. catalogPlugin.routes.catalogIndex exists in @backstage/plugin-catalog/alpha.",
+    "Changesets: three patch changesets, one package each, with no code symbols. No existing changeset overlaps.",
+    "Env-fixture check: skipped (bugfix intent)",
+    "Sensitive files: no manifests, .env.example, CLAUDE.md or settings files were touched."
+  ],
+  "refinement_packets": []
+}

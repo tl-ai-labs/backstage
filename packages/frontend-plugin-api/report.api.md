@@ -2069,6 +2069,8 @@ export interface RouteRef<
 
 // @public (undocumented)
 export interface RouteResolutionApi {
+  isFinalized?(): boolean;
+  onFinalized?(listener: () => void): () => void;
   // (undocumented)
   resolve<TParams extends AnyRouteRefParams>(
     anyRouteRef:

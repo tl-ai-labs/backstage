@@ -30,6 +30,9 @@ import {
   useApi,
   analyticsApiRef,
   createExtensionDataRef,
+  AppRootElementBlueprint,
+  PageBlueprint,
+  routeResolutionApiRef,
 } from '@backstage/frontend-plugin-api';
 import { act, render, screen } from '@testing-library/react';
 import { createSpecializedApp } from './createSpecializedApp';
@@ -44,6 +47,8 @@ import {
   featureFlagsApiRef,
   IdentityApi,
   identityApiRef,
+  createRouteRef as createLegacyRouteRef,
+  useRouteRef as useLegacyRouteRef,
 } from '@backstage/core-plugin-api';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiProvider, ConfigReader } from '@backstage/core-app-api';
@@ -1910,6 +1915,293 @@ describe('createSpecializedApp', () => {
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
+    });
+
+    it.each([
+      ['new frontend system', 'Link: [pending]', 'Link: [/new-page]'],
+      ['legacy', 'Link: []', 'Link: [/legacy-page]'],
+    ])(
+      'should resolve %s route refs in app root elements across finalization',
+      async (hook, bootstrapText, finalizedText) => {
+        const identityApi = {
+          getProfileInfo: async () => ({ displayName: 'Test User' }),
+          getBackstageIdentity: async () => ({
+            type: 'user' as const,
+            userEntityRef: 'user:default/test-user',
+            ownershipEntityRefs: ['user:default/test-user'],
+          }),
+          getCredentials: async () => ({ token: 'token' }),
+          signOut: async () => {},
+        };
+        let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+
+        const newPageRouteRef = createRouteRef();
+        const legacyPageRouteRef = createLegacyRouteRef({ id: 'legacy-page' });
+
+        function NewLink() {
+          const link = useRouteRef(newPageRouteRef);
+          return <div>{`Link: [${link?.() ?? 'pending'}]`}</div>;
+        }
+
+        function LegacyLink() {
+          const link = useLegacyRouteRef(legacyPageRouteRef);
+          return <div>{`Link: [${link()}]`}</div>;
+        }
+
+        const LinkElement = hook === 'legacy' ? LegacyLink : NewLink;
+
+        const preparedApp = prepareSpecializedApp({
+          features: [
+            appPlugin,
+            createFrontendModule({
+              pluginId: 'app',
+              extensions: [
+                appPlugin.getExtension('sign-in-page:app').override({
+                  factory: () => {
+                    function SignInPage(props: {
+                      onSignInSuccess(identity: IdentityApi): void;
+                    }) {
+                      onSignInSuccess = props.onSignInSuccess;
+                      return <div>Custom Sign In</div>;
+                    }
+
+                    return [signInPageComponentDataRef(SignInPage)];
+                  },
+                }),
+              ],
+            }),
+            createFrontendPlugin({
+              pluginId: 'test',
+              routes: {
+                newPage: newPageRouteRef,
+                legacyPage: legacyPageRouteRef as any,
+              },
+              extensions: [
+                PageBlueprint.make({
+                  name: 'new-page',
+                  params: {
+                    path: '/new-page',
+                    routeRef: newPageRouteRef,
+                    loader: async () => <div>New Page</div>,
+                  },
+                }),
+                PageBlueprint.make({
+                  name: 'legacy-page',
+                  params: {
+                    path: '/legacy-page',
+                    routeRef: legacyPageRouteRef as any,
+                    loader: async () => <div>Legacy Page</div>,
+                  },
+                }),
+                AppRootElementBlueprint.make({
+                  name: 'link',
+                  params: {
+                    element: <LinkElement />,
+                  },
+                }),
+              ],
+            }),
+          ],
+        });
+
+        function PreparedAppRoot(props: {
+          preparedApp: PreparedSpecializedApp;
+        }) {
+          const [finalizedApp, setFinalizedApp] =
+            useState<FinalizedSpecializedApp>();
+
+          useEffect(
+            () => props.preparedApp.onFinalized(setFinalizedApp),
+            [props.preparedApp],
+          );
+
+          return (
+            finalizedApp?.element ?? props.preparedApp.getBootstrapApp().element
+          );
+        }
+
+        render(<PreparedAppRoot preparedApp={preparedApp} />);
+
+        await expect(
+          screen.findByText('Custom Sign In'),
+        ).resolves.toBeInTheDocument();
+        await expect(
+          screen.findByText(bootstrapText),
+        ).resolves.toBeInTheDocument();
+
+        const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+        if (!onSignInSuccess) {
+          throw new Error('Expected sign-in success callback to be captured');
+        }
+        const triggerSignInSuccess = onSignInSuccess;
+        act(() => {
+          triggerSignInSuccess(identityApi);
+        });
+
+        await act(async () => {
+          await finalizedAppPromise;
+        });
+
+        await expect(
+          screen.findByText('App Layout'),
+        ).resolves.toBeInTheDocument();
+        await expect(
+          screen.findByText(finalizedText),
+        ).resolves.toBeInTheDocument();
+        expect(screen.queryByText(bootstrapText)).not.toBeInTheDocument();
+      },
+    );
+
+    it('should re-resolve app root element route refs across finalization after a bootstrap error', async () => {
+      // In a real app the app root error boundary replaces the root elements,
+      // and page routes are not built on this path; the deferred route sits
+      // under app/root.elements so it is resolved on bootstrap-error finalization,
+      // and this test stays on the still-mounted bootstrap render.
+      const errorRouteRef = createLegacyRouteRef({ id: 'error-route' });
+      const rejectingPermissionApiRef = createApiRef<{
+        authorize(): Promise<never>;
+      }>({ id: 'plugin.permission.api' });
+
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal.getExtension('app/layout').override({
+            factory: () => [
+              coreExtensionData.reactElement(<div>App Layout</div>),
+            ],
+          }),
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+
+      function ErrorLink() {
+        const link = useLegacyRouteRef(errorRouteRef);
+        return <div>{`Link: [${link()}]`}</div>;
+      }
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: {
+              errorRoute: errorRouteRef as any,
+            },
+            extensions: [
+              createExtension({
+                name: 'deferred-route',
+                attachTo: { id: 'app/root', input: 'elements' },
+                if: { permissions: { $contains: 'test.permission' } },
+                output: [
+                  coreExtensionData.reactElement,
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                ],
+                factory: () => [
+                  coreExtensionData.reactElement(<div />),
+                  coreExtensionData.routePath('/error-route'),
+                  coreExtensionData.routeRef(errorRouteRef as any),
+                ],
+              }),
+              AppRootElementBlueprint.make({
+                name: 'link',
+                params: {
+                  element: <ErrorLink />,
+                },
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              ApiBlueprint.make({
+                name: 'permission',
+                params: defineParams =>
+                  defineParams({
+                    api: rejectingPermissionApiRef,
+                    deps: {},
+                    factory: () => ({
+                      authorize: async () => {
+                        throw new Error('Permission backend unavailable');
+                      },
+                    }),
+                  }),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const api = preparedApp
+        .getBootstrapApp()
+        .apis.get(routeResolutionApiRef)!;
+      const listener = jest.fn();
+      api.onFinalized?.(listener);
+
+      expect(api.isFinalized?.()).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
+
+      renderPreparedBootstrap(preparedApp);
+      await expect(screen.findByText('Link: []')).resolves.toBeInTheDocument();
+
+      await act(async () => {
+        await waitForFinalizedApp(preparedApp);
+      });
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(api.isFinalized?.()).toBe(true);
+      await expect(
+        screen.findByText('Link: [/error-route]'),
+      ).resolves.toBeInTheDocument();
+    });
+
+    it('should signal route resolution finalization once across finalization when the error path follows normal finalization', async () => {
+      let appRootCalls = 0;
+
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal.getExtension('app/layout').override({
+            factory: () => [
+              coreExtensionData.reactElement(<div>App Layout</div>),
+            ],
+          }),
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+
+      const preparedApp = prepareSpecializedApp({
+        features: [noSignInAppPlugin],
+        advanced: {
+          extensionFactoryMiddleware(originalFactory, { node }) {
+            if (node.spec.id === 'app/root') {
+              appRootCalls++;
+              if (appRootCalls === 2) {
+                throw new Error('Finalization failure');
+              }
+            }
+            return originalFactory();
+          },
+        },
+      });
+
+      const api = preparedApp
+        .getBootstrapApp()
+        .apis.get(routeResolutionApiRef)!;
+      const listener = jest.fn();
+      api.onFinalized?.(listener);
+
+      expect(api.isFinalized?.()).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
+
+      const finalizedApp = await waitForFinalizedApp(preparedApp);
+
+      expect(appRootCalls).toBe(3);
+      expect(finalizedApp.errors).toBeUndefined();
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(api.isFinalized?.()).toBe(true);
     });
   });
 });

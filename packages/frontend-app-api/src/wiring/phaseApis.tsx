@@ -113,6 +113,8 @@ export class AppTreeApiProxy implements AppTreeApi {
 export class RouteResolutionApiProxy implements RouteResolutionApi {
   #delegate: RouteResolutionApi | undefined;
   #routeObjects: BackstageRouteObject[] | undefined;
+  #finalized = false;
+  #finalizedListeners = new Set<() => void>();
 
   private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   private readonly appBasePath: string;
@@ -161,6 +163,35 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
 
   getRouteObjects() {
     return this.#routeObjects;
+  }
+
+  isFinalized(): boolean {
+    return this.#finalized;
+  }
+
+  onFinalized(listener: () => void): () => void {
+    if (this.#finalized) {
+      return () => {};
+    }
+
+    this.#finalizedListeners.add(listener);
+    return () => {
+      this.#finalizedListeners.delete(listener);
+    };
+  }
+
+  // Called by the finalization paths only, at most once in effect.
+  markFinalized(): void {
+    if (this.#finalized) {
+      return;
+    }
+
+    this.#finalized = true;
+    const listeners = Array.from(this.#finalizedListeners);
+    this.#finalizedListeners.clear();
+    for (const listener of listeners) {
+      listener();
+    }
   }
 }
 

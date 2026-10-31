@@ -704,6 +704,9 @@ function finalizeFromSessionState(options: {
     throw new Error('Expected finalized app tree to expose a root element');
   }
 
+  // Let mounted route ref hooks re-resolve against the final route information
+  options.phase.routeResolutionApi.markFinalized();
+
   return {
     apis: options.phase.apis,
     element,
@@ -771,6 +774,9 @@ function finalizeFromBootstrapError(options: {
   if (!element) {
     throw new Error('Expected finalized app tree to expose a root element');
   }
+
+  // Let mounted route ref hooks re-resolve against the final route information
+  options.phase.routeResolutionApi.markFinalized();
 
   return {
     apis: options.phase.apis,

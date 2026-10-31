@@ -1,0 +1,139 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261031-120000-bugfix-approot-routeref",
+    "artifact_path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+    "instruction": "Fix `packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate review (this overrides the brief's TSDoc wording): the isFinalized and onFinalized TSDoc must make no claim about routes or page routes. Lines 64 ('all page routes are registered') and 71 ('routes are finalized') are wrong. Replace the isFinalized description lines (around 63-65) with exactly these two lines:\n   * Returns false while the app is still being bootstrapped and true once it is\n   * finalized. An implementation without this method is treated as finalized.\nReplace the onFinalized description lines (around 70-72) with exactly these two lines:\n   * Registers a listener that is called once when the app is finalized. If the\n   * app is already finalized, the listener is not registered or called.\nKeep the blank ` *` line, the `@returns An unsubscribe function that removes the listener.` line, both member signatures and everything else in the file unchanged.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-120000-bugfix-approot-routeref/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-120000-bugfix-approot-routeref/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261031-120000-bugfix-approot-routeref",
+    "artifact_path": "docs/frontend-system/architecture/10-app.md",
+    "instruction": "Fix `docs/frontend-system/architecture/10-app.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate review (this overrides the brief's example): the docs example imports `catalogIndexRouteRef` from '@backstage/plugin-catalog', which does not exist. Replace line 101 with exactly:\nimport catalogPlugin from '@backstage/plugin-catalog/alpha';\nand line 104 with exactly:\n  const catalogLink = useRouteRef(catalogPlugin.routes.catalogIndex);\nKeep the indentation of line 104 as it is now. Change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/frontend-system/architecture/10-app.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/frontend-system/architecture/10-app.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-120000-bugfix-approot-routeref/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-120000-bugfix-approot-routeref/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/frontend-system/architecture/10-app.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261031-120000-bugfix-approot-routeref",
+    "artifact_path": ".changeset/app-root-route-resolution-finalization.md",
+    "instruction": "Fix `.changeset/app-root-route-resolution-finalization.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate review (this overrides the brief's changeset wording): remove the clause 'including when finalization follows a startup error' from line 5, because page routes are not built on that path and the error screen replaces the root elements. Line 5 must read exactly:\nApps now notify already rendered app root elements when the app is finalized, so their route links resolve without a remount.\nKeep the frontmatter and everything else unchanged.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/app-root-route-resolution-finalization.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/app-root-route-resolution-finalization.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-120000-bugfix-approot-routeref/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-120000-bugfix-approot-routeref/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/app-root-route-resolution-finalization.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

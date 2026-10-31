@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { matchRoutes, useLocation } from 'react-router-dom';
 import { useVersionedContext } from '@backstage/version-bridge';
 import {
@@ -51,6 +51,54 @@ function useRouteResolutionApi(): RouteResolutionApi | undefined {
   }
 }
 
+function isRouteResolutionFinalized(
+  api: RouteResolutionApi | undefined,
+): boolean {
+  if (!api) {
+    return true;
+  }
+  if (
+    typeof api.isFinalized === 'function' &&
+    typeof api.onFinalized === 'function'
+  ) {
+    return api.isFinalized();
+  }
+  return true;
+}
+
+function useRouteResolutionFinalized(
+  api: RouteResolutionApi | undefined,
+): boolean {
+  const [signalled, setSignalled] = useState(false);
+  const finalized = signalled || isRouteResolutionFinalized(api);
+
+  useEffect(() => {
+    if (
+      finalized ||
+      !api ||
+      typeof api.isFinalized !== 'function' ||
+      typeof api.onFinalized !== 'function'
+    ) {
+      return undefined;
+    }
+
+    const unsubscribe = api.onFinalized(() => {
+      setSignalled(true);
+    });
+
+    if (api.isFinalized()) {
+      setSignalled(true);
+    }
+
+    return unsubscribe;
+  }, [api, finalized]);
+
+  return finalized;
+}
+
+// Used while the app is still being bootstrapped and page routes are not known yet.
+const bootstrapRouteFunc = () => '';
+
 /**
  * React hook for constructing URLs to routes.
  *
@@ -60,6 +108,8 @@ function useRouteResolutionApi(): RouteResolutionApi | undefined {
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`.
+ * During bootstrap, a non-optional ref that cannot be resolved yet gives a function
+ * that returns an empty string, and it updates to the real link once the app is finalized.
  * @public
  */
 export function useRouteRef<Optional extends boolean, Params extends AnyParams>(
@@ -75,6 +125,8 @@ export function useRouteRef<Optional extends boolean, Params extends AnyParams>(
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`.
+ * During bootstrap, a non-optional ref that cannot be resolved yet gives a function
+ * that returns an empty string, and it updates to the real link once the app is finalized.
  * @public
  */
 export function useRouteRef<Params extends AnyParams>(
@@ -90,6 +142,8 @@ export function useRouteRef<Params extends AnyParams>(
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`.
+ * During bootstrap, a non-optional ref that cannot be resolved yet gives a function
+ * that returns an empty string, and it updates to the real link once the app is finalized.
  * @public
  */
 export function useRouteRef<Params extends AnyParams>(
@@ -100,6 +154,7 @@ export function useRouteRef<Params extends AnyParams>(
 ): RouteFunc<Params> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useRouteResolutionApi();
+  const finalized = useRouteResolutionFinalized(routeResolutionApi);
   const versionedContext = useVersionedContext<{ 1: RouteResolver }>(
     'routing-context',
   );
@@ -118,7 +173,8 @@ export function useRouteRef<Params extends AnyParams>(
     } catch {
       return null;
     }
-  }, [routeResolutionApi, routeRef, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeResolutionApi, routeRef, pathname, finalized]);
 
   const legacyRouteFunc = useMemo(
     () => resolver && resolver.resolve(routeRef, { pathname }),
@@ -128,6 +184,9 @@ export function useRouteRef<Params extends AnyParams>(
   if (newRouteFunc !== null) {
     const isOptional = 'optional' in routeRef && routeRef.optional;
     if (!newRouteFunc && !isOptional) {
+      if (!finalized) {
+        return bootstrapRouteFunc as RouteFunc<Params>;
+      }
       throw new Error(`No path for ${routeRef}`);
     }
     return newRouteFunc;

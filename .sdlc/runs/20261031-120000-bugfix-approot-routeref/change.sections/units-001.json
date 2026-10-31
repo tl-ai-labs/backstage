@@ -1,0 +1,205 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Reproduces #35932 end to end: app root elements that call either useRouteRef hook render during bootstrap and show the real page link after finalization (normal and bootstrap-error paths), and the finalization signal fires once.",
+    "rules": [
+      "The file already holds the three `across finalization` tests listed in `tests`. This edit changes only the two `PageBlueprint.make` params lines that use `defaultPath:`, because `PageBlueprint` has no `defaultPath` param (its param is `path`, packages/frontend-plugin-api/src/blueprints/PageBlueprint.tsx line 79), so tsc fails and the pages get no route.",
+      "In the `new-page` page, line 1983 becomes exactly `path: '/new-page',` at the same indentation.",
+      "In the `legacy-page` page, line 1991 becomes exactly `path: '/legacy-page',` at the same indentation.",
+      "Change nothing else in the file: the imports, the other params lines (`routeRef`, `loader`), the casts and every test stay exactly as they are."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 1983,
+        "to": 1983,
+        "first_line": "defaultPath: '/new-page',",
+        "rule": "Write exactly `path: '/new-page',` in place of this line, keeping its indentation."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 1991,
+        "to": 1991,
+        "first_line": "defaultPath: '/legacy-page',",
+        "rule": "Write exactly `path: '/legacy-page',` in place of this line, keeping its indentation."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "lines": [1419, 1490],
+      "reason": "Sign-in capture, prepareSpecializedApp feature setup and finalization flow the new tests copy."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "lines": [1660, 1750],
+        "reason": "Pattern for app/root.elements extensions with an `if` predicate that are deferred to finalization."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+        "lines": [636, 781],
+        "reason": "The two finalization paths (normal and bootstrap error) the tests drive."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/predicates.ts",
+        "lines": [60, 150],
+        "reason": "The predicate loader rejects when the API with id `plugin.permission.api` rejects in `authorize`, which drives the bootstrap-error path."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/blueprints/AppRootElementBlueprint.tsx",
+        "reason": "Params of the root element blueprint (`element`)."
+      },
+      {
+        "path": "packages/frontend-defaults/src/createApp.tsx",
+        "lines": [147, 171],
+        "reason": "`PreparedAppRoot` swaps the bootstrap element for the finalized element in one React tree; the AC-1 test mirrors it so root elements stay mounted."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["AC-1", "AC-7", "NFR-3"],
+    "tests": [
+      {
+        "name": "it.each([['new frontend system', 'Link: [pending]', 'Link: [/new-page]'], ['legacy', 'Link: []', 'Link: [/legacy-page]']])('should resolve %s route refs in app root elements across finalization', async (hook, bootstrapText, finalizedText) => ...)",
+        "given": "In the test body: `newPageRouteRef = createRouteRef()`, `legacyPageRouteRef = createLegacyRouteRef({ id: 'legacy-page' })`; `NewLink` renders `useRouteRef(newPageRouteRef)?.() ?? 'pending'` and `LegacyLink` renders `useLegacyRouteRef(legacyPageRouteRef)()`, both as `Link: [${link}]`; `LinkElement = hook === 'legacy' ? LegacyLink : NewLink`. `prepareSpecializedApp` with the describe-level `appPlugin`, a `createFrontendModule({ pluginId: 'app' })` holding the capturing `sign-in-page:app` override, and `createFrontendPlugin({ pluginId: 'test', routes: { newPage: newPageRouteRef, legacyPage: legacyPageRouteRef } })` with `PageBlueprint.make` pages `new-page` (path '/new-page', routeRef newPageRouteRef, loader rendering 'New Page') and `legacy-page` (path '/legacy-page', routeRef legacyPageRouteRef, loader rendering 'Legacy Page') and `AppRootElementBlueprint.make({ name: 'link', params: { element: <LinkElement /> } })`. Render `<PreparedAppRoot preparedApp={preparedApp} />`, a component declared in the test body as `function PreparedAppRoot(props: { preparedApp: PreparedSpecializedApp })` with `useState<FinalizedSpecializedApp>()`, `useEffect(() => props.preparedApp.onFinalized(setFinalizedApp), [props.preparedApp])`, returning `finalizedApp?.element ?? props.preparedApp.getBootstrapApp().element` (the same swap as createApp.tsx, so root elements stay mounted).",
+        "expect": "'Custom Sign In' and `bootstrapText` are found during bootstrap. After `finalizedAppPromise = waitForFinalizedApp(preparedApp)`, the sign-in trigger in `act`, and `await act(async () => { await finalizedAppPromise; })`: 'App Layout' is found, `finalizedText` is found, and `bootstrapText` is no longer in the document. Before the fix the legacy row fails during bootstrap (the hook throws and the boundary renders nothing) and the new-system row fails after finalization (it stays 'Link: [pending]')."
+      },
+      {
+        "name": "should re-resolve app root element route refs across finalization after a bootstrap error",
+        "given": "`errorRouteRef = createLegacyRouteRef({ id: 'error-route' })`; `rejectingPermissionApiRef = createApiRef<{ authorize(): Promise<never> }>({ id: 'plugin.permission.api' })`. Features: `noSignInAppPlugin`; `createFrontendPlugin({ pluginId: 'test', routes: { errorRoute: errorRouteRef } })` with a `createExtension({ name: 'deferred-route', attachTo: { id: 'app/root', input: 'elements' }, if: { permissions: { $contains: 'test.permission' } }, output: [coreExtensionData.reactElement, coreExtensionData.routePath, coreExtensionData.routeRef] })` yielding `<div />`, '/error-route' and errorRouteRef, plus `AppRootElementBlueprint.make({ name: 'link' })` whose element renders `useLegacyRouteRef(errorRouteRef)()` as `Link: [${link}]`; and `createFrontendModule({ pluginId: 'app' })` with `ApiBlueprint.make({ name: 'permission' })` defining `rejectingPermissionApiRef` with `deps: {}` and a factory whose `authorize` is `async () => { throw new Error('Permission backend unavailable'); }`. Before rendering: `api = preparedApp.getBootstrapApp().apis.get(routeResolutionApiRef)!`, `listener = jest.fn()`, `api.onFinalized?.(listener)`. At the start of the test body, a short comment says why the route sits under `app/root.elements` and why the test stays on the bootstrap render: page routes are not built on this path, and in a real app the app root error boundary replaces the root elements.",
+        "expect": "Right after `getBootstrapApp()` (the startup initialize), `api.isFinalized?.()` is `false` and `listener` was not called. `renderPreparedBootstrap(preparedApp)` shows 'Link: []'. After `await act(async () => { await waitForFinalizedApp(preparedApp); })`, `listener` was called exactly once, `api.isFinalized?.()` is `true`, and 'Link: [/error-route]' is found in the still-mounted bootstrap render."
+      },
+      {
+        "name": "should signal route resolution finalization once across finalization when the error path follows normal finalization",
+        "given": "`let appRootCalls = 0`; `prepareSpecializedApp({ features: [noSignInAppPlugin], advanced: { extensionFactoryMiddleware(originalFactory, { node }) { ... } } })` where the middleware increments `appRootCalls` when `node.spec.id === 'app/root'`, throws `new Error('Finalization failure')` when that count reaches 2 (the normal finalization pass), and otherwise returns `originalFactory()`. Then `api = preparedApp.getBootstrapApp().apis.get(routeResolutionApiRef)!`, `listener = jest.fn()`, `api.onFinalized?.(listener)`. No React render.",
+        "expect": "Before finalizing, `api.isFinalized?.()` is `false` and `listener` was not called. After `const finalizedApp = await waitForFinalizedApp(preparedApp)`: `appRootCalls` is 3 (bootstrap, failed normal finalization, bootstrap-error finalization), `finalizedApp.errors` is `undefined` (the bootstrap-error app), `listener` was called exactly once, and `api.isFinalized?.()` is `true`."
+      }
+    ],
+    "checks": ["prettier", "lint"],
+    "red_checks": ["test-new"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Hook-level tests for the new-system useRouteRef: one re-resolution and one extra render at finalization, none without the optional members, no missed signal, unsubscribe on unmount.",
+    "rules": [
+      "Add two new `it` blocks at the end of the existing `describe('v1 consumer')`; both names contain `across finalization`.",
+      "Build mock APIs as `RouteResolutionApi` object literals with `TestApiProvider` and `MemoryRouter initialEntries={['/my-page']}` wrappers, as the existing tests do.",
+      "Count renders with a closure counter inside the `renderHook` callback (`renders += 1; return useRouteRef(routeRef);`).",
+      "Fire mock listeners inside `act(() => { ... })`."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { renderHook } from '@testing-library/react';",
+        "rule": "Import `act` and `renderHook` from '@testing-library/react'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 26,
+        "to": 26,
+        "first_line": "import { routeResolutionApiRef } from '../apis';",
+        "rule": "Import `routeResolutionApiRef` and `RouteResolutionApi` from '../apis'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 208,
+        "to": 208,
+        "first_line": "});",
+        "rule": "Insert the two new tests listed in `tests` here, after the last existing `it` and before the closing of `describe('v1 consumer')`."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "lines": [59, 97],
+      "reason": "renderHook with TestApiProvider and MemoryRouter wrappers."
+    },
+    "depends_on": [],
+    "covers": ["AC-4", "FR-2", "FR-5"],
+    "tests": [
+      {
+        "name": "should re-resolve once across finalization and not re-render for APIs without finalization support",
+        "given": "A mock API with `let finalized = false`, `listeners = new Set<() => void>()`, `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`, `isFinalized: () => finalized`, `onFinalized: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }`, rendered with a render counter; then a second hook rendered against `{ resolve: jest.fn(() => () => '/plain') }` with its own counter, plus a third hook mounted against a fresh API built the same way (its own listener set) and unmounted before any signal.",
+        "expect": "Mounted in bootstrap: result is `undefined`, `resolve` called once, 1 render, 1 listener. After `act(() => { finalized = true; listeners.forEach(l => l()); })`: `result.current?.()` is '/ready', `resolve` called twice, exactly 2 renders, and the listener set is empty. The plain API: result returns '/plain', 1 render, `resolve` called once after `await act(async () => {})`. The third hook had one listener while mounted and its listener set is empty after `unmount()`."
+      },
+      {
+        "name": "should not miss a finalization that happens while subscribing across finalization",
+        "given": "Mock API A: `let finalized = false`, `isFinalized: jest.fn(() => finalized)`, `onFinalized: jest.fn(() => { finalized = true; return () => {}; })` (finalizes during subscription without calling the listener), `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`. Mock API B: `isFinalized: () => true`, `onFinalized: jest.fn()`, `resolve: jest.fn(() => () => '/done')`. Each rendered with a render counter.",
+        "expect": "A: `onFinalized` was called once and `result.current?.()` is '/ready' after the effects flush, with at most 2 renders. B (finalized at mount): `onFinalized` was never called, `result.current?.()` is '/done', exactly 1 render."
+      }
+    ],
+    "checks": ["prettier", "lint"],
+    "red_checks": ["test-new"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Hook-level tests for the legacy useRouteRef with the new route resolution API: empty-string placeholder during bootstrap, one re-resolution at finalization, unchanged throw once finalized, bounded renders.",
+    "rules": [
+      "Add two new `it` blocks at the end of the existing `describe('new app system')`; both names contain `across finalization`.",
+      "Use `createRouteRef({ id: 'ref1' })` and `createExternalRouteRef({ id: 'external-ref', optional: true })` from the local modules, and mock APIs typed as `RouteResolutionApi`, wrapped like the existing 'new app system' tests.",
+      "Assert a render-time throw with `withLogCollector(['error'], () => { expect(() => renderHook(...)).toThrow('No path for routeRef{type=absolute,id=ref1}'); })` so React's error log stays quiet.",
+      "Fire mock listeners inside `act(() => { ... })`; count renders with a closure counter in the `renderHook` callback."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { renderHook } from '@testing-library/react';",
+        "rule": "Import `act` and `renderHook` from '@testing-library/react'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 30,
+        "to": 30,
+        "first_line": "import { TestApiProvider } from '@backstage/test-utils';",
+        "rule": "Import `TestApiProvider` and `withLogCollector` from '@backstage/test-utils'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 218,
+        "to": 218,
+        "first_line": "});",
+        "rule": "Insert the two new tests listed in `tests` here, after 'should handle optional external route refs' and before the closing of `describe('new app system')`."
+      }
+    ],
+    "style_from": {
+      "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+      "lines": [167, 218],
+      "reason": "Mock RouteResolutionApi wrappers of the 'new app system' tests."
+    },
+    "depends_on": [],
+    "covers": ["AC-4", "FR-3", "FR-4"],
+    "tests": [
+      {
+        "name": "should return an empty link during bootstrap and re-resolve across finalization",
+        "given": "A mock API with `let finalized = false`, a listener set, `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`, `isFinalized: () => finalized`, and an `onFinalized` that adds to the set and returns a delete; a render-counted hook for the non-optional ref against it; a second hook for the optional external ref against its own bootstrap API (`resolve: () => undefined`, `isFinalized: () => false`, `onFinalized: () => () => {}`); then a finalized API (`isFinalized: () => true`, `onFinalized: jest.fn()`, `resolve: () => undefined`) and a plain API (`{ resolve: () => undefined }`).",
+        "expect": "In bootstrap the non-optional hook does not throw, `result.current()` returns '' (also when called again), 1 render; the optional hook returns `undefined`. After `act(() => { finalized = true; listeners.forEach(l => l()); })`: `result.current()` is '/ready', `resolve` called twice for that hook, exactly 2 renders. Against the finalized API and against the plain API, rendering the non-optional hook throws 'No path for routeRef{type=absolute,id=ref1}'."
+      },
+      {
+        "name": "should keep renders bounded across finalization",
+        "given": "Mock API A finalizes during subscription (`let finalized = false`, `isFinalized: jest.fn(() => finalized)`, `onFinalized: jest.fn(() => { finalized = true; return () => {}; })`, `resolve: jest.fn(() => (finalized ? () => '/ready' : undefined))`); mock API B `{ resolve: jest.fn(() => () => '/plain') }` without the optional members; each hook render-counted.",
+        "expect": "A: no throw, `onFinalized` called once, and `result.current()` is '/ready' after the effects flush with at most 2 renders. B: `result.current()` is '/plain', exactly 1 render and 1 `resolve` call after `await act(async () => {})`."
+      }
+    ],
+    "checks": ["prettier", "lint"],
+    "red_checks": ["test-new"]
+  }
+]

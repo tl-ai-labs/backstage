@@ -1,0 +1,14 @@
+[
+  {
+    "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+    "problem": "Gate review (this overrides the brief's TSDoc wording): the isFinalized and onFinalized TSDoc must make no claim about routes or page routes. Lines 64 ('all page routes are registered') and 71 ('routes are finalized') are wrong. Replace the isFinalized description lines (around 63-65) with exactly these two lines:\n   * Returns false while the app is still being bootstrapped and true once it is\n   * finalized. An implementation without this method is treated as finalized.\nReplace the onFinalized description lines (around 70-72) with exactly these two lines:\n   * Registers a listener that is called once when the app is finalized. If the\n   * app is already finalized, the listener is not registered or called.\nKeep the blank ` *` line, the `@returns An unsubscribe function that removes the listener.` line, both member signatures and everything else in the file unchanged."
+  },
+  {
+    "path": "docs/frontend-system/architecture/10-app.md",
+    "problem": "Gate review (this overrides the brief's example): the docs example imports `catalogIndexRouteRef` from '@backstage/plugin-catalog', which does not exist. Replace line 101 with exactly:\nimport catalogPlugin from '@backstage/plugin-catalog/alpha';\nand line 104 with exactly:\n  const catalogLink = useRouteRef(catalogPlugin.routes.catalogIndex);\nKeep the indentation of line 104 as it is now. Change nothing else in the file."
+  },
+  {
+    "path": ".changeset/app-root-route-resolution-finalization.md",
+    "problem": "Gate review (this overrides the brief's changeset wording): remove the clause 'including when finalization follows a startup error' from line 5, because page routes are not built on that path and the error screen replaces the root elements. Line 5 must read exactly:\nApps now notify already rendered app root elements when the app is finalized, so their route links resolve without a remount.\nKeep the frontmatter and everything else unchanged."
+  }
+]
