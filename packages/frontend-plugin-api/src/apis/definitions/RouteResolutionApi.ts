@@ -58,6 +58,20 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+
+  /**
+   * Returns false while the app is still being bootstrapped and true once it is
+   * finalized. An implementation without this method is treated as finalized.
+   */
+  isFinalized?(): boolean;
+
+  /**
+   * Registers a listener that is called once when the app is finalized. If the
+   * app is already finalized, the listener is not registered or called.
+   *
+   * @returns An unsubscribe function that removes the listener.
+   */
+  onFinalized?(listener: () => void): () => void;
 }
 
 /**

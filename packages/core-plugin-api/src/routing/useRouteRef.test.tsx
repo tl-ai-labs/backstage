@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -27,7 +27,7 @@ import { useRouteRef } from './useRouteRef';
 import { createRouteRef } from './RouteRef';
 import { createExternalRouteRef } from './ExternalRouteRef';
 import { createBrowserHistory } from 'history';
-import { TestApiProvider } from '@backstage/test-utils';
+import { TestApiProvider, withLogCollector } from '@backstage/test-utils';
 
 describe('useRouteRef', () => {
   describe('old app system', () => {
@@ -215,6 +215,175 @@ describe('useRouteRef', () => {
       });
 
       expect(renderedHook.result.current).toBeUndefined();
+    });
+
+    it('should return an empty link during bootstrap and re-resolve across finalization', () => {
+      let finalized = false;
+      const listeners = new Set<() => void>();
+      const mockRouteResolutionApi: RouteResolutionApi = {
+        resolve: jest.fn(() => (finalized ? () => '/ready' : undefined)),
+        isFinalized: () => finalized,
+        onFinalized: listener => {
+          listeners.add(listener);
+          return () => {
+            listeners.delete(listener);
+          };
+        },
+      };
+
+      const routeRef = createRouteRef({ id: 'ref1' });
+      let renderCount = 0;
+      const renderedHook = renderHook(
+        () => {
+          renderCount += 1;
+          return useRouteRef(routeRef);
+        },
+        {
+          wrapper: ({ children }: PropsWithChildren<{}>) => (
+            <TestApiProvider
+              apis={[[routeResolutionApiRef, mockRouteResolutionApi]]}
+            >
+              <MemoryRouter initialEntries={['/my-page']}>
+                {children}
+              </MemoryRouter>
+            </TestApiProvider>
+          ),
+        },
+      );
+
+      expect(renderedHook.result.current()).toBe('');
+      expect(renderedHook.result.current()).toBe('');
+      expect(renderCount).toBe(1);
+
+      const externalRouteRef = createExternalRouteRef({
+        id: 'external-ref',
+        optional: true,
+      });
+      const optionalHook = renderHook(() => useRouteRef(externalRouteRef), {
+        wrapper: ({ children }: PropsWithChildren<{}>) => (
+          <TestApiProvider
+            apis={[
+              [
+                routeResolutionApiRef,
+                {
+                  resolve: () => undefined,
+                  isFinalized: () => false,
+                  onFinalized: () => () => {},
+                },
+              ],
+            ]}
+          >
+            <MemoryRouter initialEntries={['/my-page']}>
+              {children}
+            </MemoryRouter>
+          </TestApiProvider>
+        ),
+      });
+      expect(optionalHook.result.current).toBeUndefined();
+
+      act(() => {
+        finalized = true;
+        listeners.forEach(l => l());
+      });
+
+      expect(renderedHook.result.current!()).toBe('/ready');
+      expect(mockRouteResolutionApi.resolve).toHaveBeenCalledTimes(2);
+      expect(renderCount).toBe(2);
+
+      const finalizedApi: RouteResolutionApi = {
+        isFinalized: () => true,
+        onFinalized: jest.fn(),
+        resolve: () => undefined,
+      };
+      withLogCollector(['error'], () => {
+        expect(() =>
+          renderHook(() => useRouteRef(routeRef), {
+            wrapper: ({ children }: PropsWithChildren<{}>) => (
+              <TestApiProvider apis={[[routeResolutionApiRef, finalizedApi]]}>
+                <MemoryRouter initialEntries={['/my-page']}>
+                  {children}
+                </MemoryRouter>
+              </TestApiProvider>
+            ),
+          }),
+        ).toThrow('No path for routeRef{type=absolute,id=ref1}');
+      });
+
+      const plainApi: RouteResolutionApi = {
+        resolve: () => undefined,
+      };
+      withLogCollector(['error'], () => {
+        expect(() =>
+          renderHook(() => useRouteRef(routeRef), {
+            wrapper: ({ children }: PropsWithChildren<{}>) => (
+              <TestApiProvider apis={[[routeResolutionApiRef, plainApi]]}>
+                <MemoryRouter initialEntries={['/my-page']}>
+                  {children}
+                </MemoryRouter>
+              </TestApiProvider>
+            ),
+          }),
+        ).toThrow('No path for routeRef{type=absolute,id=ref1}');
+      });
+    });
+
+    it('should keep renders bounded across finalization', async () => {
+      let finalized = false;
+      const mockApiA: RouteResolutionApi = {
+        resolve: jest.fn(() => (finalized ? () => '/ready' : undefined)),
+        isFinalized: jest.fn(() => finalized),
+        onFinalized: jest.fn(() => {
+          finalized = true;
+          return () => {};
+        }),
+      };
+
+      const routeRef = createRouteRef({ id: 'ref1' });
+      let rendersA = 0;
+      const hookA = renderHook(
+        () => {
+          rendersA += 1;
+          return useRouteRef(routeRef);
+        },
+        {
+          wrapper: ({ children }: PropsWithChildren<{}>) => (
+            <TestApiProvider apis={[[routeResolutionApiRef, mockApiA]]}>
+              <MemoryRouter initialEntries={['/my-page']}>
+                {children}
+              </MemoryRouter>
+            </TestApiProvider>
+          ),
+        },
+      );
+
+      expect(mockApiA.onFinalized).toHaveBeenCalledTimes(1);
+      expect(hookA.result.current!()).toBe('/ready');
+      expect(rendersA).toBeLessThanOrEqual(2);
+
+      let rendersB = 0;
+      const mockApiB: RouteResolutionApi = {
+        resolve: jest.fn(() => () => '/plain'),
+      };
+      const hookB = renderHook(
+        () => {
+          rendersB += 1;
+          return useRouteRef(routeRef);
+        },
+        {
+          wrapper: ({ children }: PropsWithChildren<{}>) => (
+            <TestApiProvider apis={[[routeResolutionApiRef, mockApiB]]}>
+              <MemoryRouter initialEntries={['/my-page']}>
+                {children}
+              </MemoryRouter>
+            </TestApiProvider>
+          ),
+        },
+      );
+
+      await act(async () => {});
+      expect(hookB.result.current!()).toBe('/plain');
+      expect(rendersB).toBe(1);
+      expect(mockApiB.resolve).toHaveBeenCalledTimes(1);
     });
   });
 });
