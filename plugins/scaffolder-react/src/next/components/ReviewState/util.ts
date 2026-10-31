@@ -15,9 +15,9 @@
  */
 
 import { JsonObject, JsonValue } from '@backstage/types';
-import { startCase } from 'lodash';
+import { omit, startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
-import { Draft07 as JSONSchema } from 'json-schema-library';
+import { Draft07 as JSONSchema, isJsonError } from 'json-schema-library';
 
 export function isJsonObject(value?: JsonValue): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -39,38 +39,70 @@ export function findSchemaForKey(
 ): ParsedTemplateSchema | null {
   for (const step of schemas) {
     /*
-      To determine if a key is defined in a schema we need to call getSchema
-      with an empty form state. Otherwise, it will never return undefined as it
-      will fallback to a default schema based on the form state. 
-
-      An exception to this is when your schema is dynamic i.e. using dependencies 
-      because the form state is required for generating the schema. In this case,
-      we add only the dependencies data to the getSchema call.
+      The key itself is omitted from data so json-schema-library does not invent
+      a schema based on its value when it is not declared in the schema.
+      All other form answers are provided so conditional constructs (allOf,
+      if/then/else, dependencies) from this or earlier steps can be resolved.
     */
-
-    const schema = step.mergedSchema;
-
-    // Declare data to be a subset of formState
-    const data: typeof formState = {};
-
-    if (schema.dependencies && isJsonObject(schema.dependencies)) {
-      for (const dep in schema.dependencies) {
-        if (formState.hasOwnProperty(dep)) {
-          data[dep] = formState[dep]; // Add each dependency key from formState
-        }
-      }
-    }
-
-    const draft = new JSONSchema(schema);
+    const data = omit(formState, key);
+    const draft = new JSONSchema(step.mergedSchema);
     const res = draft.getSchema({
       pointer: `#/${key}`,
       data,
     });
 
-    if (!!res) {
+    if (res && !isJsonError(res)) {
       return step;
     }
   }
 
-  return null; // Return null if the key isn't found in any schema
+  return null;
+}
+
+function isKeyDeclaredInNode(key: string, node?: JsonValue): boolean {
+  if (!isJsonObject(node)) {
+    return false;
+  }
+
+  if (
+    isJsonObject(node.properties) &&
+    Object.prototype.hasOwnProperty.call(node.properties, key)
+  ) {
+    return true;
+  }
+
+  const compoundKeys = ['allOf', 'anyOf', 'oneOf'] as const;
+  for (const compound of compoundKeys) {
+    const list = node[compound];
+    if (
+      Array.isArray(list) &&
+      list.some(entry => isKeyDeclaredInNode(key, entry))
+    ) {
+      return true;
+    }
+  }
+
+  if (
+    isKeyDeclaredInNode(key, node.then) ||
+    isKeyDeclaredInNode(key, node.else)
+  ) {
+    return true;
+  }
+
+  if (isJsonObject(node.dependencies)) {
+    for (const dep of Object.values(node.dependencies)) {
+      if (isKeyDeclaredInNode(key, dep)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function isKeyDeclaredInSchemas(
+  key: string,
+  schemas: ParsedTemplateSchema[],
+): boolean {
+  return schemas.some(step => isKeyDeclaredInNode(key, step.mergedSchema));
 }

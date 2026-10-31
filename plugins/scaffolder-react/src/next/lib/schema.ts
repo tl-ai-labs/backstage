@@ -134,6 +134,90 @@ export const extractSchemaFromStep = (
 };
 
 /**
+ * Rewrites dependencies whose trigger key is not defined in the step's own
+ * properties into equivalent allOf if/then entries. rjsf skips dependencies
+ * whose trigger is not one of the step's own properties, whereas if/then is
+ * evaluated against the full form state across wizard steps.
+ */
+export const liftCrossStepDependencies = (schema: JsonObject): JsonObject => {
+  if (!isObject(schema.dependencies) || !isObject(schema.properties)) {
+    return schema;
+  }
+
+  const remainingDependencies: JsonObject = {};
+  const liftedEntries: JsonObject[] = [];
+
+  for (const [key, value] of Object.entries(schema.dependencies)) {
+    if (Object.prototype.hasOwnProperty.call(schema.properties, key)) {
+      remainingDependencies[key] = value;
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      liftedEntries.push({
+        if: { required: [key] },
+        then: { required: value },
+      });
+    } else if (isObject(value)) {
+      if (Array.isArray(value.oneOf)) {
+        for (const branch of value.oneOf) {
+          if (
+            isObject(branch) &&
+            isObject(branch.properties) &&
+            Object.prototype.hasOwnProperty.call(branch.properties, key)
+          ) {
+            const { [key]: _omitted, ...restProperties } = branch.properties;
+            liftedEntries.push({
+              if: {
+                properties: { [key]: branch.properties[key] },
+                required: [key],
+              },
+              then: {
+                ...branch,
+                properties: restProperties,
+              },
+            });
+          }
+        }
+
+        const { oneOf: _omittedOneOf, ...otherKeys } = value;
+        if (Object.keys(otherKeys).length > 0) {
+          liftedEntries.push({
+            if: { required: [key] },
+            then: otherKeys,
+          });
+        }
+      } else {
+        liftedEntries.push({
+          if: { required: [key] },
+          then: value,
+        });
+      }
+    } else {
+      remainingDependencies[key] = value;
+    }
+  }
+
+  if (liftedEntries.length === 0) {
+    return schema;
+  }
+
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  const result: JsonObject = {
+    ...schema,
+    allOf: [...existingAllOf, ...liftedEntries],
+  };
+
+  if (Object.keys(remainingDependencies).length > 0) {
+    result.dependencies = remainingDependencies;
+  } else {
+    delete result.dependencies;
+  }
+
+  return result;
+};
+
+/**
  * Creates a field validation object for use in react jsonschema form
  * @alpha
  */

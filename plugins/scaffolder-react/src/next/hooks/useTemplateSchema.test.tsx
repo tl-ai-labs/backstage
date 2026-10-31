@@ -86,6 +86,129 @@ describe('useTemplateSchema', () => {
     });
   });
 
+  it('should keep conditions that depend on answers from earlier steps', () => {
+    const manifest: TemplateParameterSchema = {
+      title: 'Test Template',
+      description: 'Test Template Description',
+      steps: [
+        {
+          title: 'Step 1',
+          schema: {
+            type: 'object',
+            properties: {
+              isMobile: { type: 'boolean' },
+            },
+          },
+        },
+        {
+          title: 'Step 2',
+          schema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+            },
+            if: {
+              properties: { isMobile: { const: true } },
+              required: ['isMobile'],
+            },
+            then: {
+              properties: {
+                sdkName: { type: 'string', 'ui:help': 'Help' },
+              },
+            },
+          },
+        },
+        {
+          title: 'Step 3',
+          schema: {
+            type: 'object',
+            properties: {
+              team: { type: 'string' },
+            },
+            dependencies: {
+              isMobile: {
+                properties: {
+                  store: { type: 'string', 'ui:widget': 'textarea' },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    const mockFeatureFlagsApi = mockApis.featureFlags.mock({
+      isActive: jest.fn(() => false),
+    });
+
+    const { result } = renderHook(() => useTemplateSchema(manifest), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider apis={[mockFeatureFlagsApi]}>
+          {children}
+        </TestApiProvider>
+      ),
+    });
+
+    const [, second, third] = result.current.steps;
+
+    expect(second.schema).toEqual({
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      if: {
+        properties: { isMobile: { const: true } },
+        required: ['isMobile'],
+      },
+      then: {
+        properties: {
+          sdkName: { type: 'string' },
+        },
+      },
+    });
+    expect(second.uiSchema).toEqual({
+      name: {},
+      sdkName: { 'ui:help': 'Help' },
+    });
+    expect(second.mergedSchema).toEqual({
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      if: {
+        properties: { isMobile: { const: true } },
+        required: ['isMobile'],
+      },
+      then: {
+        properties: {
+          sdkName: { type: 'string', 'ui:help': 'Help' },
+        },
+      },
+    });
+
+    expect(third.schema).toEqual({
+      type: 'object',
+      properties: {
+        team: { type: 'string' },
+      },
+      allOf: [
+        {
+          if: { required: ['isMobile'] },
+          then: {
+            properties: {
+              store: { type: 'string' },
+            },
+          },
+        },
+      ],
+    });
+    expect(third.schema.dependencies).toBeUndefined();
+    expect(third.uiSchema).toEqual({
+      team: {},
+      store: { 'ui:widget': 'textarea' },
+    });
+  });
+
   describe('FeatureFlags', () => {
     it('should use featureFlags property to skip a step if the whole step is disabled', () => {
       const manifest: TemplateParameterSchema = {

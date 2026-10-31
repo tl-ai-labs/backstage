@@ -340,6 +340,62 @@ parameters:
                 - address
 ```
 
+### Conditional fields based on an earlier step
+
+A condition in a step can use answers from any earlier step, not only fields
+of the same step.
+
+```yaml
+parameters:
+  - title: Choose the project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+        default: false
+  - title: Fill in the details
+    properties:
+      name:
+        title: Name
+        type: string
+    allOf:
+      - if:
+          properties:
+            isMobileSdk:
+              const: true
+          required:
+            - isMobileSdk
+        then:
+          properties:
+            sdkPlatform:
+              title: SDK Platform
+              type: string
+              enum:
+                - android
+                - ios
+            minimumOsVersion:
+              title: Minimum OS Version
+              type: string
+          required:
+            - sdkPlatform
+            - minimumOsVersion
+```
+
+The step-2 fields appear and are required only when the first step was
+answered Yes, and the **Review** step only lists them in that case; going back
+and changing the answer hides them again.
+
+:::note
+
+Include the earlier field in the `if` block's `required` list so the condition
+does not hold while that field has no answer. A plain `dependencies` entry
+applies as soon as the earlier field has any answer, including `false`. To act
+on a specific value, use `oneOf` branches with a `const` on the earlier field,
+or use `if`/`then`. Values typed into fields that were hidden again are not
+shown on the **Review** step but are still sent with the other parameters.
+
+:::
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

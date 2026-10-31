@@ -18,7 +18,10 @@ import { TemplatePresentationV1beta3 } from '@backstage/plugin-scaffolder-common
 import { JsonObject } from '@backstage/types';
 import { UiSchema } from '@rjsf/utils';
 import { TemplateParameterSchema } from '@backstage/plugin-scaffolder-react';
-import { extractSchemaFromStep } from '../lib';
+import {
+  extractSchemaFromStep,
+  liftCrossStepDependencies,
+} from '../lib/schema';
 
 /**
  * This is the parsed template schema that is returned from the {@link useTemplateSchema} hook.
@@ -45,12 +48,15 @@ export const useTemplateSchema = (
   presentation?: TemplatePresentationV1beta3;
 } => {
   const featureFlags = useApi(featureFlagsApiRef);
-  const steps = manifest.steps.map(({ title, description, schema }) => ({
-    title,
-    description,
-    mergedSchema: schema,
-    ...extractSchemaFromStep(schema),
-  }));
+  const steps = manifest.steps.map(({ title, description, schema }) => {
+    const liftedSchema = liftCrossStepDependencies(schema);
+    return {
+      title,
+      description,
+      mergedSchema: liftedSchema,
+      ...extractSchemaFromStep(liftedSchema),
+    };
+  });
 
   const returningSteps = steps
     // Filter out steps that are not enabled with the feature flags

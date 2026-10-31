@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { isJsonObject, formatKey, findSchemaForKey } from './util';
+import {
+  isJsonObject,
+  formatKey,
+  findSchemaForKey,
+  isKeyDeclaredInSchemas,
+} from './util';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('isJsonObject', () => {
@@ -169,5 +174,201 @@ describe('findSchemaForKey', () => {
   it('should return the schema for an object key', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
+  });
+});
+
+describe('findSchemaForKey with conditions', () => {
+  const crossStepSchemas: ParsedTemplateSchema[] = [
+    {
+      mergedSchema: {
+        type: 'object',
+        properties: {
+          isMobile: {
+            type: 'boolean',
+          },
+        },
+      },
+      schema: {},
+      title: 'Step 1',
+      uiSchema: {},
+    },
+    {
+      mergedSchema: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+          },
+        },
+        allOf: [
+          {
+            if: {
+              properties: {
+                isMobile: { const: true },
+              },
+              required: ['isMobile'],
+            },
+            then: {
+              properties: {
+                sdkName: { type: 'string' },
+              },
+            },
+          },
+        ],
+      },
+      schema: {},
+      title: 'Step 2',
+      uiSchema: {},
+    },
+  ];
+
+  it('resolves a field from an if/then branch against an earlier-step answer', () => {
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        isMobile: true,
+        sdkName: 'x',
+      }),
+    ).toBe(crossStepSchemas[1]);
+
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        isMobile: false,
+        sdkName: 'x',
+      }),
+    ).toBeNull();
+
+    expect(
+      findSchemaForKey('name', crossStepSchemas, {
+        isMobile: true,
+        name: 'test',
+      }),
+    ).toBe(crossStepSchemas[1]);
+    expect(
+      findSchemaForKey('name', crossStepSchemas, {
+        isMobile: false,
+        name: 'test',
+      }),
+    ).toBe(crossStepSchemas[1]);
+  });
+
+  it('resolves a field from a same-step oneOf dependency only for the matching branch', () => {
+    const oneOfDependencySchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            moreInfo: { type: 'boolean' },
+          },
+          dependencies: {
+            moreInfo: {
+              oneOf: [
+                {
+                  properties: {
+                    moreInfo: { const: true },
+                    description: { type: 'string' },
+                  },
+                },
+                {
+                  properties: {
+                    moreInfo: { not: { const: true } },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('description', oneOfDependencySchemas, {
+        moreInfo: true,
+        description: 'd',
+      }),
+    ).toBe(oneOfDependencySchemas[0]);
+
+    expect(
+      findSchemaForKey('description', oneOfDependencySchemas, {
+        moreInfo: false,
+        description: 'd',
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('isKeyDeclaredInSchemas', () => {
+  const schemasWithBranches: ParsedTemplateSchema[] = [
+    {
+      mergedSchema: {
+        type: 'object',
+        properties: {
+          plainField: { type: 'string' },
+        },
+        if: {
+          properties: { plainField: { const: 'yes' } },
+        },
+        then: {
+          properties: {
+            thenField: { type: 'string' },
+          },
+        },
+        else: {
+          properties: {
+            elseField: { type: 'string' },
+          },
+        },
+      },
+      schema: {},
+      title: 'Step 1',
+      uiSchema: {},
+    },
+    {
+      mergedSchema: {
+        type: 'object',
+        allOf: [
+          {
+            properties: {
+              allOfField: { type: 'string' },
+            },
+          },
+        ],
+        dependencies: {
+          depTrigger: {
+            oneOf: [
+              {
+                properties: {
+                  depOneOfField: { type: 'string' },
+                },
+              },
+            ],
+          },
+        },
+      },
+      schema: {},
+      title: 'Step 2',
+      uiSchema: {},
+    },
+  ];
+
+  it('finds keys in properties and conditional branches', () => {
+    expect(isKeyDeclaredInSchemas('plainField', schemasWithBranches)).toBe(
+      true,
+    );
+    expect(isKeyDeclaredInSchemas('thenField', schemasWithBranches)).toBe(true);
+    expect(isKeyDeclaredInSchemas('elseField', schemasWithBranches)).toBe(true);
+    expect(isKeyDeclaredInSchemas('allOfField', schemasWithBranches)).toBe(
+      true,
+    );
+    expect(isKeyDeclaredInSchemas('depOneOfField', schemasWithBranches)).toBe(
+      true,
+    );
+
+    expect(isKeyDeclaredInSchemas('undeclaredField', schemasWithBranches)).toBe(
+      false,
+    );
+    expect(isKeyDeclaredInSchemas('plainField', [])).toBe(false);
   });
 });
