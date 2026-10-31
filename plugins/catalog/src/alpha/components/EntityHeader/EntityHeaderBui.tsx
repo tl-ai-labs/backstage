@@ -53,16 +53,12 @@ import {
   type EntityContextMenuItemDataWithNode,
 } from '../EntityContextMenu';
 
-function useOwnerUsers(entity: Entity | undefined): HeaderMetadataUser[] {
+function OwnerUsers(props: { refs: CompoundEntityRef[] }) {
   const catalogApi = useApi(catalogApiRef);
   const entityLink = useEntityRefLink();
-  const ownerRefs = useMemo(
-    () => getEntityRelations(entity, RELATION_OWNED_BY),
-    [entity],
-  );
   const ownerRefStrings = useMemo(
-    () => ownerRefs.map(ref => stringifyEntityRef(ref)),
-    [ownerRefs],
+    () => props.refs.map(ref => stringifyEntityRef(ref)),
+    [props.refs],
   );
   const { value: ownerEntities } = useAsync(async () => {
     if (ownerRefStrings.length === 0) return [];
@@ -80,7 +76,7 @@ function useOwnerUsers(entity: Entity | undefined): HeaderMetadataUser[] {
     ).items;
   }, [catalogApi, ownerRefStrings]);
 
-  return ownerRefs.map((ref, index) => {
+  const users: HeaderMetadataUser[] = props.refs.map((ref, index) => {
     const owner = ownerEntities?.[index];
     const profile = (owner?.spec as { profile?: { picture?: string } })
       ?.profile;
@@ -90,6 +86,8 @@ function useOwnerUsers(entity: Entity | undefined): HeaderMetadataUser[] {
       href: entityLink(ref),
     };
   });
+
+  return <HeaderMetadataUsers users={users} />;
 }
 
 function HierarchyLinks(props: { refs: CompoundEntityRef[] }) {
@@ -122,7 +120,6 @@ function hierarchyLabel(
 }
 
 function useMetadata(entity: Entity | undefined): HeaderMetadataItem[] {
-  const owners = useOwnerUsers(entity);
   const { t } = useTranslationRef(catalogTranslationRef);
   return useMemo(() => {
     if (!entity) return [];
@@ -134,10 +131,11 @@ function useMetadata(entity: Entity | undefined): HeaderMetadataItem[] {
         value: lifecycle,
       });
     }
-    if (owners.length > 0) {
+    const ownerRefs = getEntityRelations(entity, RELATION_OWNED_BY);
+    if (ownerRefs.length > 0) {
       metadata.push({
         label: t('entityLabels.ownerLabel'),
-        value: <HeaderMetadataUsers users={owners} />,
+        value: <OwnerUsers refs={ownerRefs} />,
       });
     }
 
@@ -161,7 +159,7 @@ function useMetadata(entity: Entity | undefined): HeaderMetadataItem[] {
       });
     }
     return metadata;
-  }, [entity, owners, t]);
+  }, [entity, t]);
 }
 
 function FavoriteEntityButton(props: { entity: Entity }) {

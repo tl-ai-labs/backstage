@@ -111,6 +111,16 @@ export class ReadWriteSplitCatalogService implements CatalogService {
     );
   }
 
+  async getEntityByFormerRef(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<Entity | undefined> {
+    return this.#catalogRead.getEntityByFormerRef?.(
+      entityRef,
+      await this.#getOptions(options),
+    );
+  }
+
   async removeEntityByUid(
     uid: string,
     options: CatalogServiceRequestOptions,

@@ -40,6 +40,7 @@ import {
   ValidateEntityResponse,
 } from '@backstage/catalog-client';
 import {
+  ANNOTATION_FORMER_ENTITY_REFS,
   CompoundEntityRef,
   Entity,
   parseEntityRef,
@@ -619,6 +620,23 @@ export class InMemoryCatalogClient implements CatalogApi {
   ): Promise<Entity | undefined> {
     return this.#createEntityRefMap().get(
       stringifyEntityRef(parseEntityRef(entityRef)),
+    );
+  }
+
+  async getEntityByFormerRef(
+    entityRef: string | CompoundEntityRef,
+  ): Promise<Entity | undefined> {
+    const ref = stringifyEntityRef(parseEntityRef(entityRef));
+    if (this.#createEntityRefMap().has(ref)) {
+      return undefined;
+    }
+    const { kind } = parseEntityRef(ref);
+    return this.#entities.find(
+      entity =>
+        entity.kind.toLowerCase() === kind &&
+        entity.metadata.annotations?.[ANNOTATION_FORMER_ENTITY_REFS]?.split(',')
+          .map(piece => piece.trim().toLowerCase())
+          .includes(ref),
     );
   }
 

@@ -1,0 +1,263 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U37",
+      "path": "plugins/catalog-backend/src/tests/integration.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the whole path from ingestion through processing and stitching to the lookup.",
+      "rules": [
+        "`claimed_at` has whole-second precision on SQLite, so give the claimant meant to win the name that also sorts first."
+      ],
+      "tests": [
+        {
+          "name": "should resolve a former ref after a rename in flight",
+          "given": "an entity with a location key, then both it and its renamed copy under the same key with the annotation, then only the copy",
+          "expect": "no error on the copy, no resolution while the old entity lives, and resolution to the copy once it is gone"
+        },
+        {
+          "name": "should report a rejected former ref claim without blocking the entity",
+          "given": "a live entity from one key and a claimant from another key, then the holder removed",
+          "expect": "the claimant is stitched with its spec intact, the rejection shows in `status.items`, and it stays there with nothing resolving after the holder is gone"
+        },
+        {
+          "name": "should clear a lost claim's error when the winner stops declaring it",
+          "given": "two claimants of one ref, then the winner's annotation removed while the loser's input stays identical",
+          "expect": "the loser first shows the lost error, then shows no error after reprocessing with no change to its own output, and the ref resolves to it"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 55,
+          "to": 55,
+          "first_line": "import { mockServices, TestDatabases } from '@backstage/backend-test-utils';",
+          "rule": "Import `mockCredentials` as well."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 403,
+          "to": 403,
+          "first_line": "}",
+          "rule": "Add `async getEntityByFormerRef(formerEntityRef: string)` to `TestHarness`, calling `this.#catalog.entityByFormerRef({ formerEntityRef, credentials: mockCredentials.none() })` and returning the first item of `entitiesResponseToObjects(items)`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 1382,
+          "to": 1382,
+          "first_line": "});",
+          "rule": "Add the listed cases, built like the neighbouring cases with `TestHarness.create`, `setInputEntities` and `process`."
+        }
+      ],
+      "depends_on": [
+        "U06",
+        "U09"
+      ],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "AC-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U38",
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the lookup against real tables on every supported database.",
+      "tests": [
+        {
+          "name": "returns the claimant's entity for a resolvable former ref",
+          "given": "an entity from `addEntity` and a claim row on a ref nothing holds, plus a second run with a filter the entity does not match",
+          "expect": "the entity on the first call, and a single null item on the filtered call"
+        },
+        {
+          "name": "returns a single null for every miss",
+          "given": "no claim, a rejected claim, a former ref held by a live entity, and a claimant with no final entity",
+          "expect": "each call returns `{ type: 'object', entities: [null] }`"
+        },
+        {
+          "name": "resolves a single hop only",
+          "given": "A's former ref claimed by B, and B's former ref claimed by C, with B live",
+          "expect": "the lookup of A's ref returns B and never C"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 912,
+          "to": 912,
+          "first_line": "describe('queryEntities', () => {",
+          "rule": "Add `describe('entityByFormerRef', ...)` with the listed cases, using `createDatabase`, `addEntity` and direct inserts into `former_entity_refs`."
+        }
+      ],
+      "depends_on": [
+        "U09"
+      ],
+      "covers": [
+        "FR-10",
+        "FR-12",
+        "NFR-1",
+        "NFR-4",
+        "AC-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U39",
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the permission decisions on the lookup.",
+      "tests": [
+        {
+          "name": "returns a null item on DENY",
+          "given": "a DENY decision",
+          "expect": "`{ type: 'object', entities: [null] }` and no call to the inner catalog"
+        },
+        {
+          "name": "passes the conditional filter down",
+          "given": "a CONDITIONAL decision on `IS_ENTITY_KIND`",
+          "expect": "the inner `entityByFormerRef` is called with the transformed filter"
+        },
+        {
+          "name": "passes the request through on ALLOW",
+          "given": "an ALLOW decision",
+          "expect": "the inner `entityByFormerRef` is called with the request unchanged"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "entitiesBatch: jest.fn(),",
+          "rule": "Add `entityByFormerRef: jest.fn(),` to `fakeCatalog`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 165,
+          "to": 165,
+          "first_line": "describe('queryEntities', () => {",
+          "rule": "Add `describe('entityByFormerRef', ...)` with the listed cases, shaped like the `entitiesBatch` describe above."
+        }
+      ],
+      "depends_on": [
+        "U10"
+      ],
+      "covers": [
+        "FR-11",
+        "FR-12",
+        "AC-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U40",
+      "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the route's response, its uniform not-found, and its audit event.",
+      "rules": [
+        "The new describe builds its own router with a local `mockServices.auditor.mock()`, as this file's `beforeEach` builds one, so the audit event can be asserted."
+      ],
+      "tests": [
+        {
+          "name": "returns the entity for a resolved former ref",
+          "given": "`entityByFormerRef` resolving one entity, requested with an uppercase kind",
+          "expect": "200 with the entity, the catalog called with the lowercase ref, and an `entity-fetch` audit event with `queryType: 'by-former-name'` that succeeds"
+        },
+        {
+          "name": "answers every miss identically",
+          "given": "`entityByFormerRef` resolving a null item for two different stand-in causes",
+          "expect": "both are 404 with the same body shape, the decided message, and no field naming a target"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "facets: jest.fn(),",
+          "rule": "Add `entityByFormerRef: jest.fn(),`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 557,
+          "to": 557,
+          "first_line": "describe('DELETE /entities/by-uid/:uid', () => {",
+          "rule": "Add `describe('GET /entities/by-former-name/:kind/:namespace/:name', ...)` with the listed cases."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 880,
+          "to": 880,
+          "first_line": "facets: jest.fn(),",
+          "rule": "Add `entityByFormerRef: jest.fn(),`."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 1393,
+          "to": 1393,
+          "first_line": "facets: jest.fn(),",
+          "rule": "Add `entityByFormerRef: jest.fn(),`."
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 1649,
+          "to": 1649,
+          "first_line": "facets: jest.fn(),",
+          "rule": "Add `entityByFormerRef: jest.fn(),`."
+        }
+      ],
+      "depends_on": [
+        "U13"
+      ],
+      "covers": [
+        "FR-9",
+        "FR-12",
+        "FR-13",
+        "AC-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/catalog-backend/src/tests/integration.test.ts": "10d3dc01d86417b9b808b5d0b11f4a16e1a57453d028b33afc459afd32e3414f",
+    "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts": "ef2981d8199ae7dc0cb974b13a50465c95fe821a629891b537b872d3a17100c4",
+    "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts": "9771c1714e397ccc94b2da5955173481ee078c7f2188288c4dcc215f89e38a32",
+    "plugins/catalog-backend/src/service/createRouter.test.ts": "71071aa78e7aeb3c13d6d8ebf8d307c7fdf488184bbe577e2db3cfdf00365047"
+  }
+}

@@ -43,6 +43,7 @@ import {
   EntityLayoutRoute,
   filterEntityLayoutRoutes,
 } from './entityLayoutRoutes';
+import { useFormerEntityRef } from '../../../components/EntityLayout/EntityRenamedNotice';
 
 function EntityDocumentTitle(props: { activeContentTitle?: string }) {
   const configApi = useApi(configApiRef);
@@ -106,6 +107,7 @@ function EntityLayoutContent(props: {
   const { kind } = useRouteRefParams(entityRouteRef);
   const { entity, loading, error } = useAsyncEntity();
   const { t } = useTranslationRef(catalogTranslationRef);
+  const formerEntityRef = useFormerEntityRef();
 
   let content: ReactNode;
   if (error) {
@@ -115,7 +117,17 @@ function EntityLayoutContent(props: {
       </Container>
     );
   } else if (entity) {
-    content = <Container>{props.content ?? <NotFoundErrorPage />}</Container>;
+    content = (
+      <Container>
+        {formerEntityRef && (
+          <Alert
+            status="info"
+            title={t('entityPage.renamedNotice', { formerEntityRef })}
+          />
+        )}
+        {props.content ?? <NotFoundErrorPage />}
+      </Container>
+    );
   } else if (!loading) {
     content = (
       <Container>

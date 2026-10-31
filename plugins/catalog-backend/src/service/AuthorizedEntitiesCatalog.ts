@@ -30,6 +30,7 @@ import {
   EntitiesRequest,
   EntitiesResponse,
   EntityAncestryResponse,
+  EntityByFormerRefRequest,
   EntityFacetsRequest,
   EntityFacetsResponse,
   QueryEntitiesRequest,
@@ -127,6 +128,33 @@ export class AuthorizedEntitiesCatalog implements EntitiesCatalog {
     }
 
     return this.entitiesCatalog.entitiesBatch(request);
+  }
+
+  async entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntitiesBatchResponse> {
+    const authorizeDecision = (
+      await this.permissionApi.authorizeConditional(
+        [{ permission: catalogEntityReadPermission }],
+        { credentials: request.credentials },
+      )
+    )[0];
+
+    if (authorizeDecision.result === AuthorizeResult.DENY) {
+      return { items: { type: 'object', entities: [null] } };
+    }
+
+    if (authorizeDecision.result === AuthorizeResult.CONDITIONAL) {
+      return this.entitiesCatalog.entityByFormerRef({
+        ...request,
+        filter: this.permissionPredicate(
+          authorizeDecision.conditions,
+          request.filter,
+        ),
+      });
+    }
+
+    return this.entitiesCatalog.entityByFormerRef(request);
   }
 
   async queryEntities(

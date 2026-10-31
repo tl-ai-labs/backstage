@@ -93,6 +93,13 @@ export class ReadWriteSplitCatalogClient implements CatalogApi {
     return this.#read.getEntityByRef(entityRef, options);
   }
 
+  async getEntityByFormerRef(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<Entity | undefined> {
+    return this.#read.getEntityByFormerRef?.(entityRef, options);
+  }
+
   removeEntityByUid(
     uid: string,
     options?: CatalogRequestOptions,

@@ -669,6 +669,20 @@ value. These are special in that they form the entity's unique
 The return type is JSON, as a single [`Entity`](descriptor-format.md), or a 404
 error if there was no entity with that reference triplet.
 
+### `GET /entities/by-former-name/<kind>/<namespace>/<name>`
+
+Gets the single entity that currently holds a claim on a former entity reference,
+given by its `kind`, `namespace`, and `name`. Entities claim a former reference
+with the `backstage.io/former-entity-refs` annotation. The reference is resolved
+in one hop, so a former reference never leads through a chain of renames.
+
+This endpoint applies the `catalog.entity.read` permission, including conditional
+decisions, to the entity that holds the claim.
+
+The return type is JSON, as a single [`Entity`](descriptor-format.md), or a 404
+error. Every miss gives the same 404 response, whether no claim resolves, the
+reference belongs to a live entity, or you may not read the target entity.
+
 ### `GET /entities/by-name/{kind}/{namespace}/{name}/ancestry`
 
 Get an entity's ancestry by entity ref.

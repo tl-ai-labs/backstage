@@ -23,9 +23,12 @@ import { TECHDOCS_EXTERNAL_ANNOTATION } from '@backstage/plugin-techdocs-common'
 const mockNavigate = jest.fn();
 const mockViewTechdocLink = jest.fn(() => '/docs');
 
+const mockLocation = { pathname: '/docs', search: '', hash: '' };
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useLocation: () => mockLocation,
 }));
 
 jest.mock('@backstage/core-plugin-api', () => ({
@@ -277,6 +280,151 @@ describe('useExternalRedirect', () => {
 
     await waitFor(() => {
       expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('with a former ref', () => {
+    const oldEntityRef = {
+      kind: 'component',
+      namespace: 'default',
+      name: 'old',
+    };
+
+    const newEntity = {
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: { name: 'new', namespace: 'default' },
+    };
+
+    const wrapperWith =
+      (catalogApi: typeof mockCatalogApi) =>
+      ({ children }: { children: React.ReactNode }) =>
+        (
+          <TestApiProvider apis={[[catalogApiRef, catalogApi]]}>
+            {children}
+          </TestApiProvider>
+        );
+
+    afterEach(() => {
+      Object.assign(mockLocation, { pathname: '/docs', search: '', hash: '' });
+      mockViewTechdocLink.mockImplementation(() => '/docs');
+    });
+
+    it('follows a former ref and keeps sub-path, query and hash', async () => {
+      Object.assign(mockLocation, {
+        pathname: '/docs/default/component/old/sub/page',
+        search: '?x=1',
+        hash: '#y',
+      });
+      (mockViewTechdocLink as jest.Mock).mockImplementation(
+        ({ kind, namespace, name }) => `/docs/${namespace}/${kind}/${name}`,
+      );
+      mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+
+      let resolveLookup: (entity: typeof newEntity) => void = () => {};
+      const getEntityByFormerRef = jest.fn(
+        () =>
+          new Promise<typeof newEntity>(resolve => {
+            resolveLookup = resolve;
+          }),
+      );
+
+      const { result } = renderHook(
+        () => useExternalRedirect(oldEntityRef, { followFormerRef: true }),
+        {
+          wrapper: wrapperWith({
+            ...mockCatalogApi,
+            getEntityByFormerRef,
+          } as typeof mockCatalogApi),
+        },
+      );
+
+      await waitFor(() => {
+        expect(getEntityByFormerRef).toHaveBeenCalledTimes(1);
+      });
+
+      expect(result.current.shouldShowProgress).toBe(true);
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      resolveLookup(newEntity);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          '/docs/default/Component/new/sub/page?x=1#y',
+          {
+            replace: true,
+            state: { formerEntityRef: 'component:default/old' },
+          },
+        );
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.shouldShowProgress).toBe(true);
+    });
+
+    it('never looks up a former ref without the option or after an exact hit', async () => {
+      const getEntityByFormerRef = jest.fn();
+      const wrapperWithLookup = wrapperWith({
+        ...mockCatalogApi,
+        getEntityByFormerRef,
+      } as typeof mockCatalogApi);
+
+      mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+      const withoutOption = renderHook(
+        () => useExternalRedirect(oldEntityRef),
+        { wrapper: wrapperWithLookup },
+      );
+
+      await waitFor(() => {
+        expect(withoutOption.result.current.loading).toBe(false);
+      });
+
+      mockCatalogApi.getEntityByRef.mockResolvedValue(newEntity);
+      const afterHit = renderHook(
+        () => useExternalRedirect(oldEntityRef, { followFormerRef: true }),
+        { wrapper: wrapperWithLookup },
+      );
+
+      await waitFor(() => {
+        expect(afterHit.result.current.loading).toBe(false);
+      });
+
+      expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
+      expect(getEntityByFormerRef).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a client with no method', () => ({})],
+      [
+        'a lookup resolving undefined',
+        () => ({ getEntityByFormerRef: jest.fn(async () => undefined) }),
+      ],
+      [
+        'a lookup that rejects',
+        () => ({
+          getEntityByFormerRef: jest.fn(async () => {
+            throw new Error('Catalog API error');
+          }),
+        }),
+      ],
+    ])('stays put with %s', async (_name, createLookup) => {
+      mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+
+      const { result } = renderHook(
+        () => useExternalRedirect(oldEntityRef, { followFormerRef: true }),
+        { wrapper: wrapperWith({ ...mockCatalogApi, ...createLookup() }) },
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.shouldShowProgress).toBe(false);
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,0 +1,859 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U14",
+      "path": "packages/catalog-client/src/types/api.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the optional former-ref lookup to `CatalogApi`.",
+      "exports": [
+        {
+          "name": "CatalogApi.getEntityByFormerRef",
+          "kind": "optional method",
+          "params": [
+            {
+              "name": "entityRef",
+              "type": "string | CompoundEntityRef"
+            },
+            {
+              "name": "options",
+              "type": "CatalogRequestOptions | undefined"
+            }
+          ],
+          "returns": "Promise<Entity | undefined>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 699,
+          "to": 699,
+          "first_line": "): Promise<Entity | undefined>;",
+          "rule": "Add the optional method `getEntityByFormerRef?(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<Entity | undefined>;` in the TSDoc style of `getEntityByRef`. Say that it resolves a former ref to the entity that declares it, that the method is optional so callers must treat a missing method as not found, and that it returns undefined when nothing resolves or the caller may not read the target."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "packages/catalog-client/src/CatalogClient.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Implements the lookup over the generated client, mapping a 404 to undefined.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 480,
+          "to": 480,
+          "first_line": "}",
+          "rule": "Add `async getEntityByFormerRef(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<Entity | undefined>` with the comment `{@inheritdoc CatalogApi.getEntityByFormerRef}`. Shape it like `getEntityByRef`: `this.requestOptional(await this.apiClient.getEntityByFormerName({ path: parseEntityRef(entityRef) }, options))`. An older backend answers 404, so it reads as not found (NFR-7)."
+        }
+      ],
+      "depends_on": [
+        "U12",
+        "U14"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-7",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Implements the lookup over the in-memory entities.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 43,
+          "to": 43,
+          "first_line": "CompoundEntityRef,",
+          "rule": "Import `ANNOTATION_FORMER_ENTITY_REFS` from `@backstage/catalog-model`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 623,
+          "to": 623,
+          "first_line": "}",
+          "rule": "Add `async getEntityByFormerRef(entityRef: string | CompoundEntityRef): Promise<Entity | undefined>`. Compute `ref = stringifyEntityRef(parseEntityRef(entityRef))`. Return undefined when `this.#createEntityRefMap().has(ref)`, since an exact holder wins. Otherwise return the first entity in `this.#entities` of the same kind (compared in lowercase) whose annotation, split on commas with each piece trimmed and lowercased, includes `ref`."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U14"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U17",
+      "path": "plugins/catalog-node/src/catalogService.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the optional lookup to `CatalogService` and implements it in the default service.",
+      "exports": [
+        {
+          "name": "CatalogService.getEntityByFormerRef",
+          "kind": "optional method",
+          "params": [
+            {
+              "name": "entityRef",
+              "type": "string | CompoundEntityRef"
+            },
+            {
+              "name": "options",
+              "type": "CatalogServiceRequestOptions"
+            }
+          ],
+          "returns": "Promise<Entity | undefined>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 91,
+          "to": 91,
+          "first_line": "): Promise<Entity | undefined>;",
+          "rule": "Add the optional method `getEntityByFormerRef?(entityRef: string | CompoundEntityRef, options: CatalogServiceRequestOptions): Promise<Entity | undefined>;`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 234,
+          "to": 234,
+          "first_line": "}",
+          "rule": "Add `async getEntityByFormerRef(...)` to `DefaultCatalogService`, shaped like `getEntityByRef`, calling `this.#catalogApi.getEntityByFormerRef?.(entityRef, await this.#getOptions(options))`, so a client without the method gives undefined."
+        }
+      ],
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U18",
+      "path": "plugins/catalog-node/src/testUtils/types.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the lookup to the mock interface that merges both API types.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 85,
+          "to": 85,
+          "first_line": "): Promise<Entity | undefined>;",
+          "rule": "Add the optional method `getEntityByFormerRef?(entityRef: string | CompoundEntityRef, options?: CatalogServiceRequestOptions | CatalogRequestOptions): Promise<Entity | undefined>;`, which is needed because `CatalogServiceMock` extends both interfaces."
+        }
+      ],
+      "depends_on": [
+        "U14",
+        "U17"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U19",
+      "path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the lookup to the jest-function mock.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 68,
+          "to": 68,
+          "first_line": "getEntityByRef: jest.fn(),",
+          "rule": "Add `getEntityByFormerRef: jest.fn(),`."
+        }
+      ],
+      "depends_on": [
+        "U18"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U20",
+      "path": "plugins/catalog-react/src/testUtils/catalogApiMock.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the lookup to the jest-function mock.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "getEntityByRef: jest.fn(),",
+          "rule": "Add `getEntityByFormerRef: jest.fn(),`."
+        }
+      ],
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U21",
+      "path": "contrib/catalog/read-write-split/workspace/packages/app/src/catalogApi.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Forwards the lookup to the read client.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 94,
+          "to": 94,
+          "first_line": "}",
+          "rule": "Add `async getEntityByFormerRef(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<Entity | undefined>` returning `this.#read.getEntityByFormerRef?.(entityRef, options)`."
+        }
+      ],
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-14"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U22",
+      "path": "contrib/catalog/read-write-split/workspace/packages/backend/src/catalogService.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Forwards the lookup to the read client.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 112,
+          "to": 112,
+          "first_line": "}",
+          "rule": "Add `async getEntityByFormerRef(entityRef: string | CompoundEntityRef, options: CatalogServiceRequestOptions): Promise<Entity | undefined>`, shaped like `getEntityByRef`, returning `this.#catalogRead.getEntityByFormerRef?.(entityRef, await this.#getOptions(options))`."
+        }
+      ],
+      "depends_on": [
+        "U17"
+      ],
+      "covers": [
+        "FR-14"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U23",
+      "path": "plugins/catalog/src/alpha/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the entity-page notice text.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 30,
+          "to": 30,
+          "first_line": "notFoundLinkText: 'kind, namespace, and name',",
+          "rule": "Add `renamedNotice: 'This entity was renamed from {{formerEntityRef}}.',`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-17"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U24",
+      "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "After an exact miss, looks up the former ref, stays loading, and replaces the history entry with the renamed entity's URL. When the entity route cannot be resolved it skips the redirect, so the existing not-found page renders.",
+      "rules": [
+        "The exported signature stays `useEntityFromUrl(): EntityLoadingStatus`.",
+        "An error from the exact lookup surfaces exactly as today; only failures of the former lookup and of building the redirect are swallowed.",
+        "`useOptionalEntityRoute()` is the only source of URL prefixes; nothing beyond the returned entity's kind, namespace and name reaches the target (FR-16).",
+        "`useOptionalEntityRoute()` is private and takes no parameters. Its whole body is a try that returns `useRouteRef(entityRouteRef)` and a catch that returns undefined, the shape of `useRouteResolutionApi` in the style file, with no eslint-disable. A one-line comment says that `useRouteRef` throws on an unresolved ref, and that inside a Router its hooks run in the same order whether or not it throws.",
+        "Import `useRouteRef` from `@backstage/core-plugin-api`, never from `@backstage/frontend-plugin-api`. Call `useOptionalEntityRoute()` unconditionally at the top level, after `useNavigate` and `useLocation`, which throw uncaught outside a Router, so the catch only ever sees route failures."
+      ],
+      "style_from": {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+        "lines": [
+          46,
+          52
+        ],
+        "reason": "the repo's try/catch around a hook, which `useOptionalEntityRoute()` copies"
+      },
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 21,
+          "first_line": "import {",
+          "last_line": "} from '@backstage/core-plugin-api';",
+          "rule": "Add `stringifyEntityRef` from `@backstage/catalog-model` as its own import above this one, and add `useRouteRef` to this import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 22,
+          "to": 26,
+          "first_line": "import {",
+          "last_line": "} from '@backstage/plugin-catalog-react';",
+          "rule": "Add `entityRouteParams` to this import."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 28,
+          "to": 28,
+          "first_line": "import { useNavigate } from 'react-router-dom';",
+          "rule": "Import `useLocation` as well."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 31,
+          "to": 55,
+          "first_line": "export const useEntityFromUrl = (): EntityLoadingStatus => {",
+          "last_line": "};",
+          "rule": "Declare the private `useOptionalEntityRoute()` above the hook. Keep the hooks and the `!name` effect, and add, after `catalogApi`, `const location = useLocation();` and `const entityRoute = useOptionalEntityRoute();`. The async function of `useAsyncRetry`, with the same deps: (1) await `getEntityByRef`; on a hit return `{ entity }`, so no former lookup runs (NFR-5). (2) When `entityRoute` is undefined return `{}`, so no former lookup runs (FR-27). (3) Put steps 4 to 6 in one try/catch whose catch returns `{}`, so a route function that throws also ends at the not-found page. (4) Await `catalogApi.getEntityByFormerRef?.({ kind, namespace, name })`; on no result return `{}`. (5) Compute `oldPath = entityRoute(entityRouteParams({ kind, namespace, name }, { encodeParams: true }))`. Take `subPath` as `location.pathname.slice(oldPath.length)` when the lowercased pathname starts with the lowercased `oldPath`, else `''`. (6) Return `{ redirect: { to: entityRoute(entityRouteParams(renamed, { encodeParams: true })) + subPath + location.search + location.hash, formerEntityRef: stringifyEntityRef({ kind, namespace, name }) } }`. Add an effect that, when `value?.redirect` is set and its `formerEntityRef` equals the ref of the current params, calls `navigate(redirect.to, { replace: true, state: { formerEntityRef: redirect.formerEntityRef } })`; the ref is computed only inside that branch because `name` can be missing. Return `{ entity: value?.entity, loading: loading || !!value?.redirect, error, refresh }`, so the page stays loading until the new route's lookup replaces the value (FR-18)."
+        }
+      ],
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-15",
+        "FR-16",
+        "FR-18",
+        "FR-27",
+        "NFR-5",
+        "NFR-6",
+        "NFR-7",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U25",
+      "path": "plugins/catalog/src/components/EntityLayout/EntityRenamedNotice.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Reads the former ref from location state and renders the dismissible notice for the MUI layouts.",
+      "rules": [
+        "`useFormerEntityRef` reads `useLocation().state` and returns its `formerEntityRef` only when that is a string, else undefined. Null or foreign state gives undefined.",
+        "`EntityRenamedNotice` renders nothing when there is no former ref or after dismissal.",
+        "Otherwise it renders `<Snackbar open anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>` around `<Alert severity=\"info\" onClose={...}>`, with `t('entityPage.renamedNotice', { formerEntityRef })`.",
+        "Do not export it from the package index, and do not import `useEntityFromUrl` here."
+      ],
+      "exports": [
+        {
+          "name": "useFormerEntityRef",
+          "kind": "function",
+          "params": [],
+          "returns": "string | undefined"
+        },
+        {
+          "name": "EntityRenamedNotice",
+          "kind": "function component",
+          "params": [],
+          "returns": "JSX.Element | null"
+        }
+      ],
+      "import_line": "import { EntityRenamedNotice, useFormerEntityRef } from './EntityRenamedNotice';",
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx",
+        "reason": "a Snackbar notice with local open state and translated text"
+      },
+      "depends_on": [
+        "U23"
+      ],
+      "covers": [
+        "FR-17",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U26",
+      "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Shows the notice in the legacy layout.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "import { EntityContextMenu } from '../EntityContextMenu/EntityContextMenu';",
+          "rule": "Add `import { EntityRenamedNotice } from './EntityRenamedNotice';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 378,
+          "to": 378,
+          "first_line": "{entity && <RoutedTabs routes={routes} />}",
+          "rule": "Add `{entity && <EntityRenamedNotice />}`."
+        }
+      ],
+      "depends_on": [
+        "U25"
+      ],
+      "covers": [
+        "FR-17",
+        "AC-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U27",
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Shows the notice in the alpha MUI layout.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 42,
+          "to": 42,
+          "first_line": "} from './entityLayoutRoutes';",
+          "rule": "Add `import { EntityRenamedNotice } from '../../../components/EntityLayout/EntityRenamedNotice';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 108,
+          "to": 108,
+          "first_line": "{error && (",
+          "rule": "Add `{entity && <EntityRenamedNotice />}`, followed by a blank line."
+        }
+      ],
+      "depends_on": [
+        "U25"
+      ],
+      "covers": [
+        "FR-17",
+        "AC-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U28",
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Shows the notice in the BUI layout, above the tab content.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 45,
+          "to": 45,
+          "first_line": "} from './entityLayoutRoutes';",
+          "rule": "Add `import { useFormerEntityRef } from '../../../components/EntityLayout/EntityRenamedNotice';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 108,
+          "to": 108,
+          "first_line": "const { t } = useTranslationRef(catalogTranslationRef);",
+          "rule": "Add `const formerEntityRef = useFormerEntityRef();`."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 118,
+          "to": 118,
+          "first_line": "content = <Container>{props.content ?? <NotFoundErrorPage />}</Container>;",
+          "rule": "Keep the Container and its content, and render before the content, when `formerEntityRef` is set, `<Alert status=\"info\" title={t('entityPage.renamedNotice', { formerEntityRef })} />`."
+        }
+      ],
+      "depends_on": [
+        "U23",
+        "U25"
+      ],
+      "covers": [
+        "FR-17",
+        "AC-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U62",
+      "path": "plugins/catalog/src/alpha/components/EntityHeader/EntityHeaderBui.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves owner links in a child component rendered only for an entity with owners, so the not-found page never calls `useEntityRefLink`, which throws on an unbound `entityRouteRef`.",
+      "rules": [
+        "Nothing changes for a found entity: the same owner fallback while owners load, the same metadata order, the same catalog request.",
+        "No try/catch around `useEntityRefLink`: it throws before its own `useCallback`, so guarding it would change the hook count."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 56,
+          "to": 93,
+          "first_line": "function useOwnerUsers(entity: Entity | undefined): HeaderMetadataUser[] {",
+          "last_line": "}",
+          "rule": "Replace the hook with `function OwnerUsers(props: { refs: CompoundEntityRef[] })`, in the shape of `HierarchyLinks`. It keeps `catalogApi`, `entityLink`, the memoized `ownerRefStrings`, now built from `props.refs`, and the same `useAsync`. Map `props.refs` as today into `const users: HeaderMetadataUser[]`, and return `<HeaderMetadataUsers users={users} />`."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 125,
+          "to": 125,
+          "first_line": "const owners = useOwnerUsers(entity);",
+          "rule": "Remove this line."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 137,
+          "to": 142,
+          "first_line": "if (owners.length > 0) {",
+          "last_line": "}",
+          "rule": "Declare `const ownerRefs = getEntityRelations(entity, RELATION_OWNED_BY);`, test `ownerRefs.length > 0`, keep the label, and set `value: <OwnerUsers refs={ownerRefs} />`."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 164,
+          "to": 164,
+          "first_line": "}, [entity, owners, t]);",
+          "rule": "Drop `owners` from the deps."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-27"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U29",
+      "path": "plugins/techdocs/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the reader notice text.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 113,
+          "to": 113,
+          "first_line": "settings: 'Settings',",
+          "rule": "Add `renamedNotice: 'This entity was renamed from {{formerEntityRef}}.',`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-20"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U30",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "For the standalone reader, follows a former ref after an exact miss, keeping sub-path, query and hash, and leaves the external redirect as it is.",
+      "rules": [
+        "External redirects still call exactly `navigate(url, { replace: true })`, and `loading` and `shouldShowProgress` keep their meaning.",
+        "The former lookup runs only when `options?.followFormerRef` is true and `getEntityByRef` resolved to nothing. The existing try/catch covers it, so any failure leaves the existing not-found behaviour (FR-21)."
+      ],
+      "exports": [
+        {
+          "name": "useExternalRedirect",
+          "kind": "function",
+          "params": [
+            {
+              "name": "entityRef",
+              "type": "CompoundEntityRef"
+            },
+            {
+              "name": "options",
+              "type": "{ followFormerRef?: boolean } | undefined"
+            }
+          ],
+          "returns": "{ loading: boolean; shouldShowProgress: boolean }"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { useNavigate } from 'react-router-dom';",
+          "rule": "Import `useLocation` as well."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 22,
+          "to": 25,
+          "first_line": "import {",
+          "last_line": "} from '@backstage/catalog-model';",
+          "rule": "Add `getCompoundEntityRef` to this import."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 30,
+          "to": 43,
+          "first_line": "/**",
+          "last_line": "} {",
+          "rule": "Add the `options` parameter and a `@param options` line saying that `followFormerRef` makes the hook follow a former ref after an exact miss, for the standalone reader only. Mention the former-ref redirect in the summary."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 46,
+          "to": 46,
+          "first_line": "const viewTechdocLink = useRouteRef(rootDocsRouteRef);",
+          "rule": "Add `const location = useLocation();`."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 58,
+          "to": 73,
+          "first_line": "const externalRedirectResult = useAsync(async () => {",
+          "last_line": "}, [entityKey, catalogApi]);",
+          "rule": "Make the async result `{ to: string; formerEntityRef?: string } | undefined`, with the same deps. External case: return `{ to }` when `buildTechDocsURL` gives a value. Former case, after the external check: await `catalogApi.getEntityByFormerRef?.(entityRef)`; on a hit compute `oldPath = viewTechdocLink(entityRef)`, `subPath` as `location.pathname.slice(oldPath.length)` when the lowercased pathname starts with the lowercased `oldPath` else `''`, and return `{ to: viewTechdocLink(getCompoundEntityRef(renamed)) + subPath + location.search + location.hash, formerEntityRef: entityKey }`."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 77,
+          "to": 79,
+          "first_line": "if (!externalRedirectResult.loading && externalRedirectResult.value) {",
+          "last_line": "}",
+          "rule": "Read `to` and `formerEntityRef` from the value. With a `formerEntityRef`, call `navigate(to, { replace: true, state: { formerEntityRef } })`; otherwise call `navigate(to, { replace: true })`."
+        }
+      ],
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-19",
+        "FR-21",
+        "NFR-5",
+        "NFR-6",
+        "NFR-7",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U31",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsRenamedNotice.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Shows a dismissible notice naming the former ref when the reader arrived through a redirect.",
+      "rules": [
+        "Read `useLocation().state` and use its `formerEntityRef` only when it is a string; render nothing otherwise or after dismissal.",
+        "Render `<Snackbar open anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>` around `<Alert severity=\"info\" onClose={...}>`, with `t('reader.renamedNotice', { formerEntityRef })` from `techdocsTranslationRef`.",
+        "Do not export it from `index.ts`."
+      ],
+      "exports": [
+        {
+          "name": "TechDocsRenamedNotice",
+          "kind": "function component",
+          "params": [],
+          "returns": "JSX.Element | null"
+        }
+      ],
+      "import_line": "import { TechDocsRenamedNotice } from './TechDocsRenamedNotice';",
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx",
+        "reason": "this package's Snackbar notice"
+      },
+      "depends_on": [
+        "U29"
+      ],
+      "covers": [
+        "FR-20",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U32",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Turns on former-ref redirects and the notice for the standalone reader only. The alpha reader goes through this component too, by way of `TechDocsReaderRouter`.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 43,
+          "to": 43,
+          "first_line": "import { useExternalRedirect } from './useExternalRedirect';",
+          "rule": "Add `import { TechDocsRenamedNotice } from './TechDocsRenamedNotice';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 201,
+          "to": 201,
+          "first_line": "const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef);",
+          "rule": "Declare `const isStandalone = props.entityRef === undefined;` above this line, and pass `{ followFormerRef: isStandalone }` as the second argument."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 232,
+          "to": 232,
+          "first_line": "<TechDocsReaderPageProvider entityRef={memoizedEntityRef}>",
+          "rule": "Add `{isStandalone && <TechDocsRenamedNotice />}`."
+        },
+        {
+          "id": "S4",
+          "at": "insert_before",
+          "from": 244,
+          "to": 244,
+          "first_line": "<TechDocsReaderPageProvider entityRef={memoizedEntityRef}>",
+          "rule": "Add `{isStandalone && <TechDocsRenamedNotice />}`."
+        }
+      ],
+      "depends_on": [
+        "U30",
+        "U31"
+      ],
+      "covers": [
+        "FR-19",
+        "FR-20",
+        "FR-21",
+        "AC-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-client/src/types/api.ts": "5a9971d3bc584e8eb42dfddebee90d90784f220803e7790b345875ad4e38bbd5",
+    "packages/catalog-client/src/CatalogClient.ts": "a7b421af7243df47c2b2d29f4d9fb809ec6295dcd3eb2b4d7f1439208993ffa5",
+    "packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts": "91bb4353a307aae94be1e262af4deede5bcde34474c15a51a3de8aa756b31acc",
+    "plugins/catalog-node/src/catalogService.ts": "6a007de9b6230a3ebc9fa0da517c4b0df3f678918492abd9a62074801f619dc7",
+    "plugins/catalog-node/src/testUtils/types.ts": "db562a22a493473dde8ca8f33d033f350e180dfcbe177367f2b7d39ae4350ea3",
+    "plugins/catalog-node/src/testUtils/catalogServiceMock.ts": "a23ec6c96db38a3bafa7bd755120b9290865f2b4673c690b402fbd1fd3a558ba",
+    "plugins/catalog-react/src/testUtils/catalogApiMock.ts": "262db96c9526ccbf417426599449936c8335df1f71340e491638e319b685db87",
+    "contrib/catalog/read-write-split/workspace/packages/app/src/catalogApi.ts": "07c6232ded26a0281d076c5662ff9d37c4b7907084ba859269e155fad4adfff1",
+    "contrib/catalog/read-write-split/workspace/packages/backend/src/catalogService.ts": "33470db6819c657d2433d79b58521b400785a761c4947cb02f562222a72b68aa",
+    "plugins/catalog/src/alpha/translation.ts": "e1cccbc5729475d7afa9bd9a528c8aa86b4e741e1899cc10438a297d120d00a9",
+    "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts": "c659ba5c0fee40019b6fce9cf59baeff2c52312935e1eecac48b32346cfba669",
+    "packages/core-plugin-api/src/routing/useRouteRef.tsx": "a838b8ce52c7fa7baf015d58fe5ea841ed2009b27f032495edcd3634ca15704c",
+    "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx": "032b837f83cad115ea4dc4ff176456c65a355e74596266f1533e38ef591f7f29",
+    "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx": "4efbe818c334d36e31fb8187902f1d496382147dbf6d8e46f8089816cd253e16",
+    "plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx": "27fbf3785c4579c1dddb4bddf2b9a99d0215912849190f093d474f5dd83d4a64",
+    "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.tsx": "8754dcb0affd2b5d3dbc0f2b703d38969f65b10e5d830837da3b36291279d6bb",
+    "plugins/catalog/src/alpha/components/EntityHeader/EntityHeaderBui.tsx": "86e6afa64318d8896de4030222999a84f1c8ec430617a3cf737c0c2969eb04c5",
+    "plugins/techdocs/src/translation.ts": "c24dada25e678926c3daa5957dde10534e6e15e29f7f4023f06d7ff7ff70499c",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts": "bdc05b9ee057fe5b3efc5e10b7f0a3fc14adcc375137ca24f65d8887fdda8af1",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx": "99e696efcf13a98aa446135088dce6048957abb7dfc6d685b5232d47caa5661c"
+  }
+}

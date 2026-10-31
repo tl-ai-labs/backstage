@@ -59,5 +59,24 @@ describe('catalogApiMock', () => {
       getEntities: async () => ({ items: [entity1] }),
     });
     await expect(mock2.getEntities()).resolves.toEqual({ items: [entity1] });
+
+    const renamedEntity: Entity = {
+      ...entity1,
+      metadata: {
+        ...entity1.metadata,
+        annotations: {
+          'backstage.io/former-entity-refs': 'customkind:default/e0',
+        },
+      },
+    };
+    const renamedFake = catalogApiMock({ entities: [renamedEntity] });
+    await expect(
+      renamedFake.getEntityByFormerRef?.('customkind:default/e0'),
+    ).resolves.toEqual(renamedEntity);
+
+    expect(jest.isMockFunction(mock.getEntityByFormerRef)).toBe(true);
+    expect(
+      mock.getEntityByFormerRef?.('customkind:default/e0'),
+    ).toBeUndefined();
   });
 });

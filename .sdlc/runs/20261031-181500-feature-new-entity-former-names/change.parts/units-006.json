@@ -1,0 +1,335 @@
+{
+  "section": "units",
+  "source": "units-006.json",
+  "value": [
+    {
+      "id": "U50",
+      "path": "docs/features/software-catalog/well-known-annotations.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the annotation.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 83,
+          "to": 83,
+          "first_line": "### backstage.io/techdocs-ref",
+          "rule": "Add `### backstage.io/former-entity-refs` in the shape of the neighbouring sections, with a YAML example. State that the value is comma-separated full entity refs (`kind:namespace/name`), compared in lowercase, of the same kind as the entity and never its own ref; that this keeps old links working after a rename or namespace move; that an entity renamed twice lists both former refs; and that invalid values are ignored and reported on the entity. Link to the `Renaming an Entity` section of `life-of-an-entity.md` for conflict rules."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-22",
+        "AC-1"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U51",
+      "path": "docs/features/software-catalog/api.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the lookup route.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 672,
+          "to": 672,
+          "first_line": "### `GET /entities/by-name/{kind}/{namespace}/{name}/ancestry`",
+          "rule": "Add a section headed `GET /entities/by-former-name/<kind>/<namespace>/<name>`, in the shape of the by-name section. State that it returns the single entity that currently holds a claim on that former ref, resolved in one hop; that it applies `catalog.entity.read`, including conditional decisions; and that every miss gives the same 404, whether no claim resolves, the ref belongs to a live entity, or the caller may not read the target."
+        }
+      ],
+      "depends_on": [
+        "U13"
+      ],
+      "covers": [
+        "FR-22"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U52",
+      "path": "docs/features/software-catalog/audit-events.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the audit query type.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18,
+          "first_line": "- **`by-name`**: Fetching a single entity using its kind, namespace, and name. (GET `/entities/by-name/:kind/:namespace/:name`)",
+          "rule": "Add `- **`by-former-name`**: Fetching a single entity using a former kind, namespace, and name. (GET `/entities/by-former-name/:kind/:namespace/:name`)` with the same indentation."
+        }
+      ],
+      "depends_on": [
+        "U13"
+      ],
+      "covers": [
+        "FR-22"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U53",
+      "path": "docs/features/software-catalog/life-of-an-entity.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents renames: behaviour, conflict rules and limits.",
+      "rules": [
+        "Say what the reader gets first: declare former refs and old entity-page and TechDocs links redirect with a notice, while a rename nobody declares does not redirect.",
+        "Conflict rules: a claim on a live entity with the same location key waits and takes effect once that entity is gone; a claim on a live entity from another source is rejected and stays rejected until the value is removed, even after that entity disappears, and to clear it you remove the value, then add it back once the old entity is gone.",
+        "Competing claims: the earliest recorded claim wins and others get an error; the winner is stable across reprocessing and restarts, equal times break on the claimant's ref, and the next-earliest takes over when the winner is removed. Which of two brand-new claims is recorded first depends on processing order.",
+        "A new entity taking the name: exact lookups always win, the claim is inactive with no error, and it takes effect again if that entity goes away.",
+        "Claim problems show up as entity processing errors and never stop the entity from being ingested.",
+        "Limits: one hop only, same kind only, a former ref of an orphan kept by `catalog.orphanStrategy: keep` does not redirect because a kept orphan is live, relations and other stored refs are not rewritten, and published TechDocs content is not moved or copied."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 370,
+          "to": 370,
+          "first_line": "still in there.",
+          "rule": "Add a blank line and a `## Renaming an Entity` section covering the rules of this unit, with a short YAML example. Link to `well-known-annotations.md#backstageioformer-entity-refs`."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-22"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U54",
+      "path": "docs/features/techdocs/how-to-guides.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the TechDocs side of renames.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 791,
+          "to": 791,
+          "first_line": "## Create download links for static assets",
+          "rule": "Add `## How to keep TechDocs links working after renaming an entity`. Say that an entity declaring its former refs through the `backstage.io/former-entity-refs` annotation gets old docs links redirected to its new docs with a notice, keeping the page path, query and hash. State that docs are served from the new ref's own site, so published content must exist there and is never moved or copied, and that if nothing resolves the existing not-found behaviour stays. Link to `../software-catalog/life-of-an-entity.md#renaming-an-entity` for the rules and limits."
+        }
+      ],
+      "depends_on": [
+        "U32"
+      ],
+      "covers": [
+        "FR-22"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U55",
+      "path": ".changeset/entity-former-names-model.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for `@backstage/catalog-model`.",
+      "rules": [
+        "Bump: `'@backstage/catalog-model': minor`.",
+        "Text: added the well-known `backstage.io/former-entity-refs` annotation, exported as `ANNOTATION_FORMER_ENTITY_REFS`, which declares the refs an entity was formerly known as."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "the changeset format"
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-23",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U56",
+      "path": ".changeset/entity-former-names-client.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for the client surface.",
+      "rules": [
+        "Bumps: `'@backstage/catalog-client': minor`, `'@backstage/plugin-catalog-node': minor`, `'@backstage/plugin-catalog-react': minor`.",
+        "Text: added an optional `getEntityByFormerRef` method to `CatalogApi` and `CatalogService`, and to the in-memory client and test mocks. It is optional, so existing implementers keep working, and callers must treat a missing method as not found."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "the changeset format"
+      },
+      "depends_on": [
+        "U20"
+      ],
+      "covers": [
+        "FR-14",
+        "FR-23",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U57",
+      "path": ".changeset/entity-former-names-backend.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for `@backstage/plugin-catalog-backend`.",
+      "rules": [
+        "Bump: `'@backstage/plugin-catalog-backend': minor`.",
+        "Text: entities can now declare former refs through the `backstage.io/former-entity-refs` annotation. The catalog records and validates these claims, reports problems as entity processing errors without blocking ingestion, and serves a new permissioned `GET /entities/by-former-name/:kind/:namespace/:name` endpoint. Mention that this adds a database migration."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "the changeset format"
+      },
+      "depends_on": [
+        "U13"
+      ],
+      "covers": [
+        "FR-23",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U58",
+      "path": ".changeset/entity-former-names-catalog.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for `@backstage/plugin-catalog`.",
+      "rules": [
+        "Bump: `'@backstage/plugin-catalog': minor`.",
+        "Text: opening an entity page by a former name now redirects to the renamed entity, keeping the sub-route, query and hash, with a notice naming the former ref. This works in both frontend systems, and pages behave as before when the backend does not support the lookup."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "the changeset format"
+      },
+      "depends_on": [
+        "U28"
+      ],
+      "covers": [
+        "FR-23",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U59",
+      "path": ".changeset/entity-former-names-techdocs.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for `@backstage/plugin-techdocs`.",
+      "rules": [
+        "Bump: `'@backstage/plugin-techdocs': minor`.",
+        "Text: opening a TechDocs page by an entity's former name now redirects to the renamed entity's docs, keeping the page path, query and hash, with a notice naming the former ref."
+      ],
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "reason": "the changeset format"
+      },
+      "depends_on": [
+        "U32"
+      ],
+      "covers": [
+        "FR-23",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U60",
+      "path": ".gitignore",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Ignores the run records folder, and changes nothing else in the file.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 193,
+          "to": 193,
+          "first_line": ".claude/worktrees/",
+          "rule": "Add the line `.sdlc/`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-25"
+      ]
+    },
+    {
+      "id": "U61",
+      "path": "packages/catalog-client/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates API reports without SQL reports, so plugins/catalog-backend/report.sql.md is never written (D4); the final report names that file as needing regeneration. Besides this file the step writes every changed report*.api.md in packages/catalog-model, packages/catalog-client, plugins/catalog-backend, plugins/catalog-node, plugins/catalog-react, plugins/catalog and plugins/techdocs.",
+      "run": "LANG=en_US.UTF-8 NODE_OPTIONS=--max-old-space-size=8192 yarn backstage-repo-tools api-reports packages/catalog-model packages/catalog-client plugins/catalog-backend plugins/catalog-node plugins/catalog-react plugins/catalog plugins/techdocs --tsc --allow-warnings 'packages/backend-app-api,packages/core-components,plugins/+(catalog|catalog-import|kubernetes)' -o ae-undocumented,ae-wrong-input-file-type --validate-release-tags",
+      "depends_on": [
+        "U21",
+        "U22",
+        "U33",
+        "U34",
+        "U35",
+        "U36",
+        "U37",
+        "U38",
+        "U39",
+        "U40",
+        "U41",
+        "U42",
+        "U43",
+        "U44",
+        "U45",
+        "U46",
+        "U47",
+        "U48",
+        "U49"
+      ],
+      "covers": [
+        "FR-26",
+        "NFR-9",
+        "AC-8"
+      ]
+    }
+  ],
+  "hashes": {
+    "docs/features/software-catalog/well-known-annotations.md": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056",
+    "docs/features/software-catalog/api.md": "ec934fc7bf0d9e7ccfadd9dfe7034e7a7c6f5c77892095f7e7e49404917c0587",
+    "docs/features/software-catalog/audit-events.md": "f7f7c09de587f945aed084b05d8e4036b0697031afcc3cc723add5123c2daa1b",
+    "docs/features/software-catalog/life-of-an-entity.md": "0ce248b2e9e31130a38607f032c8b5f89a6bcabe4c8dc2b3824d65b0aa6128af",
+    "docs/features/techdocs/how-to-guides.md": "0d19d25e8fc067048fc14408052e29d41c0c6a6411286c605caa647ece44ce33",
+    ".changeset/calm-catalog-placeholders.md": "7ec2fa9f79e5eff6ffc6d2d373d628dbecd6de1b8d3db28f421bba0e9c5d3d33",
+    ".gitignore": "8ba83d2a79973faef40691131335781b0353cd056c893651bc4bd9d359dc8c74"
+  }
+}

@@ -30,6 +30,7 @@ describe('AuthorizedEntitiesCatalog', () => {
   const fakeCatalog = {
     entities: jest.fn(),
     entitiesBatch: jest.fn(),
+    entityByFormerRef: jest.fn(),
     removeEntityByUid: jest.fn(),
     entityAncestry: jest.fn(),
     facets: jest.fn(),
@@ -157,6 +158,67 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       expect(fakeCatalog.entitiesBatch).toHaveBeenCalledWith({
         entityRefs: ['component:default/component-a'],
+        credentials: mockCredentials.none(),
+      });
+    });
+  });
+
+  describe('entityByFormerRef', () => {
+    it('returns a null item on DENY', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog();
+
+      await expect(
+        catalog.entityByFormerRef({
+          formerEntityRef: 'component:default/former-name',
+          credentials: mockCredentials.none(),
+        }),
+      ).resolves.toEqual({
+        items: { type: 'object', entities: [null] },
+      });
+
+      expect(fakeCatalog.entityByFormerRef).not.toHaveBeenCalled();
+    });
+
+    it('calls underlying catalog method with correct filter on CONDITIONAL', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        {
+          result: AuthorizeResult.CONDITIONAL,
+          conditions: {
+            rule: 'IS_ENTITY_KIND',
+            params: { kinds: ['b'] },
+          },
+        },
+      ]);
+      const catalog = createCatalog(isEntityKind);
+
+      await catalog.entityByFormerRef({
+        formerEntityRef: 'component:default/former-name',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(fakeCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        formerEntityRef: 'component:default/former-name',
+        credentials: mockCredentials.none(),
+        filter: { kind: 'b' },
+      });
+    });
+
+    it('calls underlying catalog method on ALLOW', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.ALLOW },
+      ]);
+      const catalog = createCatalog();
+
+      await catalog.entityByFormerRef({
+        formerEntityRef: 'component:default/former-name',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(fakeCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        formerEntityRef: 'component:default/former-name',
         credentials: mockCredentials.none(),
       });
     });

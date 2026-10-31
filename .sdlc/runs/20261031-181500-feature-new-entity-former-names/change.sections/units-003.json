@@ -1,0 +1,180 @@
+[
+  {
+    "id": "U33",
+    "path": "plugins/catalog-backend/src/database/operations/formerEntityRefs/syncFormerEntityRefClaims.test.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Tests claim recording, outcomes and resolution on every supported database, using both operations of this folder.",
+    "rules": [
+      "Insert `refresh_state` rows directly, set `claimed_at` directly on rows where a case needs an order or a tie, and wrap each sync in `knex.transaction`.",
+      "Use `syncFormerEntityRefClaims` and `resolveFormerEntityRef` against the real migrations."
+    ],
+    "tests": [
+      {
+        "name": "records a free claim and leaves it alone on reprocessing",
+        "given": "a claimant declaring an unheld ref, synced twice, with the row's claimed_at read after each sync",
+        "expect": "outcome active, one row, claimed_at unchanged, and the ref resolves to the claimant"
+      },
+      {
+        "name": "removes a claim when it is no longer declared or the claimant is deleted",
+        "given": "two declared refs, one dropped on a later sync, then the claimant's refresh_state row deleted",
+        "expect": "the dropped row goes on the sync, and the cascade removes the other"
+      },
+      {
+        "name": "records a same-source claim on a live holder until the holder goes",
+        "given": "a holder with the claimant's location key, then the holder deleted",
+        "expect": "outcome active with rejected_at null, no resolution while held, and resolution to the claimant with no further sync once it is gone"
+      },
+      {
+        "name": "rejects a claim on another source's live entity and keeps it rejected",
+        "given": "holders with a different key, and with no key on either side, then the holder deleted and the claimant resynced",
+        "expect": "outcome rejected in both key cases, still rejected and unresolved after the holder is gone, and a fresh active claim after the value is dropped and declared again"
+      },
+      {
+        "name": "picks a stable winner among competing claims",
+        "given": "three claimants, two with equal claimed_at and one later, plus a rejected claim that is the earliest",
+        "expect": "the earlier ref in sort order wins, the others are lost, the rejected claim never wins, and removing the winner promotes the next with no sync of that claimant"
+      },
+      {
+        "name": "goes inactive with no error when a new entity takes the ref",
+        "given": "a recorded claim, then a new refresh_state row for the ref from another source, then that row deleted",
+        "expect": "outcome stays active, nothing resolves while held, and it resolves to the claimant again afterwards"
+      }
+    ],
+    "style_from": { "path": "plugins/catalog-backend/src/database/operations/provider/refreshByRefreshKeys.test.ts", "reason": "the database test scaffold of the operations folder" },
+    "depends_on": ["U04", "U07"],
+    "covers": ["FR-3", "FR-4", "FR-5", "FR-8", "NFR-3", "NFR-4", "AC-2"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U34",
+    "path": "plugins/catalog-backend/src/processing/formerEntityRefs.test.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Tests annotation parsing, the sync gate and the claim error text.",
+    "tests": [
+      {
+        "name": "parses valid refs",
+        "given": "a value with spaces, mixed case, an empty piece, a duplicate and a namespace move",
+        "expect": "lowercase deduplicated refs in order and no errors"
+      },
+      {
+        "name": "reports each kind of invalid value and ignores it",
+        "given": "`component:foo` with no namespace, `not a ref`, a different kind, the entity's own ref in another case, and one valid ref",
+        "expect": "one InputError per bad value with the decided text, naming the value as written, and only the valid ref returned"
+      },
+      {
+        "name": "decides when a sync is needed",
+        "given": "no annotation, an empty annotation, the state marker alone, and a non-object state",
+        "expect": "false with neither annotation nor marker, true for the others that have one, and no throw on the odd state"
+      },
+      {
+        "name": "turns outcomes into errors",
+        "given": "active, rejected and lost outcomes",
+        "expect": "two InputErrors in order with the decided text, the rejected one saying how to clear it"
+      }
+    ],
+    "style_from": { "path": "plugins/catalog-backend/src/processing/ProcessorCacheManager.test.ts", "reason": "a plain unit test in the processing folder" },
+    "depends_on": ["U05"],
+    "covers": ["FR-1", "FR-2", "FR-4", "FR-6", "AC-2"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U35",
+    "path": "plugins/catalog-backend/src/processing/DefaultCatalogProcessingEngine.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Tests that claim errors never block an entity, that outcomes reach the hash, and that undeclaring entities make no call.",
+    "tests": [
+      {
+        "name": "stores claim errors with the processed entity",
+        "given": "an ok result for an annotated entity with one invalid value, and the mocked sync returning a rejected outcome",
+        "expect": "`updateProcessedEntity` runs with the entity and both errors serialized, `updateProcessedEntityErrors` does not run, and the state gains the marker"
+      },
+      {
+        "name": "reprocesses when only a claim outcome changes",
+        "given": "two runs of identical output with a real sha1 hash, where the sync returns active and then lost",
+        "expect": "`updateProcessedEntity` runs on the second run too, with the lost error"
+      },
+      {
+        "name": "leaves entities that never declared alone",
+        "given": "an ok result with no annotation and no marker",
+        "expect": "the sync is not called and the state is not written"
+      },
+      {
+        "name": "removes claims once the annotation is dropped",
+        "given": "an ok result with no annotation and the marker in the state",
+        "expect": "the sync is called with no refs and the marker is dropped from the state"
+      },
+      {
+        "name": "keeps the marker through failed runs",
+        "given": "a failed result with ttl 0 and the marker in the state",
+        "expect": "the state is written as the marker alone and the sync is not called"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { Hash } from 'node:crypto';",
+        "rule": "Import `createHash` as well."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 22,
+        "to": 22,
+        "first_line": "import { markForStitching } from '../database/operations/stitcher/markForStitching';",
+        "rule": "Import `syncFormerEntityRefClaims`."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 29,
+        "to": 29,
+        "first_line": "const mockMarkForStitching = jest.mocked(markForStitching);",
+        "rule": "Add `jest.mock` of the sync module and `const mockSyncFormerEntityRefClaims = jest.mocked(syncFormerEntityRefClaims);`."
+      },
+      {
+        "id": "S4",
+        "at": "insert_before",
+        "from": 1022,
+        "to": 1022,
+        "first_line": "});",
+        "rule": "Add the listed cases in a nested `describe('former entity refs', ...)`, built like the neighbouring cases."
+      }
+    ],
+    "depends_on": ["U06"],
+    "covers": ["FR-6", "FR-7", "NFR-2", "AC-2"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U36",
+    "path": "plugins/catalog-backend/src/tests/migrations.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Tests the migration up and down on every supported database.",
+    "tests": [
+      {
+        "name": "20261031000000_former_entity_refs.js",
+        "given": "the database migrated to just before this migration, then up, then a row inserted against a refresh_state row, then that row deleted, then down",
+        "expect": "the table exists after up with a nullable rejected_at, the claim row cascades away with the refresh_state row, a duplicate primary key is refused, and the table is gone after down"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 1702,
+        "to": 1702,
+        "first_line": "});",
+        "rule": "Add the listed case after the `20261007000000_stitch_failure_count.js` case, in the same shape."
+      }
+    ],
+    "depends_on": ["U02"],
+    "covers": ["FR-3", "NFR-4", "AC-2"],
+    "checks": ["prettier", "eslint", "test"]
+  }
+]

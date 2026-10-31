@@ -890,6 +890,53 @@ describe('InMemoryCatalogClient', () => {
     });
   });
 
+  describe('getEntityByFormerRef', () => {
+    const held: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: { namespace: 'default', name: 'held' },
+    };
+    const renamed: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        namespace: 'default',
+        name: 'renamed',
+        annotations: {
+          'backstage.io/former-entity-refs':
+            ' Component:Default/Old-Name , component:default/Older-Name,component:default/held',
+        },
+      },
+    };
+
+    it('resolves a declared former ref', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [...entities, held, renamed],
+      });
+      await expect(
+        client.getEntityByFormerRef('component:default/old-name'),
+      ).resolves.toEqual(renamed);
+      await expect(
+        client.getEntityByFormerRef('component:default/older-name'),
+      ).resolves.toEqual(renamed);
+    });
+
+    it('does not resolve when nothing should', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [...entities, held, renamed],
+      });
+      await expect(
+        client.getEntityByFormerRef('component:default/undeclared'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.getEntityByFormerRef('component:default/held'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.getEntityByFormerRef('system:default/old-name'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('removeEntityByUid', () => {
     it('removes an entity by uid', async () => {
       const client = new InMemoryCatalogClient({ entities });

@@ -1,0 +1,118 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261031-181500-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-node/src/catalogService.test.ts",
+    "instruction": "Fix `plugins/catalog-node/src/catalogService.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. U43 was not applied: the file is back at its original state, so add the planned cases for U43. The last attempt failed with: catalogServiceRef › should forward getEntityByFormerRef with the caller's token: expect(received).toEqual(expected), Expected the entity, Received: undefined; then expect.assertions(2): Expected two assertions to be called but received one assertion call. Cause: when that attempt ran, CatalogClient had no getEntityByFormerRef yet (U15 was still blocked on the OpenAPI generate step), so the optional call in DefaultCatalogService returned undefined. U15 is now applied and CatalogClient has the method, so the source needs no change; write the test against it.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-node/src/catalogService.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-node/src/catalogService.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-181500-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-181500-feature-new-entity-former-names/briefs/U43.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-node/src/catalogService.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/CatalogClient.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-node/src/catalogService.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261031-181500-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. 3 of 4 tests fail: TypeError: Cannot read properties of undefined (reading 'filter') at CatalogEntityPage.tsx:67, then the findByText(content) at test line 136 times out. Cause: renderPage does not pass the required menuItems prop, so props.menuItems is undefined as soon as an entity loads. CatalogEntityPageProps requires menuItems, headerLayouts, headers, routes, groupDefinitions, defaultContentOrder and showNavItemIcons: pass every one of them, with menuItems={[]} and headerLayouts={[]} unless a case needs otherwise. The fault is in this test file; CatalogEntityPage.tsx must not change.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261031-181500-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261031-181500-feature-new-entity-former-names/briefs/U47.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/components/CatalogEntityPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 420,
+      "max_retries": 2
+    }
+  }
+]

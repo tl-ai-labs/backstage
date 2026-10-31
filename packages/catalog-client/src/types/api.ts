@@ -699,6 +699,24 @@ export interface CatalogApi {
   ): Promise<Entity | undefined>;
 
   /**
+   * Gets a single entity from the catalog by a former ref, resolving that ref
+   * to the entity that declares it.
+   *
+   * @remarks
+   *
+   * This method is optional, so callers must treat a missing method as not
+   * found.
+   *
+   * @param entityRef - A complete former entity ref, either on string or compound form
+   * @param options - Additional options
+   * @returns The entity that declares the former ref, or undefined if nothing resolves or the caller may not read the target
+   */
+  getEntityByFormerRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<Entity | undefined>;
+
+  /**
    * Removes a single entity from the catalog by entity UID.
    *
    * @param uid - An entity UID

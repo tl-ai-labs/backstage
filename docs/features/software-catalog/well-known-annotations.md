@@ -80,6 +80,35 @@ metadata:
     backstage.io/orphan: 'true'
 ```
 
+### backstage.io/former-entity-refs
+
+```yaml
+# Example:
+metadata:
+  name: new-name
+  annotations:
+    backstage.io/former-entity-refs: component:default/first-name,component:default/second-name
+```
+
+The value of this annotation is a comma-separated list of the full entity refs,
+on the form `kind:namespace/name`, that this entity was previously known by.
+Refs are compared in lowercase. Each one must be of the same kind as the entity,
+and can't be the entity's own ref.
+
+Add this annotation when you rename an entity or move it to another namespace,
+to keep old links working. If you rename an entity twice, list both former refs,
+as in the example above.
+
+The catalog ignores invalid values and reports them on the entity, without
+affecting the rest of its processing.
+
+An entity can declare at most 20 distinct former refs. The catalog reads them in
+order, ignores the rest, and reports that on the entity in the same way.
+
+Two entities can declare the same former ref. For the rules that apply in that
+case, see
+[Renaming an Entity](life-of-an-entity.md#renaming-an-entity).
+
 ### backstage.io/techdocs-ref
 
 ```yaml

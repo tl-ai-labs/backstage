@@ -104,6 +104,26 @@ export interface EntitiesBatchResponse {
   items: EntitiesResponseItems;
 }
 
+/**
+ * A request for the entity that holds a former ref.
+ */
+export interface EntityByFormerRefRequest {
+  /**
+   * The former ref to look up, in lowercase.
+   */
+  formerEntityRef: string;
+  /**
+   * Filters to apply in the selection of the entity. An entity that does not
+   * match the filter results in a null entry in the response, as if it did
+   * not exist.
+   */
+  filter?: FilterPredicate;
+  /**
+   * The credentials that authorizes the action.
+   */
+  credentials: BackstageCredentials;
+}
+
 export type EntityAncestryResponse = {
   rootEntityRef: string;
   items: Array<{
@@ -158,6 +178,14 @@ export interface EntitiesCatalog {
    * Fetches a batch of entities.
    */
   entitiesBatch(request: EntitiesBatchRequest): Promise<EntitiesBatchResponse>;
+
+  /**
+   * Fetches the entity that holds a former ref. The response has a single
+   * item, which is null for every miss.
+   */
+  entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntitiesBatchResponse>;
 
   /**
    * Fetch entities and scroll back and forth between entities.

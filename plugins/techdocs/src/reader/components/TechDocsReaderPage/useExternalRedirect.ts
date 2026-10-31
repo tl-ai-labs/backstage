@@ -15,12 +15,13 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useAsync from 'react-use/esm/useAsync';
 import { useApi, useRouteRef } from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import {
   CompoundEntityRef,
+  getCompoundEntityRef,
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { buildTechDocsURL } from '@backstage/plugin-techdocs-react';
@@ -30,20 +31,26 @@ import { rootDocsRouteRef } from '../../../routes';
 /**
  * Hook to handle external TechDocs redirects based on entity annotations.
  * Checks if an entity has the `backstage.io/techdocs-entity` annotation and
- * redirects to the external TechDocs URL if present.
+ * redirects to the external TechDocs URL if present. Can also redirect to the
+ * renamed entity's TechDocs when the reference is a former ref of that entity.
  *
  * @param entityRef - The entity reference to check for external redirects
+ * @param options - `followFormerRef` makes the hook follow a former ref after an exact miss, for the standalone reader only
  * @returns Object containing loading state and whether a redirect is in progress
  *
  * @internal
  */
-export function useExternalRedirect(entityRef: CompoundEntityRef): {
+export function useExternalRedirect(
+  entityRef: CompoundEntityRef,
+  options?: { followFormerRef?: boolean },
+): {
   loading: boolean;
   shouldShowProgress: boolean;
 } {
   const catalogApi = useApi(catalogApiRef);
   const navigate = useNavigate();
   const viewTechdocLink = useRouteRef(rootDocsRouteRef);
+  const location = useLocation();
 
   // Create a stable string key for the entity to use as a dependency.
   // This ensures the useAsync hook only re-runs when the entity changes,
@@ -55,14 +62,39 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
   const shouldCheckForRedirect = checkedEntityRef.current !== entityKey;
 
   // Check if this entity should redirect to external TechDocs
-  const externalRedirectResult = useAsync(async () => {
+  const externalRedirectResult = useAsync(async (): Promise<
+    { to: string; formerEntityRef?: string } | undefined
+  > => {
     try {
       const catalogEntity = await catalogApi.getEntityByRef(entityRef);
 
       if (
         catalogEntity?.metadata?.annotations?.[TECHDOCS_EXTERNAL_ANNOTATION]
       ) {
-        return buildTechDocsURL(catalogEntity, viewTechdocLink);
+        const to = buildTechDocsURL(catalogEntity, viewTechdocLink);
+        if (to) {
+          return { to };
+        }
+      }
+
+      if (!catalogEntity && options?.followFormerRef) {
+        const renamed = await catalogApi.getEntityByFormerRef?.(entityRef);
+        if (renamed) {
+          const oldPath = viewTechdocLink(entityRef);
+          const subPath = location.pathname
+            .toLocaleLowerCase('en-US')
+            .startsWith(oldPath.toLocaleLowerCase('en-US'))
+            ? location.pathname.slice(oldPath.length)
+            : '';
+          return {
+            to:
+              viewTechdocLink(getCompoundEntityRef(renamed)) +
+              subPath +
+              location.search +
+              location.hash,
+            formerEntityRef: entityKey,
+          };
+        }
       }
     } catch (error) {
       // Ignore errors and allow the current entity's TechDocs to load.
@@ -75,7 +107,12 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
   useEffect(() => {
     // Navigate to external TechDocs if a redirect URL is available
     if (!externalRedirectResult.loading && externalRedirectResult.value) {
-      navigate(externalRedirectResult.value, { replace: true });
+      const { to, formerEntityRef } = externalRedirectResult.value;
+      if (formerEntityRef) {
+        navigate(to, { replace: true, state: { formerEntityRef } });
+      } else {
+        navigate(to, { replace: true });
+      }
     }
 
     // Mark entity as checked once we've determined there's no redirect needed.

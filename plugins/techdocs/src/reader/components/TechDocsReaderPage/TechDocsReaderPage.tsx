@@ -41,6 +41,7 @@ import {
   useTheme,
 } from '@material-ui/core/styles';
 import { useExternalRedirect } from './useExternalRedirect';
+import { TechDocsRenamedNotice } from './TechDocsRenamedNotice';
 
 /* An explanation for the multiple ways of customizing the TechDocs reader page
 
@@ -198,7 +199,10 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
   );
 
   // Check for external TechDocs redirects and handle navigation
-  const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef);
+  const isStandalone = props.entityRef === undefined;
+  const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef, {
+    followFormerRef: isStandalone,
+  });
 
   const page: ReactNode = useMemo(() => {
     if (children) {
@@ -229,6 +233,7 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
     return (
       <ThemeProvider theme={readerPageTheme}>
         <CookieAuthRefreshProvider pluginId="techdocs">
+          {isStandalone && <TechDocsRenamedNotice />}
           <TechDocsReaderPageProvider entityRef={memoizedEntityRef}>
             {(page as JSX.Element) || <TechDocsReaderLayout />}
           </TechDocsReaderPageProvider>
@@ -241,6 +246,7 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
   return (
     <ThemeProvider theme={readerPageTheme}>
       <CookieAuthRefreshProvider pluginId="techdocs">
+        {isStandalone && <TechDocsRenamedNotice />}
         <TechDocsReaderPageProvider entityRef={memoizedEntityRef}>
           {({ metadata, entityMetadata, onReady }) => (
             <StyledPage

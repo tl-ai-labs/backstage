@@ -368,3 +368,89 @@ However, if you were to try to do an explicit deletion on an entity that's
 being kept actively updated by a parent entity, it would just reappear again
 shortly thereafter when the processing loops reconsider the parent entity that's
 still in there.
+
+## Renaming an Entity
+
+When you rename an entity, you can declare its former refs. Old entity page and
+TechDocs links then redirect to the entity's new name and show a notice about
+the rename. A rename that nobody declares does not redirect.
+
+To declare former refs, add the
+[`backstage.io/former-entity-refs`](well-known-annotations.md#backstageioformer-entity-refs)
+annotation to the renamed entity:
+
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: new-name
+  annotations:
+    backstage.io/former-entity-refs: component:default/old-name
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+```
+
+Problems with a claim on a former ref show up as entity processing errors. They
+never stop the entity from being ingested.
+
+### Claims on a Live Entity
+
+A claim can name a ref that a live entity still holds. The catalog checks this
+when it first records the claim and again on every later processing run, so a
+rejection because another source's entity holds the ref applies whether that
+entity was there first or arrived later. The outcome depends on where that
+entity comes from:
+
+- If the live entity has the same location key as the claimant, the claim waits
+  and takes effect once that entity is gone.
+- If the live entity comes from another source, the claim is rejected. It stays
+  rejected until you remove the value, even after that entity disappears. To
+  clear the rejection, remove the value, then add it back once the old entity
+  is gone.
+
+### Competing Claims
+
+When several entities claim the same former ref, the earliest recorded claim
+wins and the others get an error. The winner is stable across reprocessing and
+restarts, and equal times break on the claimant's ref. If the winner is removed,
+the next-earliest claim takes over. Which of two brand-new claims is recorded
+first depends on processing order.
+
+### A New Entity Taking the Name
+
+If a new entity takes a former name, exact lookups always win. What happens to
+the claim depends on where the new entity comes from:
+
+- If the new entity has the same location key as the claimant, the claim becomes
+  inactive with no error. It takes effect again if that entity goes away.
+- If the new entity comes from another source, the claim is rejected the next
+  time the claimant is processed. It then stays rejected as described in
+  [Claims on a Live Entity](#claims-on-a-live-entity).
+
+### Who Can Claim a Name
+
+The catalog does not prove that an entity ever held a former ref. Any entity
+author can claim any ref of the same kind, in any namespace, that nothing holds.
+Old entity page and TechDocs links for that ref then open the claiming entity
+with a renamed notice.
+
+A claim grants no permissions. Former refs are not used for relations or
+ownership, and viewers still need read access to the target entity.
+
+There is no setting to turn this off. A claim on a free name is only rejected
+when the claimant is next processed after another source takes that name.
+
+### Limits
+
+Keep these limits in mind when you rely on former refs:
+
+- Redirects follow one hop only.
+- A former ref must have the same kind as the entity that claims it.
+- A former ref of an orphan kept by `catalog.orphanStrategy: keep` does not
+  redirect, because a kept orphan is live.
+- Relations and other stored refs are not rewritten.
+- Published TechDocs content is not moved or copied.
+- An entity can declare at most 20 distinct former refs. The catalog reads them
+  in annotation order, ignores the rest, and reports that on the entity.

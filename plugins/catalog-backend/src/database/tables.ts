@@ -200,3 +200,42 @@ export type DbSearchRow = {
   original_value: string | null;
   value: string | null;
 };
+
+/**
+ * Represents the former_entity_refs table.
+ *
+ * @remarks
+ *
+ * There is one row per entity declaring a former ref, so several entities can
+ * hold a claim on the same ref at once. Rows are removed when the claimant
+ * stops declaring the ref, or when the claimant's refresh_state row is deleted.
+ *
+ * Datetime columns are both string and Date, because different database engines
+ * return them in different forms on the client side.
+ */
+export type DbFormerEntityRefsRow = {
+  /**
+   * The declared former entity ref (on lowercase kind:namespace/name form).
+   */
+  former_entity_ref: string;
+  /**
+   * The entity_id of the refresh_state row of the entity making the claim.
+   */
+  claimant_entity_id: string;
+  /**
+   * The entity ref of the entity making the claim (on lowercase
+   * kind:namespace/name form).
+   */
+  claimant_entity_ref: string;
+  /**
+   * The point in time when the claim was first recorded. This never changes
+   * while the claim stands.
+   */
+  claimed_at: string | Date;
+  /**
+   * The point in time when the claim was refused, or null if it was not. A
+   * non-null value means that the claim was refused when first recorded, and
+   * that it can never win.
+   */
+  rejected_at: string | Date | null;
+};

@@ -202,6 +202,11 @@ export interface CatalogService {
     options: CatalogServiceRequestOptions,
   ): Promise<GetEntityAncestorsResponse>;
   // (undocumented)
+  getEntityByFormerRef?(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<Entity | undefined>;
+  // (undocumented)
   getEntityByRef(
     entityRef: string | CompoundEntityRef,
     options: CatalogServiceRequestOptions,
