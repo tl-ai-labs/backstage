@@ -9,9 +9,9 @@ Written by code from this run's records (manifest.json and the files below); eve
 |                                                                              |         Cost |
 | ---------------------------------------------------------------------------- | -----------: |
 | Dispatched work (the calls the dispatch server made or logged)               |      $0.3917 |
-| Orchestrator overhead (this session's own loop, priced from its transcripts) |     $34.3122 |
+| Orchestrator overhead (this session's own loop, priced from its transcripts) |     $34.8382 |
 | In-session work already inside the overhead, counted once                    |     −$0.0788 |
-| **True total**                                                               | **$34.6251** |
+| **True total**                                                               | **$35.1511** |
 
 How the overhead was measured: transcript (no receipt; unverified).
 
@@ -45,8 +45,8 @@ A phase marked measured ran in a helper of this session (the architect or a revi
 
 | Model           | Role    | Messages |     Cost |
 | --------------- | ------- | -------: | -------: |
-| claude-opus-5-5 | session |       41 |  $2.9423 |
-| claude-opus-5-5 | helper  |      176 | $31.3699 |
+| claude-opus-5-5 | session |       47 |  $3.2210 |
+| claude-opus-5-5 | helper  |      180 | $31.6172 |
 
 ## Provisional — re-run after closing this session
 
