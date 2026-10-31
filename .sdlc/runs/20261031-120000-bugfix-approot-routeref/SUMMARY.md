@@ -9,8 +9,8 @@ Written by code from this run's records (manifest.json and the files below); eve
 | | Cost |
 |---|---:|
 | Dispatched work (the calls the dispatch server made or logged) | $0.1933 |
-| Orchestrator overhead (this session's own loop, priced from its transcripts) | $49.3891 |
-| **True total** | **$49.5824** |
+| Orchestrator overhead (this session's own loop, priced from its transcripts) | $50.2147 |
+| **True total** | **$50.4080** |
 
 How the overhead was measured: transcript (no receipt; unverified).
 
@@ -42,8 +42,8 @@ A phase marked measured ran in a helper of this session (the architect or a revi
 
 | Model | Role | Messages | Cost |
 |---|---|---:|---:|
-| claude-opus-5-5 | session | 143 | $13.0429 |
-| claude-opus-5-5 | helper | 263 | $36.3461 |
+| claude-opus-5-5 | session | 153 | $13.7831 |
+| claude-opus-5-5 | helper | 264 | $36.4316 |
 
 ## Provisional — re-run after closing this session
 
@@ -61,6 +61,7 @@ node "/Users/macbook/.claude/plugins/cache/tilicho-ai-labs/mmo/0.9.3/scripts/col
 - [security_review.md](security_review.md)
 - [manifest.json](manifest.json)
 - [provenance.json](provenance.json)
+
 ## Run notes (recorded at Gate 3, as the person instructed)
 
 1. **U01 edit made outside the packet flow.** The orchestrator changed two words by hand, `defaultPath:` to `path:`, on lines 1983 and 1991 of `packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx`. Flash did not type this change. The person approved it because no fix round can change the reproducing test. Provenance packet id: `orchestrator_manual_U01_path`. Its diff against the batch result is exactly those two lines (`u01-manual/u01-vs-batch.diff`).
