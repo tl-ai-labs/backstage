@@ -36,10 +36,10 @@
       },
       {
         "topic": "Where bootstrap ends",
-        "choice": "`RouteResolutionApiProxy` gets a new `markFinalized(): void` method. `initialize()` is unchanged and never finalizes, so the startup call from treeLifecycle.tsx keeps the API in bootstrap. prepareSpecializedApp.tsx calls `options.phase.routeResolutionApi.markFinalized()` directly after each of its two `instantiateAndInitializePhaseTree(...)` calls (the normal finalization at line 689 and the bootstrap-error finalization at line 758), before the root element check.",
+        "choice": "`RouteResolutionApiProxy` gets a new `markFinalized(): void` method. `initialize()` is unchanged and never finalizes, so the startup call from treeLifecycle.tsx keeps the API in bootstrap. prepareSpecializedApp.tsx calls `options.phase.routeResolutionApi.markFinalized()` in `finalizeFromSessionState` and in `finalizeFromBootstrapError`, each time just before the function's `return` statement, after its root element check. When the normal path fails its root element check the signal has not fired yet, and the bootstrap-error path that follows fires it, still exactly once (AC-7).",
         "rejected": [
           "a `finalize` flag on `initialize()` or on `instantiateAndInitializePhaseTree` (spreads the lifecycle into the shared helper that the startup path also uses)",
-          "marking after the root element check (the 689 path would not fire when its element check throws, contradicting AC-7's 689-then-758 case)"
+          "marking directly after each `instantiateAndInitializePhaseTree(...)` call, before the root element check (would report finalization for a normal pass whose root element check then throws, before any finalized app exists)"
         ],
         "reason": "Keeps treeLifecycle.tsx (outside the allowlist) untouched and makes the two finalization sites explicit."
       },
@@ -220,7 +220,7 @@
         },
         {
           "name": "should re-resolve app root element route refs across finalization after a bootstrap error",
-          "given": "`errorRouteRef = createLegacyRouteRef({ id: 'error-route' })`; `rejectingPermissionApiRef = createApiRef<{ authorize(): Promise<never> }>({ id: 'plugin.permission.api' })`. Features: `noSignInAppPlugin`; `createFrontendPlugin({ pluginId: 'test', routes: { errorRoute: errorRouteRef } })` with a `createExtension({ name: 'deferred-route', attachTo: { id: 'app/root', input: 'elements' }, if: { permissions: { $contains: 'test.permission' } }, output: [coreExtensionData.reactElement, coreExtensionData.routePath, coreExtensionData.routeRef] })` yielding `<div />`, '/error-route' and errorRouteRef, plus `AppRootElementBlueprint.make({ name: 'link' })` whose element renders `useLegacyRouteRef(errorRouteRef)()` as `Link: [${link}]`; and `createFrontendModule({ pluginId: 'app' })` with `ApiBlueprint.make({ name: 'permission' })` defining `rejectingPermissionApiRef` with `deps: {}` and a factory whose `authorize` is `async () => { throw new Error('Permission backend unavailable'); }`. Before rendering: `api = preparedApp.getBootstrapApp().apis.get(routeResolutionApiRef)!`, `listener = jest.fn()`, `api.onFinalized?.(listener)`.",
+          "given": "`errorRouteRef = createLegacyRouteRef({ id: 'error-route' })`; `rejectingPermissionApiRef = createApiRef<{ authorize(): Promise<never> }>({ id: 'plugin.permission.api' })`. Features: `noSignInAppPlugin`; `createFrontendPlugin({ pluginId: 'test', routes: { errorRoute: errorRouteRef } })` with a `createExtension({ name: 'deferred-route', attachTo: { id: 'app/root', input: 'elements' }, if: { permissions: { $contains: 'test.permission' } }, output: [coreExtensionData.reactElement, coreExtensionData.routePath, coreExtensionData.routeRef] })` yielding `<div />`, '/error-route' and errorRouteRef, plus `AppRootElementBlueprint.make({ name: 'link' })` whose element renders `useLegacyRouteRef(errorRouteRef)()` as `Link: [${link}]`; and `createFrontendModule({ pluginId: 'app' })` with `ApiBlueprint.make({ name: 'permission' })` defining `rejectingPermissionApiRef` with `deps: {}` and a factory whose `authorize` is `async () => { throw new Error('Permission backend unavailable'); }`. Before rendering: `api = preparedApp.getBootstrapApp().apis.get(routeResolutionApiRef)!`, `listener = jest.fn()`, `api.onFinalized?.(listener)`. At the start of the test body, a short comment says why the route sits under `app/root.elements` and why the test stays on the bootstrap render: page routes are not built on this path, and in a real app the app root error boundary replaces the root elements.",
           "expect": "Right after `getBootstrapApp()` (the startup initialize), `api.isFinalized?.()` is `false` and `listener` was not called. `renderPreparedBootstrap(preparedApp)` shows 'Link: []'. After `await act(async () => { await waitForFinalizedApp(preparedApp); })`, `listener` was called exactly once, `api.isFinalized?.()` is `true`, and 'Link: [/error-route]' is found in the still-mounted bootstrap render."
         },
         {
@@ -389,7 +389,7 @@
       "behaviour": "Adds the two optional finalization members to the public RouteResolutionApi interface.",
       "rules": [
         "Both members are optional method signatures (`isFinalized?(): boolean;` and `onFinalized?(listener: () => void): () => void;`); `resolve` stays exactly as it is and no member becomes required.",
-        "Give each member a TSDoc comment in the style of the `sourcePath` comment: `isFinalized` returns false while the app is still in its bootstrap phase, before page routes are known, and an implementation without it is treated as finalized; `onFinalized` registers a listener called once when the app is finalized and route resolution can see all routes, returns a function that removes the listener, and does not call the listener if the app is already finalized.",
+        "Give each member a TSDoc comment in the style of the `sourcePath` comment: `isFinalized` returns false while the app is still in its bootstrap phase, before page routes are known, and an implementation without it is treated as finalized; `onFinalized` registers a listener that is called once when the app is finalized, returns a function that removes the listener, and does not call the listener if the app is already finalized.",
         "No new imports and no other changes."
       ],
       "exports": [
@@ -539,27 +539,27 @@
       "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
       "action": "edit",
       "phase": "codegen",
-      "behaviour": "Both finalization paths mark the route resolution API finalized right after the finalized tree is instantiated and route resolution is re-initialized.",
+      "behaviour": "Both finalization paths mark the route resolution API finalized just before they return the finalized app, after the root element check.",
       "rules": [
-        "Each insertion is exactly `options.phase.routeResolutionApi.markFinalized();` preceded by a one-line comment saying that this lets mounted route ref hooks re-resolve now that page routes are known.",
+        "Each insertion is exactly `options.phase.routeResolutionApi.markFinalized();` preceded by a one-line comment saying that this lets mounted route ref hooks re-resolve against the final route information; use the same comment at both sites.",
         "Do not touch `createBootstrapApp`, the early `if (options.finalized)` returns, or the root element checks."
       ],
       "sites": [
         {
           "id": "S1",
           "at": "insert_after",
-          "from": 698,
-          "to": 698,
-          "first_line": "});",
-          "rule": "In `finalizeFromSessionState`, directly after the `instantiateAndInitializePhaseTree({...});` call and before `const element = ...`, insert the comment and the `markFinalized()` call."
+          "from": 705,
+          "to": 705,
+          "first_line": "}",
+          "rule": "In `finalizeFromSessionState`, after the closing brace of the `if (!element)` root element check and before the blank line and `return {`, insert a blank line, the comment and the `markFinalized()` call."
         },
         {
           "id": "S2",
           "at": "insert_after",
-          "from": 766,
-          "to": 766,
-          "first_line": "});",
-          "rule": "In `finalizeFromBootstrapError`, directly after the `instantiateAndInitializePhaseTree({...});` call and before `const element = ...`, insert the same comment and `markFinalized()` call."
+          "from": 773,
+          "to": 773,
+          "first_line": "}",
+          "rule": "In `finalizeFromBootstrapError`, after the closing brace of the `if (!element)` root element check and before the blank line and `return {`, insert a blank line, the same comment and the `markFinalized()` call."
         }
       ],
       "uses": [
@@ -690,7 +690,7 @@
         "In the hook body call `const finalized = useRouteResolutionFinalized(routeResolutionApi);` right after `useRouteResolutionApi()`; add `finalized` to the deps of the `newRouteFunc` memo with the exhaustive-deps disable comment above the deps line; the `legacyRouteFunc` memo is unchanged.",
         "In the `newRouteFunc !== null` branch, when `!newRouteFunc && !isOptional`: return `bootstrapRouteFunc as RouteFunc<Params>` if `!finalized`, else throw `new Error(`No path for ${routeRef}`)` as today. Optional refs still return `newRouteFunc` (undefined).",
         "The legacy routing-context path (after the branch) stays exactly as it is.",
-        "Leave the overload signatures and all TSDoc blocks unchanged, so the public API reports of core-plugin-api do not change. The new private functions get no TSDoc release tags."
+        "Leave the overload signatures unchanged. In all three `useRouteRef` TSDoc blocks, keep the existing `@returns` sentence and append, as U07 does for the new hook: during bootstrap, a non-optional ref that cannot be resolved yet gives a function that returns an empty string, and it updates to the real link once the app is finalized. report.api.md holds only release markers and signatures, no TSDoc text, so the core-plugin-api reports do not change. The new private functions get no TSDoc release tags."
       ],
       "exports": [
         {
@@ -722,6 +722,30 @@
           "to": 52,
           "first_line": "}",
           "rule": "After `useRouteResolutionApi`, add a blank line, `isRouteResolutionFinalized`, `useRouteResolutionFinalized`, and the commented `bootstrapRouteFunc` constant, separated by blank lines."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 62,
+          "to": 62,
+          "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`.",
+          "rule": "First overload TSDoc: keep the existing sentence and append the bootstrap sentence from the rules, wrapped as TSDoc lines."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 77,
+          "to": 77,
+          "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`.",
+          "rule": "Second overload TSDoc: the same `@returns` text as S4."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 92,
+          "to": 92,
+          "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`.",
+          "rule": "Implementation TSDoc: the same `@returns` text as S4."
         },
         {
           "id": "S3",

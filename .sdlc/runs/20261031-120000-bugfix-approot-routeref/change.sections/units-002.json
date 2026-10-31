@@ -4,11 +4,12 @@
     "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
     "action": "edit",
     "phase": "codegen",
-    "behaviour": "Adds the two optional finalization members to the public RouteResolutionApi interface.",
+    "behaviour": "Keeps the two optional finalization members of the public RouteResolutionApi interface and rewrites their TSDoc so it makes no claim about routes or page routes.",
     "rules": [
-      "Both members are optional method signatures (`isFinalized?(): boolean;` and `onFinalized?(listener: () => void): () => void;`); `resolve` stays exactly as it is and no member becomes required.",
-      "Give each member a TSDoc comment in the style of the `sourcePath` comment: `isFinalized` returns false while the app is still in its bootstrap phase, before page routes are known, and an implementation without it is treated as finalized; `onFinalized` registers a listener called once when the app is finalized and route resolution can see all routes, returns a function that removes the listener, and does not call the listener if the app is already finalized.",
-      "No new imports and no other changes."
+      "The file already holds both optional members and their TSDoc. This edit replaces only the TSDoc text lines that claim something about routes; neither comment may mention routes or page routes.",
+      "The `isFinalized` TSDoc comment is, word for word: `Returns false while the app is still being bootstrapped and true once it is finalized. An implementation without this method is treated as finalized.` Wrap it as two lines: `* Returns false while the app is still being bootstrapped and true once it is`, `* finalized. An implementation without this method is treated as finalized.`",
+      "The `onFinalized` TSDoc comment is, word for word: `Registers a listener that is called once when the app is finalized. If the app is already finalized, the listener is not registered or called.` followed by the existing blank `*` line and `@returns An unsubscribe function that removes the listener.` Wrap the first part as two lines: `* Registers a listener that is called once when the app is finalized. If the`, `* app is already finalized, the listener is not registered or called.`",
+      "Keep the `/**` and `*/` lines, the blank `*` line, the `@returns` line and both member signatures (`isFinalized?(): boolean;`, `onFinalized?(listener: () => void): () => void;`) exactly as they are. No other changes."
     ],
     "exports": [
       {
@@ -28,11 +29,21 @@
     "sites": [
       {
         "id": "S1",
-        "at": "insert_after",
-        "from": 60,
-        "to": 60,
-        "first_line": "): RouteFunc<TParams> | undefined;",
-        "rule": "Insert a blank line, then the documented `isFinalized?(): boolean;` member, a blank line, and the documented `onFinalized?(listener: () => void): () => void;` member, inside the interface before its closing brace."
+        "at": "replace",
+        "from": 63,
+        "to": 65,
+        "first_line": "* Returns whether the application has finished its bootstrap phase and",
+        "last_line": "* method are treated as already finalized.",
+        "rule": "Replace these three lines with the two `isFinalized` TSDoc lines quoted in the rules, at the same indentation."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 70,
+        "to": 72,
+        "first_line": "* Registers a listener that is called once when the application finishes its",
+        "last_line": "* the listener is not registered or called.",
+        "rule": "Replace these three lines with the two `onFinalized` TSDoc lines quoted in the rules, at the same indentation; the blank `*` line and the `@returns` line after them stay."
       }
     ],
     "style_from": {
@@ -118,27 +129,27 @@
     "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
     "action": "edit",
     "phase": "codegen",
-    "behaviour": "Both finalization paths mark the route resolution API finalized right after the finalized tree is instantiated and route resolution is re-initialized.",
+    "behaviour": "Both finalization paths mark the route resolution API finalized just before they return the finalized app, after the root element check.",
     "rules": [
-      "Each insertion is exactly `options.phase.routeResolutionApi.markFinalized();` preceded by a one-line comment saying that this lets mounted route ref hooks re-resolve now that page routes are known.",
+      "Each insertion is exactly `options.phase.routeResolutionApi.markFinalized();` preceded by a one-line comment saying that this lets mounted route ref hooks re-resolve against the final route information; use the same comment at both sites.",
       "Do not touch `createBootstrapApp`, the early `if (options.finalized)` returns, or the root element checks."
     ],
     "sites": [
       {
         "id": "S1",
         "at": "insert_after",
-        "from": 698,
-        "to": 698,
-        "first_line": "});",
-        "rule": "In `finalizeFromSessionState`, directly after the `instantiateAndInitializePhaseTree({...});` call and before `const element = ...`, insert the comment and the `markFinalized()` call."
+        "from": 705,
+        "to": 705,
+        "first_line": "}",
+        "rule": "In `finalizeFromSessionState`, after the closing brace of the `if (!element)` root element check and before the blank line and `return {`, insert a blank line, the comment and the `markFinalized()` call."
       },
       {
         "id": "S2",
         "at": "insert_after",
-        "from": 766,
-        "to": 766,
-        "first_line": "});",
-        "rule": "In `finalizeFromBootstrapError`, directly after the `instantiateAndInitializePhaseTree({...});` call and before `const element = ...`, insert the same comment and `markFinalized()` call."
+        "from": 773,
+        "to": 773,
+        "first_line": "}",
+        "rule": "In `finalizeFromBootstrapError`, after the closing brace of the `if (!element)` root element check and before the blank line and `return {`, insert a blank line, the same comment and the `markFinalized()` call."
       }
     ],
     "uses": [
@@ -238,7 +249,7 @@
       "In the hook body call `const finalized = useRouteResolutionFinalized(routeResolutionApi);` right after `useRouteResolutionApi()`; add `finalized` to the deps of the `newRouteFunc` memo with the exhaustive-deps disable comment above the deps line; the `legacyRouteFunc` memo is unchanged.",
       "In the `newRouteFunc !== null` branch, when `!newRouteFunc && !isOptional`: return `bootstrapRouteFunc as RouteFunc<Params>` if `!finalized`, else throw `new Error(`No path for ${routeRef}`)` as today. Optional refs still return `newRouteFunc` (undefined).",
       "The legacy routing-context path (after the branch) stays exactly as it is.",
-      "Leave the overload signatures and all TSDoc blocks unchanged, so the public API reports of core-plugin-api do not change. The new private functions get no TSDoc release tags."
+      "Leave the overload signatures unchanged. In all three `useRouteRef` TSDoc blocks, keep the existing `@returns` sentence and append, as U07 does for the new hook: during bootstrap, a non-optional ref that cannot be resolved yet gives a function that returns an empty string, and it updates to the real link once the app is finalized. report.api.md holds only release markers and signatures, no TSDoc text, so the core-plugin-api reports do not change. The new private functions get no TSDoc release tags."
     ],
     "exports": [
       {
@@ -265,6 +276,30 @@
         "to": 52,
         "first_line": "}",
         "rule": "After `useRouteResolutionApi`, add a blank line, `isRouteResolutionFinalized`, `useRouteResolutionFinalized`, and the commented `bootstrapRouteFunc` constant, separated by blank lines."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 62,
+        "to": 62,
+        "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`.",
+        "rule": "First overload TSDoc: keep the existing sentence and append the bootstrap sentence from the rules, wrapped as TSDoc lines."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 77,
+        "to": 77,
+        "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`.",
+        "rule": "Second overload TSDoc: the same `@returns` text as S4."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 92,
+        "to": 92,
+        "first_line": "* @returns A function that will in turn return the concrete URL of the `routeRef`.",
+        "rule": "Implementation TSDoc: the same `@returns` text as S4."
       },
       {
         "id": "S3",
@@ -299,19 +334,27 @@
     "phase": "codegen",
     "behaviour": "Documents that app root elements render during bootstrap and how both useRouteRef hooks behave before and after finalization.",
     "rules": [
-      "One new paragraph, plus a short `tsx` example, in the 'Preparing an App in Phases' section.",
-      "The paragraph says: elements attached to `app/root.elements` (for example a global banner) render during bootstrap, before the app is finalized and before page routes are known; during that time `useRouteRef` from `@backstage/frontend-plugin-api` returns `undefined` for routes it cannot resolve yet, and `useRouteRef` from `@backstage/core-plugin-api` returns a link function that returns an empty string; both update to the real link once the app is finalized, without a remount or a navigation.",
-      "The example is a small banner component using the new-system hook and handling `undefined` (for example `const link = useRouteRef(catalogRouteRef);` and rendering the link only when `link` is defined).",
-      "Follow docs/contribute/doc-style-guide.md: U.S. English, second person, no filler, identifiers in backticks."
+      "The file already holds the paragraph and the `tsx` banner example. This edit changes only the example's two lines that use `catalogIndexRouteRef`, which `@backstage/plugin-catalog` does not export; the example must use a route ref that exists, `catalogIndex` in the routes of the default export of `@backstage/plugin-catalog/alpha` (plugins/catalog/report-alpha.api.md).",
+      "Line 101 becomes exactly `import catalogPlugin from '@backstage/plugin-catalog/alpha';`",
+      "Line 104 becomes exactly `const catalogLink = useRouteRef(catalogPlugin.routes.catalogIndex);` at the same two-space indentation, so the call is `useRouteRef(catalogPlugin.routes.catalogIndex)`.",
+      "Change nothing else: the paragraph, the `import { useRouteRef } from '@backstage/frontend-plugin-api';` line, the `GlobalBanner` component and the `{catalogLink && <a href={catalogLink()}>View Catalog</a>}` line stay exactly as they are."
     ],
     "sites": [
       {
         "id": "S1",
-        "at": "insert_after",
-        "from": 95,
-        "to": 95,
-        "first_line": "Utility APIs that are first materialized during bootstrap are frozen for the lifetime of that app instance. Finalization may still add new APIs and may override existing API refs that were not materialized during bootstrap, but any deferred override of an already materialized bootstrap API is ignored and reported as an app error.",
-        "rule": "Insert a blank line, the new paragraph, a blank line and the `tsx` example, before the blank line that precedes '## Plugin Info Resolution'."
+        "at": "replace",
+        "from": 101,
+        "to": 101,
+        "first_line": "import { catalogIndexRouteRef } from '@backstage/plugin-catalog';",
+        "rule": "Write exactly `import catalogPlugin from '@backstage/plugin-catalog/alpha';` in place of this line."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 104,
+        "to": 104,
+        "first_line": "const catalogLink = useRouteRef(catalogIndexRouteRef);",
+        "rule": "Write exactly `const catalogLink = useRouteRef(catalogPlugin.routes.catalogIndex);` in place of this line, keeping its two-space indentation."
       }
     ],
     "uses": [
@@ -347,12 +390,23 @@
   {
     "id": "U11",
     "path": ".changeset/app-root-route-resolution-finalization.md",
-    "action": "create",
+    "action": "edit",
     "phase": "codegen",
-    "behaviour": "Changeset for @backstage/frontend-app-api.",
+    "behaviour": "Changeset for @backstage/frontend-app-api, without the clause about finalization after a startup error.",
     "rules": [
-      "Frontmatter is exactly one line `'@backstage/frontend-app-api': patch` between `---` lines, then a blank line and the message.",
-      "Message (one sentence, adopter wording, no code symbols): apps now notify already rendered app root elements when the app is finalized, including when finalization follows a startup error, so their route links resolve without a remount."
+      "The file already holds the frontmatter and the message. This edit replaces only the message line (line 5) and removes the clause `including when finalization follows a startup error`: page routes are not built on that path and the error screen replaces the root elements, so the clause promises something adopters will not see.",
+      "Line 5 becomes exactly `Apps now notify already rendered app root elements when the app is finalized, so their route links resolve without a remount.`",
+      "The frontmatter lines (`---`, `'@backstage/frontend-app-api': patch`, `---`) and the blank line 4 stay exactly as they are."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 5,
+        "to": 5,
+        "first_line": "Apps now notify already rendered app root elements when the app is finalized, including when finalization follows a startup error, so their route links resolve without a remount.",
+        "rule": "Write exactly `Apps now notify already rendered app root elements when the app is finalized, so their route links resolve without a remount.` in place of this line."
+      }
     ],
     "exports": [],
     "import_line": "",

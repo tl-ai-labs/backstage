@@ -38,10 +38,10 @@
       },
       {
         "topic": "Where bootstrap ends",
-        "choice": "`RouteResolutionApiProxy` gets a new `markFinalized(): void` method. `initialize()` is unchanged and never finalizes, so the startup call from treeLifecycle.tsx keeps the API in bootstrap. prepareSpecializedApp.tsx calls `options.phase.routeResolutionApi.markFinalized()` directly after each of its two `instantiateAndInitializePhaseTree(...)` calls (the normal finalization at line 689 and the bootstrap-error finalization at line 758), before the root element check.",
+        "choice": "`RouteResolutionApiProxy` gets a new `markFinalized(): void` method. `initialize()` is unchanged and never finalizes, so the startup call from treeLifecycle.tsx keeps the API in bootstrap. prepareSpecializedApp.tsx calls `options.phase.routeResolutionApi.markFinalized()` in `finalizeFromSessionState` and in `finalizeFromBootstrapError`, each time just before the function's `return` statement, after its root element check. When the normal path fails its root element check the signal has not fired yet, and the bootstrap-error path that follows fires it, still exactly once (AC-7).",
         "rejected": [
           "a `finalize` flag on `initialize()` or on `instantiateAndInitializePhaseTree` (spreads the lifecycle into the shared helper that the startup path also uses)",
-          "marking after the root element check (the 689 path would not fire when its element check throws, contradicting AC-7's 689-then-758 case)"
+          "marking directly after each `instantiateAndInitializePhaseTree(...)` call, before the root element check (would report finalization for a normal pass whose root element check then throws, before any finalized app exists)"
         ],
         "reason": "Keeps treeLifecycle.tsx (outside the allowlist) untouched and makes the two finalization sites explicit."
       },
