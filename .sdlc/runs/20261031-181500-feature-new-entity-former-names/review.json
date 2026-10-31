@@ -1,0 +1,55 @@
+{
+  "module": "entity-former-names",
+  "verdict": "needs_changes",
+  "tool_calls": 11,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/catalog-react/report.api.md",
+      "issue": "Every changed line only reorders existing translation keys, with no API change in this entry point. The path-limited report run (U61) produced a different union order from the whole-repo run that CI verifies with `yarn build:api-reports:only --ci --docs` (.github/workflows/ci.yml line 124), so the verify step will likely fail. Confidence is medium-high; the tool was not re-run.",
+      "fix": "Restore the file with `git checkout <git_head_before> -- plugins/catalog-react/report.api.md`, then confirm with the CI report check."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog-react/report-alpha.api.md",
+      "issue": "Reorder-only churn with no API change: translation keys move and the `'Title' | 'Name'` union flips. It comes from the same path-limited run and will likely fail the whole-repo `--ci` report check.",
+      "fix": "Restore the file with `git checkout <git_head_before> -- plugins/catalog-react/report-alpha.api.md`, then confirm with the CI report check."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog/report.api.md",
+      "issue": "The one intended addition, `entityPage.renamedNotice`, sits among about 20 lines of reordered translation keys from the path-limited run. The whole-repo `--ci` report check will likely expect the original order.",
+      "fix": "Regenerate with the U61 flags over the whole repo instead of the seven paths, which still leaves out `--sql-reports`, and keep only this package's result. Do not write plugins/catalog-backend/report.sql.md or reports of unrelated packages. The diff should reduce to the added key."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog/report-alpha.api.md",
+      "issue": "Same defect as plugins/catalog/report.api.md: `entityPage.renamedNotice` is added inside reorder-only churn that the whole-repo `--ci` report check will likely reject.",
+      "fix": "Regenerate in the same whole-repo run without `--sql-reports`. The diff should reduce to the added key."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/techdocs/report-alpha.api.md",
+      "issue": "`reader.renamedNotice` is added alongside reordered `table.pagination.labelRowsSelect`, `readerPageHeader.owner` and `reader.settings` lines from the path-limited run. The whole-repo `--ci` report check will likely reject the order.",
+      "fix": "Regenerate in the same whole-repo run without `--sql-reports`. The diff should reduce to the added key."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "issue": "`TechDocsRenamedNotice` has no test for dismissal or for non-string `location.state.formerEntityRef`, though U31 rule 1 requires both behaviours. No test of the catalog notice covers a non-string value either.",
+      "fix": "Extend the redirect case to dismiss the notice and expect it gone, and add one render with non-string state that expects no notice."
+    }
+  ],
+  "refinement_packets": [],
+  "passing_checks": {
+    "correctness": "Backend, client and frontend logic match change_plan.md; only the report units above fall short.",
+    "type_safety": "No unjustified `any`; casts match the plan.",
+    "error_handling": "Claim errors stay out of `result.ok` and enter the hash; swallowed lookup failures are the plan's fallback to not-found.",
+    "authz": "The route goes through AuthorizedEntitiesCatalog; DENY, CONDITIONAL and ALLOW are tested.",
+    "pii": "Errors and 404 messages name only declared or requested refs.",
+    "dry": "No extraction warranted; the two notices sit in separate packages.",
+    "test_coverage": "Happy path, denied, every-miss, audit, takeover and redirect cases are covered, apart from the minor gap above.",
+    "env_fixtures": "Not applicable: no new required env vars or config schema in the changed code.",
+    "sensitive_files": ".gitignore adds only `.sdlc/` as planned; no manifest or settings files touched."
+  }
+}

@@ -909,6 +909,109 @@ describe.each(databases.eachSupportedId())(
       });
     });
 
+    describe('entityByFormerRef', () => {
+      async function addClaim(
+        formerEntityRef: string,
+        claimantEntityId: string,
+        claimant: Entity,
+        rejected: boolean = false,
+      ) {
+        await knex('former_entity_refs').insert({
+          former_entity_ref: formerEntityRef,
+          claimant_entity_id: claimantEntityId,
+          claimant_entity_ref: stringifyEntityRef(claimant),
+          claimed_at: knex.fn.now(),
+          rejected_at: rejected ? knex.fn.now() : null,
+        });
+      }
+
+      it('returns the entity of the claimant for a resolvable former ref', async () => {
+        await createDatabase();
+
+        const claimant = entityFrom('claimant');
+        const claimantId = await addEntity(claimant, []);
+        await addClaim('k:default/old-name', claimantId, claimant);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const res = await catalog.entityByFormerRef({
+          formerEntityRef: 'k:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(res.items)).toEqual([claimant]);
+
+        const filtered = await catalog.entityByFormerRef({
+          formerEntityRef: 'k:default/old-name',
+          filter: { kind: 'other' },
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(filtered.items)).toEqual([null]);
+      });
+
+      it('returns a single null for every miss', async () => {
+        await createDatabase();
+
+        const claimant = entityFrom('claimant');
+        const claimantId = await addEntity(claimant, []);
+        await addEntity(entityFrom('held'), []);
+        const unstitched = entityFrom('unstitched');
+        const unstitchedId = await addEntity(unstitched, []);
+        await knex('final_entities')
+          .where({ entity_id: unstitchedId })
+          .delete();
+
+        await addClaim('k:default/old-rejected', claimantId, claimant, true);
+        await addClaim('k:default/held', claimantId, claimant);
+        await addClaim('k:default/old-unstitched', unstitchedId, unstitched);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        for (const formerEntityRef of [
+          'k:default/old-unclaimed',
+          'k:default/old-rejected',
+          'k:default/held',
+          'k:default/old-unstitched',
+        ]) {
+          const { items } = await catalog.entityByFormerRef({
+            formerEntityRef,
+            credentials: mockCredentials.none(),
+          });
+          expect(entitiesResponseToObjects(items)).toEqual([null]);
+        }
+      });
+
+      it('resolves a single hop only', async () => {
+        await createDatabase();
+
+        const entityB = entityFrom('b');
+        const entityC = entityFrom('c');
+        const entityBId = await addEntity(entityB, []);
+        const entityCId = await addEntity(entityC, []);
+        await addClaim('k:default/a', entityBId, entityB);
+        await addClaim('k:default/b', entityCId, entityC);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const res = await catalog.entityByFormerRef({
+          formerEntityRef: 'k:default/a',
+          credentials: mockCredentials.none(),
+        });
+        const items = entitiesResponseToObjects(res.items);
+
+        expect(items).toEqual([entityB]);
+        expect(items).not.toContainEqual(entityC);
+      });
+    });
+
     describe('queryEntities', () => {
       it('should return paginated entities and scroll the items accordingly', async () => {
         await createDatabase();

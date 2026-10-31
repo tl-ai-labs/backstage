@@ -40,6 +40,7 @@ import {
   EntityLayoutRoute,
   filterEntityLayoutRoutes,
 } from './entityLayoutRoutes';
+import { EntityRenamedNotice } from '../../../components/EntityLayout/EntityRenamedNotice';
 
 interface EntityLayoutProps {
   UNSTABLE_extraContextMenuItems?: ComponentProps<
@@ -104,6 +105,8 @@ export function EntityLayout(props: EntityLayoutProps) {
           showIcons={showNavItemIcons}
         />
       )}
+
+      {entity && <EntityRenamedNotice />}
 
       {error && (
         <Content>

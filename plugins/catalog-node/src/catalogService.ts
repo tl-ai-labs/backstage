@@ -90,6 +90,11 @@ export interface CatalogService {
     options: CatalogServiceRequestOptions,
   ): Promise<Entity | undefined>;
 
+  getEntityByFormerRef?(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<Entity | undefined>;
+
   removeEntityByUid(
     uid: string,
     options: CatalogServiceRequestOptions,
@@ -228,6 +233,16 @@ class DefaultCatalogService implements CatalogService {
     options: CatalogServiceRequestOptions,
   ): Promise<Entity | undefined> {
     return this.#catalogApi.getEntityByRef(
+      entityRef,
+      await this.#getOptions(options),
+    );
+  }
+
+  async getEntityByFormerRef(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<Entity | undefined> {
+    return this.#catalogApi.getEntityByFormerRef?.(
       entityRef,
       await this.#getOptions(options),
     );

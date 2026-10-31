@@ -1065,6 +1065,49 @@ export const spec = {
         ],
       },
     },
+    '/entities/by-former-name/{kind}/{namespace}/{name}': {
+      get: {
+        operationId: 'GetEntityByFormerName',
+        tags: ['Entity'],
+        description:
+          'Get the entity that currently claims a former entity ref.',
+        responses: {
+          '200': {
+            description: 'Ok',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/Entity',
+                },
+              },
+            },
+          },
+          '400': {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+        },
+        security: [
+          {},
+          {
+            JWT: [],
+          },
+        ],
+        parameters: [
+          {
+            $ref: '#/components/parameters/kind',
+          },
+          {
+            $ref: '#/components/parameters/namespace',
+          },
+          {
+            $ref: '#/components/parameters/name',
+          },
+        ],
+      },
+    },
     '/entities/by-name/{kind}/{namespace}/{name}/ancestry': {
       get: {
         operationId: 'GetEntityAncestryByName',

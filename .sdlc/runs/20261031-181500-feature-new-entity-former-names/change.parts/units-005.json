@@ -1,0 +1,469 @@
+{
+  "section": "units",
+  "source": "units-005.json",
+  "value": [
+    {
+      "id": "U41",
+      "path": "packages/catalog-client/src/CatalogClient.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the client's lookup.",
+      "tests": [
+        {
+          "name": "finds by string and compound",
+          "given": "msw answering `/entities/by-former-name/customkind/default/old` with an entity",
+          "expect": "`getEntityByFormerRef` returns it for both ref forms"
+        },
+        {
+          "name": "returns undefined for 404s",
+          "given": "msw answering 404, as a backend without the route does",
+          "expect": "`getEntityByFormerRef` resolves to undefined"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 1172,
+          "to": 1172,
+          "first_line": "describe('getLocations', () => {",
+          "rule": "Add `describe('getEntityByFormerRef', ...)` with the listed cases, shaped like the `getEntityByRef` describe above."
+        }
+      ],
+      "depends_on": [
+        "U15"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-7",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U42",
+      "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the in-memory lookup.",
+      "tests": [
+        {
+          "name": "resolves a declared former ref",
+          "given": "an entity declaring two former refs, in mixed case with spaces",
+          "expect": "each ref returns the entity"
+        },
+        {
+          "name": "does not resolve when nothing should",
+          "given": "an undeclared ref, a ref held by an entity, and a ref of another kind",
+          "expect": "each resolves to undefined"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 893,
+          "to": 893,
+          "first_line": "describe('removeEntityByUid', () => {",
+          "rule": "Add `describe('getEntityByFormerRef', ...)` with the listed cases."
+        }
+      ],
+      "depends_on": [
+        "U16"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U43",
+      "path": "plugins/catalog-node/src/catalogService.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests that the default service forwards the lookup with the caller's token.",
+      "tests": [
+        {
+          "name": "should forward getEntityByFormerRef with the caller's token",
+          "given": "msw answering `/api/catalog/entities/by-former-name/component/default/old` with an entity, and a service credentials call",
+          "expect": "the authorization header carries the service token and the entity is returned"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 120,
+          "to": 120,
+          "first_line": "});",
+          "rule": "Add the listed case, built like `should inject token from service credentials`."
+        }
+      ],
+      "depends_on": [
+        "U17"
+      ],
+      "covers": [
+        "FR-14"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U44",
+      "path": "plugins/catalog-node/src/testUtils/catalogServiceMock.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests that both forms of the mock support the lookup.",
+      "tests": [
+        {
+          "name": "exports the expected functionality",
+          "given": "the fake holding an entity that declares a former ref, and the jest-function mock",
+          "expect": "the fake resolves the former ref, and the mock's method is a jest function that returns undefined"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 61,
+          "to": 61,
+          "first_line": "await expect(mock2.getEntities()).resolves.toEqual({ items: [entity1] });",
+          "rule": "Extend this case with the listed assertions."
+        }
+      ],
+      "depends_on": [
+        "U16",
+        "U19"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U45",
+      "path": "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests that both forms of the mock support the lookup.",
+      "tests": [
+        {
+          "name": "exports the expected functionality",
+          "given": "the fake holding an entity that declares a former ref, and the jest-function mock",
+          "expect": "the fake resolves the former ref, and the mock's method is a jest function that returns undefined"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 61,
+          "to": 61,
+          "first_line": "await expect(mock2.getEntities()).resolves.toEqual({ items: [entity1] });",
+          "rule": "Extend this case with the listed assertions."
+        }
+      ],
+      "depends_on": [
+        "U16",
+        "U20"
+      ],
+      "covers": [
+        "FR-14",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U46",
+      "path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Tests the redirect and the notice in the old frontend system, through the real legacy page and layout.",
+      "rules": [
+        "Render `CatalogEntityPage` on a `/catalog/:namespace/:kind/:name/*` route with `EntityLayout` as its child, and a small probe that prints the current location and offers a real Back through `useNavigate`.",
+        "Use `catalogApiMock.mock` for lookups, so call counts and deferred promises can be asserted.",
+        "Import the plain component from `./CatalogEntityPage`, not the routable extension in `plugin.ts`, whose `createRoutableExtension` wrapper throws its own mount-point error on an unbound ref before the page renders.",
+        "For the unbound scenario pass `mountedRoutes` with only `/catalog` bound to `rootRouteRef`, which `EntityLayout` needs, and nothing bound to `entityRouteRef`."
+      ],
+      "tests": [
+        {
+          "name": "redirects an old link and shows the notice",
+          "given": "an exact miss and a hit, from `/catalog/default/component/old/ci?tab=1#top`",
+          "expect": "the location becomes `/catalog/default/component/new/ci?tab=1#top`, and the notice names `component:default/old`"
+        },
+        {
+          "name": "replaces the history entry",
+          "given": "route entries with an earlier page before the old link",
+          "expect": "Back lands on the earlier page and the former lookup is not repeated"
+        },
+        {
+          "name": "builds the target through the route ref",
+          "given": "the entity route mounted at `/custom/:namespace/:kind/:name/*`",
+          "expect": "the location becomes the custom path of the new entity"
+        },
+        {
+          "name": "stays loading while the lookup is pending",
+          "given": "an exact miss and a former lookup that stays pending",
+          "expect": "progress shows and the not-found text does not"
+        },
+        {
+          "name": "leaves the not-found page unchanged when nothing resolves",
+          "given": "a client with no method, a lookup resolving undefined, and a lookup that rejects",
+          "expect": "each renders the existing `Entity not found` panel with no error and no navigation"
+        },
+        {
+          "name": "does nothing extra for an entity found by exact lookup",
+          "given": "an exact hit on a URL holding a `formerEntityRef` query parameter",
+          "expect": "`getEntityByFormerRef` is never called, the query stays, and no notice renders"
+        },
+        {
+          "name": "shows the not-found page when the entity route cannot be resolved",
+          "given": "an exact miss and a former lookup that would hit, first with `entityRouteRef` unbound and route entries `/catalog/default/component/other` then `/catalog/default/component/old`, then with `entityRouteRef` mounted at `/t/:tenant/:namespace/:kind/:name/*` from `/t/acme/default/component/old`, where the route function throws on the missing `tenant`",
+          "expect": "unbound: `Warning: Entity not found` renders with no thrown error, the location stays, `getEntityByFormerRef` is never called, and after Back the panel renders again for `other` with no hook-order error. Throwing route function: `getEntityByFormerRef` is called and the same panel renders with no error alert"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "lines": [
+          17,
+          90
+        ],
+        "reason": "the legacy test app, API and route setup"
+      },
+      "depends_on": [
+        "U20",
+        "U24",
+        "U26"
+      ],
+      "covers": [
+        "FR-15",
+        "FR-16",
+        "FR-17",
+        "FR-18",
+        "FR-27",
+        "NFR-5",
+        "NFR-6",
+        "NFR-7",
+        "NFR-8",
+        "AC-4",
+        "AC-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U47",
+      "path": "plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Tests the redirect and the notice in the new frontend system, through the alpha page and both of its layouts.",
+      "rules": [
+        "The BUI layout is the one chosen with no `headers` matching; the alpha MUI layout is chosen by passing a `headers` entry whose element matches and no `headerLayouts`.",
+        "Use `catalogApiMock({ entities })` with an entity declaring the former ref, so the in-memory lookup runs end to end.",
+        "For the unbound case omit `mountedRoutes` and keep `mountPath` and `initialRouteEntries`, so the route params still come from the URL while `entityRouteRef` has no path. With no entity the page always takes the BUI layout."
+      ],
+      "tests": [
+        {
+          "name": "redirects and shows the notice in the BUI layout",
+          "given": "the default page from `/catalog/default/component/old/overview?tab=1#top`",
+          "expect": "the renamed entity's content renders at the new path with query and hash kept, with an info alert naming `component:default/old`"
+        },
+        {
+          "name": "redirects and shows the notice in the MUI layout",
+          "given": "a matching legacy header entry and the same link",
+          "expect": "the same landing, with the snackbar notice, which goes away when dismissed"
+        },
+        {
+          "name": "shows no notice on a direct visit",
+          "given": "the renamed entity opened by its own URL",
+          "expect": "the content renders with no notice in either layout"
+        },
+        {
+          "name": "shows the not-found page when the entity route is not bound",
+          "given": "the default page with no `mountedRoutes`, an entity declaring `component:default/old`, opened from `/catalog/default/component/old`",
+          "expect": "`Entity not found` renders, the renamed entity's content does not, and no `No path for` error shows"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx",
+        "lines": [
+          17,
+          100
+        ],
+        "reason": "the new-frontend-system test app and route setup"
+      },
+      "depends_on": [
+        "U16",
+        "U24",
+        "U27",
+        "U28",
+        "U62"
+      ],
+      "covers": [
+        "FR-15",
+        "FR-17",
+        "FR-27",
+        "AC-4",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U48",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the former-ref branch of the hook and keeps the existing cases running with `useLocation` mocked.",
+      "tests": [
+        {
+          "name": "follows a former ref and keeps sub-path, query and hash",
+          "given": "`followFormerRef`, an exact miss, a hit, and a mocked location of `/docs/default/component/old/sub/page?x=1#y`",
+          "expect": "`navigate` is called with `/docs/default/Component/new/sub/page?x=1#y`, `replace: true` and the former ref in state, and progress shows until then"
+        },
+        {
+          "name": "never looks up a former ref without the option or after an exact hit",
+          "given": "an exact miss with no option, and an exact hit with the option",
+          "expect": "`getEntityByFormerRef` is not called and `navigate` is not called"
+        },
+        {
+          "name": "stays put when the lookup gives nothing",
+          "given": "`followFormerRef` with a client with no method, a lookup resolving undefined, and a lookup that rejects",
+          "expect": "no navigation, and `shouldShowProgress` ends false"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 26,
+          "to": 29,
+          "first_line": "jest.mock('react-router-dom', () => ({",
+          "last_line": "}));",
+          "rule": "Declare `const mockLocation = { pathname: '/docs', search: '', hash: '' };` above this mock, and add `useLocation: () => mockLocation` to it. Each new case assigns the fields it needs and an `afterEach` restores them."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 282,
+          "to": 282,
+          "first_line": "});",
+          "rule": "Add the listed cases. `mockCatalogApi` gains `getEntityByFormerRef: jest.fn()` locally in each case that needs it, so the case with no method stays honest."
+        }
+      ],
+      "depends_on": [
+        "U30"
+      ],
+      "covers": [
+        "FR-19",
+        "FR-21",
+        "NFR-5",
+        "NFR-7",
+        "AC-5",
+        "AC-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U49",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the docs redirect and notice through the real reader page.",
+      "rules": [
+        "The file mocks `useNavigate`. In the redirect case set `(useNavigate as jest.Mock).mockImplementation(jest.requireActual('react-router-dom').useNavigate)`, so the navigation is real; the file's `beforeEach` restores the mock for later cases.",
+        "Render as the addons cases do, with `FlatRoutes` and a `/docs/:namespace/:kind/:name/*` route, so the page is standalone."
+      ],
+      "tests": [
+        {
+          "name": "redirects an old docs link and shows the notice",
+          "given": "route entry `/docs/default/component/old/sub/page?x=1#y`, an exact miss on the old ref, a hit on the former lookup, and an exact hit on the new ref",
+          "expect": "`getEntityByRef` is called for the new ref, and the notice naming `component:default/old` appears"
+        },
+        {
+          "name": "does not follow former refs when embedded",
+          "given": "the page rendered with an `entityRef` prop and an exact miss",
+          "expect": "`getEntityByFormerRef` is not called, and no notice renders"
+        },
+        {
+          "name": "leaves not-found behaviour unchanged when nothing resolves",
+          "given": "a standalone page, an exact miss, and a former lookup that rejects",
+          "expect": "no navigation, and the page renders as it does today"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 310,
+          "to": 310,
+          "first_line": "describe('external TechDocs redirect', () => {",
+          "rule": "Add `describe('former entity ref redirect', ...)` with the listed cases, resetting `catalogApiMock.getEntityByRef` and `catalogApiMock.getEntityByFormerRef` in its `beforeEach`."
+        }
+      ],
+      "depends_on": [
+        "U20",
+        "U32"
+      ],
+      "covers": [
+        "FR-19",
+        "FR-20",
+        "FR-21",
+        "NFR-6",
+        "NFR-8",
+        "AC-5",
+        "AC-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-client/src/CatalogClient.test.ts": "af70588c308639cdb7f5da6603c58579358588f930459771d08cc427a05af291",
+    "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts": "69104fe18bb4beb8b58ec35fad76d01960bff9d0bf1d2df29169e5a913901b76",
+    "plugins/catalog-node/src/catalogService.test.ts": "f859e9d100859ec80e04cec23dfffb4b2fb9ffd373e01c94ad5e90b366235e82",
+    "plugins/catalog-node/src/testUtils/catalogServiceMock.test.ts": "1b171d3f93ae35a36c0c7e2b9eeff894b35d15ae09e7eebb7710d3cf495d7cd6",
+    "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts": "a6b208a7de7b02a1e79cd4f77d7f4bb66f8384740a0dcbbdedca176e32f5a517",
+    "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx": "bb1ef35e94081752d6ace6bc88ff87bb78beebe4581028a7b7a560f82cdf93b3",
+    "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx": "32ae3ef89fa5af0bf8f1c5df8868db1a3240eb9680ad8dac540a414c3de574f8",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx": "5f2227eec2ee7d7263c723bc1a7d43773b186553a951750d810f08b02646da4f",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx": "65e6ceb6441168ab8e28c589e9cfb50a12d70d4463134adf32c8250c53fa7e0d"
+  }
+}

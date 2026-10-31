@@ -8,6 +8,9 @@ import { JsonObject } from '@backstage/types';
 // @public
 export const ANNOTATION_EDIT_URL = 'backstage.io/edit-url';
 
+// @public
+export const ANNOTATION_FORMER_ENTITY_REFS = 'backstage.io/former-entity-refs';
+
 // @public @deprecated
 export const ANNOTATION_KUBERNETES_API_SERVER = 'kubernetes.io/api-server';
 

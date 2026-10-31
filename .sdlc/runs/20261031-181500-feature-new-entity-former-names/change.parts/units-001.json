@@ -1,0 +1,575 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "packages/catalog-model/src/entity/constants.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Exports the well-known annotation that declares an entity's former refs.",
+      "exports": [
+        {
+          "name": "ANNOTATION_FORMER_ENTITY_REFS",
+          "kind": "const",
+          "params": [],
+          "returns": "'backstage.io/former-entity-refs'"
+        }
+      ],
+      "import_line": "import { ANNOTATION_FORMER_ENTITY_REFS } from '@backstage/catalog-model';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 36,
+          "to": 36,
+          "first_line": "export const ANNOTATION_EDIT_URL = 'backstage.io/edit-url';",
+          "rule": "Add `ANNOTATION_FORMER_ENTITY_REFS = 'backstage.io/former-entity-refs'` with a `@public` TSDoc comment saying it holds comma-separated full entity refs (`kind:namespace/name`) that the entity was formerly known as."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "AC-1"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/catalog-backend/migrations/20261031000000_former_entity_refs.js",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Creates the `former_entity_refs` claim table, with a working `down`.",
+      "rules": [
+        "`up` creates the table with the columns, keys and FK of the Claim table decision, with a `table.comment` and a `.comment` on each column.",
+        "The primary key uses `constraintName: 'former_entity_refs_pkey'`; the secondary index is `former_entity_refs_claimant_entity_id_idx`.",
+        "`claimed_at` and `rejected_at` are `table.dateTime`; `rejected_at` is nullable.",
+        "`down` drops the table.",
+        "No backfill: nothing exists to claim yet."
+      ],
+      "style_from": {
+        "path": "plugins/catalog-backend/migrations/20261007000000_stitch_failure_count.js",
+        "reason": "the header, `// @ts-check` and JSDoc shape of a migration"
+      },
+      "uses": [
+        {
+          "path": "plugins/catalog-backend/migrations/20220616202842_refresh_keys.js",
+          "reason": "how a table declares its cascading FK to refresh_state and its named index"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/catalog-backend/src/database/tables.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the row type of the claim table.",
+      "exports": [
+        {
+          "name": "DbFormerEntityRefsRow",
+          "kind": "type",
+          "params": [],
+          "returns": "{ former_entity_ref: string; claimant_entity_id: string; claimant_entity_ref: string; claimed_at: string | Date; rejected_at: string | Date | null }"
+        }
+      ],
+      "import_line": "import { DbFormerEntityRefsRow } from '../../tables';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 202,
+          "to": 202,
+          "first_line": "};",
+          "rule": "Add `DbFormerEntityRefsRow` with a `Represents the former_entity_refs table.` TSDoc comment that explains each field: one row per entity declaring a former ref, `claimed_at` never changes while the claim stands, and a non-null `rejected_at` means the claim was refused when first recorded and can never win."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/catalog-backend/src/database/operations/formerEntityRefs/syncFormerEntityRefClaims.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Makes one claimant's claim rows match the refs it declares, and returns each declared ref's outcome.",
+      "rules": [
+        "1. Select the claimant's own rows by `claimant_entity_id` (`former_entity_ref`, `rejected_at`).",
+        "2. Delete, in one statement scoped to `claimant_entity_id`, the own rows whose ref is not in `formerEntityRefs`; issue no delete when there are none.",
+        "3. For declared refs with no own row, select `entity_ref` and `location_key` from `refresh_state` where `entity_ref` is one of them; issue no select when there are none.",
+        "4. A new claim is rejected when a holder row exists and it is not the case that both location keys are non-empty and equal.",
+        "5. Insert the new rows in one statement with `claimed_at: tx.fn.now()`, `rejected_at: tx.fn.now()` or `null`, and `.onConflict(['former_entity_ref', 'claimant_entity_id']).ignore()`. Existing rows are never updated, so a run with no change writes nothing (NFR-3).",
+        "6. If `formerEntityRefs` is empty, return `[]`.",
+        "7. Select `former_entity_ref` and `claimant_entity_id` where `former_entity_ref` is in `formerEntityRefs` and `rejected_at` is null, ordered by `claimed_at` asc then `claimant_entity_ref` asc; the first row per ref is its winner.",
+        "8. Return one outcome per entry of `formerEntityRefs`, in that order: `rejected` when the own row is rejected, `lost` when the winner is another claimant, otherwise `active`.",
+        "9. A holder never changes an outcome after rule 4: a recorded claim on a ref that a new entity takes stays `active` with no error."
+      ],
+      "exports": [
+        {
+          "name": "FormerEntityRefClaimOutcome",
+          "kind": "type",
+          "params": [],
+          "returns": "{ formerEntityRef: string; outcome: 'active' | 'rejected' | 'lost' }"
+        },
+        {
+          "name": "syncFormerEntityRefClaims",
+          "kind": "function",
+          "params": [
+            {
+              "name": "options",
+              "type": "{ tx: Knex.Transaction; claimantEntityId: string; claimantEntityRef: string; locationKey?: string; formerEntityRefs: string[] }"
+            }
+          ],
+          "returns": "Promise<FormerEntityRefClaimOutcome[]>"
+        }
+      ],
+      "import_line": "import { syncFormerEntityRefClaims } from '../database/operations/formerEntityRefs/syncFormerEntityRefClaims';",
+      "style_from": {
+        "path": "plugins/catalog-backend/src/database/operations/refreshState/checkLocationKeyConflict.ts",
+        "reason": "a single-function database operation taking an options object with tx"
+      },
+      "depends_on": [
+        "U02",
+        "U03"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-8",
+        "NFR-3",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/catalog-backend/src/processing/formerEntityRefs.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Parses and validates the annotation, decides whether a run needs a claim sync, and turns claim outcomes into errors.",
+      "rules": [
+        "`parseFormerEntityRefs` applies the Annotation decision, then judges each piece in this order: it must match `/^([^:/]+):([^:/]+)\\/([^:/]+)$/` with kind, namespace and name passing `makeValidator()`'s `isValidKind`, `isValidNamespace` and `isValidEntityName`; its kind must equal the entity's kind in lowercase; it must differ from `stringifyEntityRef(entity)`.",
+        "Validation runs on the lowercased piece; the error names the trimmed piece as it was written.",
+        "An invalid piece produces its error and is left out of `formerEntityRefs`. An entity with no annotation returns two empty lists.",
+        "`shouldSyncFormerEntityRefs` is true when the annotation key is present on the entity or `state?.[FORMER_ENTITY_REF_CLAIMS_STATE_KEY]` is truthy. It tolerates a state that is not a plain object.",
+        "`formerEntityRefClaimErrors` returns an `InputError` for each `rejected` and `lost` outcome, in order, and nothing for `active`.",
+        "All error text is exactly as the Claim error text decision gives it."
+      ],
+      "exports": [
+        {
+          "name": "FORMER_ENTITY_REF_CLAIMS_STATE_KEY",
+          "kind": "const",
+          "params": [],
+          "returns": "'formerEntityRefClaims'"
+        },
+        {
+          "name": "parseFormerEntityRefs",
+          "kind": "function",
+          "params": [
+            {
+              "name": "entity",
+              "type": "Entity"
+            }
+          ],
+          "returns": "{ formerEntityRefs: string[]; errors: Error[] }"
+        },
+        {
+          "name": "shouldSyncFormerEntityRefs",
+          "kind": "function",
+          "params": [
+            {
+              "name": "entity",
+              "type": "Entity"
+            },
+            {
+              "name": "state",
+              "type": "JsonObject | undefined"
+            }
+          ],
+          "returns": "boolean"
+        },
+        {
+          "name": "formerEntityRefClaimErrors",
+          "kind": "function",
+          "params": [
+            {
+              "name": "outcomes",
+              "type": "FormerEntityRefClaimOutcome[]"
+            }
+          ],
+          "returns": "Error[]"
+        }
+      ],
+      "import_line": "import { FORMER_ENTITY_REF_CLAIMS_STATE_KEY, formerEntityRefClaimErrors, parseFormerEntityRefs, shouldSyncFormerEntityRefs } from './formerEntityRefs';",
+      "style_from": {
+        "path": "plugins/catalog-backend/src/processing/util.ts",
+        "reason": "small exported helpers of the processing folder"
+      },
+      "depends_on": [
+        "U01",
+        "U04"
+      ],
+      "covers": [
+        "FR-2",
+        "FR-4",
+        "FR-6",
+        "NFR-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/catalog-backend/src/processing/DefaultCatalogProcessingEngine.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Syncs claims on successful runs and merges their errors into the result, so they show on the entity and change the result hash without blocking it.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { markForStitching } from '../database/operations/stitcher/markForStitching';",
+          "rule": "Import `syncFormerEntityRefClaims` and the four names of `./formerEntityRefs` that this file uses."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 175,
+          "to": 175,
+          "first_line": "track.markProcessorsCompleted(result);",
+          "rule": "Add `const formerEntityRefs = result.ok ? await this.syncFormerEntityRefs(item, result.completedEntity) : undefined;`, so a sync failure fails the run before any state is written."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 177,
+          "to": 202,
+          "first_line": "if (result.ok) {",
+          "last_line": "}",
+          "rule": "Keep the behaviour, with the marker of the No query decision. In the ok branch, build `nextState` as `result.state` plus `[FORMER_ENTITY_REF_CLAIMS_STATE_KEY]: true` when `formerEntityRefs?.hasClaims`, compare it with `stateWithoutTtl`, and write `{ ttl: CACHE_TTL, ...nextState }`. In the failure branch, where the ttl has run out, write `{ [FORMER_ENTITY_REF_CLAIMS_STATE_KEY]: true }` instead of `{}` when the marker is set on `state`, and `{}` otherwise."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 206,
+          "to": 218,
+          "first_line": "if (result.errors.length) {",
+          "last_line": ");",
+          "rule": "Declare `const errors = [...result.errors, ...(formerEntityRefs?.errors ?? [])];` first, then use `errors` in place of `result.errors` for the length check, the event payload and `errorsString`, so a changed claim outcome changes the hash. Leave `result.ok` and the failure path's `result.errors` as they are."
+        },
+        {
+          "id": "S5",
+          "at": "insert_before",
+          "from": 345,
+          "to": 345,
+          "first_line": "private startOrphanCleanup(): () => void {",
+          "rule": "Add `private async syncFormerEntityRefs(item: RefreshStateItem, entity: Entity): Promise<{ errors: Error[]; hasClaims: boolean }>`. Return `{ errors: [], hasClaims: false }` when `shouldSyncFormerEntityRefs(entity, item.state)` is false, with no database call. Otherwise call `parseFormerEntityRefs`, then `syncFormerEntityRefClaims` with `claimantEntityId: item.id`, `claimantEntityRef: item.entityRef`, `locationKey: item.locationKey` and `tx: tx as Knex.Transaction`, inside `retryOnDeadlock(() => this.processingDatabase.transaction(...), this.knex)`. Return the parse errors followed by `formerEntityRefClaimErrors(outcomes)`, and `hasClaims: formerEntityRefs.length > 0`."
+        }
+      ],
+      "depends_on": [
+        "U04",
+        "U05"
+      ],
+      "covers": [
+        "FR-6",
+        "FR-7",
+        "NFR-2",
+        "NFR-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/catalog-backend/src/database/operations/formerEntityRefs/resolveFormerEntityRef.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Resolves a former ref to the ref of the entity whose claim is in effect, in one hop.",
+      "rules": [
+        "1. Select from `refresh_state` where `entity_ref` is the former ref; when a row exists return `undefined`, so an exact holder always wins and an inactive claim resolves to nothing.",
+        "2. Select `claimant_entity_ref` from `former_entity_refs` where `former_entity_ref` is the former ref and `rejected_at` is null, ordered by `claimed_at` asc then `claimant_entity_ref` asc, taking the first row.",
+        "3. Return that ref, or `undefined`. Never follow the result further and never fall back to a later claim."
+      ],
+      "exports": [
+        {
+          "name": "resolveFormerEntityRef",
+          "kind": "function",
+          "params": [
+            {
+              "name": "options",
+              "type": "{ knex: Knex; formerEntityRef: string }"
+            }
+          ],
+          "returns": "Promise<string | undefined>"
+        }
+      ],
+      "import_line": "import { resolveFormerEntityRef } from '../database/operations/formerEntityRefs/resolveFormerEntityRef';",
+      "style_from": {
+        "path": "plugins/catalog-backend/src/database/operations/refreshState/checkLocationKeyConflict.ts",
+        "reason": "a single-function read operation"
+      },
+      "depends_on": [
+        "U02",
+        "U03"
+      ],
+      "covers": [
+        "FR-5",
+        "FR-8",
+        "FR-10",
+        "FR-12",
+        "FR-24",
+        "NFR-1",
+        "NFR-4",
+        "AC-9"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/catalog-backend/src/catalog/types.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the former-ref lookup to the internal catalog interface.",
+      "exports": [
+        {
+          "name": "EntityByFormerRefRequest",
+          "kind": "interface",
+          "params": [],
+          "returns": "{ formerEntityRef: string; filter?: FilterPredicate; credentials: BackstageCredentials }"
+        },
+        {
+          "name": "EntitiesCatalog.entityByFormerRef",
+          "kind": "method",
+          "params": [
+            {
+              "name": "request",
+              "type": "EntityByFormerRefRequest"
+            }
+          ],
+          "returns": "Promise<EntitiesBatchResponse>"
+        }
+      ],
+      "import_line": "import { EntityByFormerRefRequest } from '../catalog/types';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 105,
+          "to": 105,
+          "first_line": "}",
+          "rule": "Add `EntityByFormerRefRequest` with a TSDoc comment on each field, in the style of `EntitiesBatchRequest`. `formerEntityRef` is lowercase; `filter` follows the same rule as in `EntitiesBatchRequest`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 160,
+          "to": 160,
+          "first_line": "entitiesBatch(request: EntitiesBatchRequest): Promise<EntitiesBatchResponse>;",
+          "rule": "Add the required method `entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntitiesBatchResponse>;` with a comment saying the single item is null for every miss."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-10"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Implements the lookup by resolving the former ref and fetching the target through `entitiesBatch`.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 28,
+          "to": 28,
+          "first_line": "EntityAncestryResponse,",
+          "rule": "Import `EntityByFormerRefRequest` from `../catalog/types`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 45,
+          "to": 45,
+          "first_line": "import { markForStitching } from '../database/operations/stitcher/markForStitching';",
+          "rule": "Import `resolveFormerEntityRef`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 367,
+          "to": 367,
+          "first_line": "}",
+          "rule": "Add `async entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntitiesBatchResponse>`. Call `resolveFormerEntityRef` with `this.database`; on `undefined` return `{ items: { type: 'object', entities: [null] } }`; otherwise return `this.entitiesBatch({ entityRefs: [target], filter: request.filter, credentials: request.credentials })`. Leave `entitiesBatch` and every other query as they are."
+        }
+      ],
+      "depends_on": [
+        "U07",
+        "U08"
+      ],
+      "covers": [
+        "FR-10",
+        "NFR-1"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Applies `catalog.entity.read` to the lookup, with the same decisions as `entitiesBatch`.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "EntityAncestryResponse,",
+          "rule": "Import `EntityByFormerRefRequest` from `../catalog/types`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 130,
+          "to": 130,
+          "first_line": "}",
+          "rule": "Add `async entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntitiesBatchResponse>`, shaped exactly like `entitiesBatch`: `authorizeConditional` on `catalogEntityReadPermission`; DENY returns `{ items: { type: 'object', entities: [null] } }` without calling the inner catalog; CONDITIONAL passes `filter: this.permissionPredicate(authorizeDecision.conditions, request.filter)`; ALLOW passes the request through."
+        }
+      ],
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-11",
+        "FR-12"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/catalog-backend/src/schema/openapi.yaml",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Declares the former-ref lookup beside the by-name route.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 999,
+          "to": 999,
+          "first_line": "/entities/by-name/{kind}/{namespace}/{name}/ancestry:",
+          "rule": "Add path `/entities/by-former-name/{kind}/{namespace}/{name}` as a copy of the by-name path, with `operationId: GetEntityByFormerName` and description `Get the entity that currently claims a former entity ref.`. Same tags, 200 `Entity` response, 400 and default `ErrorResponse`, security and the three path parameters."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-9"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/catalog-backend/src/schema/openapi/generated/router.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates the server and client OpenAPI code. Besides this file the step writes plugins/catalog-backend/src/schema/openapi/generated/apis/Api.server.ts and packages/catalog-client/src/schema/openapi/generated/apis/Api.client.ts, and it needs Java for the bundled generator.",
+      "run": "yarn generate",
+      "cwd": "plugins/catalog-backend",
+      "depends_on": [
+        "U11"
+      ],
+      "covers": [
+        "FR-9"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/catalog-backend/src/service/createRouter.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Serves the lookup route, audited like the by-name route.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 455,
+          "to": 455,
+          "first_line": "})",
+          "rule": "Add `.get('/entities/by-former-name/:kind/:namespace/:name', async (req, res) => { ... })`, following the by-name route line for line. `entityRef` is `stringifyEntityRef({ kind, namespace, name })`. The auditor event is `eventId: 'entity-fetch'`, `request: req`, `meta: { queryType: 'by-former-name', entityRef }`. Call `entitiesCatalog.entityByFormerRef({ formerEntityRef: entityRef, credentials: await httpAuth.credentials(req) })`, await `auditorEvent?.success()`, then `writeSingleEntityResponse(res, items, ...)` with the message of the Lookup response decision. Errors go to `auditorEvent?.fail({ error: err })` and are rethrown."
+        }
+      ],
+      "depends_on": [
+        "U08",
+        "U12"
+      ],
+      "covers": [
+        "FR-9",
+        "FR-12",
+        "FR-13"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-model/src/entity/constants.ts": "efa7abef43133b613f72dfe6d7e7d27edb24ca4af5b26595e6e8e89d1abab604",
+    "plugins/catalog-backend/migrations/20261007000000_stitch_failure_count.js": "a77f7ac557472f3aad14ad7f46a99f661ea7ad386ddf9341f6e6aeaebfa363b1",
+    "plugins/catalog-backend/migrations/20220616202842_refresh_keys.js": "ef525c25ba74d10727cff6bd308f7a6d1d9af4dc97d1e8870bbbed6bc5ef7549",
+    "plugins/catalog-backend/src/database/tables.ts": "1f6f6a726f7866734b9f69ad88c23a9056bf35274f942eaacd4ba9022ae72996",
+    "plugins/catalog-backend/src/database/operations/refreshState/checkLocationKeyConflict.ts": "475fd1d7917a60a1b642a1691dae374f2d975a4478cf3ce20d7c8b45d5a1b075",
+    "plugins/catalog-backend/src/processing/util.ts": "feacb6dc2121e9d118204554e6fddfcf316bfecd7266452fabbc7ea334022019",
+    "plugins/catalog-backend/src/processing/DefaultCatalogProcessingEngine.ts": "b0f6d825f2019bd09057ef5e15af39ba23c3b6d76f1bbfe4df77a97e37dbb00f",
+    "plugins/catalog-backend/src/catalog/types.ts": "2259187bf405b52a4c4ce79001538f2855a062d6b99eec018bbe80e2f98d820f",
+    "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts": "f71ddf1617331f791cf4d8792c91d35a0dc439c3d92c95b75ba02031d9780f51",
+    "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts": "ccefdb5eae4dec5d99898e104cc29f69ff05150f6f9ff0b94cc3ca2ddcdbe93b",
+    "plugins/catalog-backend/src/schema/openapi.yaml": "cf26233702b7e9a356ad00edc75b52b57cfc9fad72d39de3d5f37c23a8900719",
+    "plugins/catalog-backend/src/service/createRouter.ts": "e9f7ea913cd77b0d92a06343c44bc0c6004780c0db470061d14d96bb8ef24f9b"
+  }
+}

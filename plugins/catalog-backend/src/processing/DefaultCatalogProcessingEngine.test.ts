@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import { Hash } from 'node:crypto';
+import { createHash, Hash } from 'node:crypto';
 import { DateTime } from 'luxon';
 import waitForExpect from 'wait-for-expect';
 import { DefaultProcessingDatabase } from '../database/DefaultProcessingDatabase';
 import { DefaultCatalogProcessingEngine } from './DefaultCatalogProcessingEngine';
 import { markForStitching } from '../database/operations/stitcher/markForStitching';
+import { syncFormerEntityRefClaims } from '../database/operations/formerEntityRefs/syncFormerEntityRefClaims';
 import { CatalogProcessingOrchestrator } from './types';
 import { ConfigReader } from '@backstage/config';
 import { mockServices } from '@backstage/backend-test-utils';
@@ -27,6 +28,9 @@ import { metricsServiceMock } from '@backstage/backend-test-utils/alpha';
 
 jest.mock('../database/operations/stitcher/markForStitching');
 const mockMarkForStitching = jest.mocked(markForStitching);
+
+jest.mock('../database/operations/formerEntityRefs/syncFormerEntityRefClaims');
+const mockSyncFormerEntityRefClaims = jest.mocked(syncFormerEntityRefClaims);
 
 describe('DefaultCatalogProcessingEngine', () => {
   const db = {
@@ -1018,5 +1022,253 @@ describe('DefaultCatalogProcessingEngine', () => {
       expect.arrayContaining(['k:ns/me', 'k:ns/other2']),
     );
     await engine.stop();
+  });
+
+  describe('former entity refs', () => {
+    type TestEntity = Parameters<
+      CatalogProcessingOrchestrator['process']
+    >[0]['entity'];
+    type TestState = Parameters<
+      CatalogProcessingOrchestrator['process']
+    >[0]['state'];
+
+    const plainEntity: TestEntity = {
+      apiVersion: '1',
+      kind: 'Location',
+      metadata: { name: 'test' },
+    };
+    const annotatedEntity: TestEntity = {
+      apiVersion: '1',
+      kind: 'Location',
+      metadata: {
+        name: 'test',
+        annotations: {
+          'backstage.io/former-entity-refs': 'location:default/old',
+        },
+      },
+    };
+
+    const createEngine = (
+      hashFactory: () => Hash = () => hash,
+    ): DefaultCatalogProcessingEngine =>
+      new DefaultCatalogProcessingEngine({
+        config: new ConfigReader({}),
+        logger: mockServices.logger.mock(),
+        processingDatabase: db,
+        knex: { client: { config: { client: 'pg' } } } as any,
+        orchestrator,
+        createHash: hashFactory,
+        scheduler: mockServices.scheduler(),
+        pollingIntervalMs: 100,
+        events: mockServices.events.mock(),
+        metrics: metricsServiceMock.mock(),
+      });
+
+    const processable = (
+      entity: TestEntity,
+      state: TestState,
+      resultHash: string = '',
+    ) => ({
+      entityRef: 'location:default/test',
+      id: '1',
+      unprocessedEntity: entity,
+      resultHash,
+      state,
+      nextUpdateAt: DateTime.now(),
+    });
+
+    const mockSuccessfulProcessing = (entity: TestEntity) => {
+      orchestrator.process.mockResolvedValue({
+        ok: true,
+        completedEntity: entity,
+        relations: [],
+        errors: [],
+        deferredEntities: [],
+        state: {},
+        refreshKeys: [],
+      });
+    };
+
+    const errorMessages = (errors: string | undefined): string[] =>
+      JSON.parse(errors!).map((e: { message: string }) => e.message);
+
+    beforeEach(() => {
+      db.transaction.mockImplementation(cb => cb((() => {}) as any));
+      db.listParents.mockResolvedValue({ entityRefs: [] });
+      db.updateProcessedEntity.mockResolvedValue({
+        relationsChange: { deleted: [], inserted: [] },
+      });
+      hash.digest.mockReturnValue('new-result-hash');
+    });
+
+    it('stores claim errors with the processed entity', async () => {
+      const entity: TestEntity = {
+        ...plainEntity,
+        metadata: {
+          name: 'test',
+          annotations: {
+            'backstage.io/former-entity-refs':
+              'location:default/old, not-a-ref',
+          },
+        },
+      };
+      mockSuccessfulProcessing(entity);
+      mockSyncFormerEntityRefClaims.mockResolvedValue([
+        { formerEntityRef: 'location:default/old', outcome: 'rejected' },
+      ]);
+      db.getProcessableEntities
+        .mockResolvedValueOnce({ items: [processable(entity, {})] })
+        .mockResolvedValue({ items: [] });
+
+      const engine = createEngine();
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(1);
+        expect(db.updateEntityCache).toHaveBeenCalledTimes(1);
+      });
+      await engine.stop();
+
+      expect(mockSyncFormerEntityRefClaims).toHaveBeenCalledWith(
+        expect.objectContaining({
+          claimantEntityId: '1',
+          claimantEntityRef: 'location:default/test',
+          formerEntityRefs: ['location:default/old'],
+        }),
+      );
+      const processed = db.updateProcessedEntity.mock.calls[0][1];
+      expect(processed).toEqual(
+        expect.objectContaining({ id: '1', processedEntity: entity }),
+      );
+      const messages = errorMessages(processed.errors);
+      expect(messages).toHaveLength(2);
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          "Ignored former entity ref 'not-a-ref' in annotation backstage.io/former-entity-refs: it is not a full entity ref on the form kind:namespace/name",
+          "Former entity ref 'location:default/old' was rejected because an entity from another source holds or held that ref. To clear this, remove the value from annotation backstage.io/former-entity-refs, then add it back once that entity is gone",
+        ]),
+      );
+      expect(db.updateProcessedEntityErrors).not.toHaveBeenCalled();
+      expect(db.updateEntityCache.mock.calls[0][1].state).toEqual(
+        expect.objectContaining({ formerEntityRefClaims: true }),
+      );
+    });
+
+    it('reprocesses when only a claim outcome changes', async () => {
+      mockSuccessfulProcessing(annotatedEntity);
+      mockSyncFormerEntityRefClaims
+        .mockResolvedValueOnce([
+          { formerEntityRef: 'location:default/old', outcome: 'active' },
+        ])
+        .mockResolvedValue([
+          { formerEntityRef: 'location:default/old', outcome: 'lost' },
+        ]);
+      db.getProcessableEntities
+        .mockResolvedValueOnce({
+          items: [processable(annotatedEntity, {})],
+        })
+        .mockResolvedValue({ items: [] });
+
+      const engine = createEngine(() => createHash('sha1'));
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(1);
+      });
+      const first = db.updateProcessedEntity.mock.calls[0][1];
+      expect(errorMessages(first.errors)).toEqual([]);
+
+      db.getProcessableEntities
+        .mockReset()
+        .mockResolvedValueOnce({
+          items: [
+            processable(
+              annotatedEntity,
+              { formerEntityRefClaims: true },
+              first.resultHash,
+            ),
+          ],
+        })
+        .mockResolvedValue({ items: [] });
+
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(2);
+      });
+      await engine.stop();
+
+      const second = db.updateProcessedEntity.mock.calls[1][1];
+      expect(second.resultHash).not.toBe(first.resultHash);
+      expect(errorMessages(second.errors)).toEqual([
+        "Former entity ref 'location:default/old' is not in effect because another entity claimed it first",
+      ]);
+    });
+
+    it('leaves entities that never declared alone', async () => {
+      mockSuccessfulProcessing(plainEntity);
+      db.getProcessableEntities
+        .mockResolvedValueOnce({ items: [processable(plainEntity, {})] })
+        .mockResolvedValue({ items: [] });
+
+      const engine = createEngine();
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(1);
+      });
+      await engine.stop();
+
+      expect(mockSyncFormerEntityRefClaims).not.toHaveBeenCalled();
+      expect(db.updateEntityCache).not.toHaveBeenCalled();
+    });
+
+    it('removes claims once the annotation is dropped', async () => {
+      mockSuccessfulProcessing(plainEntity);
+      mockSyncFormerEntityRefClaims.mockResolvedValue([]);
+      db.getProcessableEntities
+        .mockResolvedValueOnce({
+          items: [processable(plainEntity, { formerEntityRefClaims: true })],
+        })
+        .mockResolvedValue({ items: [] });
+
+      const engine = createEngine();
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(1);
+        expect(db.updateEntityCache).toHaveBeenCalledTimes(1);
+      });
+      await engine.stop();
+
+      expect(mockSyncFormerEntityRefClaims).toHaveBeenCalledTimes(1);
+      expect(mockSyncFormerEntityRefClaims).toHaveBeenCalledWith(
+        expect.objectContaining({ formerEntityRefs: [] }),
+      );
+      expect(db.updateEntityCache.mock.calls[0][1].state).not.toHaveProperty(
+        'formerEntityRefClaims',
+      );
+    });
+
+    it('keeps the marker through failed runs', async () => {
+      orchestrator.process.mockResolvedValue({ ok: false, errors: [] });
+      db.getProcessableEntities
+        .mockResolvedValueOnce({
+          items: [
+            processable(annotatedEntity, {
+              formerEntityRefClaims: true,
+              ttl: 0,
+            }),
+          ],
+        })
+        .mockResolvedValue({ items: [] });
+
+      const engine = createEngine();
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateEntityCache).toHaveBeenCalledTimes(1);
+      });
+      await engine.stop();
+
+      expect(db.updateEntityCache).toHaveBeenCalledWith(expect.anything(), {
+        id: '1',
+        state: { formerEntityRefClaims: true },
+      });
+      expect(mockSyncFormerEntityRefClaims).not.toHaveBeenCalled();
+    });
   });
 });

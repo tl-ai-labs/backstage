@@ -59,5 +59,27 @@ describe('catalogServiceMock', () => {
       getEntities: async () => ({ items: [entity1] }),
     });
     await expect(mock2.getEntities()).resolves.toEqual({ items: [entity1] });
+
+    const renamed: Entity = {
+      apiVersion: 'v1',
+      kind: 'CustomKind',
+      metadata: {
+        namespace: 'default',
+        name: 'e3',
+        uid: 'u3',
+        annotations: {
+          'backstage.io/former-entity-refs': 'customkind:default/old-e3',
+        },
+      },
+    };
+    const renamedFake = catalogServiceMock({ entities: [renamed] });
+    await expect(
+      renamedFake.getEntityByFormerRef?.('customkind:default/old-e3'),
+    ).resolves.toEqual(renamed);
+
+    expect(jest.isMockFunction(mock.getEntityByFormerRef)).toBe(true);
+    expect(
+      mock.getEntityByFormerRef?.('customkind:default/old-e3'),
+    ).toBeUndefined();
   });
 });

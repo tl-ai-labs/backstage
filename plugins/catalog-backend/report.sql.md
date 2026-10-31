@@ -22,6 +22,21 @@
 - `final_entities_entity_ref_uniq` (`entity_ref`) unique
 - `final_entities_pkey` (`entity_id`) unique primary
 
+## Table `former_entity_refs`
+
+| Column                | Type                       | Nullable | Max Length | Default |
+| --------------------- | -------------------------- | -------- | ---------- | ------- |
+| `claimant_entity_id`  | `character varying`        | false    | 255        | -       |
+| `claimant_entity_ref` | `character varying`        | false    | 255        | -       |
+| `claimed_at`          | `timestamp with time zone` | false    | -          | -       |
+| `former_entity_ref`   | `character varying`        | false    | 255        | -       |
+| `rejected_at`         | `timestamp with time zone` | true     | -          | -       |
+
+### Indices
+
+- `former_entity_refs_claimant_entity_id_idx` (`claimant_entity_id`)
+- `former_entity_refs_pkey` (`former_entity_ref`, `claimant_entity_id`) unique primary
+
 ## Table `location_update_log`
 
 | Column        | Type                       | Nullable | Max Length | Default                                           |

@@ -68,6 +68,7 @@ import useAsync from 'react-use/esm/useAsync';
 import { catalogTranslationRef } from '../../alpha/translation';
 import { rootRouteRef, unregisterRedirectRouteRef } from '../../routes';
 import { EntityContextMenu } from '../EntityContextMenu/EntityContextMenu';
+import { EntityRenamedNotice } from './EntityRenamedNotice';
 
 /** @public */
 export type EntityLayoutRouteProps = {
@@ -376,6 +377,7 @@ export const EntityLayout = (props: EntityLayoutProps) => {
       {loading && <Progress />}
 
       {entity && <RoutedTabs routes={routes} />}
+      {entity && <EntityRenamedNotice />}
 
       {error && (
         <Content>

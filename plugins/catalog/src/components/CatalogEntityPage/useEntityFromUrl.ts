@@ -14,35 +14,94 @@
  * limitations under the License.
  */
 
+import { stringifyEntityRef } from '@backstage/catalog-model';
 import {
   errorApiRef,
   useApi,
+  useRouteRef,
   useRouteRefParams,
 } from '@backstage/core-plugin-api';
 import {
   catalogApiRef,
   EntityLoadingStatus,
+  entityRouteParams,
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useAsyncRetry from 'react-use/esm/useAsyncRetry';
+
+// useRouteRef throws if unresolved; in a Router its hook order stays the same
+function useOptionalEntityRoute() {
+  try {
+    return useRouteRef(entityRouteRef);
+  } catch {
+    return undefined;
+  }
+}
 
 export const useEntityFromUrl = (): EntityLoadingStatus => {
   const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
   const navigate = useNavigate();
   const errorApi = useApi(errorApiRef);
   const catalogApi = useApi(catalogApiRef);
+  const location = useLocation();
+  const entityRoute = useOptionalEntityRoute();
 
   const {
-    value: entity,
+    value,
     error,
     loading,
     retry: refresh,
-  } = useAsyncRetry(
-    () => catalogApi.getEntityByRef({ kind, namespace, name }),
-    [catalogApi, kind, namespace, name],
-  );
+  } = useAsyncRetry(async () => {
+    const exactMatch = await catalogApi.getEntityByRef({
+      kind,
+      namespace,
+      name,
+    });
+    if (exactMatch) {
+      return { entity: exactMatch };
+    }
+    if (!entityRoute) {
+      return {};
+    }
+
+    try {
+      const renamed = await catalogApi.getEntityByFormerRef?.({
+        kind,
+        namespace,
+        name,
+      });
+      if (!renamed) {
+        return {};
+      }
+
+      const oldPath = entityRoute(
+        entityRouteParams({ kind, namespace, name }, { encodeParams: true }),
+      );
+      const subPath = location.pathname
+        .toLowerCase()
+        .startsWith(oldPath.toLowerCase())
+        ? location.pathname.slice(oldPath.length)
+        : '';
+
+      return {
+        redirect: {
+          to:
+            entityRoute(entityRouteParams(renamed, { encodeParams: true })) +
+            subPath +
+            location.search +
+            location.hash,
+          formerEntityRef: stringifyEntityRef({ kind, namespace, name }),
+        },
+      };
+    } catch {
+      return {};
+    }
+  }, [catalogApi, kind, namespace, name]);
+
+  const entity = value?.entity;
+  const redirect = value?.redirect;
 
   useEffect(() => {
     if (!name) {
@@ -51,5 +110,17 @@ export const useEntityFromUrl = (): EntityLoadingStatus => {
     }
   }, [errorApi, navigate, error, loading, entity, name]);
 
-  return { entity, loading, error, refresh };
+  useEffect(() => {
+    if (redirect) {
+      const currentRef = stringifyEntityRef({ kind, namespace, name });
+      if (redirect.formerEntityRef === currentRef) {
+        navigate(redirect.to, {
+          replace: true,
+          state: { formerEntityRef: redirect.formerEntityRef },
+        });
+      }
+    }
+  }, [navigate, redirect, kind, namespace, name]);
+
+  return { entity, loading: loading || !!redirect, error, refresh };
 };

@@ -52,7 +52,11 @@ import { DefaultEntitiesCatalog } from '../service/DefaultEntitiesCatalog';
 import { DefaultRefreshService } from '../service/DefaultRefreshService';
 import { RefreshOptions, RefreshService } from '../service/types';
 import { DefaultStitcher } from '../stitching/DefaultStitcher';
-import { mockServices, TestDatabases } from '@backstage/backend-test-utils';
+import {
+  mockCredentials,
+  mockServices,
+  TestDatabases,
+} from '@backstage/backend-test-utils';
 import { LoggerService } from '@backstage/backend-plugin-api';
 import { entitiesResponseToObjects } from '../service/response';
 import { deleteOrphanedEntities } from '../database/operations/util/deleteOrphanedEntities';
@@ -400,6 +404,14 @@ class TestHarness {
         e!,
       ]),
     );
+  }
+
+  async getEntityByFormerRef(formerEntityRef: string) {
+    const { items } = await this.#catalog.entityByFormerRef({
+      formerEntityRef,
+      credentials: mockCredentials.none(),
+    });
+    return entitiesResponseToObjects(items)[0];
   }
 
   async refresh(options: RefreshOptions) {
@@ -1378,5 +1390,183 @@ describe('Catalog Backend Integration', () => {
     await expect(harness.getOutputEntities()).resolves.toEqual({
       'component:default/a': withOutputFields(entityA),
     });
+  });
+
+  function mkFormerRefEntity(
+    name: string,
+    locationKey: string,
+    formerEntityRefs?: string,
+  ) {
+    return {
+      locationKey,
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: {
+        name,
+        annotations: {
+          'backstage.io/managed-by-location': 'url:.',
+          'backstage.io/managed-by-origin-location': 'url:.',
+          ...(formerEntityRefs && {
+            'backstage.io/former-entity-refs': formerEntityRefs,
+          }),
+        },
+      },
+      spec: { type: 'service', owner: 'me' },
+    };
+  }
+
+  it('should resolve a former ref after a rename in flight', async () => {
+    const harness = await TestHarness.create({
+      db: await databases.init('SQLITE_3'),
+    });
+
+    const oldEntity = mkFormerRefEntity('old', 'shared-key');
+    const newEntity = mkFormerRefEntity(
+      'new',
+      'shared-key',
+      'component:default/old',
+    );
+
+    await harness.setInputEntities([oldEntity]);
+    await expect(harness.process()).resolves.toEqual({});
+
+    await harness.setInputEntities([oldEntity, newEntity]);
+    await expect(harness.process()).resolves.toEqual({});
+
+    await expect(harness.getOutputEntities()).resolves.toEqual({
+      'component:default/old': expect.anything(),
+      'component:default/new': expect.anything(),
+    });
+    await expect(
+      harness.getEntityByFormerRef('component:default/old'),
+    ).resolves.toBeFalsy();
+
+    await harness.setInputEntities([newEntity]);
+    await expect(harness.process()).resolves.toEqual({});
+
+    await expect(harness.getOutputEntities()).resolves.toEqual({
+      'component:default/new': expect.anything(),
+    });
+    await expect(
+      harness.getEntityByFormerRef('component:default/old'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ name: 'new' }),
+      }),
+    );
+  });
+
+  it('should report a rejected former ref claim without blocking the entity', async () => {
+    const harness = await TestHarness.create({
+      db: await databases.init('SQLITE_3'),
+    });
+
+    const holder = mkFormerRefEntity('old', 'source-a');
+    const claimant = mkFormerRefEntity(
+      'new',
+      'source-b',
+      'component:default/old',
+    );
+    const expectedClaimant = expect.objectContaining({
+      spec: { type: 'service', owner: 'me' },
+      status: {
+        items: [
+          expect.objectContaining({
+            level: 'error',
+            message:
+              "InputError: Former entity ref 'component:default/old' was rejected because an entity from another source holds or held that ref. To clear this, remove the value from annotation backstage.io/former-entity-refs, then add it back once that entity is gone",
+          }),
+        ],
+      },
+    });
+
+    await harness.setInputEntities([holder]);
+    await expect(harness.process()).resolves.toEqual({});
+
+    await harness.setInputEntities([holder, claimant]);
+    await harness.process();
+
+    await expect(harness.getOutputEntities()).resolves.toEqual({
+      'component:default/old': expect.anything(),
+      'component:default/new': expectedClaimant,
+    });
+
+    await harness.setInputEntities([claimant]);
+    await harness.process();
+
+    await expect(harness.getOutputEntities()).resolves.toEqual({
+      'component:default/new': expectedClaimant,
+    });
+    await expect(
+      harness.getEntityByFormerRef('component:default/old'),
+    ).resolves.toBeFalsy();
+  });
+
+  it("should clear a lost claim's error when the winner stops declaring it", async () => {
+    const harness = await TestHarness.create({
+      db: await databases.init('SQLITE_3'),
+    });
+
+    const winner = mkFormerRefEntity(
+      'a-winner',
+      'source-a',
+      'component:default/old',
+    );
+    const loser = mkFormerRefEntity(
+      'b-loser',
+      'source-b',
+      'component:default/old',
+    );
+
+    // The winner is processed first and also sorts first, since timestamps
+    // can tie at whole-second precision
+    await harness.setInputEntities([winner]);
+    await expect(harness.process()).resolves.toEqual({});
+
+    await harness.setInputEntities([winner, loser]);
+    await harness.process();
+
+    const lostOutput = await harness.getOutputEntities();
+    expect(lostOutput['component:default/b-loser']).toEqual(
+      expect.objectContaining({
+        status: {
+          items: [
+            expect.objectContaining({
+              level: 'error',
+              message:
+                "InputError: Former entity ref 'component:default/old' is not in effect because another entity claimed it first",
+            }),
+          ],
+        },
+      }),
+    );
+    await expect(
+      harness.getEntityByFormerRef('component:default/old'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ name: 'a-winner' }),
+      }),
+    );
+
+    await harness.setInputEntities([
+      mkFormerRefEntity('a-winner', 'source-a'),
+      loser,
+    ]);
+    await expect(harness.process()).resolves.toEqual({});
+
+    const loserBefore = lostOutput['component:default/b-loser'];
+    const clearedOutput = await harness.getOutputEntities();
+    expect(clearedOutput['component:default/b-loser']).toEqual({
+      ...loserBefore,
+      metadata: { ...loserBefore.metadata, etag: expect.any(String) },
+      status: undefined,
+    });
+    await expect(
+      harness.getEntityByFormerRef('component:default/old'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ name: 'b-loser' }),
+      }),
+    );
   });
 });

@@ -568,6 +568,7 @@ export const techdocsTranslationRef: TranslationRef<
     readonly 'pageWrapper.subtitle': 'Documentation available in {{orgName}}';
     readonly 'entityContent.title': 'TechDocs';
     readonly 'reader.settings': 'Settings';
+    readonly 'reader.renamedNotice': 'This entity was renamed from {{formerEntityRef}}.';
   }
 >;
 

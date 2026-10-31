@@ -68,6 +68,7 @@ describe('createRouter readonly disabled', () => {
       removeEntityByUid: jest.fn(),
       entityAncestry: jest.fn(),
       facets: jest.fn(),
+      entityByFormerRef: jest.fn(),
       queryEntities: jest.fn(),
     };
     locationService = {
@@ -554,6 +555,105 @@ describe('createRouter readonly disabled', () => {
     });
   });
 
+  describe('GET /entities/by-former-name/:kind/:namespace/:name', () => {
+    let auditor: ReturnType<typeof mockServices.auditor.mock>;
+    let auditedApp: express.Express | Server;
+
+    beforeEach(async () => {
+      auditor = mockServices.auditor.mock();
+      const router = await createRouter({
+        entitiesCatalog,
+        locationService,
+        orchestrator,
+        logger: mockServices.logger.mock(),
+        refreshService,
+        config: new ConfigReader(undefined),
+        auth: mockServices.auth(),
+        httpAuth: mockServices.httpAuth(),
+        locationAnalyzer,
+        permissionsService,
+        auditor,
+      });
+      router.use(middleware.error());
+      auditedApp = await wrapServer(express().use(router));
+    });
+
+    it('returns the entity for a resolved former ref', async () => {
+      const entity: Entity = {
+        apiVersion: 'a',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          namespace: 'ns',
+        },
+      };
+      const auditorEvent = { success: jest.fn(), fail: jest.fn() };
+      auditor.createEvent.mockResolvedValue(auditorEvent);
+      entitiesCatalog.entityByFormerRef.mockResolvedValue({
+        items: { type: 'object', entities: [entity] },
+      });
+
+      const response = await request(auditedApp).get(
+        '/entities/by-former-name/COMPONENT/ns/old-name',
+      );
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toEqual(expect.objectContaining(entity));
+      expect(entitiesCatalog.entityByFormerRef).toHaveBeenCalledTimes(1);
+      expect(entitiesCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        formerEntityRef: 'component:ns/old-name',
+        credentials: mockCredentials.user(),
+      });
+      expect(auditor.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'entity-fetch',
+          meta: expect.objectContaining({ queryType: 'by-former-name' }),
+        }),
+      );
+      expect(auditorEvent.success).toHaveBeenCalledTimes(1);
+      expect(auditorEvent.success).toHaveBeenCalledWith({
+        meta: { entities: ['component:ns/new-name'] },
+      });
+      expect(auditorEvent.fail).not.toHaveBeenCalled();
+    });
+
+    it('answers every miss identically', async () => {
+      const auditorEvent = { success: jest.fn(), fail: jest.fn() };
+      auditor.createEvent.mockResolvedValue(auditorEvent);
+      entitiesCatalog.entityByFormerRef.mockResolvedValue({
+        items: { type: 'object', entities: [null] },
+      });
+
+      const unclaimed = await request(auditedApp).get(
+        '/entities/by-former-name/component/default/unclaimed',
+      );
+      const unauthorized = await request(auditedApp).get(
+        '/entities/by-former-name/component/default/unauthorized',
+      );
+
+      expect(unclaimed.status).toEqual(404);
+      expect(unauthorized.status).toEqual(404);
+      expect(unclaimed.body.error.name).toEqual('NotFoundError');
+      expect(unauthorized.body.error.name).toEqual('NotFoundError');
+      expect(unclaimed.body.error.message).toEqual(
+        "No entity found with former ref 'component:default/unclaimed'",
+      );
+      expect(unauthorized.body.error.message).toEqual(
+        "No entity found with former ref 'component:default/unauthorized'",
+      );
+      expect(Object.keys(unclaimed.body)).toEqual(
+        Object.keys(unauthorized.body),
+      );
+      expect(Object.keys(unclaimed.body.error)).toEqual(
+        Object.keys(unauthorized.body.error),
+      );
+      expect(unclaimed.body).not.toHaveProperty('entityRef');
+      expect(unauthorized.body).not.toHaveProperty('entityRef');
+      expect(auditorEvent.success).not.toHaveBeenCalled();
+      expect(auditorEvent.fail).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('DELETE /entities/by-uid/:uid', () => {
     it('can remove', async () => {
       entitiesCatalog.removeEntityByUid.mockResolvedValue(undefined);
@@ -878,6 +978,7 @@ describe('createRouter readonly disabled', () => {
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          entityByFormerRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,
@@ -1391,6 +1492,7 @@ describe('createRouter readonly and raw json enabled', () => {
       removeEntityByUid: jest.fn(),
       entityAncestry: jest.fn(),
       facets: jest.fn(),
+      entityByFormerRef: jest.fn(),
       queryEntities: jest.fn(),
     };
     locationService = {
@@ -1647,6 +1749,7 @@ describe.each(databases.eachSupportedId())(
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          entityByFormerRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,

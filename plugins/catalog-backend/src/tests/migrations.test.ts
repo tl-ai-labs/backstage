@@ -1699,4 +1699,55 @@ describe.each(databases.eachSupportedId())('migrations, %p', databaseId => {
       { ...newRequest, failure_count: 0 },
     ]);
   });
+
+  it('20261031000000_former_entity_refs.js', async () => {
+    const knex = await databases.init(databaseId);
+    await migrateUntilBefore(knex, '20261031000000_former_entity_refs.js');
+
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(false);
+
+    await migrateUpOnce(knex);
+
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(true);
+    const columnInfo = await knex('former_entity_refs').columnInfo();
+    expect(columnInfo.rejected_at.nullable).toBe(true);
+    expect(columnInfo.claimed_at.nullable).toBe(false);
+
+    await knex('refresh_state').insert({
+      entity_id: 'e1',
+      entity_ref: 'k:ns/new',
+      unprocessed_entity: '{}',
+      errors: '[]',
+      next_update_at: knex.fn.now(),
+      last_discovery_at: knex.fn.now(),
+    });
+
+    const claim = {
+      former_entity_ref: 'k:ns/old',
+      claimant_entity_id: 'e1',
+      claimant_entity_ref: 'k:ns/new',
+      claimed_at: knex.fn.now(),
+    };
+    await knex('former_entity_refs').insert(claim);
+    await expect(knex('former_entity_refs')).resolves.toEqual([
+      expect.objectContaining({
+        former_entity_ref: 'k:ns/old',
+        claimant_entity_id: 'e1',
+        claimant_entity_ref: 'k:ns/new',
+        rejected_at: null,
+      }),
+    ]);
+
+    // Using a weak expectation since the error differs between engines
+    await expect(knex('former_entity_refs').insert(claim)).rejects.toEqual(
+      expect.anything(),
+    );
+
+    await knex('refresh_state').where({ entity_id: 'e1' }).delete();
+    await expect(knex('former_entity_refs')).resolves.toEqual([]);
+
+    await migrateDownOnce(knex);
+
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(false);
+  });
 });

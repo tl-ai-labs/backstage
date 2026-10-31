@@ -290,6 +290,7 @@ export const catalogTranslationRef: TranslationRef<
     readonly 'indexPage.title': '{{orgName}} Catalog';
     readonly 'indexPage.createButtonTitle': 'Create';
     readonly 'indexPage.supportButtonContent': 'All your software catalog entities';
+    readonly 'entityPage.renamedNotice': 'This entity was renamed from {{formerEntityRef}}.';
     readonly 'entityPage.notFoundMessage': 'There is no {{kind}} with the requested {{link}}.';
     readonly 'entityPage.notFoundLinkText': 'kind, namespace, and name';
     readonly 'searchResultItem.type': 'Type';

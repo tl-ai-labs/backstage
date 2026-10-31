@@ -26,6 +26,7 @@ import {
   EntitiesRequest,
   EntitiesResponse,
   EntityAncestryResponse,
+  EntityByFormerRefRequest,
   EntityFacetsRequest,
   EntityFacetsResponse,
   EntityOrder,
@@ -43,6 +44,7 @@ import {
   DbSearchRow,
 } from '../database/tables';
 import { markForStitching } from '../database/operations/stitcher/markForStitching';
+import { resolveFormerEntityRef } from '../database/operations/formerEntityRefs/resolveFormerEntityRef';
 
 import {
   isQueryEntitiesCursorRequest,
@@ -364,6 +366,25 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
     const items = request.entityRefs.map(ref => lookup.get(ref) ?? null);
 
     return { items: await processRawEntitiesResult(items, request.fields) };
+  }
+
+  async entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntitiesBatchResponse> {
+    const target = await resolveFormerEntityRef({
+      knex: this.database,
+      formerEntityRef: request.formerEntityRef,
+    });
+
+    if (target === undefined) {
+      return { items: { type: 'object', entities: [null] } };
+    }
+
+    return this.entitiesBatch({
+      entityRefs: [target],
+      filter: request.filter,
+      credentials: request.credentials,
+    });
   }
 
   async queryEntities(

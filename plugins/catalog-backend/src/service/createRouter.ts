@@ -454,6 +454,59 @@ export async function createRouter(
       }
     })
     .get(
+      '/entities/by-former-name/:kind/:namespace/:name',
+      async (req, res) => {
+        const { kind, namespace, name } = req.params;
+        const entityRef = stringifyEntityRef({ kind, namespace, name });
+
+        const auditorEvent = await auditor.createEvent({
+          eventId: 'entity-fetch',
+          request: req,
+          meta: {
+            queryType: 'by-former-name',
+            entityRef,
+          },
+        });
+
+        try {
+          const { items } = await entitiesCatalog.entityByFormerRef({
+            formerEntityRef: entityRef,
+            credentials: await httpAuth.credentials(req),
+          });
+
+          writeSingleEntityResponse(
+            res,
+            items,
+            `No entity found with former ref '${entityRef}'`,
+          );
+
+          await auditorEvent?.success({
+            meta: {
+              // stringify to entity refs
+              entities: items.entities.reduce((arr, element) => {
+                if (!element) {
+                  return arr;
+                }
+
+                if (typeof element === 'string') {
+                  arr.push(element);
+                  return arr;
+                }
+
+                arr.push(stringifyEntityRef(element));
+                return arr;
+              }, [] as string[]),
+            },
+          });
+        } catch (err) {
+          await auditorEvent?.fail({
+            error: err,
+          });
+          throw err;
+        }
+      },
+    )
+    .get(
       '/entities/by-name/:kind/:namespace/:name/ancestry',
       async (req, res) => {
         const { kind, namespace, name } = req.params;

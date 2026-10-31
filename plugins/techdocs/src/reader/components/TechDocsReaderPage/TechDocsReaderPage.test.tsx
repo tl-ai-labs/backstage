@@ -15,6 +15,7 @@
  */
 
 import { ReactNode } from 'react';
+import { fireEvent, waitFor } from '@testing-library/react';
 import { scmIntegrationsApiRef } from '@backstage/integration-react';
 
 import {
@@ -35,7 +36,7 @@ import { rootRouteRef, rootDocsRouteRef } from '../../../routes';
 import { TECHDOCS_EXTERNAL_ANNOTATION } from '@backstage/plugin-techdocs-common';
 
 import { TechDocsReaderPage } from './TechDocsReaderPage';
-import { Route, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Route, useNavigate, useParams } from 'react-router-dom';
 import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
 import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
 import { FlatRoutes } from '@backstage/core-app-api';
@@ -305,6 +306,160 @@ describe('<TechDocsReaderPage />', () => {
     const text = rendered.getAllByText(mockTechDocsMetadata.site_name)[0];
 
     expect(text).toHaveStyle('fontFamily: Comic Sans MS');
+  });
+
+  describe('former entity ref redirect', () => {
+    const getEntityByFormerRef =
+      catalogApiMock.getEntityByFormerRef as jest.Mock;
+
+    const toRef = (
+      ref: string | { kind: string; namespace?: string; name: string },
+    ) =>
+      typeof ref === 'string'
+        ? ref
+        : `${ref.kind}:${ref.namespace}/${ref.name}`.toLowerCase();
+
+    const renamedEntity = {
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: { name: 'new', namespace: 'default' },
+      spec: {},
+    };
+
+    beforeEach(() => {
+      mockNavigate.mockClear();
+      catalogApiMock.getEntityByRef.mockReset();
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      getEntityByFormerRef.mockReset();
+    });
+
+    it('redirects an old docs link and shows the notice', async () => {
+      (useNavigate as jest.Mock).mockImplementation(
+        jest.requireActual('react-router-dom').useNavigate,
+      );
+      catalogApiMock.getEntityByRef.mockImplementation(async (ref: any) =>
+        toRef(ref) === 'component:default/new' ? renamedEntity : undefined,
+      );
+      getEntityByFormerRef.mockResolvedValue(renamedEntity);
+
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/docs/default/component/old/sub/page?x=1#y'],
+        },
+      );
+
+      expect(
+        await rendered.findByText(
+          'This entity was renamed from component:default/old.',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        catalogApiMock.getEntityByRef.mock.calls.map(([ref]) =>
+          toRef(ref as string),
+        ),
+      ).toContain('component:default/new');
+
+      fireEvent.click(rendered.getByRole('button', { name: 'Close' }));
+
+      await waitFor(() =>
+        expect(rendered.queryByText(/renamed from/)).not.toBeInTheDocument(),
+      );
+    });
+
+    it('shows no notice when the former ref state is not a string', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(renamedEntity);
+
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/start"
+              element={
+                <Navigate
+                  to="/docs/default/component/new"
+                  state={{ formerEntityRef: 42 }}
+                  replace
+                />
+              }
+            />
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/start'],
+        },
+      );
+
+      await waitFor(() =>
+        expect(rendered.container.querySelector('article')).toBeInTheDocument(),
+      );
+      expect(getEntityByFormerRef).not.toHaveBeenCalled();
+      expect(rendered.queryByText(/renamed from/)).not.toBeInTheDocument();
+    });
+
+    it('does not follow former refs when embedded', async () => {
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <TechDocsReaderPage
+            entityRef={{
+              name: 'old',
+              namespace: 'default',
+              kind: 'component',
+            }}
+          />
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+        },
+      );
+
+      expect(rendered.container.querySelector('article')).toBeInTheDocument();
+      expect(getEntityByFormerRef).not.toHaveBeenCalled();
+      expect(rendered.queryByText(/renamed from/)).not.toBeInTheDocument();
+    });
+
+    it('leaves not-found behaviour unchanged when nothing resolves', async () => {
+      getEntityMetadata.mockRejectedValue(new Error('Not found'));
+      getEntityByFormerRef.mockRejectedValue(new Error('Not found'));
+
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/docs/default/component/old'],
+        },
+      );
+
+      expect(
+        await rendered.findByText('Custom not found page'),
+      ).toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(rendered.queryByText(/renamed from/)).not.toBeInTheDocument();
+    });
   });
 
   describe('external TechDocs redirect', () => {

@@ -36,6 +36,13 @@ import {
 } from '../util/opentelemetry';
 import { deleteOrphanedEntities } from '../database/operations/util/deleteOrphanedEntities';
 import { markForStitching } from '../database/operations/stitcher/markForStitching';
+import { syncFormerEntityRefClaims } from '../database/operations/formerEntityRefs/syncFormerEntityRefClaims';
+import {
+  FORMER_ENTITY_REF_CLAIMS_STATE_KEY,
+  formerEntityRefClaimErrors,
+  parseFormerEntityRefs,
+  shouldSyncFormerEntityRefs,
+} from './formerEntityRefs';
 import { EventsService } from '@backstage/plugin-events-node';
 import { CATALOG_ERRORS_TOPIC } from '../constants';
 import { retryOnDeadlock } from '../database/util';
@@ -174,18 +181,27 @@ export class DefaultCatalogProcessingEngine {
 
             track.markProcessorsCompleted(result);
 
+            const formerEntityRefs = result.ok
+              ? await this.syncFormerEntityRefs(item, result.completedEntity)
+              : undefined;
+
             if (result.ok) {
               const { ttl: _, ...stateWithoutTtl } = state ?? {};
+              const nextState = formerEntityRefs?.hasClaims
+                ? {
+                    ...result.state,
+                    [FORMER_ENTITY_REF_CLAIMS_STATE_KEY]: true,
+                  }
+                : result.state;
               if (
-                stableStringify(stateWithoutTtl) !==
-                stableStringify(result.state)
+                stableStringify(stateWithoutTtl) !== stableStringify(nextState)
               ) {
                 await this.processingDatabase.transaction(async tx => {
                   await this.processingDatabase.updateEntityCache(tx, {
                     id,
                     state: {
                       ttl: CACHE_TTL,
-                      ...result.state,
+                      ...nextState,
                     },
                   });
                 });
@@ -193,28 +209,35 @@ export class DefaultCatalogProcessingEngine {
             } else {
               const maybeTtl = state?.ttl;
               const ttl = Number.isInteger(maybeTtl) ? (maybeTtl as number) : 0;
+              const expiredState = state?.[FORMER_ENTITY_REF_CLAIMS_STATE_KEY]
+                ? { [FORMER_ENTITY_REF_CLAIMS_STATE_KEY]: true }
+                : {};
               await this.processingDatabase.transaction(async tx => {
                 await this.processingDatabase.updateEntityCache(tx, {
                   id,
-                  state: ttl > 0 ? { ...state, ttl: ttl - 1 } : {},
+                  state: ttl > 0 ? { ...state, ttl: ttl - 1 } : expiredState,
                 });
               });
             }
 
             const location =
               unprocessedEntity?.metadata?.annotations?.[ANNOTATION_LOCATION];
-            if (result.errors.length) {
+            const errors = [
+              ...result.errors,
+              ...(formerEntityRefs?.errors ?? []),
+            ];
+            if (errors.length) {
               this.events.publish({
                 topic: CATALOG_ERRORS_TOPIC,
                 eventPayload: {
                   entity: entityRef,
                   location,
-                  errors: result.errors,
+                  errors,
                 },
               });
             }
             const errorsString = JSON.stringify(
-              result.errors.map(e => serializeError(e)),
+              errors.map(e => serializeError(e)),
             );
 
             let hashBuilder = this.createHash().update(errorsString);
@@ -340,6 +363,35 @@ export class DefaultCatalogProcessingEngine {
         });
       },
     });
+  }
+
+  private async syncFormerEntityRefs(
+    item: RefreshStateItem,
+    entity: Entity,
+  ): Promise<{ errors: Error[]; hasClaims: boolean }> {
+    if (!shouldSyncFormerEntityRefs(entity, item.state)) {
+      return { errors: [], hasClaims: false };
+    }
+
+    const { formerEntityRefs, errors } = parseFormerEntityRefs(entity);
+    const outcomes = await retryOnDeadlock(
+      () =>
+        this.processingDatabase.transaction(tx =>
+          syncFormerEntityRefClaims({
+            tx: tx as Knex.Transaction,
+            claimantEntityId: item.id,
+            claimantEntityRef: item.entityRef,
+            locationKey: item.locationKey,
+            formerEntityRefs,
+          }),
+        ),
+      this.knex,
+    );
+
+    return {
+      errors: [...errors, ...formerEntityRefClaimErrors(outcomes)],
+      hasClaims: formerEntityRefs.length > 0,
+    };
   }
 
   private startOrphanCleanup(): () => void {
