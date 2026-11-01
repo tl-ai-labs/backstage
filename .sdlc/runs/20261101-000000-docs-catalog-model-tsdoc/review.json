@@ -1,0 +1,43 @@
+{
+  "module": "packages/catalog-model",
+  "verdict": "needs_changes",
+  "tool_calls": 7,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+      "line": 43,
+      "issue": "The @returns text says the method returns a new object with the default namespace set whenever the entity has no truthy namespace. That is false for `namespace: ''` and `namespace: null`: the guard falls through to lodash.merge, whose source value overwrites the default. Run against lodash: both inputs return a new object that keeps the empty or null value, and only undefined gets the default. The summary on line 35 has the same gap. The text matches the plan word for word, so this is a defect in the U11 site rule, not in the typing. Confidence: high on behavior, and it is an edge case because the type only allows string or undefined.",
+      "fix": "Reword @returns to say that a new object gets the default namespace only when `metadata.namespace` is undefined, and that an empty or null namespace is kept in the new object. This needs a matching change to the U11 site text, which the plan requires word for word."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+      "line": 60,
+      "issue": "The @throws text covers only errors that name a field, but `entity.metadata.name` is read before `require` runs, so an entity with no `metadata` rejects with a plain TypeError that matches none of the listed cases. U12's behaviour line asks for when the method rejects, and the sibling blocks U11 and U13 document this same TypeError case, so the set is inconsistent. The text matches the plan word for word, so this is a gap in the U12 site rule.",
+      "fix": "Extend @throws with the TypeError for an entity that has no `metadata`, in the wording U11 uses. This needs a matching change to the U12 site text."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+      "line": 65,
+      "issue": "The @throws continuation line is not hanging-indented: it reads `* method does no validation of its own` at the normal comment column. The plan's style source, types.ts:26-33, aligns continuation lines under the tag text, and the other multi-line tags in this run (DefaultNamespaceEntityPolicy, FieldFormatEntityPolicy, SchemaValidEntityPolicy) all do.",
+      "fix": "Indent the continuation so it starts under the tag text, as `   *         method does no validation of its own`. Whitespace only; no plan change is needed."
+    }
+  ],
+  "refinement_packets": [],
+  "notes": {
+    "verdict_basis": "No blocker or major findings. Three minor defects remain in a docs-only deliverable, so they are returned as fixes. The first two change text the plan fixes word for word, so the operator must accept those plan changes or waive them.",
+    "passing": [
+      "All 15 source diffs add comment lines only, remove nothing, and stay within 80 columns (scripted check against git_head_before).",
+      "All 36 sites contain their plan text word for word after line-break normalization, with [PREFIX] expanded (scripted check).",
+      "Validator comments match CommonValidatorFunctions and the regexes in KubernetesValidatorFunctions, including label and annotation keys.",
+      "Spec comments match the 8 kind schemas: required lists, minLength, no minItems or additionalProperties, the Location default, and the dependencyOf and memberOf differences from the types.",
+      "SchemaValid, NoForeignRootFields and GroupDefaultParent comments match the code and Entity.schema.json, including the default known fields.",
+      "API reports change only by removing undocumented markers, with no signature changes.",
+      "The changeset follows U16 and names no internal symbols; no other .changeset file names catalog-model.",
+      "No {@link} tags, release tags on member blocks, or unescaped TSDoc characters were added.",
+      "Env-fixture, authz, PII and test-coverage checks do not apply to this docs intent."
+    ]
+  }
+}

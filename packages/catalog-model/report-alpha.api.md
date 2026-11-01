@@ -44,11 +44,8 @@ export interface AlphaEntity extends Entity_2 {
 
 // @public
 interface ApiEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'API';
-  // (undocumented)
   spec: {
     type: string;
     lifecycle: string;

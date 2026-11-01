@@ -29,8 +29,22 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ResourceEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `Resource`.
+   */
   kind: 'Resource';
+  /**
+   * The specification data of the resource. The JSON schema requires the
+   * non-empty strings `type` and `owner`, and allows an optional non-empty
+   * `system` and an optional `dependsOn` array of non-empty strings. All of
+   * these except `type` hold entity references. The JSON schema does not define
+   * `dependencyOf`, so it accepts any value for that field.
+   */
   spec: {
     type: string;
     owner: string;

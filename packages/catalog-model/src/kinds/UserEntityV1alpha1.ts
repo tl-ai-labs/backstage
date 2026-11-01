@@ -25,8 +25,20 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface UserEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `User`.
+   */
   kind: 'User';
+  /**
+   * The specification data of the user. The JSON schema requires `memberOf`, an
+   * array of entity references that can be empty, even though this type marks
+   * the field as optional. `profile` and all of its fields are optional.
+   */
   spec: {
     profile?: {
       displayName?: string;

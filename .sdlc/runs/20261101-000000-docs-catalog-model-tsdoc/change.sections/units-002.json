@@ -1,0 +1,118 @@
+[
+  {
+    "id": "U10",
+    "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Each of the 8 isValid* static methods has TSDoc that states the rules the method applies.",
+    "rules": [
+      "[PREFIX] in a site rule stands for this text: The prefix must be a DNS subdomain of 1 to 253 characters, made of dot-separated labels. Each label has 1 to 63 lowercase ASCII letters, digits and hyphens, and starts and ends with a letter or digit.",
+      "Every block ends with exactly this tag line: @param value - The value to check"
+    ],
+    "sites": [
+      { "id": "S1", "at": "insert_before", "from": 29, "to": 29, "first_line": "static isValidApiVersion(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid entity `apiVersion`. Remarks: The value must be a string on the form `<suffix>` or `<prefix>/<suffix>`, with at most one `/`. [PREFIX] The suffix must have 1 to 63 ASCII letters or digits, in upper or lower case, and no other characters." },
+      { "id": "S2", "at": "insert_before", "from": 38, "to": 38, "first_line": "static isValidKind(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid entity `kind`. Remarks: The value must be a string of 1 to 63 ASCII letters or digits, in upper or lower case, that starts with a letter." },
+      { "id": "S3", "at": "insert_before", "from": 47, "to": 47, "first_line": "static isValidObjectName(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid object name. Remarks: The value must be a string of 1 to 63 characters. It can contain ASCII letters in upper or lower case, digits, `-`, `_` and `.`, and must start and end with a letter or digit. Separators can repeat, so `a--b` and `a..b` are valid." },
+      { "id": "S4", "at": "insert_before", "from": 56, "to": 56, "first_line": "static isValidNamespace(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid entity namespace. Remarks: The value must be a DNS label: a string of 1 to 63 lowercase ASCII letters, digits and hyphens that starts and ends with a letter or digit. Upper case letters, `_` and `.` are not valid." },
+      { "id": "S5", "at": "insert_before", "from": 60, "to": 60, "first_line": "static isValidLabelKey(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid label key. Remarks: The value must be a string on the form `<name>` or `<prefix>/<name>`, with at most one `/`. [PREFIX] The name must satisfy `isValidObjectName`." },
+      { "id": "S6", "at": "insert_before", "from": 69, "to": 69, "first_line": "static isValidLabelValue(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid label value. Remarks: The value must be the empty string, or a string that satisfies `isValidObjectName`." },
+      { "id": "S7", "at": "insert_before", "from": 75, "to": 75, "first_line": "static isValidAnnotationKey(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid annotation key. Remarks: The value must be a string on the form `<name>` or `<prefix>/<name>`, with at most one `/`. [PREFIX] The name must satisfy `isValidObjectName`." },
+      { "id": "S8", "at": "insert_before", "from": 84, "to": 84, "first_line": "static isValidAnnotationValue(value: unknown): boolean {", "rule": "Summary: Checks that the value is a valid annotation value. Remarks: The value can be any string, including the empty string, with no limit on length or characters. Any other type is not valid." }
+    ],
+    "style_from": { "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts", "lines": [26, 34], "reason": "The method comments of the sibling validator class." },
+    "uses": [
+      { "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts", "lines": [35, 96], "reason": "The prefix, DNS subdomain and DNS label rules the methods delegate to." },
+      { "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.test.ts", "reason": "The cases each comment must stay consistent with." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "AC-1", "AC-2", "AC-3", "AC-4", "AC-6", "AC-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U11",
+    "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The enforce method has TSDoc that states what it changes, what it resolves to and when it rejects.",
+    "sites": [
+      { "id": "S1", "at": "insert_before", "from": 34, "to": 34, "first_line": "async enforce(entity: Entity): Promise<Entity> {", "rule": "Summary: Sets the default namespace on an entity that has no namespace. Remarks: The default namespace is the one passed to the constructor, which defaults to `DEFAULT_NAMESPACE`. @param entity - The entity to update @returns The same entity object if it has a namespace, otherwise a new object with the default namespace set, which leaves the input unchanged @throws A `TypeError` if the entity has no `metadata`, since the method does no validation of its own" }
+    ],
+    "style_from": { "path": "packages/catalog-model/src/entity/policies/types.ts", "lines": [26, 33], "reason": "The enforce comment of the EntityPolicy type." },
+    "depends_on": [],
+    "covers": ["FR-4", "AC-1", "AC-2", "AC-3", "AC-6", "AC-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U12",
+    "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The enforce method has TSDoc that states what it checks, what it resolves to and when it rejects.",
+    "sites": [
+      { "id": "S1", "at": "insert_before", "from": 43, "to": 43, "first_line": "async enforce(entity: Entity): Promise<Entity> {", "rule": "Summary: Checks the format of the fields in the entity envelope, and leaves the entity unchanged. Remarks: The method checks `apiVersion`, `kind`, `metadata.name`, `metadata.namespace` if it is defined, each key and value of `metadata.labels` and `metadata.annotations`, each entry of `metadata.tags`, and the `url`, `title` and `icon` of each entry of `metadata.links`, where `title` and `icon` are optional. The validators passed to the constructor check all of these fields except those of `metadata.links`, which always use `CommonValidatorFunctions`. The method does not check `spec`, and stops at the first failure. @param entity - The entity to check @returns The same entity object @throws An error that names the first field that has no value, fails its validator, or makes its validator throw" }
+    ],
+    "style_from": { "path": "packages/catalog-model/src/entity/policies/types.ts", "lines": [26, 33], "reason": "The enforce comment of the EntityPolicy type." },
+    "depends_on": [],
+    "covers": ["FR-4", "AC-1", "AC-2", "AC-3", "AC-6", "AC-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The enforce method has TSDoc that states what it changes, what it resolves to and when it rejects.",
+    "sites": [
+      { "id": "S1", "at": "insert_before", "from": 51, "to": 51, "first_line": "async enforce(entity: Entity): Promise<Entity> {", "rule": "Summary: Sets the default parent on a group entity that has no parent. Remarks: The method leaves the entity unchanged if its `kind` is not exactly `Group`, compared case-sensitively, if `spec.parent` is already set, or if the entity is itself the default parent. Otherwise, it sets `spec.parent` to the canonical reference of the default parent that was passed to the constructor. It writes to the entity passed in, not to a copy. @param entity - The entity to update @returns The same entity object @throws A `TypeError` if an entity of kind `Group` has no `spec`, since the method does no validation of its own" }
+    ],
+    "style_from": { "path": "packages/catalog-model/src/entity/policies/types.ts", "lines": [26, 33], "reason": "The enforce comment of the EntityPolicy type." },
+    "depends_on": [],
+    "covers": ["FR-4", "AC-1", "AC-2", "AC-3", "AC-6", "AC-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The enforce method has TSDoc that states what it checks, what it resolves to and when it rejects.",
+    "sites": [
+      { "id": "S1", "at": "insert_before", "from": 34, "to": 34, "first_line": "async enforce(entity: Entity): Promise<Entity> {", "rule": "Summary: Checks that the entity has no unknown root fields, and leaves the entity unchanged. Remarks: The known fields are the ones passed to the constructor, which default to `apiVersion`, `kind`, `metadata` and `spec`. @param entity - The entity to check @returns The same entity object @throws An error that names the first root field that is not a known field" }
+    ],
+    "style_from": { "path": "packages/catalog-model/src/entity/policies/types.ts", "lines": [26, 33], "reason": "The enforce comment of the EntityPolicy type." },
+    "depends_on": [],
+    "covers": ["FR-4", "AC-1", "AC-2", "AC-3", "AC-6", "AC-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U15",
+    "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The enforce method has TSDoc that states what it checks, what it resolves to and when it rejects.",
+    "sites": [
+      { "id": "S1", "at": "insert_before", "from": 38, "to": 38, "first_line": "async enforce(entity: Entity): Promise<Entity> {", "rule": "Summary: Validates the entity against the JSON schema of the entity envelope, and leaves the entity unchanged. Remarks: This schema is common to all kinds. It requires `apiVersion`, `kind` and `metadata`, allows only `spec`, `relations` and `status` as other root fields, and requires `spec` to be an object if present. It applies no kind-specific schema, so it does not check the fields inside `spec`. The method compiles the schema on its first call and reuses it for later calls. @param entity - The entity to validate @returns The same entity object @throws An error whose message starts with `Malformed envelope` and describes the first schema violation" }
+    ],
+    "style_from": { "path": "packages/catalog-model/src/entity/policies/types.ts", "lines": [26, 33], "reason": "The enforce comment of the EntityPolicy type." },
+    "uses": [{ "path": "packages/catalog-model/src/schema/Entity.schema.json", "reason": "The envelope schema the comment describes." }],
+    "depends_on": [],
+    "covers": ["FR-4", "FR-5", "AC-1", "AC-2", "AC-3", "AC-6", "AC-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U16",
+    "path": ".changeset/clear-catalog-model-docs.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "A new changeset gives @backstage/catalog-model a patch bump for the added API documentation.",
+    "rules": [
+      "The file holds a front matter block of three lines, `---`, `'@backstage/catalog-model': patch` and `---`, then a blank line, then the message.",
+      "The message is exactly: Added API documentation for the entity kind type guards, the fields of the built-in entity kinds, the Kubernetes-style validation functions, and the entity policies. There are no changes to behavior."
+    ],
+    "import_line": "",
+    "style_from": { "path": ".changeset/calm-cli-logout.md", "reason": "An existing patch changeset for one package." },
+    "depends_on": [],
+    "covers": ["FR-6", "AC-8"],
+    "checks": ["prettier"]
+  }
+]

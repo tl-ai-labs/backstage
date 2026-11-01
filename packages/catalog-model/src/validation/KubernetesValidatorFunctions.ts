@@ -26,6 +26,20 @@ import { CommonValidatorFunctions } from './CommonValidatorFunctions';
  * @see https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
  */
 export class KubernetesValidatorFunctions {
+  /**
+   * Checks that the value is a valid entity `apiVersion`.
+   *
+   * @remarks
+   *
+   * The value must be a string on the form `<suffix>` or `<prefix>/<suffix>`,
+   * with at most one `/`. The prefix must be a DNS subdomain of 1 to 253
+   * characters, made of dot-separated labels. Each label has 1 to 63 lowercase
+   * ASCII letters, digits and hyphens, and starts and ends with a letter or
+   * digit. The suffix must have 1 to 63 ASCII letters or digits, in upper or
+   * lower case, and no other characters.
+   *
+   * @param value - The value to check
+   */
   static isValidApiVersion(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -35,6 +49,16 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid entity `kind`.
+   *
+   * @remarks
+   *
+   * The value must be a string of 1 to 63 ASCII letters or digits, in upper or
+   * lower case, that starts with a letter.
+   *
+   * @param value - The value to check
+   */
   static isValidKind(value: unknown): boolean {
     return (
       typeof value === 'string' &&
@@ -44,6 +68,18 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid object name.
+   *
+   * @remarks
+   *
+   * The value must be a string of 1 to 63 characters. It can contain ASCII
+   * letters in upper or lower case, digits, `-`, `_` and `.`, and must start
+   * and end with a letter or digit. Separators can repeat, so `a--b` and `a..b`
+   * are valid.
+   *
+   * @param value - The value to check
+   */
   static isValidObjectName(value: unknown): boolean {
     return (
       typeof value === 'string' &&
@@ -53,10 +89,34 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid entity namespace.
+   *
+   * @remarks
+   *
+   * The value must be a DNS label: a string of 1 to 63 lowercase ASCII letters,
+   * digits and hyphens that starts and ends with a letter or digit. Upper case
+   * letters, `_` and `.` are not valid.
+   *
+   * @param value - The value to check
+   */
   static isValidNamespace(value: unknown): boolean {
     return CommonValidatorFunctions.isValidDnsLabel(value);
   }
 
+  /**
+   * Checks that the value is a valid label key.
+   *
+   * @remarks
+   *
+   * The value must be a string on the form `<name>` or `<prefix>/<name>`, with
+   * at most one `/`. The prefix must be a DNS subdomain of 1 to 253 characters,
+   * made of dot-separated labels. Each label has 1 to 63 lowercase ASCII
+   * letters, digits and hyphens, and starts and ends with a letter or digit.
+   * The name must satisfy `isValidObjectName`.
+   *
+   * @param value - The value to check
+   */
   static isValidLabelKey(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -66,12 +126,35 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid label value.
+   *
+   * @remarks
+   *
+   * The value must be the empty string, or a string that satisfies
+   * `isValidObjectName`.
+   *
+   * @param value - The value to check
+   */
   static isValidLabelValue(value: unknown): boolean {
     return (
       value === '' || KubernetesValidatorFunctions.isValidObjectName(value)
     );
   }
 
+  /**
+   * Checks that the value is a valid annotation key.
+   *
+   * @remarks
+   *
+   * The value must be a string on the form `<name>` or `<prefix>/<name>`, with
+   * at most one `/`. The prefix must be a DNS subdomain of 1 to 253 characters,
+   * made of dot-separated labels. Each label has 1 to 63 lowercase ASCII
+   * letters, digits and hyphens, and starts and ends with a letter or digit.
+   * The name must satisfy `isValidObjectName`.
+   *
+   * @param value - The value to check
+   */
   static isValidAnnotationKey(value: unknown): boolean {
     return CommonValidatorFunctions.isValidPrefixAndOrSuffix(
       value,
@@ -81,6 +164,16 @@ export class KubernetesValidatorFunctions {
     );
   }
 
+  /**
+   * Checks that the value is a valid annotation value.
+   *
+   * @remarks
+   *
+   * The value can be any string, including the empty string, with no limit on
+   * length or characters. Any other type is not valid.
+   *
+   * @param value - The value to check
+   */
   static isValidAnnotationValue(value: unknown): boolean {
     return typeof value === 'string';
   }

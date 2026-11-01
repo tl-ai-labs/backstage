@@ -25,8 +25,22 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface LocationEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `Location`.
+   */
   kind: 'Location';
+  /**
+   * The specification data of the location. The JSON schema requires this
+   * object but none of its fields. It allows a non-empty `type`, a non-empty
+   * `target`, a `targets` array of non-empty strings, and a `presence` of
+   * `required` or `optional`, which the schema documents as defaulting to
+   * `required`.
+   */
   spec: {
     type?: string;
     target?: string;

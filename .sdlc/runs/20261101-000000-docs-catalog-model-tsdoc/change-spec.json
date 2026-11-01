@@ -1,0 +1,1083 @@
+{
+  "header": {
+    "conventions": [
+      "Comments only: a typed source file gains TSDoc lines at its sites and changes nothing else. No code, type, import, blank line or existing comment changes, and no copyright year changes.",
+      "A site's rule gives the comment's text in labelled parts, in order: Summary, Remarks, @param, @returns, @throws. Type that text word for word, changing only the line breaks.",
+      "The labels Summary and Remarks are not typed. Summary text is the plain description. Remarks text goes under a @remarks tag, written as in ComponentEntityV1alpha1.ts: a ` *` line, ` * @remarks`, a ` *` line, then the text.",
+      "A ` *` line separates the description or remarks from the first @param, and @param, @returns and @throws sit on consecutive lines. `@param name - text` keeps its hyphen.",
+      "A new member or method block is multi-line, at the indentation of the line it documents: `/**`, one or more ` * text` lines, ` */`. Wrap text at 80 columns including the indentation, as Entity.ts does. Prettier does not wrap comments.",
+      "No release tag on a member or method block; it inherits from its class or interface. Only the conditions.ts blocks carry @public, on the line they already have.",
+      "TSDoc markup characters (at sign, braces, angle brackets) appear only inside backticks, as they do in the site rules. Never write a star followed by a slash inside comment text, so comment text holds no regular expression.",
+      "Wording follows docs/contribute/doc-style-guide.md: U.S. English, present tense, active voice, plain language, with code names in backticks.",
+      "The changeset follows the existing .changeset files: single-quoted package name, one plain-language paragraph for adopters, no internal symbol names."
+    ],
+    "decisions": [
+      {
+        "topic": "Cross-references in new comments",
+        "choice": "Name symbols in backticks and write no {@link} tag",
+        "rejected": [
+          "{@link} to exported symbols"
+        ],
+        "reason": "An unresolved link adds a warning line to the API report, which NFR-4 and AC-2 forbid, and backticks carry the same meaning."
+      },
+      {
+        "topic": "Where the type and the JSON schema differ",
+        "choice": "The spec comment states what the JSON schema does and names the difference: User memberOf is required by the schema and optional in the type, and dependencyOf on Component and Resource is in the type but not in the schema",
+        "rejected": [
+          "Describing the type alone",
+          "Changing the type to match the schema"
+        ],
+        "reason": "FR-2 requires agreement with the schema, the User tests reject a missing memberOf, and NFR-1 forbids a type change."
+      },
+      {
+        "topic": "Where the code and Kubernetes differ",
+        "choice": "Validator comments state the code's rules with no comparison to Kubernetes, for example isValidObjectName accepts upper case and underscores, and isValidAnnotationValue applies no size limit",
+        "rejected": [
+          "Quoting the Kubernetes documentation"
+        ],
+        "reason": "FR-3 says the comment states what the code does."
+      },
+      {
+        "topic": "API report regeneration (FR-5)",
+        "choice": "No unit writes a report: the orchestrator regenerates both reports after the typed files are in. FR-5 appears in the covers of U15, the last source unit, only because finalize requires every FR id to be covered",
+        "rejected": [
+          "A typed unit",
+          "A tooling unit"
+        ],
+        "reason": "Requirements FR-5 keeps the step out of the spec and a docs run holds no tooling unit. AC-1 and AC-2 are judged after that step, so they are not project checks."
+      },
+      {
+        "topic": "Lint command",
+        "choice": "The project check runs `yarn lint`, without --fix",
+        "rejected": [
+          "`yarn lint --fix`"
+        ],
+        "reason": "A check does not write files. A pass without --fix means `yarn lint --fix` has nothing to change, which satisfies AC-7."
+      },
+      {
+        "topic": "Changeset",
+        "choice": "Add one new patch changeset",
+        "rejected": [
+          "Reusing an existing changeset"
+        ],
+        "reason": "No .changeset markdown file names @backstage/catalog-model at the current HEAD, so nothing already covers this change."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 180
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test",
+        "run": "CI=1 yarn test packages/catalog-model"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/catalog-model/src/entity/conditions.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Each of the 8 is*Entity guards keeps its single TSDoc block, which now states the check the function performs.",
+      "rules": [
+        "Extend the existing block: each site adds the Summary text and then a ` *` line after the `/**` line, so ` * @public` stays the last tag. Add no second block."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 29,
+          "to": 29,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `API`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 35,
+          "to": 35,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `Component`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 41,
+          "to": 41,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `Domain`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 47,
+          "to": 47,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `Group`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 53,
+          "to": 53,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `Location`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 59,
+          "to": 59,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `Resource`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S7",
+          "at": "insert_after",
+          "from": 65,
+          "to": 65,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `System`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        },
+        {
+          "id": "S8",
+          "at": "insert_after",
+          "from": 71,
+          "to": 71,
+          "first_line": "/**",
+          "rule": "Summary: Checks whether `entity.kind` is `User`, ignoring case. The function does not check `apiVersion` or `spec`, so a match does not prove that the entity is valid for this kind."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+        "lines": [
+          19,
+          24
+        ],
+        "reason": "A description above @public in this package."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of ApiEntityV1alpha1 have TSDoc that agrees with the API JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'API';",
+          "rule": "Summary: The high level entity type, which is always `API`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the API. The JSON schema requires the non-empty strings `type`, `lifecycle`, `owner` and `definition`, and allows an optional non-empty `system`. `owner` and `system` are entity references, and `definition` holds the API definition in the format that `type` names."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/API.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "packages/catalog-model/src/kinds/ComponentEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of ComponentEntityV1alpha1 have TSDoc that agrees with the Component JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'Component';",
+          "rule": "Summary: The high level entity type, which is always `Component`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the component. The JSON schema requires the non-empty strings `type`, `lifecycle` and `owner`, and allows the optional non-empty strings `system` and `subcomponentOf` and the optional arrays of non-empty strings `providesApis`, `consumesApis` and `dependsOn`. All of these except `type` and `lifecycle` hold entity references. The JSON schema does not define `dependencyOf`, so it accepts any value for that field."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Component.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "packages/catalog-model/src/kinds/DomainEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of DomainEntityV1alpha1 have TSDoc that agrees with the Domain JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'Domain';",
+          "rule": "Summary: The high level entity type, which is always `Domain`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the domain. The JSON schema requires a non-empty `owner` and allows the optional non-empty strings `subdomainOf` and `type`. `owner` and `subdomainOf` are entity references, and the schema enforces no set of values for `type`."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Domain.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "packages/catalog-model/src/kinds/GroupEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of GroupEntityV1alpha1 have TSDoc that agrees with the Group JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 28,
+          "to": 28,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "kind: 'Group';",
+          "rule": "Summary: The high level entity type, which is always `Group`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 30,
+          "to": 30,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the group. The JSON schema requires a non-empty `type` and a `children` array, which can be empty, and allows the optional fields `profile`, `parent` and `members`. `parent`, `children` and `members` hold entity references, and all fields of `profile` are optional."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Group.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "packages/catalog-model/src/kinds/LocationEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of LocationEntityV1alpha1 have TSDoc that agrees with the Location JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 28,
+          "to": 28,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "kind: 'Location';",
+          "rule": "Summary: The high level entity type, which is always `Location`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 30,
+          "to": 30,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the location. The JSON schema requires this object but none of its fields. It allows a non-empty `type`, a non-empty `target`, a `targets` array of non-empty strings, and a `presence` of `required` or `optional`, which the schema documents as defaulting to `required`."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Location.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "packages/catalog-model/src/kinds/ResourceEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of ResourceEntityV1alpha1 have TSDoc that agrees with the Resource JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'Resource';",
+          "rule": "Summary: The high level entity type, which is always `Resource`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the resource. The JSON schema requires the non-empty strings `type` and `owner`, and allows an optional non-empty `system` and an optional `dependsOn` array of non-empty strings. All of these except `type` hold entity references. The JSON schema does not define `dependencyOf`, so it accepts any value for that field."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Resource.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "packages/catalog-model/src/kinds/SystemEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of SystemEntityV1alpha1 have TSDoc that agrees with the System JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'System';",
+          "rule": "Summary: The high level entity type, which is always `System`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the system. The JSON schema requires a non-empty `owner` and allows the optional non-empty strings `domain` and `type`. `owner` and `domain` are entity references, and the schema enforces no set of values for `type`."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/System.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "packages/catalog-model/src/kinds/UserEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The apiVersion, kind and spec members of UserEntityV1alpha1 have TSDoc that agrees with the User JSON schema.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 28,
+          "to": 28,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Summary: The version of the specification format that this entity is written against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "kind: 'User';",
+          "rule": "Summary: The high level entity type, which is always `User`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 30,
+          "to": 30,
+          "first_line": "spec: {",
+          "rule": "Summary: The specification data of the user. The JSON schema requires `memberOf`, an array of entity references that can be empty, even though this type marks the field as optional. `profile` and all of its fields are optional."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          29,
+          48
+        ],
+        "reason": "The member comments of the base Entity type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/User.v1alpha1.schema.json",
+          "reason": "The schema the spec comment must agree with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Each of the 8 isValid* static methods has TSDoc that states the rules the method applies.",
+      "rules": [
+        "[PREFIX] in a site rule stands for this text: The prefix must be a DNS subdomain of 1 to 253 characters, made of dot-separated labels. Each label has 1 to 63 lowercase ASCII letters, digits and hyphens, and starts and ends with a letter or digit.",
+        "Every block ends with exactly this tag line: @param value - The value to check"
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "static isValidApiVersion(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid entity `apiVersion`. Remarks: The value must be a string on the form `<suffix>` or `<prefix>/<suffix>`, with at most one `/`. [PREFIX] The suffix must have 1 to 63 ASCII letters or digits, in upper or lower case, and no other characters."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 38,
+          "to": 38,
+          "first_line": "static isValidKind(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid entity `kind`. Remarks: The value must be a string of 1 to 63 ASCII letters or digits, in upper or lower case, that starts with a letter."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 47,
+          "to": 47,
+          "first_line": "static isValidObjectName(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid object name. Remarks: The value must be a string of 1 to 63 characters. It can contain ASCII letters in upper or lower case, digits, `-`, `_` and `.`, and must start and end with a letter or digit. Separators can repeat, so `a--b` and `a..b` are valid."
+        },
+        {
+          "id": "S4",
+          "at": "insert_before",
+          "from": 56,
+          "to": 56,
+          "first_line": "static isValidNamespace(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid entity namespace. Remarks: The value must be a DNS label: a string of 1 to 63 lowercase ASCII letters, digits and hyphens that starts and ends with a letter or digit. Upper case letters, `_` and `.` are not valid."
+        },
+        {
+          "id": "S5",
+          "at": "insert_before",
+          "from": 60,
+          "to": 60,
+          "first_line": "static isValidLabelKey(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid label key. Remarks: The value must be a string on the form `<name>` or `<prefix>/<name>`, with at most one `/`. [PREFIX] The name must satisfy `isValidObjectName`."
+        },
+        {
+          "id": "S6",
+          "at": "insert_before",
+          "from": 69,
+          "to": 69,
+          "first_line": "static isValidLabelValue(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid label value. Remarks: The value must be the empty string, or a string that satisfies `isValidObjectName`."
+        },
+        {
+          "id": "S7",
+          "at": "insert_before",
+          "from": 75,
+          "to": 75,
+          "first_line": "static isValidAnnotationKey(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid annotation key. Remarks: The value must be a string on the form `<name>` or `<prefix>/<name>`, with at most one `/`. [PREFIX] The name must satisfy `isValidObjectName`."
+        },
+        {
+          "id": "S8",
+          "at": "insert_before",
+          "from": 84,
+          "to": 84,
+          "first_line": "static isValidAnnotationValue(value: unknown): boolean {",
+          "rule": "Summary: Checks that the value is a valid annotation value. Remarks: The value can be any string, including the empty string, with no limit on length or characters. Any other type is not valid."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+        "lines": [
+          26,
+          34
+        ],
+        "reason": "The method comments of the sibling validator class."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+          "lines": [
+            35,
+            96
+          ],
+          "reason": "The prefix, DNS subdomain and DNS label rules the methods delegate to."
+        },
+        {
+          "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.test.ts",
+          "reason": "The cases each comment must stay consistent with."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The enforce method has TSDoc that states what it changes, what it resolves to and when it rejects.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Summary: Sets the default namespace on an entity that has no namespace. Remarks: The default namespace is the one passed to the constructor, which defaults to `DEFAULT_NAMESPACE`. @param entity - The entity to update @returns The same entity object if it has a namespace, otherwise a new object with the default namespace set, which leaves the input unchanged @throws A `TypeError` if the entity has no `metadata`, since the method does no validation of its own"
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          26,
+          33
+        ],
+        "reason": "The enforce comment of the EntityPolicy type."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The enforce method has TSDoc that states what it checks, what it resolves to and when it rejects.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 43,
+          "to": 43,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Summary: Checks the format of the fields in the entity envelope, and leaves the entity unchanged. Remarks: The method checks `apiVersion`, `kind`, `metadata.name`, `metadata.namespace` if it is defined, each key and value of `metadata.labels` and `metadata.annotations`, each entry of `metadata.tags`, and the `url`, `title` and `icon` of each entry of `metadata.links`, where `title` and `icon` are optional. The validators passed to the constructor check all of these fields except those of `metadata.links`, which always use `CommonValidatorFunctions`. The method does not check `spec`, and stops at the first failure. @param entity - The entity to check @returns The same entity object @throws An error that names the first field that has no value, fails its validator, or makes its validator throw"
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          26,
+          33
+        ],
+        "reason": "The enforce comment of the EntityPolicy type."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The enforce method has TSDoc that states what it changes, what it resolves to and when it rejects.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 51,
+          "to": 51,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Summary: Sets the default parent on a group entity that has no parent. Remarks: The method leaves the entity unchanged if its `kind` is not exactly `Group`, compared case-sensitively, if `spec.parent` is already set, or if the entity is itself the default parent. Otherwise, it sets `spec.parent` to the canonical reference of the default parent that was passed to the constructor. It writes to the entity passed in, not to a copy. @param entity - The entity to update @returns The same entity object @throws A `TypeError` if an entity of kind `Group` has no `spec`, since the method does no validation of its own"
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          26,
+          33
+        ],
+        "reason": "The enforce comment of the EntityPolicy type."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The enforce method has TSDoc that states what it checks, what it resolves to and when it rejects.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Summary: Checks that the entity has no unknown root fields, and leaves the entity unchanged. Remarks: The known fields are the ones passed to the constructor, which default to `apiVersion`, `kind`, `metadata` and `spec`. @param entity - The entity to check @returns The same entity object @throws An error that names the first root field that is not a known field"
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          26,
+          33
+        ],
+        "reason": "The enforce comment of the EntityPolicy type."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The enforce method has TSDoc that states what it checks, what it resolves to and when it rejects.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 38,
+          "to": 38,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Summary: Validates the entity against the JSON schema of the entity envelope, and leaves the entity unchanged. Remarks: This schema is common to all kinds. It requires `apiVersion`, `kind` and `metadata`, allows only `spec`, `relations` and `status` as other root fields, and requires `spec` to be an object if present. It applies no kind-specific schema, so it does not check the fields inside `spec`. The method compiles the schema on its first call and reuses it for later calls. @param entity - The entity to validate @returns The same entity object @throws An error whose message starts with `Malformed envelope` and describes the first schema violation"
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          26,
+          33
+        ],
+        "reason": "The enforce comment of the EntityPolicy type."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/Entity.schema.json",
+          "reason": "The envelope schema the comment describes."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-6",
+        "AC-7",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": ".changeset/clear-catalog-model-docs.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "A new changeset gives @backstage/catalog-model a patch bump for the added API documentation.",
+      "rules": [
+        "The file holds a front matter block of three lines, `---`, `'@backstage/catalog-model': patch` and `---`, then a blank line, then the message.",
+        "The message is exactly: Added API documentation for the entity kind type guards, the fields of the built-in entity kinds, the Kubernetes-style validation functions, and the entity policies. There are no changes to behavior."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/calm-cli-logout.md",
+        "reason": "An existing patch changeset for one package."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ]
+}
