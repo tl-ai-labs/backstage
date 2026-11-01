@@ -165,3 +165,13 @@ Both differences below were accepted by the person at Gate 1.
    the server code.
 2. The run continued without `ANTHROPIC_API_KEY`, with auth still `vendor`. The start check passed
    without it, and this policy has no Claude model that would use it.
+
+Recorded at Gate 4, accepted by the person:
+
+3. The fix for the duplicate row on a fresh load of `/notifications?id=<id>` (Gate 3, item 1) was
+   confirmed by the person in the running app, not by a test. The jsdom test does not reproduce the
+   timing. The person's words: "6 fresh loads with no duplicate row, where every fresh load tried
+   before the fix showed one. With one unread notification, the page shows the block and no 'No records
+   to display'."
+4. Limits, kept at the person's request: neither reviewer saw round 7, all automated tests use mocked
+   APIs in jsdom, and polling and the failed mark-as-read toast were not run in the real app.

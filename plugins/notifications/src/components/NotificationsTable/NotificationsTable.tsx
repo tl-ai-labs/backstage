@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import throttle from 'lodash/throttle';
 // @ts-ignore
 import RelativeTime from 'react-relative-time';
@@ -62,6 +62,8 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  /** A notification to show and highlight above the table, outside its pagination */
+  highlightedNotification?: Notification;
 };
 
 /** @public */
@@ -78,6 +80,7 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedNotification,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const notificationsApi = useApi(notificationsApiRef);
@@ -162,8 +165,73 @@ export const NotificationsTable = ({
     }
   }, [notifications, selectedNotifications]);
 
+  const renderNotificationContent = useCallback(
+    (notification: Notification) => (
+      <Flex gap="4" align="center">
+        <div className={styles.severityItem}>
+          <NotificationIcon notification={notification} />
+        </div>
+        <Flex direction="column" gap="1">
+          <Text variant="body-medium">
+            {notification.payload.link ? (
+              <Link
+                to={notification.payload.link}
+                onClick={() => {
+                  if (markAsReadOnLinkOpen && !notification.read) {
+                    onSwitchReadStatus([notification.id], true);
+                  }
+                }}
+              >
+                {notification.payload.title}
+              </Link>
+            ) : (
+              notification.payload.title
+            )}
+          </Text>
+          {notification.payload.description ? (
+            <Suspense fallback={null}>
+              <NotificationDescription
+                description={notification.payload.description}
+              />
+            </Suspense>
+          ) : null}
+
+          <Text variant="body-small" color="secondary">
+            {!notification.user && (
+              <RiRssFill size={14} className={styles.broadcastIcon} />
+            )}
+            {notification.origin && (
+              <>
+                <span className={styles.notificationInfoRow}>
+                  {notification.origin}
+                </span>
+                &bull;
+              </>
+            )}
+            {notification.payload.topic && (
+              <>
+                <span className={styles.notificationInfoRow}>
+                  {notification.payload.topic}
+                </span>
+                &bull;
+              </>
+            )}
+            {notification.created && (
+              <RelativeTime
+                value={notification.created}
+                className={styles.notificationInfoRow}
+              />
+            )}
+          </Text>
+        </Flex>
+      </Flex>
+    ),
+    [markAsReadOnLinkOpen, onSwitchReadStatus],
+  );
+
   const compactColumns = useMemo((): TableColumn<Notification>[] => {
-    const showToolbar = notifications.length > 0;
+    const showToolbar =
+      notifications.length > 0 || Boolean(highlightedNotification);
     return [
       {
         /* selection column */
@@ -196,67 +264,7 @@ export const NotificationsTable = ({
         customFilterAndSearch: () =>
           true /* Keep sorting&filtering on backend due to pagination. */,
         cellStyle: { paddingLeft: 0 },
-        render: (notification: Notification) => {
-          // Compact content
-          return (
-            <Flex gap="4" align="center">
-              <div className={styles.severityItem}>
-                <NotificationIcon notification={notification} />
-              </div>
-              <Flex direction="column" gap="1">
-                <Text variant="body-medium">
-                  {notification.payload.link ? (
-                    <Link
-                      to={notification.payload.link}
-                      onClick={() => {
-                        if (markAsReadOnLinkOpen && !notification.read) {
-                          onSwitchReadStatus([notification.id], true);
-                        }
-                      }}
-                    >
-                      {notification.payload.title}
-                    </Link>
-                  ) : (
-                    notification.payload.title
-                  )}
-                </Text>
-                {notification.payload.description ? (
-                  <NotificationDescription
-                    description={notification.payload.description}
-                  />
-                ) : null}
-
-                <Text variant="body-small" color="secondary">
-                  {!notification.user && (
-                    <RiRssFill size={14} className={styles.broadcastIcon} />
-                  )}
-                  {notification.origin && (
-                    <>
-                      <span className={styles.notificationInfoRow}>
-                        {notification.origin}
-                      </span>
-                      &bull;
-                    </>
-                  )}
-                  {notification.payload.topic && (
-                    <>
-                      <span className={styles.notificationInfoRow}>
-                        {notification.payload.topic}
-                      </span>
-                      &bull;
-                    </>
-                  )}
-                  {notification.created && (
-                    <RelativeTime
-                      value={notification.created}
-                      className={styles.notificationInfoRow}
-                    />
-                  )}
-                </Text>
-              </Flex>
-            </Flex>
-          );
-        },
+        render: renderNotificationContent,
       },
       {
         /* actions column */
@@ -289,11 +297,25 @@ export const NotificationsTable = ({
     onSwitchSavedStatus,
     onMarkAllRead,
     onNotificationsSelectChange,
-    markAsReadOnLinkOpen,
+    renderNotificationContent,
+    highlightedNotification,
   ]);
 
   return (
     <>
+      {highlightedNotification && (
+        <div aria-current="true" className={styles.highlightedNotification}>
+          <Flex justify="between" align="center" gap="4">
+            {renderNotificationContent(highlightedNotification)}
+            <BulkActions
+              notifications={[highlightedNotification]}
+              selectedNotifications={new Set([highlightedNotification.id])}
+              onSwitchReadStatus={onSwitchReadStatus}
+              onSwitchSavedStatus={onSwitchSavedStatus}
+            />
+          </Flex>
+        </div>
+      )}
       <Table<Notification>
         isLoading={isLoading}
         options={{
@@ -314,7 +336,12 @@ export const NotificationsTable = ({
         columns={compactColumns}
         localization={{
           body: {
-            emptyDataSourceMessage: t('table.emptyMessage'),
+            emptyDataSourceMessage:
+              Boolean(highlightedNotification) &&
+              notifications.length === 0 &&
+              (totalCount ?? 0) > 0
+                ? ''
+                : t('table.emptyMessage'),
           },
           pagination: {
             firstTooltip: t('table.pagination.firstTooltip'),

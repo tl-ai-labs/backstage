@@ -1,0 +1,156 @@
+[
+  {
+    "id": "tp_debug_r7_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Two changes, and nothing else in this file. (1) Bug seen in the running app: on a fresh load of /notifications?id=<id>, with <id> on the current page and rows that have descriptions, the notification shows in the highlighted block and again in the table. `NotificationDescription` is lazy, so on first load a row suspends the boundary above the table, material-table's componentDidUpdate does not run while the table is hidden, and its state keeps the old rows. Fix: remove the `<Suspense fallback={null}>` that wraps the highlighted block in the returned JSX, keeping the `aria-current` div and its contents as they are, and instead wrap `<NotificationDescription description={notification.payload.description} />` in `<Suspense fallback={null}>` inside `renderNotificationContent`, so neither the block nor a row can suspend the table. Keep the `Suspense` import. (2) When the highlighted notification is the only row, do not show 'No records to display' under the block. `notifications` arrives with the highlighted row already removed, so empty `notifications` alone does not mean that: a filter that really returned nothing must still show the message. `totalCount` is the unfiltered count. In the Table's `localization.body`, set `emptyDataSourceMessage` to an empty string when `Boolean(highlightedNotification) && notifications.length === 0 && (totalCount ?? 0) > 0`, and to `t('table.emptyMessage')` otherwise. With no `highlightedNotification`, output and behaviour stay exactly as they are.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r7_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "docs/getting-started/homepage.md",
+    "instruction": "Fix `docs/getting-started/homepage.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Add one sentence after the table of widgets that holds the 'Unread notifications' row at line 123: to place this widget in the default layout, use its name, `HomePageUnreadNotifications`, as the value of `component` in `page:home.defaultConfig`. Keep the existing extension id `home-page-widget:notifications/unread-notifications` in that row exactly as it is, and change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/getting-started/homepage.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/getting-started/homepage.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U18.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/getting-started/homepage.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r7_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Add two tests to this file. The six existing tests pass and stay exactly as they are. Use the file's `createNotification` fixture, which sets a description, and the same TestApiProvider `apis` as the other tests, including `[toastApiRef, { post: jest.fn() }]`. (1) 'shows a row of the current page only in the highlight': `getNotifications` resolves `{ notifications: [first, second], totalCount: 2 }`, `getNotification` resolves `first`, and the route is `/?id=<first's id>`. Assert `const occurrences = await screen.findAllByText(<first's title>)`, then `expect(occurrences).toHaveLength(1)`, that `occurrences[0].closest('[aria-current=\"true\"]')` is in the document, and that `await screen.findByText(<second's title>)` is in the document and its `closest('[aria-current=\"true\"]')` is null. (2) 'hides the empty message only when the highlight is the only row': first render with `getNotifications` resolving `{ notifications: [item], totalCount: 1 }`, `getNotification` resolving `item` and the route `/?id=<item's id>`; after `await screen.findByText(<item's title>)`, assert `screen.queryByText('No records to display')` is null, then unmount. Then render with `getNotifications` resolving `{ notifications: [], totalCount: 0 }`, `getNotification` resolving a read notification from `createNotification('read-1', 'Read notification', true)` and the route `/?id=read-1`; assert `await screen.findByText('No records to display')` is in the document and `screen.getByText('Read notification')` is in the document. Do not change NotificationsPage.tsx or NotificationsTable.tsx.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]

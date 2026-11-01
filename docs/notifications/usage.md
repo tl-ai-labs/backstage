@@ -31,6 +31,16 @@ The `NotificationsSidebarItem` component can be used as an active left-side menu
 
 You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.
 
+### Unread notifications card
+
+The extension `home-page-widget:notifications/unread-notifications` is offered under **Add Widget** in the new frontend system with no configuration. It lists the 5 latest unread notifications, each with a mark-as-read action and a link to the notifications page.
+
+With the signal API installed, the card refreshes on notification signals and does not poll; without it, the card refreshes every 60 seconds. When signals are installed but the connection is down, the card gets no live updates and does not poll.
+
+### Linking to a notification
+
+Navigating to `/notifications?id=<id>` shows and highlights that notification even when the current filters or pagination would hide it. If the notification cannot be loaded, for example because it was deleted or belongs to someone else, the page renders as it does without `?id=`.
+
 ## Usage
 
 New notifications can be sent either by a backend plugin or by an external service through the REST API.
