@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { matchRoutes, useLocation } from 'react-router-dom';
 import { useVersionedContext } from '@backstage/version-bridge';
 import {
@@ -100,34 +100,65 @@ export function useRouteRef<Params extends AnyParams>(
 ): RouteFunc<Params> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useRouteResolutionApi();
+  const ready = routeResolutionApi?.isReady?.() ?? true;
+  const [routeInfoVersion, setRouteInfoVersion] = useState(0);
+
+  useEffect(() => {
+    if (!routeResolutionApi?.subscribe) {
+      return undefined;
+    }
+
+    const unsubscribe = routeResolutionApi.subscribe(() => {
+      setRouteInfoVersion(v => v + 1);
+    });
+
+    if ((routeResolutionApi.isReady?.() ?? true) !== ready) {
+      setRouteInfoVersion(v => v + 1);
+    }
+
+    return unsubscribe;
+  }, [routeResolutionApi, ready]);
   const versionedContext = useVersionedContext<{ 1: RouteResolver }>(
     'routing-context',
   );
 
   const resolver = versionedContext?.atVersion(1);
 
-  const newRouteFunc = useMemo(() => {
-    if (!routeResolutionApi) {
-      return null;
-    }
+  const newRouteFunc = useMemo(
+    () => {
+      if (!routeResolutionApi) {
+        return null;
+      }
 
-    try {
-      return routeResolutionApi?.resolve(routeRef, {
-        sourcePath: pathname,
-      });
-    } catch {
-      return null;
-    }
-  }, [routeResolutionApi, routeRef, pathname]);
+      try {
+        return routeResolutionApi?.resolve(routeRef, {
+          sourcePath: pathname,
+        });
+      } catch {
+        return null;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, routeInfoVersion],
+  );
 
   const legacyRouteFunc = useMemo(
     () => resolver && resolver.resolve(routeRef, { pathname }),
     [resolver, routeRef, pathname],
   );
 
+  const placeholderRouteFunc = useMemo(
+    () => (() => pathname) as RouteFunc<Params>,
+    [pathname],
+  );
+
   if (newRouteFunc !== null) {
     const isOptional = 'optional' in routeRef && routeRef.optional;
     if (!newRouteFunc && !isOptional) {
+      if (!ready) {
+        // The app is still starting and page routes are not known yet
+        return placeholderRouteFunc;
+      }
       throw new Error(`No path for ${routeRef}`);
     }
     return newRouteFunc;

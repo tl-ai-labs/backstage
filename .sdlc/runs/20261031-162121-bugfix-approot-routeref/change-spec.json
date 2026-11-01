@@ -1,0 +1,480 @@
+{
+  "header": {
+    "conventions": [
+      "TypeScript + React 18 JSX, formatted by the repo Prettier config: single quotes, trailing commas, 2-space indent, 80-column wrap, arrow functions without parens around a single parameter.",
+      "Match the style of the file you edit; consistency within a package beats consistency across the repo.",
+      "No new source files in this change. Never change the Apache 2.0 copyright year of an existing file.",
+      "No new dependencies. Stay compatible with the React peer range ^17 || ^18: do not use useSyncExternalStore; use useState plus useEffect.",
+      "Public API members get TSDoc in plain adopter-facing language; the interface keeps its existing @public tag.",
+      "Tests are Jest describe/it with @testing-library/react; prefer screen with findBy*/getBy* over waitFor, no test ids, one thorough test with several assertions.",
+      "Changesets live in .changeset/<name>.md: YAML front matter mapping each quoted package name to its bump, a blank line, then one plain-language paragraph for adopters that names no internal code symbols (public API names such as useRouteRef and RouteResolutionApi are allowed).",
+      "API report files (report*.api.md) are regenerated with `yarn build:api-reports` after this change; never type them by hand.",
+      "Docs follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as you, code style for package names and API names."
+    ],
+    "decisions": [
+      {
+        "topic": "Q-1: how route resolution tells consumers that its route information changed",
+        "choice": "Add two optional public members to RouteResolutionApi in @backstage/frontend-plugin-api: subscribe?(listener: () => void): () => void, and isReady?(): boolean (false while the app is starting and only part of the routes are known).",
+        "rejected": [
+          "Undocumented methods on the app's proxy object that both hooks duck-type, like the existing getRouteObjects TODO in AppRoot (a hidden cross-package contract no mock or adopter implementation can see)",
+          "A versioned value shared through a @backstage/version-bridge global singleton (more machinery for one bit of state)"
+        ],
+        "reason": "Optional members are typed, documented and mockable, keep every existing implementation valid (FR-5), and follow the pattern of other core APIs that expose change notifications; the cost is a frontend-plugin-api API report change."
+      },
+      {
+        "topic": "How the hooks re-resolve when route information changes",
+        "choice": "Each useRouteRef keeps a numeric state counter; a useEffect on [routeResolutionApi, ready] subscribes via routeResolutionApi.subscribe when present and bumps the counter on each notification; the counter is added to the useMemo dependency array behind an `// eslint-disable-next-line react-hooks/exhaustive-deps` comment placed on the line directly above the array.",
+        "rejected": [
+          "useSyncExternalStore (React 18 only, the peer range includes React 17)",
+          "Remounting root elements at finalization (changes tree instantiation, a non-goal)"
+        ],
+        "reason": "One notification causes exactly one state update and one re-render per consumer (FR-4), and an API without subscribe leaves the hook exactly as today (FR-5)."
+      },
+      {
+        "topic": "Race between the first render and the subscription effect",
+        "choice": "Each hook reads `ready = routeResolutionApi.isReady?.() ?? true` during render; the effect, right after subscribing, bumps the counter once if `isReady?.() ?? true` now differs from the render-time value.",
+        "reason": "A notification that fires between render and subscribe would otherwise be lost and leave the bootstrap result in place."
+      },
+      {
+        "topic": "What the core-plugin-api bridge returns for a required ref that is unresolved before the app is ready",
+        "choice": "A placeholder RouteFunc `(() => pathname) as RouteFunc<Params>` that links to the current location; once isReady is true (or the API has no isReady), an unresolved required ref throws `No path for ${routeRef}` exactly as today; optional refs keep returning undefined.",
+        "rejected": [
+          "Throwing a promise to suspend (an element without its own boundary suspends app/root, which hides the sign-in page and deadlocks finalization)",
+          "Returning undefined for a required ref (callers type it as always defined and crash calling it)"
+        ],
+        "reason": "Root elements render during startup without an error box (AC-2) and switch to the real link on the next notification."
+      },
+      {
+        "topic": "Where readiness comes from",
+        "choice": "RouteResolutionApiProxy.initialize takes a third argument `options: { ready: boolean }`; instantiateAndInitializePhaseTree passes `{ ready: !options.stopAtAttachment }`, because only the bootstrap phase stops at the session boundary.",
+        "rejected": [
+          "Threading an explicit flag through createBootstrapApp and finalizeFromSessionState/finalizeFromBootstrapError (edits two more files for the same information)"
+        ],
+        "reason": "Keeps the fix in phaseApis.tsx; prepareSpecializedApp.tsx and treeLifecycle.tsx stay unchanged."
+      },
+      {
+        "topic": "Changeset bumps",
+        "choice": "Two changesets: one fix changeset with patch for @backstage/frontend-app-api (0.16.x), @backstage/frontend-plugin-api (0.18.x) and @backstage/core-plugin-api (1.12.x, fix only, no new API in that package); one patch changeset for @backstage/frontend-plugin-api describing the new optional RouteResolutionApi members.",
+        "reason": "CLAUDE.md: patch below 1.0 even for additions, patch for a fix at 1.0 and above; separate messages because the API addition concerns one package only."
+      },
+      {
+        "topic": "API reports",
+        "choice": "No unit types packages/frontend-plugin-api/report.api.md; it is regenerated with `yarn build:api-reports` after the units are typed.",
+        "reason": "NFR-4; a bugfix spec cannot hold a tooling unit."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "lint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "jest-reproduce",
+        "run": "CI=1 yarn test {path} -t 'should resolve page route refs in app root elements once finalized'",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "focused-tests",
+        "run": "CI=1 yarn test packages/frontend-app-api packages/frontend-plugin-api packages/core-plugin-api"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Adds the reproducing test: two app root elements call useRouteRef (new API and core-plugin-api bridge) for a page route ref, render during bootstrap without an error, and show the page path after finalization without a remount or render loop.",
+      "rules": [
+        "1. Add `AppRootElementBlueprint,` to the named import from '@backstage/frontend-plugin-api' (site S1) and `createRouteRef as createLegacyRouteRef,` plus `useRouteRef as useLegacyRouteRef,` to the named import from '@backstage/core-plugin-api' (site S2); keep the existing names and their order.",
+        "2. Insert the new case inside describe('prepareSpecializedApp'), after the test 'should synchronously finalize feature flag predicates without sign-in', separated by one blank line, named exactly 'should resolve page route refs in app root elements once finalized'.",
+        "3. Create one ref for both hooks with `const pageRouteRef = createLegacyRouteRef({ id: 'banner-page' });` (a legacy ref is accepted by both hooks and by coreExtensionData.routeRef); keep a local `let newBannerRenders = 0;` counter.",
+        "4. Define `function NewBanner()` that increments newBannerRenders, calls the frontend-plugin-api `useRouteRef(pageRouteRef)` and returns `<div>new link: {link?.() ?? 'none'}</div>`; define `function LegacyBanner()` that calls `useLegacyRouteRef(pageRouteRef)` and returns `<div>legacy link: {link()}</div>`.",
+        "5. Build the app with `prepareSpecializedApp({ features: [...] })` where the first feature is `appPluginOriginal.withOverrides({ extensions: [...] })` overriding 'app/layout' with a factory returning `coreExtensionData.reactElement(<div>App Layout</div>)` and overriding 'sign-in-page:app' with `{ disabled: true }`, as in the existing tests.",
+        "6. The second feature is `createFrontendPlugin({ pluginId: 'banner', extensions: [...] })` (no routes map) holding: createExtension({ name: 'page', attachTo: { id: 'app/routes', input: 'routes' }, output: [coreExtensionData.routePath, coreExtensionData.routeRef, coreExtensionData.reactElement] }) whose factory returns routePath('/banner-page'), routeRef(pageRouteRef) and reactElement(<div>Banner Page</div>); then `AppRootElementBlueprint.make({ name: 'new-banner', params: { element: <NewBanner /> } })` and the same with name 'legacy-banner' and `<LegacyBanner />`.",
+        "7. Render the bootstrap tree with `const { rerender } = render(preparedApp.getBootstrapApp().element);` (not the renderPreparedBootstrap helper, the test needs rerender); assert `await expect(screen.findByText('new link: none')).resolves.toBeInTheDocument()` and `await expect(screen.findByText(/^legacy link:/)).resolves.toBeInTheDocument()`.",
+        "8. Finalize inside act so the route change notification is flushed: `let finalizedApp: FinalizedSpecializedApp | undefined; await act(async () => { finalizedApp = await waitForFinalizedApp(preparedApp); });` then throw if finalizedApp is undefined.",
+        "9. Swap to the finalized tree in the same React root with `rerender(finalizedApp.element)` (this mirrors the app root swap and keeps the root element instances mounted), then assert with findByText that 'App Layout', 'new link: /banner-page' and 'legacy link: /banner-page' are in the document.",
+        "10. Check for render loops: store `const rendersAfterFinalize = newBannerRenders;`, run `await act(async () => {});`, then `expect(newBannerRenders).toBe(rendersAfterFinalize);`.",
+        "11. Do not touch any other test, helper or import; use the screen queries already imported, no waitFor, no test ids."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "} from '@backstage/frontend-plugin-api';",
+          "rule": "Insert the line `  AppRootElementBlueprint,` as the last name of the import."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 47,
+          "to": 47,
+          "first_line": "} from '@backstage/core-plugin-api';",
+          "rule": "Insert `  createRouteRef as createLegacyRouteRef,` and `  useRouteRef as useLegacyRouteRef,` as the last names of the import."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 1140,
+          "to": 1140,
+          "first_line": "});",
+          "rule": "Insert a blank line followed by the new it('should resolve page route refs in app root elements once finalized', async () => { ... }); case per rules 3-10, indented four spaces like its neighbours."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "lines": [1068, 1140],
+        "reason": "Neighbouring no-sign-in prepareSpecializedApp test: plugin overrides, root element extensions, bootstrap render then finalized render."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+          "lines": [17, 94],
+          "reason": "Existing imports, the waitForFinalizedApp helper and the app plugin override pattern."
+        },
+        {
+          "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+          "lines": [670, 752],
+          "reason": "Existing route binding test showing a route extension with routePath and routeRef outputs and a useRouteRef consumer."
+        },
+        {
+          "path": "packages/frontend-plugin-api/src/blueprints/AppRootElementBlueprint.tsx",
+          "reason": "Root element blueprint params and its error-api boundary, which hides a crashing element."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["AC-1", "AC-2", "AC-3", "AC-4", "NFR-2"],
+      "tests": [
+        {
+          "name": "should resolve page route refs in app root elements once finalized",
+          "given": "A prepared app without sign-in, a page extension bound to a legacy route ref under app/routes, and two AppRootElementBlueprint elements that call the frontend-plugin-api and core-plugin-api useRouteRef for that ref",
+          "expect": "Bootstrap shows 'new link: none' and a 'legacy link:' element with no error; after finalization and rerender of the finalized element both show '/banner-page' and the new banner render count stays stable after one more act flush"
+        }
+      ],
+      "checks": ["lint", "prettier"],
+      "red_checks": ["jest-reproduce"]
+    },
+    {
+      "id": "U02",
+      "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the optional subscribe and isReady members to the public RouteResolutionApi interface.",
+      "rules": [
+        "1. Both members are optional (`?`) so every existing implementation and mock still type-checks.",
+        "2. `subscribe?(listener: () => void): () => void;` with TSDoc: registers a listener that is called each time the route information of the app changes, for example once the app has finished loading; returns a function that removes the listener; consumers fall back to resolving once when it is missing.",
+        "3. `isReady?(): boolean;` with TSDoc: returns false while the app is starting up and only some of its routes are known, and true once all routes are known; implementations that omit it are treated as always ready.",
+        "4. Do not change resolve, RouteFunc or routeResolutionApiRef, and do not edit report.api.md (it is regenerated with yarn build:api-reports)."
+      ],
+      "exports": [
+        {
+          "name": "RouteResolutionApi.subscribe",
+          "kind": "optional interface method",
+          "params": [
+            {
+              "name": "listener",
+              "type": "() => void"
+            }
+          ],
+          "returns": "() => void"
+        },
+        {
+          "name": "RouteResolutionApi.isReady",
+          "kind": "optional interface method",
+          "params": [],
+          "returns": "boolean"
+        }
+      ],
+      "import_line": "import { RouteResolutionApi, routeResolutionApiRef } from '@backstage/frontend-plugin-api';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 60,
+          "to": 60,
+          "first_line": "): RouteFunc<TParams> | undefined;",
+          "rule": "Insert a blank line, the TSDoc-documented `subscribe?(listener: () => void): () => void;`, a blank line, and the TSDoc-documented `isReady?(): boolean;`, indented two spaces inside the interface."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [44, 61],
+        "reason": "Interface member and TSDoc style of this file."
+      },
+      "depends_on": ["U01"],
+      "covers": ["FR-1", "FR-5", "NFR-4", "AC-5"],
+      "checks": ["lint", "prettier"]
+    },
+    {
+      "id": "U03",
+      "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "RouteResolutionApiProxy tracks whether it holds the full route information, implements subscribe and isReady, and notifies subscribers on every initialize; the phase tree marks the bootstrap initialization as not ready.",
+      "rules": [
+        "1. Add private fields `#ready = false;` and `readonly #listeners = new Set<() => void>();` after #routeObjects.",
+        "2. initialize gains a third parameter `options: { ready: boolean }`; after setting #delegate and #routeObjects it sets `this.#ready = options.ready`, then calls every listener in `Array.from(this.#listeners)` (a copy, so a listener that unsubscribes does not disturb the loop), then returns routeInfo as before.",
+        "3. Add `subscribe(listener: () => void): () => void` that adds the listener to #listeners and returns `() => { this.#listeners.delete(listener); }`.",
+        "4. Add `isReady(): boolean` returning #ready (false before the first initialize).",
+        "5. In instantiateAndInitializePhaseTree pass `{ ready: !options.stopAtAttachment }` as the third initialize argument, with a one-line comment that only the bootstrap phase stops at the session boundary, so its route info is partial.",
+        "6. resolve, getRouteObjects, the constructor and every other class and function in the file stay unchanged."
+      ],
+      "exports": [
+        {
+          "name": "RouteResolutionApiProxy.initialize",
+          "kind": "method",
+          "params": [
+            {
+              "name": "routeInfo",
+              "type": "RouteInfo"
+            },
+            {
+              "name": "routeRefsById",
+              "type": "Map<string, RouteRef | SubRouteRef>"
+            },
+            {
+              "name": "options",
+              "type": "{ ready: boolean }"
+            }
+          ],
+          "returns": "RouteInfo"
+        },
+        {
+          "name": "RouteResolutionApiProxy.subscribe",
+          "kind": "method",
+          "params": [
+            {
+              "name": "listener",
+              "type": "() => void"
+            }
+          ],
+          "returns": "() => void"
+        },
+        {
+          "name": "RouteResolutionApiProxy.isReady",
+          "kind": "method",
+          "params": [],
+          "returns": "boolean"
+        }
+      ],
+      "import_line": "import { RouteResolutionApiProxy } from './phaseApis';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 115,
+          "to": 115,
+          "first_line": "#routeObjects: BackstageRouteObject[] | undefined;",
+          "rule": "Insert the #ready and #listeners fields per rule 1."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 144,
+          "to": 160,
+          "first_line": "initialize(",
+          "last_line": "}",
+          "rule": "Rewrite initialize per rule 2, keeping the RouteResolver construction and the #routeObjects assignment exactly as they are."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 164,
+          "to": 164,
+          "first_line": "}",
+          "rule": "After getRouteObjects, insert a blank line, subscribe per rule 3, a blank line, and isReady per rule 4."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 274,
+          "to": 277,
+          "first_line": "options.routeResolutionApi.initialize(",
+          "last_line": ");",
+          "rule": "Call initialize with routeInfo, options.routeRefsById.routes and `{ ready: !options.stopAtAttachment }`, preceded by the comment from rule 5."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "lines": [112, 198],
+        "reason": "Proxy classes in this file: private # fields, method layout, PreparedAppIdentityProxy handler style."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+          "reason": "The interface the proxy implements, with the optional members added by U02."
+        }
+      ],
+      "depends_on": ["U02"],
+      "covers": ["FR-1", "AC-3"],
+      "checks": ["lint", "prettier"]
+    },
+    {
+      "id": "U04",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useRouteRef re-resolves the route ref when the route resolution API reports a change, with one re-render per change.",
+      "rules": [
+        "1. Import `useEffect, useMemo, useState` from 'react'.",
+        "2. After useApi, compute `const ready = routeResolutionApi.isReady?.() ?? true;` and `const [routeInfoVersion, setRouteInfoVersion] = useState(0);`.",
+        "3. Add `useEffect(() => { ... }, [routeResolutionApi, ready]);` that returns undefined when `routeResolutionApi.subscribe` is missing; otherwise calls `routeResolutionApi.subscribe(() => setRouteInfoVersion(v => v + 1))` as a method call on the API object, then, if `(routeResolutionApi.isReady?.() ?? true) !== ready`, calls `setRouteInfoVersion(v => v + 1)` once to catch a change that happened between render and subscribe, and returns the unsubscribe function.",
+        "4. Keep the useMemo body as `routeResolutionApi.resolve(routeRef, { sourcePath: pathname })`; its dependency array becomes `[routeResolutionApi, routeRef, pathname, routeInfoVersion]` with `// eslint-disable-next-line react-hooks/exhaustive-deps` on the line directly above the array.",
+        "5. Return routeFunc; the exported signature and TSDoc stay unchanged. An API without subscribe and isReady behaves exactly as before."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Import useEffect, useMemo and useState from 'react'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 42,
+          "to": 50,
+          "first_line": "const { pathname } = useLocation();",
+          "last_line": "return routeFunc;",
+          "rule": "Rewrite the hook body per rules 2-5, keeping useLocation and useApi first."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "The file being edited; keep its formatting."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+          "reason": "Optional subscribe and isReady members added by U02."
+        }
+      ],
+      "depends_on": ["U02"],
+      "covers": ["FR-2", "FR-4", "FR-5", "NFR-1"],
+      "checks": ["lint", "prettier"]
+    },
+    {
+      "id": "U05",
+      "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The core-plugin-api useRouteRef bridge re-resolves on route resolution changes and, while the app is not ready, returns a link to the current location instead of throwing for a required ref.",
+      "rules": [
+        "1. Import `useEffect, useMemo, useState` from 'react'.",
+        "2. After `const routeResolutionApi = useRouteResolutionApi();` add `const ready = routeResolutionApi?.isReady?.() ?? true;`, `const [routeInfoVersion, setRouteInfoVersion] = useState(0);` and a useEffect on [routeResolutionApi, ready] that returns undefined when `routeResolutionApi?.subscribe` is missing; otherwise subscribes with `routeResolutionApi.subscribe(() => setRouteInfoVersion(v => v + 1))`, bumps the counter once if `(routeResolutionApi.isReady?.() ?? true) !== ready`, and returns the unsubscribe function.",
+        "3. The newRouteFunc useMemo keeps its body (null without an API, try resolve, catch returns null) and its dependency array becomes `[routeResolutionApi, routeRef, pathname, routeInfoVersion]` with `// eslint-disable-next-line react-hooks/exhaustive-deps` on the line directly above the array, so the arrow function and the array are separate arguments on their own lines.",
+        "4. In the `newRouteFunc !== null` branch, when the result is falsy and the ref is not optional: if `!ready`, return `(() => pathname) as RouteFunc<Params>` with a comment that the app is still starting and its page routes are not known yet; otherwise throw `No path for ${routeRef}` exactly as today.",
+        "5. The legacy resolver path (versionedContext, resolver, legacyRouteFunc and its errors) and all overload signatures stay unchanged; optional refs still return undefined."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Import useEffect, useMemo and useState from 'react'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 102,
+          "to": 102,
+          "first_line": "const routeResolutionApi = useRouteResolutionApi();",
+          "rule": "Insert ready, the routeInfoVersion state and the subscription effect per rule 2."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 109,
+          "to": 121,
+          "first_line": "const newRouteFunc = useMemo(() => {",
+          "last_line": "}, [routeResolutionApi, routeRef, pathname]);",
+          "rule": "Rewrite the newRouteFunc useMemo per rule 3."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 130,
+          "to": 132,
+          "first_line": "if (!newRouteFunc && !isOptional) {",
+          "last_line": "}",
+          "rule": "Return the current-location placeholder while not ready, else throw as today, per rule 4."
+        }
+      ],
+      "style_from": {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "The file being edited; keep its formatting and comment style."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+          "reason": "Optional subscribe and isReady members added by U02."
+        }
+      ],
+      "depends_on": ["U02"],
+      "covers": ["FR-3", "FR-4", "FR-5", "NFR-1", "AC-2"],
+      "checks": ["lint", "prettier"]
+    },
+    {
+      "id": "U06",
+      "path": ".changeset/fix-app-root-element-route-refs.md",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Patch changeset for the fix in the three changed packages.",
+      "rules": [
+        "1. Front matter lists `'@backstage/frontend-app-api': patch`, `'@backstage/frontend-plugin-api': patch` and `'@backstage/core-plugin-api': patch`, in that order.",
+        "2. Body, one paragraph: Fixed app root elements, such as a global announcement banner, failing with a `No path for` error when they call `useRouteRef` for a page route while the app is starting. `useRouteRef` now updates to the correct link once the app has finished loading.",
+        "3. Name no internal classes, functions or variables."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/brave-ravens-stick.md",
+        "reason": "Changeset front matter and body layout."
+      },
+      "depends_on": ["U03", "U04", "U05"],
+      "covers": ["AC-6", "NFR-3"],
+      "checks": ["prettier"]
+    },
+    {
+      "id": "U07",
+      "path": ".changeset/route-resolution-api-subscribe.md",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Patch changeset for the new optional RouteResolutionApi members.",
+      "rules": [
+        "1. Front matter lists only `'@backstage/frontend-plugin-api': patch`.",
+        "2. Body, one paragraph: Added optional `subscribe` and `isReady` methods to `RouteResolutionApi`, which let `useRouteRef` pick up route changes while the app is starting. Existing implementations without these methods keep working as before.",
+        "3. Name no internal classes, functions or variables."
+      ],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/brave-ravens-stick.md",
+        "reason": "Changeset front matter and body layout."
+      },
+      "depends_on": ["U02"],
+      "covers": ["AC-6", "NFR-3"],
+      "checks": ["prettier"]
+    }
+  ]
+}

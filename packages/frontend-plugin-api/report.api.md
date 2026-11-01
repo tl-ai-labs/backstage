@@ -2069,6 +2069,7 @@ export interface RouteRef<
 
 // @public (undocumented)
 export interface RouteResolutionApi {
+  isReady?(): boolean;
   // (undocumented)
   resolve<TParams extends AnyRouteRefParams>(
     anyRouteRef:
@@ -2079,6 +2080,7 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+  subscribe?(listener: () => void): () => void;
 }
 
 // @public

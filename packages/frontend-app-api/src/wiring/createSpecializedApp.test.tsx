@@ -30,6 +30,7 @@ import {
   useApi,
   analyticsApiRef,
   createExtensionDataRef,
+  AppRootElementBlueprint,
 } from '@backstage/frontend-plugin-api';
 import { act, render, screen } from '@testing-library/react';
 import { createSpecializedApp } from './createSpecializedApp';
@@ -44,6 +45,8 @@ import {
   featureFlagsApiRef,
   IdentityApi,
   identityApiRef,
+  createRouteRef as createLegacyRouteRef,
+  useRouteRef as useLegacyRouteRef,
 } from '@backstage/core-plugin-api';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiProvider, ConfigReader } from '@backstage/core-app-api';
@@ -1137,6 +1140,100 @@ describe('createSpecializedApp', () => {
       await expect(
         screen.findByText('Deferred Element'),
       ).resolves.toBeInTheDocument();
+    });
+
+    it('should resolve page route refs in app root elements once finalized', async () => {
+      const pageRouteRef = createLegacyRouteRef({ id: 'banner-page' });
+      let newBannerRenders = 0;
+
+      function NewBanner() {
+        newBannerRenders++;
+        const link = useRouteRef(pageRouteRef);
+        return <div>new link: {link?.() ?? 'none'}</div>;
+      }
+
+      function LegacyBanner() {
+        const link = useLegacyRouteRef(pageRouteRef);
+        return <div>legacy link: {link()}</div>;
+      }
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal.withOverrides({
+            extensions: [
+              appPluginOriginal.getExtension('app/layout').override({
+                factory: () => [
+                  coreExtensionData.reactElement(<div>App Layout</div>),
+                ],
+              }),
+              appPluginOriginal
+                .getExtension('sign-in-page:app')
+                .override({ disabled: true }),
+            ],
+          }),
+          createFrontendPlugin({
+            pluginId: 'banner',
+            extensions: [
+              createExtension({
+                name: 'page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                  coreExtensionData.reactElement,
+                ],
+                factory: () => [
+                  coreExtensionData.routePath('/banner-page'),
+                  coreExtensionData.routeRef(pageRouteRef),
+                  coreExtensionData.reactElement(<div>Banner Page</div>),
+                ],
+              }),
+              AppRootElementBlueprint.make({
+                name: 'new-banner',
+                params: { element: <NewBanner /> },
+              }),
+              AppRootElementBlueprint.make({
+                name: 'legacy-banner',
+                params: { element: <LegacyBanner /> },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const { rerender } = render(preparedApp.getBootstrapApp().element);
+
+      await expect(
+        screen.findByText('new link: none'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText(/^legacy link:/),
+      ).resolves.toBeInTheDocument();
+
+      let finalizedApp: FinalizedSpecializedApp | undefined;
+      await act(async () => {
+        finalizedApp = await waitForFinalizedApp(preparedApp);
+      });
+
+      if (!finalizedApp) {
+        throw new Error('Expected finalized app to be defined');
+      }
+
+      rerender(finalizedApp.element);
+
+      await expect(
+        screen.findByText('App Layout'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('new link: /banner-page'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('legacy link: /banner-page'),
+      ).resolves.toBeInTheDocument();
+
+      const rendersAfterFinalize = newBannerRenders;
+      await act(async () => {});
+      expect(newBannerRenders).toBe(rendersAfterFinalize);
     });
 
     it('should defer conditional api roots without resetting visible api instances', () => {

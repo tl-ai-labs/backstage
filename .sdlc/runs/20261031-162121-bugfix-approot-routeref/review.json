@@ -1,0 +1,40 @@
+{
+  "module": "approot-routeref (frontend-app-api, frontend-plugin-api, core-plugin-api)",
+  "verdict": "approved",
+  "tool_calls": 8,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+      "line": 154,
+      "issue": "While the app is not ready, the placeholder `(() => pathname) as RouteFunc<Params>` is a new function on every render. A consumer that puts the returned link in a useEffect or useMemo dependency array re-runs on every render during startup. The resolved path does not have this problem because it is memoized.",
+      "fix": "Memoize the placeholder on [pathname], for example with a useMemo placed next to the other hooks before any early return, and return that memoized function in the `!ready` branch."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "line": 501,
+      "issue": "The bootstrap assertion for the core-plugin-api bridge only matches /^legacy link:/. It does not check that the placeholder links to the current location, so a regression that returns an empty or wrong string still passes.",
+      "fix": "Assert the exact bootstrap text, for example `screen.findByText('legacy link: /')`, so the placeholder's current-location behaviour is pinned."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "line": 293,
+      "issue": "The new single-line comment is 90 columns, past the 80-column wrap in the plan's conventions. Prettier does not wrap comments, so the check still passed.",
+      "fix": "Split the comment over two lines of 80 columns or less."
+    }
+  ],
+  "refinement_packets": [],
+  "passing": [
+    "Correctness: all seven units match change_plan.md. RouteResolutionApiProxy is not ready at bootstrap (stopAtAttachment is set only in createBootstrapApp) and is ready after both finalize paths (session state and bootstrap error). initialize copies the listener set before notifying. The hooks bump the counter once per notification, and the effect handles the race when it re-runs on the ready change without an extra render.",
+    "Compatibility: both new interface members are optional. An API without subscribe or isReady behaves as before, and a missing API (old frontend system) gives ready=true and the original legacy path. No useSyncExternalStore, so the React ^17 peer range still works. Hook order is unconditional.",
+    "Type safety: no any. The one cast, RouteFunc<Params> on the placeholder, is the documented design decision.",
+    "Error handling: once ready, an unresolved required ref still throws `No path for ${routeRef}`. Optional refs still return undefined. The legacy resolver path is unchanged.",
+    "Public API: the TSDoc on subscribe and isReady is in adopter language. report.api.md is regenerated, not hand-edited, and only adds the two optional members.",
+    "Changesets: both match the plan (patch bumps, adopter wording, no internal symbols). No touched manifest or other sensitive file.",
+    "DRY: the subscription effect is repeated in the two hooks. That is acceptable because a shared helper would add public API to frontend-plugin-api.",
+    "Tests: the reproducing test covers bootstrap with no error, re-resolution after finalize without a remount for both hooks, and that the render count is stable.",
+    "Authz, PII and env-fixture checks: not applicable (bugfix intent, no routes, no PII, no config schema)."
+  ]
+}

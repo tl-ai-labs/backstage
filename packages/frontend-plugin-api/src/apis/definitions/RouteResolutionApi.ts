@@ -58,6 +58,22 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+
+  /**
+   * Registers a listener that is called each time the route information of the app changes,
+   * for example once the app has finished loading.
+   *
+   * @returns a function that removes the listener.
+   */
+  subscribe?(listener: () => void): () => void;
+
+  /**
+   * Returns false while the app is starting up and only some of its routes are known,
+   * and true once all routes are known.
+   *
+   * Implementations that omit this method are treated as always ready.
+   */
+  isReady?(): boolean;
 }
 
 /**

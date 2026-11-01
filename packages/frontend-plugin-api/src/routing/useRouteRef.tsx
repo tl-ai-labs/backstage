@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
@@ -41,10 +41,29 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const ready = routeResolutionApi.isReady?.() ?? true;
+  const [routeInfoVersion, setRouteInfoVersion] = useState(0);
+
+  useEffect(() => {
+    if (!routeResolutionApi.subscribe) {
+      return undefined;
+    }
+
+    const unsubscribe = routeResolutionApi.subscribe(() => {
+      setRouteInfoVersion(v => v + 1);
+    });
+
+    if ((routeResolutionApi.isReady?.() ?? true) !== ready) {
+      setRouteInfoVersion(v => v + 1);
+    }
+
+    return unsubscribe;
+  }, [routeResolutionApi, ready]);
 
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, routeInfoVersion],
   );
 
   return routeFunc;
