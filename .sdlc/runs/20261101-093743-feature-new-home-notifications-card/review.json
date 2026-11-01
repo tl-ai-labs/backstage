@@ -1,0 +1,61 @@
+{
+  "module": "home-notifications-card (plugins/notifications, plugins/home-react)",
+  "verdict": "needs_changes",
+  "tool_calls": 7,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "line": 203,
+      "issue": "tableNotifications filters on highlightedId, not on whether the lookup returned a notification. If ?id=X names a row on the current page and getNotification fails, X is removed from the table and not highlighted, so it is not shown at all. A transient failure on a refresh does the same to a notification that was already highlighted, because the catch turns the lookup value into undefined. The row is also missing while the first lookup is pending. This breaks docs/notifications/usage.md:42, which says the page renders as it does without ?id= when the notification cannot be loaded, and the 'treats a failed lookup' test misses it because its id 'gone' is not in the list.",
+      "fix": "Key the filter on the resolved notification: `highlightedNotification ? notifications?.filter(n => n.id !== highlightedNotification.id) : notifications`. Add a test to NotificationsPage.test.tsx where getNotification rejects and the list holds that id, and assert the row still shows with no highlight."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+      "line": 172,
+      "issue": "The new refresh path (retryLookup at NotificationsPage.tsx:168) and the highlighted block's row actions have no test. Nothing shows that using an action in the block updates that notification and refreshes its read state.",
+      "fix": "Add one test: render with ?id=, press the block's mark-as-read action, and assert updateNotifications was called with the id and getNotification ran again, with the block then showing the read state."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "line": 231,
+      "issue": "When the highlighted notification is the only row on the page, the filtered list is empty, so showToolbar is false. The header's select-all and Mark all read controls disappear and the table shows 'No records to display' under a title that still counts 1. This is the normal path for a user who follows a card link with exactly one unread notification.",
+      "fix": "Use `notifications.length > 0 || !!highlightedNotification` for showToolbar, and either suppress the empty message in that case or accept it explicitly in the plan."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "line": 169,
+      "issue": "The card copies the table's metadata row but drops its classes, so the broadcast icon, origin, bullet, topic and time run together with no spacing (the table gets its spacing from .notificationInfoRow). Rule 10 also asked only for the title and created time, so the row adds duplicated JSX beyond the plan.",
+      "fix": "Either reduce the row to the created time as the plan says, or reuse the table's CSS module classes (notificationInfoRow, broadcastIcon) so the spacing matches."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/alpha.test.tsx",
+      "line": 74,
+      "issue": "Assertions were loosened: findAllByText with length > 0 cannot tell one title from a duplicated one (low confidence that the title really renders twice), toBeDefined does not check the description text, and the 10000 ms findBy timeout equals the test's own 10000 ms timeout at line 81, so Jest's generic timeout can win over the query's message.",
+      "fix": "Use findByText for the title if it renders once, assert the exact description string, and set the query timeout below the test timeout."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "line": 116,
+      "issue": "The test uses `any` for resolver and message callbacks at lines 116, 292 and 393. Lines 27-28 and the afterEach also save and reassign setInterval and clearInterval, which mockRestore already restores.",
+      "fix": "Type the resolvers with GetNotificationsResponse and the message with NotificationSignal (unrelated_action needs one explicit cast), and remove the saved originals and reassignment."
+    }
+  ],
+  "passing_checks": [
+    "Suspense boundary in NotificationsTable: acceptable deviation from the plan. NotificationDescription is a lazy swappable component and the highlighted block sits outside the table, and the boundary only renders when a highlight exists, so rule 1 of U12 still holds.",
+    "Card refresh flag, polling switch, cleanup, mark-as-read and error states match U08 rules 1-9.",
+    "Deep link id: getNotification encodes it and links use encodeURIComponent.",
+    "useOptionalApp and CoreProgress match U04.",
+    "Manifests and yarn.lock are additions only; no dependency, script or key was dropped or changed.",
+    "Changesets are patch for 0.x packages and name no internal symbols; license headers present.",
+    "CSS tokens exist in packages/ui/src/css/tokens.css.",
+    "Authz and PII: no new routes or fields.",
+    "Env fixtures: not applicable, no validating config module or new env var in this change."
+  ],
+  "refinement_packets": []
+}

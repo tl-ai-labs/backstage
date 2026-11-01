@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import throttle from 'lodash/throttle';
+import { useSearchParams } from 'react-router-dom';
 import {
   Content,
   PageWithHeader,
@@ -47,6 +48,7 @@ import {
   GetTopicsResponse,
 } from '../../api';
 import {
+  Notification,
   NotificationSeverity,
   NotificationStatus,
 } from '@backstage/plugin-notifications-common';
@@ -140,17 +142,42 @@ function NotificationsPageContent(
     ],
   );
 
+  const [searchParams] = useSearchParams();
+  const highlightedId = searchParams.get('id') || undefined;
+  const {
+    value: lookedUp,
+    loading: lookupLoading,
+    retry: retryLookup,
+  } = useNotificationsApi<Notification | undefined>(
+    api =>
+      highlightedId
+        ? api.getNotification(highlightedId).catch(() => undefined)
+        : Promise.resolve(undefined),
+    [highlightedId],
+  );
+
   const throttledSetRefresh = useMemo(
     () => throttle(setRefresh, ThrottleDelayMs),
     [setRefresh],
   );
 
   useEffect(() => {
-    if (refresh && !loading) {
+    if (refresh && !loading && !lookupLoading) {
       retry();
+      if (highlightedId) {
+        retryLookup();
+      }
       setRefresh(false);
     }
-  }, [refresh, setRefresh, retry, loading]);
+  }, [
+    refresh,
+    setRefresh,
+    retry,
+    loading,
+    lookupLoading,
+    retryLookup,
+    highlightedId,
+  ]);
 
   useEffect(() => {
     if (lastSignal && lastSignal.action) {
@@ -170,6 +197,12 @@ function NotificationsPageContent(
   const totalCount = value?.[0]?.totalCount;
   const isUnread = !!value?.[1]?.unread;
   const allTopics = value?.[2]?.topics;
+
+  const highlightedNotification =
+    lookedUp?.id === highlightedId ? lookedUp : undefined;
+  const tableNotifications = highlightedNotification
+    ? notifications?.filter(n => n.id !== highlightedNotification.id)
+    : notifications;
 
   let tableTitle: string = t(TableTitleKeys.all, {
     count: totalCount ?? 0,
@@ -214,7 +247,8 @@ function NotificationsPageContent(
             isLoading={loading}
             isUnread={isUnread}
             markAsReadOnLinkOpen={markAsReadOnLinkOpen}
-            notifications={notifications}
+            notifications={tableNotifications}
+            highlightedNotification={highlightedNotification}
             onUpdate={onUpdate}
             setContainsText={setContainsText}
             onPageChange={setPageNumber}

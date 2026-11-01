@@ -21,6 +21,7 @@ import {
   discoveryApiRef,
   fetchApiRef,
 } from '@backstage/frontend-plugin-api';
+import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha';
 import { RiNotification3Line } from '@remixicon/react';
 import { rootRouteRef } from './routes';
 import { NotificationsClient, notificationsApiRef } from './api';
@@ -46,6 +47,23 @@ const api = ApiBlueprint.make({
     }),
 });
 
+const unreadNotificationsWidget = HomePageWidgetBlueprint.make({
+  name: 'unread-notifications',
+  params: {
+    name: 'HomePageUnreadNotifications',
+    title: 'Unread notifications',
+    description: 'Shows your latest unread notifications',
+    components: () =>
+      import('./components/UnreadNotificationsCard').then(m => ({
+        Content: m.UnreadNotificationsCard,
+      })),
+    layout: {
+      height: { minRows: 4, defaultRows: 7 },
+      width: { minColumns: 3, defaultColumns: 4 },
+    },
+  },
+});
+
 /** @alpha */
 export default createFrontendPlugin({
   pluginId: 'notifications',
@@ -56,7 +74,7 @@ export default createFrontendPlugin({
     root: rootRouteRef,
   },
   // TODO(Rugvip): Nav item (i.e. NotificationsSidebarItem) currently needs to be installed manually
-  extensions: [page, api],
+  extensions: [page, api, unreadNotificationsWidget],
 });
 
 import { notificationsTranslationRef as _notificationsTranslationRef } from './translation';

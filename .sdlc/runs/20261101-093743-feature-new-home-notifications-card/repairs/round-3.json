@@ -1,0 +1,165 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Defect in the highlighted block, found with a test: on a fresh load of `?id=<id>` whose lookup succeeds and whose notification has a description, the table stays on 'No records to display' while its heading reads 'Unread notifications (5)' and its pager reads '1-5 of 5', so the rows never appear, even after waiting 10 seconds. Reproduced on every run. With no description the same case renders all 5 rows, and with no `?id=` rows render normally. Cause: `NotificationDescription` is a swappable component built on `lazy()` and createSwappableComponent adds no Suspense boundary, so inside the highlighted block it suspends the surrounding tree on first load and the table misses its update. Fix: add `Suspense` to the existing import from 'react', and wrap the highlighted block's content in `<Suspense fallback={null}>`, inside `{highlightedNotification && (...)}`, so that the block suspends on its own and the Table beside it keeps rendering. Change nothing else: with no `highlightedNotification` the output and behaviour stay exactly as they are, and the block stays outside the Table.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Every error below is in the file as it stands; fix all of them. (1) yarn tsc: UnreadNotificationsCard.test.tsx:19:10 - error TS2305: Module '\"@backstage/core-plugin-api\"' has no exported member 'toastApiRef'. Import `toastApiRef` from `@backstage/frontend-plugin-api`, as the card does. (2) yarn tsc: UnreadNotificationsCard.test.tsx:54:5 - error TS2322: Type 'boolean' is not assignable to type 'Date'. (3) yarn tsc: UnreadNotificationsCard.test.tsx:545:8 - error TS6133: 'res' is declared but its value is never read: remove it. (4) The `createNotification` fixture has no `payload`, so the card crashes with a TypeError at `notification.payload.severity` (UnreadNotificationsCard.tsx:154). Rebuild it as `{ id, user: 'user:default/john', created: new Date('2026-01-01T00:00:00.000Z'), origin: 'plugin-test', payload: { title }, ...overrides }`: no top-level `title`, no `read` line. Update every use of the fixture to match, so that nothing reads a top-level `title`. (5) In 'shows the loading, empty and error states inside the card', `expect(await screen.findByText(/Network error loading notifications/)).toBeInTheDocument()` fails because ResponseErrorPanel renders the message in the panel title and again in its details. Use `screen.findAllByText(/Network error loading notifications/)` and assert the result is not empty, and make sure earlier renders in that test are unmounted first. Keep every other assertion.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U14.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Every error below is in the file as it stands; fix all of them. (1) All four tests fail with `NotImplementedError: No implementation available for apiRef{core.toast}`: NotificationsTable calls `useApi(toastApiRef)`. Import `toastApiRef` from `@backstage/frontend-plugin-api`, and add `[toastApiRef, { post: jest.fn() }]` to the `apis` of every TestApiProvider in the file. (2) NotificationsPage reads `value[0].notifications` and `value[0].totalCount`, so every `getNotifications.mockResolvedValue(<array>)` in the file must resolve `{ notifications: <the array>, totalCount: <its length> }`. Nothing else needs changing. Do not change or weaken any assertion: 'shows and highlights a notification the filters would hide' must still find all five rows with `findByText(item.payload.title)`, because it is the test that caught a real defect in NotificationsTable, now fixed in that file. Do not change NotificationsPage.tsx or NotificationsTable.tsx.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]

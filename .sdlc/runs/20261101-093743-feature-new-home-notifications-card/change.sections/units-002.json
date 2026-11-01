@@ -1,0 +1,259 @@
+[
+  {
+    "id": "U14",
+    "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "jsdom tests of the card's list, states, mark-as-read, deep links, signal refresh, polling fallback and cleanup.",
+    "rules": [
+      "Render with `renderInTestApp` from '@backstage/test-utils' inside `TestApiProvider`, with `mountedRoutes: { '/notifications': rootRouteRef }` ('../../routes'), and provide `[notificationsApiRef, api]` and `[toastApiRef, { post }]` in every test.",
+      "Build mocks inside each test or in `beforeEach`, and make `getNotifications` return what the backend would after the update under test, because a successful mark-as-read refetches.",
+      "Signals available means `[signalApiRef, { subscribe }]` from '@backstage/plugin-signals-react', where `subscribe` captures `onMessage` and returns `{ unsubscribe }`; publish with `act(() => onMessage(message))`. Signals unavailable means leaving `signalApiRef` out.",
+      "Do not use fake timers. `jest.spyOn(global, 'setInterval')` and `jest.spyOn(global, 'clearInterval')`, find the call whose delay is 60000, and run its callback inside `act` to stand in for the interval elapsing. Other intervals from testing-library are ignored by that filter. Restore spies in `afterEach`.",
+      "A test that needs a fetch held open uses a promise it resolves itself."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "reason": "This package's test scaffolding."
+    },
+    "tests": [
+      {
+        "name": "lists the latest unread notifications and links each to the notifications page",
+        "given": "getNotifications resolves two notifications, one with an id holding a slash",
+        "expect": "getNotifications was called with { read: false, limit: 5, sort: 'created', sortOrder: 'desc' }; both titles show; each link's href is /notifications?id=<encoded id>"
+      },
+      {
+        "name": "shows the loading, empty and error states inside the card",
+        "given": "One render each, beside a sibling element: a pending fetch, an empty list, a rejected fetch",
+        "expect": "The `progress` element, then 'No unread notifications', then the error message; the sibling still renders after the failure"
+      },
+      {
+        "name": "marks an item as read and keeps it when that fails",
+        "given": "Two items; updateNotifications rejects once and then resolves, and the list after success no longer holds the item",
+        "expect": "After the failed click the item stays and toast post was called with the failure title and status 'danger'; after the next click updateNotifications was called with { ids: [id], read: true } and the item is gone"
+      },
+      {
+        "name": "refetches on signals that change unread items and does not poll",
+        "given": "Signals available; publish new_notification, notification_read, notification_unread and one unrelated action, awaiting each refetch",
+        "expect": "The notifications channel is subscribed; each of the three actions causes one more getNotifications and the list updates; the unrelated action causes none; setInterval was never called with 60000"
+      },
+      {
+        "name": "refetches every 60 seconds without overlap when the signal API is not installed",
+        "given": "Signals unavailable; run the 60000 ms callback once and await the refetch, then hold the next fetch open and run the callback twice more",
+        "expect": "One refetch per tick; while a fetch is open no second one starts; once it resolves exactly one follow-up fetch runs"
+      },
+      {
+        "name": "releases the subscription and timers on unmount and fetches no more",
+        "given": "One render with signals and one without, each unmounted",
+        "expect": "unsubscribe was called once; clearInterval was called with the id setInterval returned; running the captured callback after unmount leaves the getNotifications call count unchanged"
+      }
+    ],
+    "depends_on": ["U08"],
+    "covers": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-9", "NFR-1", "NFR-7", "NFR-8"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U15",
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "jsdom tests of the `?id=` deep link on the notifications page.",
+    "rules": [
+      "Render `NfsNotificationsPage` from './NotificationsPage' with `renderInTestApp` from '@backstage/test-utils', inside `TestApiProvider` with `[notificationsApiRef, api]` and `[toastApiRef, { post }]`, and `routeEntries: ['/?id=<id>']`.",
+      "The mock api provides `getNotifications`, `getNotification`, `getStatus` (`{ unread, read }`) and `getTopics` (`{ topics: [] }`).",
+      "Find the highlight with `(await screen.findByText(title)).closest('[aria-current=\"true\"]')`; the absence of any highlight with `document.querySelector('[aria-current=\"true\"]')`."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "reason": "This package's test scaffolding."
+    },
+    "tests": [
+      {
+        "name": "shows and highlights a notification the filters would hide",
+        "given": "?id=hidden; getNotifications resolves five other notifications, and getNotification resolves a read notification",
+        "expect": "getNotification was called with 'hidden'; its title is inside the highlight; all five other titles still show"
+      },
+      {
+        "name": "shows a notification from the current page only once",
+        "given": "?id=n-1; getNotifications and getNotification both return n-1",
+        "expect": "The title appears once, inside the highlight"
+      },
+      {
+        "name": "treats a failed lookup as nothing to highlight",
+        "given": "?id=gone; getNotification rejects with an error whose message is 'lookup failed'",
+        "expect": "The list renders, no highlight exists, and 'lookup failed' is not shown"
+      },
+      {
+        "name": "does not look anything up without an id",
+        "given": "No query string",
+        "expect": "The list renders, getNotification was not called, and no highlight exists"
+      }
+    ],
+    "depends_on": ["U13"],
+    "covers": ["AC-7", "AC-9", "NFR-1", "NFR-7"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U16",
+    "path": "plugins/notifications/src/alpha.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "jsdom tests that the plugin exports the card as a home page widget and that the widget renders with its title.",
+    "rules": [
+      "Import `createExtensionTester` and `renderInTestApp` from '@backstage/frontend-test-utils', the plugin as the default export of './alpha', `HomePageWidgetBlueprint` from '@backstage/plugin-home-react/alpha', and `rootRouteRef` from './routes'.",
+      "Get the extension with `plugin.getExtension('home-page-widget:notifications/unread-notifications')` and its data with `createExtensionTester(extension).get(HomePageWidgetBlueprint.dataRefs.widget)`.",
+      "Render `data.component` with `apis: [[notificationsApiRef, { getNotifications }], [toastApiRef, { post }]]` and `mountedRoutes: { '/notifications': rootRouteRef }`."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": "plugins/search/src/alpha.test.tsx",
+      "reason": "A test of a plugin's new frontend system extensions."
+    },
+    "tests": [
+      {
+        "name": "exports the card as a home page widget",
+        "given": "The widget extension's data",
+        "expect": "name is 'HomePageUnreadNotifications', title is 'Unread notifications', and the description is set"
+      },
+      {
+        "name": "renders the card title and its unread notifications",
+        "given": "The widget's component rendered in a test app, with getNotifications resolving one notification",
+        "expect": "'Unread notifications' and the notification's title are shown"
+      }
+    ],
+    "depends_on": ["U10"],
+    "covers": ["AC-1", "AC-8", "AC-9", "NFR-1", "NFR-7"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U17",
+    "path": "docs/notifications/usage.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the card and the deep link under Notifications Frontend, including how the card behaves with and without signals.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 32,
+        "to": 32,
+        "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+        "rule": "Add a `### Unread notifications card` section: the extension `home-page-widget:notifications/unread-notifications` is offered under **Add Widget** in the new frontend system with no configuration; it lists the 5 latest unread notifications, each with a mark-as-read action and a link to the notifications page. With the signal API installed the card refreshes on notification signals and does not poll; without it the card refreshes every 60 seconds. It must state: when signals are installed but the connection is down, the card gets no live updates and does not poll. Then add a `### Linking to a notification` section: `/notifications?id=<id>` shows and highlights that notification even when the current filters or pagination would hide it; if the notification cannot be loaded, for example because it was deleted or belongs to someone else, the page renders as it does without `?id=`."
+      }
+    ],
+    "uses": [
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [12, 60],
+        "reason": "The writing style for this page."
+      }
+    ],
+    "depends_on": ["U10", "U13"],
+    "covers": ["NFR-3", "AC-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U18",
+    "path": "docs/getting-started/homepage.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "List the card among the available homepage widgets.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 115,
+        "to": 115,
+        "first_line": ":::",
+        "rule": "After a blank line add `### Notifications plugin widget`, the line 'This widget comes from `@backstage/plugin-notifications`:', and a table in the same format as the search table with the widget 'Unread notifications', extension ID `home-page-widget:notifications/unread-notifications`, and the description 'Lists your latest unread notifications with a mark-as-read action.'"
+      }
+    ],
+    "uses": [
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [12, 60],
+        "reason": "The writing style for this page."
+      }
+    ],
+    "depends_on": ["U10"],
+    "covers": ["NFR-3", "AC-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U19",
+    "path": "plugins/notifications/README.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Mention the card and the deep link in the plugin README.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 14,
+        "to": 14,
+        "first_line": "add `@backstage/plugin-signals` package to your installation.",
+        "rule": "After a blank line add `## Unread notifications card`: in the new frontend system the plugin provides a home page widget that appears under **Add Widget**, lists the latest unread notifications with mark-as-read, and links each to the notifications page, where `?id=<id>` highlights it. Point to docs/notifications/usage.md on backstage.io (`https://backstage.io/docs/notifications/usage`) for how it refreshes."
+      }
+    ],
+    "uses": [
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [12, 60],
+        "reason": "The writing style for this page."
+      }
+    ],
+    "depends_on": ["U10", "U13"],
+    "covers": ["NFR-3", "AC-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U20",
+    "path": ".changeset/unread-notifications-card.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for @backstage/plugin-notifications: patch.",
+    "rules": [
+      "Front matter holds only `'@backstage/plugin-notifications': patch`.",
+      "The text, for adopters and naming no internal symbols: Added an **Unread notifications** home page widget for the new frontend system. It lists your latest unread notifications with a mark-as-read action and a link to each one, and updates live through signals, or every 60 seconds when signals are not installed. The notifications page now shows and highlights the notification given by `?id=<id>`, even when the current filters or pagination would hide it."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-birds-rest.md",
+      "reason": "Changeset format."
+    },
+    "depends_on": ["U10", "U13"],
+    "covers": ["NFR-2", "AC-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U21",
+    "path": ".changeset/home-card-without-app-context.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for @backstage/plugin-home-react: patch.",
+    "rules": [
+      "Front matter holds only `'@backstage/plugin-home-react': patch`.",
+      "The text, for adopters and naming no internal symbols: Card extensions now render when no app context is available, using the default progress indicator instead of throwing. Apps with an app context keep using their own progress component."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-birds-rest.md",
+      "reason": "Changeset format."
+    },
+    "depends_on": ["U04"],
+    "covers": ["NFR-2", "AC-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U22",
+    "path": "plugins/notifications/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate the API reports after the code they report on, as a step separate from the project checks. Besides this file it writes plugins/notifications/report-alpha.api.md, and plugins/home-react/report.api.md and report-alpha.api.md if they change; review shows plugins/home-react has no public API change, so those two are expected to stay as they are.",
+    "run": "yarn build:api-reports plugins/notifications plugins/home-react",
+    "depends_on": ["U03", "U04", "U07", "U10", "U12", "U13"],
+    "covers": ["NFR-4", "AC-10", "AC-11", "AC-12", "AC-13"]
+  }
+]

@@ -114,6 +114,16 @@ This widget comes from `@backstage/plugin-search`:
 The search bar widget requires `@backstage/plugin-search` to be installed.
 :::
 
+### Notifications plugin widget
+
+This widget comes from `@backstage/plugin-notifications`:
+
+| Widget               | Extension ID                                          | Description                                                        |
+| :------------------- | :---------------------------------------------------- | :----------------------------------------------------------------- |
+| Unread notifications | `home-page-widget:notifications/unread-notifications` | Lists your latest unread notifications with a mark-as-read action. |
+
+To place this widget in the default layout, use its name, `HomePageUnreadNotifications`, as the value of `component` in `page:home.defaultConfig`.
+
 ### Community widgets
 
 The [Backstage community-plugins repository](https://github.com/backstage/community-plugins)

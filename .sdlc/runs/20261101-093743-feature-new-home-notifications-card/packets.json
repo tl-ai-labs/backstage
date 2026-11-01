@@ -1,0 +1,1406 @@
+[
+  {
+    "id": "tp_codegen_U01",
+    "unit": "U01",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/home-react/package.json",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/home-react/package.json` (unit U01) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 67 (line 67 reads `\"@backstage/cli\": \"workspace:^\",`) — Add, in this order and alphabetical with the neighbours: \"@backstage/test-utils\": \"workspace:^\", \"@testing-library/dom\": \"^10.0.0\", \"@testing-library/jest-dom\": \"^6.0.0\", \"@testing-library/react\": \"^16.0.0\".\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/home-react/package.json\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/home-react/package.json\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/package.json",
+        "lines": [
+          69,
+          82
+        ],
+        "reason": "uses: The same dev dependency ranges this repo already uses."
+      },
+      {
+        "path": "plugins/home-react/package.json",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 67,
+          "to": 67
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U02",
+    "unit": "U02",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/package.json",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/notifications/package.json` (unit U02) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 57 (line 57 reads `\"@backstage/frontend-plugin-api\": \"workspace:^\",`) — Add \"@backstage/plugin-home-react\": \"workspace:^\", to dependencies.\n- S2: insert after line 71 (line 71 reads `\"@backstage/dev-utils\": \"workspace:^\",`) — Add \"@backstage/frontend-test-utils\": \"workspace:^\", to devDependencies.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/package.json\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/package.json\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/package.json",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 57,
+          "to": 57
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 71,
+          "to": 71
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tooling_U03",
+    "unit": "U03",
+    "phase": "codegen",
+    "task_type": "tooling",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "yarn.lock",
+    "depends_on": [
+      "tp_codegen_U01",
+      "tp_codegen_U02"
+    ],
+    "instruction": "Orchestrator shell step, no model (unit U03): in one Bash call, write-provenance.mjs --before --run-id=20261101-093743-feature-new-home-notifications-card --packet-id=tooling_U03 for `yarn.lock` and every other file the step writes, then `yarn install --no-immutable`, then write-provenance.mjs --after --run-id=20261101-093743-feature-new-home-notifications-card for each of them, whether the step succeeded or not (brownfield-runs.md, Phase 5). Install so yarn.lock records the additions of U01 and U02; the lockfile gains entries only, and nothing is removed or downgraded.",
+    "inputs": [],
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string"
+        }
+      }
+    },
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0
+    }
+  },
+  {
+    "id": "tp_codegen_U04",
+    "unit": "U04",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/home-react/src/extensions.tsx",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/home-react/src/extensions.tsx` (unit U04) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 20 (line 20 reads `import { InfoCard } from '@backstage/core-components';`) — Import `InfoCard` and `Progress as CoreProgress` from '@backstage/core-components'.\n- S2: insert before line 124 (line 124 reads `export function CardExtension<T>(props: CardExtensionComponentProps<T>) {`) — Add `function useOptionalApp()` that returns `useApp()` inside try and `undefined` from a bare catch, with a blank line after it.\n- S3: replace lines 135-136 (line 135 reads `const app = useApp();`, line 136 reads `const { Progress } = app.getComponents();`) — Replace with `const app = useOptionalApp();` and `const Progress = app?.getComponents().Progress ?? CoreProgress;`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/home-react/src/extensions.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/home-react/src/extensions.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/core-plugin-api/src/app/useApp.tsx",
+        "lines": [
+          79,
+          85
+        ],
+        "reason": "uses: The try/catch hook shape to copy."
+      },
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 124,
+          "to": 124
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 135,
+          "to": 136
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U05",
+    "unit": "U05",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/home-react/src/setupTests.ts",
+    "depends_on": [
+      "tooling_U03"
+    ],
+    "subtype": "test_add",
+    "instruction": "Write `plugins/home-react/src/setupTests.ts` (unit U05) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/setupTests.ts",
+        "reason": "style file: The identical file in a sibling package, with the year changed to 2026."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/notifications/src/setupTests.ts",
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U06",
+    "unit": "U06",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/home-react/src/extensions.test.tsx",
+    "depends_on": [
+      "tooling_U03",
+      "tp_codegen_U04",
+      "tp_tests_U05"
+    ],
+    "subtype": "test_add",
+    "instruction": "Write `plugins/home-react/src/extensions.test.tsx` (unit U06) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "reason": "style file: Test scaffolding of a frontend component in this repo."
+      }
+    ],
+    "acceptance": [
+      "renders without an app context and falls back to the core Progress: given No app wrapper; first a plain Content, then a Content that suspends, expect The plain Content and the title render with no throw; the suspending Content shows the element with test id `progress` from core-components",
+      "uses the app's Progress when an app context exists: given renderInTestApp with a custom Progress component and a Content that suspends, expect 'App progress' is shown as the fallback"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U07",
+    "unit": "U07",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/translation.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/notifications/src/translation.ts` (unit U07) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 119 (line 119 reads `},`) — After the closing of `settings`, add the group `unreadNotificationsCard` with `empty: 'No unread notifications'`, `markAsRead: 'Mark as read'` and `errors: { markAsReadFailed: 'Failed to mark notification as read' }`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/translation.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/translation.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/translation.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 119,
+          "to": 119
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U08",
+    "unit": "U08",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+    "depends_on": [
+      "tp_codegen_U07"
+    ],
+    "subtype": "new_file_add",
+    "instruction": "Write `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx` (unit U08) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx",
+        "lines": [
+          16,
+          47
+        ],
+        "reason": "style file: Imports of this package's hooks, routes, signals, toast API and BUI components."
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "lines": [
+          143,
+          163
+        ],
+        "reason": "uses: The refresh flag pattern, without its throttle."
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "lines": [
+          16,
+          50
+        ],
+        "reason": "uses: The `@ts-ignore` RelativeTime import and the translation imports."
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "lines": [
+          201,
+          258
+        ],
+        "reason": "uses: How a notification's title and created time render."
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/BulkActions.tsx",
+        "lines": [
+          97,
+          108
+        ],
+        "reason": "uses: The ButtonIcon and Tooltip markup."
+      },
+      {
+        "path": "plugins/notifications/src/api/NotificationsApi.ts",
+        "lines": [
+          38,
+          88
+        ],
+        "reason": "uses: The API options and response types."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx",
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U09",
+    "unit": "U09",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/index.ts",
+    "depends_on": [
+      "tp_codegen_U08"
+    ],
+    "subtype": "new_file_add",
+    "instruction": "Write `plugins/notifications/src/components/UnreadNotificationsCard/index.ts` (unit U09) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/index.ts",
+        "reason": "style file: Barrel shape of this package."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/notifications/src/components/NotificationsPage/index.ts",
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U10",
+    "unit": "U10",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/alpha.tsx",
+    "depends_on": [
+      "tooling_U03",
+      "tp_codegen_U09"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/notifications/src/alpha.tsx` (unit U10) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 23 (line 23 reads `} from '@backstage/frontend-plugin-api';`) — Add `import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha';`.\n- S2: insert after line 47 (line 47 reads `});`) — Add `const unreadNotificationsWidget = HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: {...} })` with `name: 'HomePageUnreadNotifications'`, `title: 'Unread notifications'`, `description: 'Shows your latest unread notifications'`, `components` lazily importing './components/UnreadNotificationsCard' and mapping `m.UnreadNotificationsCard` to `Content`, and `layout: { height: { minRows: 4, defaultRows: 7 }, width: { minColumns: 3, defaultColumns: 4 } }`.\n- S3: replace line 59 (line 59 reads `extensions: [page, api],`) — `extensions: [page, api, unreadNotificationsWidget],`\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/alpha.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/alpha.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/search/src/alpha.tsx",
+        "lines": [
+          96,
+          106
+        ],
+        "reason": "uses: A plugin other than home contributing a home page widget."
+      },
+      {
+        "path": "plugins/notifications/src/alpha.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 23,
+          "to": 23
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 47,
+          "to": 47
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 59,
+          "to": 59
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U11",
+    "unit": "U11",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css` (unit U11) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 35 (line 35 reads `}`) — Inside `@layer components`, after a blank line, add `.highlightedNotification` with `background-color: var(--bui-bg-info)`, `border: 1px solid var(--bui-border-info)`, `border-radius: var(--bui-radius-2)`, `margin-bottom: var(--bui-space-4)` and `padding: var(--bui-space-3)`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 35,
+          "to": 35
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U12",
+    "unit": "U12",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "depends_on": [
+      "tp_codegen_U11"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx` (unit U12) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 64 (line 64 reads `pageSize: number;`) — Add `/** A notification to show and highlight above the table, outside its pagination */` and `highlightedNotification?: Notification;`.\n- S2: insert after line 80 (line 80 reads `totalCount,`) — Add `highlightedNotification,` to the destructured props.\n- S3: insert before line 165 (line 165 reads `const compactColumns = useMemo((): TableColumn<Notification>[] => {`) — Add `const renderNotificationContent = useCallback((notification: Notification) => (...), [markAsReadOnLinkOpen, onSwitchReadStatus]);` whose JSX is the `<Flex gap=\"4\" align=\"center\">` tree moved unchanged from site S4, then a blank line.\n- S4: replace lines 199-259 (line 199 reads `render: (notification: Notification) => {`, line 259 reads `},`) — Replace the whole render function with `render: renderNotificationContent,`.\n- S5: replace line 292 (line 292 reads `markAsReadOnLinkOpen,`) — Replace with `renderNotificationContent,`; the memo no longer reads `markAsReadOnLinkOpen` directly.\n- S6: insert after line 296 (line 296 reads `<>`) — Add, when `highlightedNotification` is set: `<div aria-current=\"true\" className={styles.highlightedNotification}>` holding `<Flex justify=\"between\" align=\"center\" gap=\"4\">` with `renderNotificationContent(highlightedNotification)` and `<BulkActions notifications={[highlightedNotification]} selectedNotifications={new Set([highlightedNotification.id])} onSwitchReadStatus={onSwitchReadStatus} onSwitchSavedStatus={onSwitchSavedStatus} />`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 64,
+          "to": 64
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 80,
+          "to": 80
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 165,
+          "to": 165
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 199,
+          "to": 259
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 292,
+          "to": 292
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 296,
+          "to": 296
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U13",
+    "unit": "U13",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+    "depends_on": [
+      "tp_codegen_U12"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx` (unit U13) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 18 (line 18 reads `import throttle from 'lodash/throttle';`) — Add `import { useSearchParams } from 'react-router-dom';`.\n- S2: insert before line 50 (line 50 reads `NotificationSeverity,`) — Add `Notification,` to this import.\n- S3: insert after line 141 (line 141 reads `);`) — Add a blank line, `const [searchParams] = useSearchParams();`, `const highlightedId = searchParams.get('id') || undefined;`, and `useNotificationsApi<Notification | undefined>` taking `value: lookedUp`, `loading: lookupLoading`, `retry: retryLookup`, whose callback returns `api.getNotification(highlightedId).catch(() => undefined)` when `highlightedId` is set and `Promise.resolve(undefined)` otherwise, with deps `[highlightedId]`.\n- S4: replace lines 148-153 (line 148 reads `useEffect(() => {`, line 153 reads `}, [refresh, setRefresh, retry, loading]);`) — The effect also waits for `!lookupLoading`, and after `retry()` calls `retryLookup()` when `highlightedId` is set, so the highlighted notification's read state stays current. Add `lookupLoading`, `retryLookup` and `highlightedId` to the deps.\n- S5: insert after line 172 (line 172 reads `const allTopics = value?.[2]?.topics;`) — Add `highlightedNotification`: `lookedUp` when `lookedUp?.id === highlightedId`, else `undefined`, which ignores a stale result while the id changes. Add `tableNotifications`: `notifications` filtered to exclude that id when it is set, else `notifications` itself.\n- S6: replace line 217 (line 217 reads `notifications={notifications}`) — Pass `notifications={tableNotifications}` and `highlightedNotification={highlightedNotification}`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/hooks/useNotificationsApi.ts",
+        "lines": [
+          21,
+          31
+        ],
+        "reason": "uses: The hook signature and its `retry`."
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 50,
+          "to": 50
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 141,
+          "to": 141
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 148,
+          "to": 153
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 172,
+          "to": 172
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 217,
+          "to": 217
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U14",
+    "unit": "U14",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "depends_on": [
+      "tp_codegen_U08"
+    ],
+    "subtype": "test_add",
+    "instruction": "Write `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` (unit U14) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U14.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "reason": "style file: This package's test scaffolding."
+      }
+    ],
+    "acceptance": [
+      "lists the latest unread notifications and links each to the notifications page: given getNotifications resolves two notifications, one with an id holding a slash, expect getNotifications was called with { read: false, limit: 5, sort: 'created', sortOrder: 'desc' }; both titles show; each link's href is /notifications?id=<encoded id>",
+      "shows the loading, empty and error states inside the card: given One render each, beside a sibling element: a pending fetch, an empty list, a rejected fetch, expect The `progress` element, then 'No unread notifications', then the error message; the sibling still renders after the failure",
+      "marks an item as read and keeps it when that fails: given Two items; updateNotifications rejects once and then resolves, and the list after success no longer holds the item, expect After the failed click the item stays and toast post was called with the failure title and status 'danger'; after the next click updateNotifications was called with { ids: [id], read: true } and the item is gone",
+      "refetches on signals that change unread items and does not poll: given Signals available; publish new_notification, notification_read, notification_unread and one unrelated action, awaiting each refetch, expect The notifications channel is subscribed; each of the three actions causes one more getNotifications and the list updates; the unrelated action causes none; setInterval was never called with 60000",
+      "refetches every 60 seconds without overlap when the signal API is not installed: given Signals unavailable; run the 60000 ms callback once and await the refetch, then hold the next fetch open and run the callback twice more, expect One refetch per tick; while a fetch is open no second one starts; once it resolves exactly one follow-up fetch runs",
+      "releases the subscription and timers on unmount and fetches no more: given One render with signals and one without, each unmounted, expect unsubscribe was called once; clearInterval was called with the id setInterval returned; running the captured callback after unmount leaves the getNotifications call count unchanged"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U15",
+    "unit": "U15",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "depends_on": [
+      "tp_codegen_U13"
+    ],
+    "subtype": "test_add",
+    "instruction": "Write `plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx` (unit U15) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "reason": "style file: This package's test scaffolding."
+      }
+    ],
+    "acceptance": [
+      "shows and highlights a notification the filters would hide: given ?id=hidden; getNotifications resolves five other notifications, and getNotification resolves a read notification, expect getNotification was called with 'hidden'; its title is inside the highlight; all five other titles still show",
+      "shows a notification from the current page only once: given ?id=n-1; getNotifications and getNotification both return n-1, expect The title appears once, inside the highlight",
+      "treats a failed lookup as nothing to highlight: given ?id=gone; getNotification rejects with an error whose message is 'lookup failed', expect The list renders, no highlight exists, and 'lookup failed' is not shown",
+      "does not look anything up without an id: given No query string, expect The list renders, getNotification was not called, and no highlight exists"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U16",
+    "unit": "U16",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/alpha.test.tsx",
+    "depends_on": [
+      "tp_codegen_U10"
+    ],
+    "subtype": "test_add",
+    "instruction": "Write `plugins/notifications/src/alpha.test.tsx` (unit U16) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U16.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/search/src/alpha.test.tsx",
+        "reason": "style file: A test of a plugin's new frontend system extensions."
+      }
+    ],
+    "acceptance": [
+      "exports the card as a home page widget: given The widget extension's data, expect name is 'HomePageUnreadNotifications', title is 'Unread notifications', and the description is set",
+      "renders the card title and its unread notifications: given The widget's component rendered in a test app, with getNotifications resolving one notification, expect 'Unread notifications' and the notification's title are shown"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline_from": "plugins/search/src/alpha.test.tsx",
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U17",
+    "unit": "U17",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "docs/notifications/usage.md",
+    "depends_on": [
+      "tp_codegen_U10",
+      "tp_codegen_U13"
+    ],
+    "subtype": "doc_update",
+    "instruction": "Edit `docs/notifications/usage.md` (unit U17) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 32 (line 32 reads `You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.`) — Add a `### Unread notifications card` section: the extension `home-page-widget:notifications/unread-notifications` is offered under **Add Widget** in the new frontend system with no configuration; it lists the 5 latest unread notifications, each with a mark-as-read action and a link to the notifications page. With the signal API installed the card refreshes on notification signals and does not poll; without it the card refreshes every 60 seconds. It must state: when signals are installed but the connection is down, the card gets no live updates and does not poll. Then add a `### Linking to a notification` section: `/notifications?id=<id>` shows and highlights that notification even when the current filters or pagination would hide it; if the notification cannot be loaded, for example because it was deleted or belongs to someone else, the page renders as it does without `?id=`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/notifications/usage.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/notifications/usage.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U17.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [
+          12,
+          60
+        ],
+        "reason": "uses: The writing style for this page."
+      },
+      {
+        "path": "docs/notifications/usage.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U18",
+    "unit": "U18",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "docs/getting-started/homepage.md",
+    "depends_on": [
+      "tp_codegen_U10"
+    ],
+    "subtype": "doc_update",
+    "instruction": "Edit `docs/getting-started/homepage.md` (unit U18) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 115 (line 115 reads `:::`) — After a blank line add `### Notifications plugin widget`, the line 'This widget comes from `@backstage/plugin-notifications`:', and a table in the same format as the search table with the widget 'Unread notifications', extension ID `home-page-widget:notifications/unread-notifications`, and the description 'Lists your latest unread notifications with a mark-as-read action.'\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/getting-started/homepage.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/getting-started/homepage.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U18.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [
+          12,
+          60
+        ],
+        "reason": "uses: The writing style for this page."
+      },
+      {
+        "path": "docs/getting-started/homepage.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 115,
+          "to": 115
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U19",
+    "unit": "U19",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/README.md",
+    "depends_on": [
+      "tp_codegen_U10",
+      "tp_codegen_U13"
+    ],
+    "subtype": "doc_update",
+    "instruction": "Edit `plugins/notifications/README.md` (unit U19) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 14 (line 14 reads `add `@backstage/plugin-signals` package to your installation.`) — After a blank line add `## Unread notifications card`: in the new frontend system the plugin provides a home page widget that appears under **Add Widget**, lists the latest unread notifications with mark-as-read, and links each to the notifications page, where `?id=<id>` highlights it. Point to docs/notifications/usage.md on backstage.io (`https://backstage.io/docs/notifications/usage`) for how it refreshes.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/README.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/README.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U19.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [
+          12,
+          60
+        ],
+        "reason": "uses: The writing style for this page."
+      },
+      {
+        "path": "plugins/notifications/README.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 14,
+          "to": 14
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U20",
+    "unit": "U20",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": ".changeset/unread-notifications-card.md",
+    "depends_on": [
+      "tp_codegen_U10",
+      "tp_codegen_U13"
+    ],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/unread-notifications-card.md` (unit U20) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U20.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/calm-birds-rest.md",
+        "reason": "style file: Changeset format."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/calm-birds-rest.md",
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U21",
+    "unit": "U21",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": ".changeset/home-card-without-app-context.md",
+    "depends_on": [
+      "tp_codegen_U04"
+    ],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/home-card-without-app-context.md` (unit U21) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-093743-feature-new-home-notifications-card/briefs/U21.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/calm-birds-rest.md",
+        "reason": "style file: Changeset format."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/calm-birds-rest.md",
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    },
+    "verify_deferred": [
+      "CI=true yarn test plugins/notifications plugins/home-react",
+      "yarn tsc",
+      "yarn lint:all"
+    ]
+  },
+  {
+    "id": "tooling_U22",
+    "unit": "U22",
+    "phase": "codegen",
+    "task_type": "tooling",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-093743-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/report.api.md",
+    "depends_on": [
+      "tooling_U03",
+      "tp_codegen_U04",
+      "tp_codegen_U07",
+      "tp_codegen_U10",
+      "tp_codegen_U12",
+      "tp_codegen_U13"
+    ],
+    "instruction": "Orchestrator shell step, no model (unit U22): in one Bash call, write-provenance.mjs --before --run-id=20261101-093743-feature-new-home-notifications-card --packet-id=tooling_U22 for `plugins/notifications/report.api.md` and every other file the step writes, then `yarn build:api-reports plugins/notifications plugins/home-react`, then write-provenance.mjs --after --run-id=20261101-093743-feature-new-home-notifications-card for each of them, whether the step succeeded or not (brownfield-runs.md, Phase 5). Regenerate the API reports after the code they report on, as a step separate from the project checks. Besides this file it writes plugins/notifications/report-alpha.api.md, and plugins/home-react/report.api.md and report-alpha.api.md if they change; review shows plugins/home-react has no public API change, so those two are expected to stay as they are.",
+    "inputs": [],
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string"
+        }
+      }
+    },
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0
+    }
+  }
+]
