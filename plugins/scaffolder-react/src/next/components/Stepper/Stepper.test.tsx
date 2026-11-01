@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,682 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditions', () => {
+    const flagStep = {
+      title: 'Step 1',
+      schema: {
+        type: 'object',
+        properties: {
+          flag: { type: 'boolean', title: 'Flag', default: false },
+        },
+      },
+    };
+
+    const flagIsOn = {
+      properties: { flag: { const: true } },
+      required: ['flag'],
+    };
+
+    const reasonDependency = {
+      flag: {
+        allOf: [
+          {
+            if: { properties: { flag: { const: true } } },
+            then: {
+              properties: { reason: { type: 'string', title: 'Reason' } },
+              required: ['reason'],
+            },
+          },
+        ],
+      },
+    };
+
+    const reasonManifest: TemplateParameterSchema = {
+      title: 'Cross-step conditions',
+      steps: [
+        flagStep,
+        {
+          title: 'Step 2',
+          schema: {
+            type: 'object',
+            properties: { detail: { type: 'string', title: 'Detail' } },
+            dependencies: reasonDependency,
+          },
+        },
+      ],
+    };
+
+    const renderStepper = async (manifest: TemplateParameterSchema) => {
+      const onCreate = jest.fn();
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={manifest}
+            extensions={[]}
+            onCreate={onCreate}
+            initialState={{}}
+          />
+        </SecretsContextProvider>,
+      );
+      return onCreate;
+    };
+
+    const clickButton = async (name: string) => {
+      const button = await screen.findByRole('button', { name });
+      await act(async () => {
+        fireEvent.click(button);
+      });
+    };
+
+    const clickButtons = async (...names: string[]) => {
+      for (const name of names) {
+        await clickButton(name);
+      }
+    };
+
+    const toggle = async (name: string) => {
+      const checkbox = await screen.findByRole('checkbox', { name });
+      await act(async () => {
+        fireEvent.click(checkbox);
+      });
+    };
+
+    const fill = async (name: string, value: string) => {
+      const textbox = await screen.findByRole('textbox', { name });
+      await act(async () => {
+        fireEvent.change(textbox, { target: { value } });
+      });
+    };
+
+    const expectBlocked = () => {
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+    };
+
+    it('shows, requires and drops a dependencies field from an earlier step', async () => {
+      const onCreate = await renderStepper(reasonManifest);
+
+      await clickButton('Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'Reason' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back');
+      await toggle('Flag');
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Reason' }),
+      ).toBeInTheDocument();
+
+      await clickButton('Review');
+      expectBlocked();
+
+      await fill('Reason', 'because');
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'because' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back');
+      await toggle('Flag');
+      await clickButtons('Next', 'Review');
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'because' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({ flag: false });
+    });
+
+    it('handles the oneOf form of dependencies across steps', async () => {
+      const onCreate = await renderStepper({
+        title: 'Cross-step conditions',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                kind: {
+                  type: 'string',
+                  title: 'Kind',
+                  enum: ['service', 'library'],
+                  'ui:widget': 'radio',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {},
+              dependencies: {
+                kind: {
+                  oneOf: [
+                    {
+                      properties: {
+                        kind: { const: 'service' },
+                        port: { type: 'string', title: 'Port' },
+                      },
+                      required: ['port'],
+                    },
+                    {
+                      properties: {
+                        kind: { const: 'library' },
+                        language: { type: 'string', title: 'Language' },
+                      },
+                      required: ['language'],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      const chooseKind = async (name: string) => {
+        const radio = await screen.findByRole('radio', { name });
+        await act(async () => {
+          fireEvent.click(radio);
+        });
+      };
+
+      await chooseKind('service');
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Port' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Language' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(screen.queryByText('Option 1')).not.toBeInTheDocument();
+
+      await clickButton('Review');
+      expectBlocked();
+
+      await fill('Port', '8080');
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: '8080' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back');
+      await chooseKind('library');
+      await clickButton('Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'Port' }),
+      ).not.toBeInTheDocument();
+
+      await fill('Language', 'go');
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'go' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: '8080' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({
+        kind: 'library',
+        language: 'go',
+      });
+    });
+
+    it('resolves top-level if/then and if inside allOf across steps', async () => {
+      const onCreate = await renderStepper({
+        title: 'Cross-step conditions',
+        steps: [
+          flagStep,
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {},
+              if: flagIsOn,
+              then: {
+                properties: { reason: { type: 'string', title: 'Reason' } },
+                required: ['reason'],
+              },
+              else: {
+                properties: {
+                  fallback: { type: 'string', title: 'Fallback' },
+                },
+                required: ['fallback'],
+              },
+              allOf: [
+                {
+                  if: flagIsOn,
+                  then: {
+                    properties: {
+                      ticket: { type: 'string', title: 'Ticket' },
+                    },
+                    required: ['ticket'],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Fallback' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Reason' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Ticket' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Review');
+      expectBlocked();
+
+      await fill('Fallback', 'plan b');
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'plan b' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back');
+      await toggle('Flag');
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Reason' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Fallback' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Review');
+      expectBlocked();
+
+      await fill('Reason', 'because');
+      await fill('Ticket', 'ABC-1');
+      await clickButton('Review');
+      expect(await screen.findByText('Reason')).toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: 'because' })).toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: 'ABC-1' })).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back');
+      await toggle('Flag');
+      await clickButtons('Next', 'Review');
+      expect(
+        await screen.findByRole('cell', { name: 'plan b' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'because' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'ABC-1' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({
+        flag: false,
+        fallback: 'plan b',
+      });
+    });
+
+    it('keeps Review and onCreate in step for kept and mixed keys', async () => {
+      const onCreate = await renderStepper({
+        title: 'Cross-step conditions',
+        steps: [
+          flagStep,
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: { mode: { type: 'string', title: 'Mode' } },
+              allOf: [
+                {
+                  if: flagIsOn,
+                  then: {
+                    properties: {
+                      shared: { type: 'string', title: 'Shared' },
+                    },
+                  },
+                },
+                {
+                  if: {
+                    properties: {
+                      flag: { const: true },
+                      mode: { const: 'advanced' },
+                    },
+                    required: ['flag', 'mode'],
+                  },
+                  then: {
+                    properties: {
+                      mixed: { type: 'string', title: 'Mixed' },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            title: 'Step 3',
+            schema: {
+              type: 'object',
+              properties: { shared: { type: 'string', title: 'Shared' } },
+            },
+          },
+        ],
+      });
+
+      await toggle('Flag');
+      await clickButton('Next');
+      await fill('Mode', 'advanced');
+      await fill('Mixed', 'mixed value');
+      await fill('Shared', 'kept');
+      await clickButtons('Next', 'Review');
+      expect(
+        await screen.findByRole('cell', { name: 'mixed value' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back', 'Back');
+      await toggle('Flag');
+      await clickButton('Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'Mixed' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Shared' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Shared' }),
+      ).toHaveValue('kept');
+
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'kept' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'mixed value' }),
+      ).not.toBeInTheDocument();
+
+      const expected = { flag: false, mode: 'advanced', shared: 'kept' };
+      expect(screen.getAllByRole('row')).toHaveLength(
+        Object.keys(expected).length,
+      );
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith(expected);
+    });
+
+    it('keeps same-step conditions and their stale values as they are today', async () => {
+      const onCreate = await renderStepper({
+        title: 'Cross-step conditions',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                withDetail: {
+                  type: 'boolean',
+                  title: 'With detail',
+                  default: false,
+                },
+                withNote: {
+                  type: 'boolean',
+                  title: 'With note',
+                  default: false,
+                },
+              },
+              dependencies: {
+                withDetail: {
+                  oneOf: [
+                    {
+                      properties: {
+                        withDetail: { const: true },
+                        detail: { type: 'string', title: 'Detail' },
+                      },
+                    },
+                    { properties: { withDetail: { const: false } } },
+                  ],
+                },
+              },
+              if: {
+                properties: { withNote: { const: true } },
+                required: ['withNote'],
+              },
+              then: {
+                properties: { note: { type: 'string', title: 'Note' } },
+              },
+            },
+          },
+        ],
+      });
+
+      await toggle('With detail');
+      await toggle('With note');
+      await fill('Detail', 'stale detail');
+      await fill('Note', 'stale note');
+
+      await toggle('With detail');
+      await toggle('With note');
+      expect(
+        screen.queryByRole('textbox', { name: 'Detail' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Note' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'stale detail' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('cell', { name: 'stale note' }),
+      ).toBeInTheDocument();
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({
+        withDetail: false,
+        withNote: false,
+        detail: 'stale detail',
+        note: 'stale note',
+      });
+    });
+
+    it('keeps earlier-step fields out of later steps', async () => {
+      const OwnerField = ({
+        formData,
+      }: FieldExtensionComponentProps<string>) => (
+        <input aria-label="Owner" value={formData ?? ''} readOnly />
+      );
+      const validation = jest.fn();
+      const onCreate = jest.fn();
+
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross-step conditions',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                flag: { type: 'boolean', title: 'Flag', default: false },
+                owner: {
+                  type: 'string',
+                  title: 'Owner',
+                  default: 'team-a',
+                  'ui:field': 'OwnerField',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              'ui:order': ['detail', 'reason'],
+              properties: { detail: { type: 'string', title: 'Detail' } },
+              dependencies: reasonDependency,
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={manifest}
+            extensions={[
+              { name: 'OwnerField', component: OwnerField, validation },
+            ]}
+            onCreate={onCreate}
+            initialState={{}}
+          />
+        </SecretsContextProvider>,
+      );
+
+      await toggle('Flag');
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Detail' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Flag' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Owner' }),
+      ).not.toBeInTheDocument();
+
+      await fill('Reason', 'because');
+      await clickButton('Review');
+      expect(
+        await screen.findAllByRole('cell', { name: 'team-a' }),
+      ).toHaveLength(1);
+      expect(screen.getAllByText('Flag')).toHaveLength(1);
+      expect(screen.getAllByText('Owner')).toHaveLength(1);
+      expect(validation).toHaveBeenCalledTimes(1);
+      expect(validation.mock.calls[0][0]).toBe('team-a');
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({
+        flag: true,
+        owner: 'team-a',
+        reason: 'because',
+      });
+    });
+
+    it('restores a hidden value when its condition returns', async () => {
+      const onCreate = await renderStepper(reasonManifest);
+
+      await toggle('Flag');
+      await clickButton('Next');
+      await fill('Reason', 'because');
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'because' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back');
+      await toggle('Flag');
+      await clickButton('Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'Reason' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Back');
+      await toggle('Flag');
+      await clickButton('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Reason' }),
+      ).toHaveValue('because');
+
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'because' }),
+      ).toBeInTheDocument();
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({
+        flag: true,
+        reason: 'because',
+      });
+    });
+
+    it('re-evaluates chained conditions after going back', async () => {
+      const onCreate = await renderStepper({
+        title: 'Cross-step conditions',
+        steps: [
+          flagStep,
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {},
+              dependencies: reasonDependency,
+            },
+          },
+          {
+            title: 'Step 3',
+            schema: {
+              type: 'object',
+              properties: {},
+              dependencies: {
+                reason: {
+                  properties: { last: { type: 'string', title: 'Last' } },
+                  required: ['last'],
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      await toggle('Flag');
+      await clickButton('Next');
+      await fill('Reason', 'because');
+      await clickButton('Next');
+      await fill('Last', 'final');
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('cell', { name: 'final' }),
+      ).toBeInTheDocument();
+
+      await clickButtons('Back', 'Back', 'Back');
+      await toggle('Flag');
+      await clickButtons('Next', 'Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'Last' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Review');
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'because' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'final' }),
+      ).not.toBeInTheDocument();
+
+      await clickButton('Create');
+      expect(onCreate).toHaveBeenCalledWith({ flag: false });
     });
   });
 });

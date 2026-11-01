@@ -340,6 +340,85 @@ parameters:
                 - address
 ```
 
+### Conditional fields across steps
+
+A field in a later step can depend on an answer from any earlier step. You use the same `dependencies` and `if`/`then` syntax as for fields in a single step, so there is no new syntax to learn.
+
+In this example, the second step asks for `sdkVersion` only if the user selected `isMobileSdk` in the first step.
+
+```yaml
+parameters:
+  - title: Choose a project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+        default: false
+
+  - title: Fill in the project details
+    properties:
+      name:
+        title: Name
+        type: string
+    dependencies:
+      isMobileSdk:
+        allOf:
+          - if:
+              properties:
+                isMobileSdk:
+                  const: true
+            then:
+              properties:
+                sdkVersion:
+                  title: SDK Version
+                  type: string
+              required:
+                - sdkVersion
+```
+
+You can write the same condition with a top-level `if`/`then` in the later step.
+
+```yaml
+parameters:
+  - title: Choose a project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+        default: false
+
+  - title: Fill in the project details
+    properties:
+      name:
+        title: Name
+        type: string
+    if:
+      properties:
+        isMobileSdk:
+          const: true
+      required:
+        - isMobileSdk
+    then:
+      properties:
+        sdkVersion:
+          title: SDK Version
+          type: string
+      required:
+        - sdkVersion
+```
+
+List the key in `required` inside the `if`. Without `required`, the condition passes while the question has no answer.
+
+When a condition that reads an earlier step hides a field, the Review step does not list its value and the value is not submitted, unless another step still shows a field with the same key. If the user turns the condition back on before submitting, the value they typed returns. A value entered in a secret field stays in the task's secrets even when its field is hidden, so guard any template step that uses it with the same condition.
+
+A condition that reads only fields of its own step behaves as it always has, so a hidden value stays in the Review step and is submitted. A condition that reads both an earlier-step field and a field of its own step counts as cross-step.
+
+Only conditions at the top level of a step can read earlier steps, because a nested object's conditions see only that object's data.
+
+A condition cannot read a later step.
+
+A task or dry run validates parameters as before, so a `oneOf` under `dependencies` must have an option for every value of the earlier field, because a value with no matching option passes the form but fails task validation.
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

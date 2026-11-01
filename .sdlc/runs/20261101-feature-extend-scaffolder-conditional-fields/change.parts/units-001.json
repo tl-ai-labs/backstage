@@ -1,0 +1,511 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Classifies each step's conditional branches, rewrites cross-step `dependencies` into `allOf` `if`/`then`, and computes the form values without those hidden by a cross-step condition.",
+      "rules": [
+        "1. Local `isObject(value: unknown): value is JsonObject` as in `lib/schema.ts`. Imports: `JsonObject`, `JsonValue` from `@backstage/types`; `ADDITIONAL_PROPERTY_FLAG`, `retrieveSchema`, type `RJSFSchema`, type `ValidatorType` from `@rjsf/utils`; `omit` from `lodash`.",
+        "2. Internal `conditionKeys(node)`: the top-level keys a condition schema reads, meaning keys of `properties`, string entries of `required`, keys of `dependencies`, plus the same recursively through object entries of array `allOf`, `anyOf`, `oneOf` and object `not`, `if`, `then`, `else`.",
+        "3. Internal `collectBranches(stepSchema)` returns `{ reads: string[]; fields: string[] }[]` by walking `walk(node, reads, inBranch)` from `walk(stepSchema, [], false)`. When `inBranch`, record `{ reads, fields: keys of node.properties }`.",
+        "4. In `walk`: for an object `node.if`, compute `branchReads = reads + conditionKeys(node.if)` and walk object `node.then` and `node.else` with `branchReads` and `true`. For each object entry of array `node.allOf`, walk it with `reads` and the same `inBranch`.",
+        "5. In `walk`: for each `[key, value]` of `node.dependencies` where `value` is a non-array object, compute `branchReads = reads + key`, walk `value` with `branchReads` and `true`, then for each object entry of array `value.oneOf` walk a copy whose `properties` omit `key`, with `branchReads` and `true`. `walk` never enters `properties.<name>`, `items`, or a `oneOf`/`anyOf` outside a dependency value.",
+        "6. Internal `fieldKeys(stepSchema)`: keys of `properties`, keys of `properties` of each object entry of top-level `allOf`, and every branch's `fields`.",
+        "7. Internal `earlierFieldKeys(stepSchemas, stepIndex)`: a Set of the `fieldKeys` of every step before `stepIndex`, minus the `fieldKeys` of `stepIndex`. A branch is cross-step when any of its `reads` is in that Set.",
+        "8. `rewriteCrossStepDependencies`: take `stepSchemas[stepIndex]`. Rewrite only `dependencies` entries whose key is in `earlierFieldKeys` and whose value is a non-array object. If there are none, return the same schema object.",
+        "9. For a rewritten entry, split the value into `oneOf` and the rest. If the rest has any key, add `{ if: { required: [key] }, then: rest }`. For each object option of array `oneOf` whose `properties[key]` is an object, add `{ if: { properties: { [key]: option.properties[key] }, required: [key] }, then: option with key removed from its properties }`.",
+        "10. Return a shallow copy of the schema with the added entries after any existing array `allOf`, and with the rewritten keys removed from `dependencies`. Delete `dependencies` when no key remains. Never mutate the input.",
+        "11. `getCrossStepConditionKeys`: the unique `reads` of the cross-step branches of `stepSchemas[stepIndex]`. An empty array when there are none.",
+        "12. `omitHiddenCrossStepValues`: loop on `values`, starting from `formData`. Candidates are the unique `fields` of the cross-step branches of every step, kept only when the key is an own key of `values`. With no candidates, return `values`, so the input object itself comes back when nothing drops.",
+        "13. In each pass, for every step compute `rewritten = rewriteCrossStepDependencies(stepSchemas, index)` and `retrieveSchema(validator, rewritten as RJSFSchema, rewritten as RJSFSchema, values)`. Its resolved keys are the keys of `properties` whose value does not carry `ADDITIONAL_PROPERTY_FLAG`, plus keys of `properties` of each object option in the result's array `oneOf` and `anyOf`.",
+        "14. Hidden keys are the candidates in no step's resolved keys. With none, return `values`. Otherwise set `values = omit(values, hidden)` and loop again. The loop ends because each pass removes at least one key.",
+        "15. If `retrieveSchema` throws for any step, return `formData` as received, so a broken later step fails when the user reaches it, as it does today."
+      ],
+      "exports": [
+        {
+          "name": "rewriteCrossStepDependencies",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchemas",
+              "type": "JsonObject[]"
+            },
+            {
+              "name": "stepIndex",
+              "type": "number"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "getCrossStepConditionKeys",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchemas",
+              "type": "JsonObject[]"
+            },
+            {
+              "name": "stepIndex",
+              "type": "number"
+            }
+          ],
+          "returns": "string[]"
+        },
+        {
+          "name": "omitHiddenCrossStepValues",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchemas",
+              "type": "JsonObject[]"
+            },
+            {
+              "name": "formData",
+              "type": "Record<string, JsonValue>"
+            },
+            {
+              "name": "validator",
+              "type": "ValidatorType"
+            }
+          ],
+          "returns": "Record<string, JsonValue>"
+        }
+      ],
+      "import_line": "import { getCrossStepConditionKeys, omitHiddenCrossStepValues, rewriteCrossStepDependencies } from '../../lib/crossStepConditions';",
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          1,
+          50
+        ],
+        "reason": "Licence header layout, the `isObject` helper and the way this folder walks a step schema."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-3",
+        "NFR-4",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Gives Form the rewritten step schema and passes the same filtered values to Form, the review step and onCreate.",
+      "rules": [
+        "1. `stepsState`, `handleChange`, `handleNext`, `activeStep` handling and `formContext={{ ...propFormContext, formData: stepsState }}` stay exactly as they are.",
+        "2. `visibleState` is computed in the render body, not in `useMemo`, because `useTemplateSchema` returns a new `steps` array on every render."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 49,
+          "to": 49,
+          "first_line": "import { useTransformSchemaToProps } from '../../hooks/useTransformSchemaToProps';",
+          "rule": "Import `omitHiddenCrossStepValues` and `rewriteCrossStepDependencies` from `'../../lib/crossStepConditions'`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 175,
+          "to": 175,
+          "first_line": "const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });",
+          "rule": "Add `const stepSchemas = steps.map(step => step.schema);` and `const visibleState = omitHiddenCrossStepValues(stepSchemas, stepsState, validator);`, with a blank line before them."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 254,
+          "to": 254,
+          "first_line": "await onCreate(stepsState);",
+          "rule": "Pass `visibleState` to `onCreate`."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 258,
+          "to": 258,
+          "first_line": "}, [analytics, createLabel, onCreate, stepsState]);",
+          "rule": "Replace `stepsState` with `visibleState` in the dependency array."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 296,
+          "to": 296,
+          "first_line": "formData={stepsState}",
+          "rule": "Use `formData={visibleState}` on `Form`."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 298,
+          "to": 298,
+          "first_line": "schema={currentStep.schema}",
+          "rule": "Use `schema={rewriteCrossStepDependencies(stepSchemas, activeStep)}`. `useTransformSchemaToProps` only changes `uiSchema`, so this is the same step's schema."
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 331,
+          "to": 331,
+          "first_line": "formData={stepsState}",
+          "rule": "Use `formData={visibleState}` on `ReviewStepComponent`."
+        },
+        {
+          "id": "S8",
+          "at": "replace",
+          "from": 339,
+          "to": 339,
+          "first_line": "<ReviewStateComponent formState={stepsState} schemas={steps} />",
+          "rule": "Use `formState={visibleState}`."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTransformSchemaToProps.ts",
+          "lines": [
+            24,
+            52
+          ],
+          "reason": "Shows that the transformed step keeps the same `schema`."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-9",
+        "NFR-2",
+        "NFR-4",
+        "AC-9"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Lets the Review lookup resolve a field defined under a cross-step `if`, so its title and masking apply.",
+      "rules": [
+        "1. The function signature and return value stay the same, and a step with no cross-step condition builds the same `data` as today."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Import `getCrossStepConditionKeys` from `'../../lib/crossStepConditions'`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 40,
+          "to": 40,
+          "first_line": "for (const step of schemas) {",
+          "rule": "Iterate with the index: `for (const [index, step] of schemas.entries()) {`."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 62,
+          "to": 62,
+          "first_line": "}",
+          "rule": "Add a blank line and a loop over `getCrossStepConditionKeys(schemas.map(({ schema: stepSchema }) => stepSchema), index)` that copies each key from `formState` into `data` when `formState` has it and it differs from `key`. Add a comment saying a cross-step condition needs the answers it reads, and that `key` stays out so `getSchema` cannot fall back to a schema made from its value."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.test.ts",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Pins the rewrite, the key classification and the drop rule on plain schemas with the real ajv8 validator.",
+      "rules": [
+        "1. Build the validator once with `customizeValidator()` from `@rjsf/validator-ajv8`, as `Stepper.tsx` does.",
+        "2. Group the cases under `describe('rewriteCrossStepDependencies')`, `describe('getCrossStepConditionKeys')` and `describe('omitHiddenCrossStepValues')`.",
+        "3. Add `jest.spyOn(console, 'warn')` silencing only in a case that expects rjsf to warn."
+      ],
+      "tests": [
+        {
+          "name": "returns the same schema when no dependency needs rewriting",
+          "given": "a first step; a dependency on the step's own property; a key defined in both an earlier step and this step, including in this step's branch; a dependency on a key no earlier step defines; an array dependency and a boolean dependency on an earlier key",
+          "expect": "the same object for schemas with nothing to rewrite, and array and boolean entries left in `dependencies`"
+        },
+        {
+          "name": "moves a dependency on an earlier-step field into allOf",
+          "given": "a step with `properties`, one `allOf` entry, and `dependencies` holding one `allOf`/`if` entry on an earlier key and one entry on its own key",
+          "expect": "the existing `allOf` entry first, then `{ if: { required: [key] }, then: value }`, the own-key entry still in `dependencies`, and an input schema that is not mutated"
+        },
+        {
+          "name": "turns each oneOf option into an if/then without the earlier field",
+          "given": "a dependency on an earlier key with extra keys beside `oneOf`, two options with a schema for the key and one option without",
+          "expect": "one required-guarded entry for the extra keys, one `if`/`then` per matching option, no `then.properties` holding the key, the third option skipped, and `dependencies` removed"
+        },
+        {
+          "name": "lists only the keys read by cross-step conditions",
+          "given": "a step with a same-step `if`, a cross-step `if` reading an earlier and an own key, and a dependency on an earlier key",
+          "expect": "the earlier keys and the own key of the cross-step condition, unique, and none of the same-step condition's keys"
+        },
+        {
+          "name": "returns the input object when nothing is hidden",
+          "given": "templates with no cross-step branch, with a selected cross-step branch, and with a candidate field that has no value",
+          "expect": "`toBe` the input `formData` in each case"
+        },
+        {
+          "name": "drops values of unselected cross-step branches",
+          "given": "values for fields under cross-step `dependencies` in `allOf`/`if` and `oneOf` form, a top-level `if`/`then`/`else`, an `if` inside top-level `allOf`, and a condition reading an earlier and an own field, each with its branch unselected",
+          "expect": "each of those keys removed, and a selected `else` field and every other key kept"
+        },
+        {
+          "name": "keeps values another rule protects",
+          "given": "a stale same-step field, a key resolved by a top-level property of another step, a key in a top-level `anyOf` option of another step, and a key outside every schema",
+          "expect": "all four kept, including when the key's own cross-step branch is unselected"
+        },
+        {
+          "name": "does not count additionalProperties stubs as resolved",
+          "given": "a template where one step sets `additionalProperties: true` and a cross-step branch is unselected",
+          "expect": "the branch field is dropped even though rjsf stubs it into that step's `properties`"
+        },
+        {
+          "name": "follows chained conditions until nothing more drops",
+          "given": "step 1 flag off, step 2 field under a cross-step condition on the flag, step 3 field under a condition on the step 2 field, all with stale values",
+          "expect": "both later fields dropped and the flag kept"
+        },
+        {
+          "name": "ignores conditions inside a nested object",
+          "given": "an object property whose own schema has `if`/`then` reading an earlier-step key name",
+          "expect": "the object value is returned untouched"
+        },
+        {
+          "name": "returns the input when a step cannot be resolved",
+          "given": "a cross-step branch with a stale value and a later step with a `$ref` to a missing definition",
+          "expect": "`toBe` the input `formData`, with no throw"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "lines": [
+          1,
+          50
+        ],
+        "reason": "Licence header and test layout of this folder."
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "AC-5",
+        "AC-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Pins cross-step and same-step condition behaviour through the real Stepper, from the form to Review and onCreate.",
+      "rules": [
+        "1. Every render in the new `describe` passes `initialState={{}}`, because the earlier test 'should grab the initial formData from the query' leaves `?formData=` in the URL and it would otherwise seed the state.",
+        "2. Render through `renderInTestApp` inside `SecretsContextProvider` as the other tests do. Click and type with `fireEvent` inside `act`, and query with `screen.findByRole`, `screen.queryByRole` and `screen.findByText`.",
+        "3. A step-2 field in `dependencies` keeps a `required` entry in its branch, so each flow proves rendering and validation together.",
+        "4. To change an earlier answer from Review, click the `Back` button or the step label as a user would. Assert `onCreate` with `toHaveBeenCalledWith` on the exact object."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19,
+          "first_line": "import { act, fireEvent, waitFor } from '@testing-library/react';",
+          "rule": "Add `screen` to the named imports."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 924,
+          "to": 924,
+          "first_line": "});",
+          "rule": "Add a blank line and `describe('cross-step conditions', ...)` holding the listed cases, as the last block of the outer `describe`."
+        }
+      ],
+      "tests": [
+        {
+          "name": "shows, requires and drops a dependencies field from an earlier step",
+          "given": "step 1 boolean flag with `default: false`, step 2 with `properties` and an `allOf`/`if` dependency on the flag whose `then` holds a required field",
+          "expect": "field absent and step 2 passes with the flag off; with the flag on the field shows and step 2 is blocked until filled; Review lists it; after going back and turning the flag off, Review omits it and `onCreate` receives no such key"
+        },
+        {
+          "name": "handles the oneOf form of dependencies across steps",
+          "given": "step 1 `kind` enum, step 2 `dependencies.kind.oneOf` with one option per value, each defining a different required field",
+          "expect": "the field of the chosen option shows, the other does not, no `oneOf` selector renders, and changing `kind` moves Review and `onCreate` to the new field only"
+        },
+        {
+          "name": "resolves top-level if/then and if inside allOf across steps",
+          "given": "step 1 flag, step 2 with a top-level `if`/`then`/`else` and an `allOf` entry with `if`/`then`, whose `if` schemas use `required`, and a titled `then` field",
+          "expect": "`then` fields and `required` apply only with the flag on, `else` applies with it off, Review shows the field's title, and turning the flag off removes the `then` values from Review and `onCreate`"
+        },
+        {
+          "name": "keeps Review and onCreate in step for kept and mixed keys",
+          "given": "a key under a cross-step branch of step 2 that is also a top-level property of step 3, and a branch whose condition reads a step 1 flag and a step 2 field",
+          "expect": "with the branch unselected the shared key stays in Review and `onCreate`, the mixed-condition field is dropped from both, and Review rows match the `onCreate` keys"
+        },
+        {
+          "name": "keeps same-step conditions and their stale values as they are today",
+          "given": "one step with a same-step `dependencies` field and a same-step `if`/`then` field, both filled, then both conditions turned off",
+          "expect": "both fields leave the form, and their stale values stay in Review and in `onCreate`"
+        },
+        {
+          "name": "keeps earlier-step fields out of later steps",
+          "given": "step 1 with a flag and a custom field extension that has a `default` and a `jest.fn()` validation, step 2 with `ui:order` listing only its own fields and a dependency on the flag",
+          "expect": "step 2 renders without error and shows no step 1 input, the validation mock ran once, for step 1 only, and Review lists each step 1 field once"
+        },
+        {
+          "name": "restores a hidden value when its condition returns",
+          "given": "the flag on and the field filled, then the flag off and on again",
+          "expect": "step 2 shows the field with the typed value, and Review and `onCreate` include it"
+        },
+        {
+          "name": "re-evaluates chained conditions after going back",
+          "given": "a step 3 field keyed on a step 2 conditional field keyed on the step 1 flag, all filled, then the flag turned off",
+          "expect": "step 3 no longer shows or requires its field, and Review and `onCreate` omit both conditional fields"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "lines": [
+          73,
+          120
+        ],
+        "reason": "Test scaffolding, manifest shape and act usage of this file."
+      },
+      "depends_on": [
+        "U02",
+        "U03"
+      ],
+      "covers": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-8",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Pins the Review lookup for fields under a cross-step `if` while same-step lookups stay as they are.",
+      "rules": [
+        "1. These cases build their own `ParsedTemplateSchema[]`, with both `schema` and `mergedSchema` set, because the existing fixture has `schema: {}`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 173,
+          "to": 173,
+          "first_line": "});",
+          "rule": "Add a blank line and the listed cases at the end of `describe('findSchemaForKey')`."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should find a key defined under a cross-step if",
+          "given": "step 1 defines `flag`; step 2 has `if` with `properties.flag.const: true` and `required: ['flag']`, and `then` and `else` branches; formState answers `flag`",
+          "expect": "the `then` key resolves to step 2 with the flag true and the `else` key resolves to step 2 with the flag false"
+        },
+        {
+          "name": "should not use form state for a same-step if",
+          "given": "one step with a same-step `if` using `required`, its `then` key and formState answering the condition",
+          "expect": "`null`, the same result as today"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "lines": [
+          83,
+          173
+        ],
+        "reason": "Fixture shape and assertion style of `findSchemaForKey` tests."
+      },
+      "depends_on": [
+        "U03"
+      ],
+      "covers": [
+        "AC-8"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.ts": "1dd5faea67e4b4b4fba22f446ff8765efcac6c7bb60529ca1868f1c38be82d88",
+    "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx": "fb817544e4b8d1307bf96b87bc5685cc814aa0fab47caced9594a27ebc555a4a",
+    "plugins/scaffolder-react/src/next/hooks/useTransformSchemaToProps.ts": "4fc22eb705d109d5472d28cbd771be2972905111754d52b14ad1a969a46d4b87",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.ts": "f189db9a2fe73997bc229936fccca5e15dd296098f624c17cf2ecaa6218384aa",
+    "plugins/scaffolder-react/src/next/lib/schema.test.ts": "fe2aad12e20f3d68973c4a79be1664107132bacfeb9fac62abc8d998ee76bdd9",
+    "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx": "f6ac8fab0b1d752dc590c1196ac007bee0e9821a7a561d19d0ba3123b9a4ce38",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts": "2bd23317d56ac650c7f366c3f1c0ed219234369939d1d3b3437d2d273ac9ad02"
+  }
+}

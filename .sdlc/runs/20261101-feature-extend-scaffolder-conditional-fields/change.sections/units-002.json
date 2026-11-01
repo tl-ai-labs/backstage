@@ -1,0 +1,62 @@
+[
+  {
+    "id": "U07",
+    "path": "docs/features/software-templates/input-examples.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Explains for template authors how conditional fields read answers from earlier steps, with examples, hidden-value behaviour and limits.",
+    "rules": [
+      "1. Heading `### Conditional fields across steps`. Open by saying a field in a later step can depend on an answer from any earlier step with the same `dependencies` and `if`/`then` syntax, and no new syntax.",
+      "2. First YAML example: two parameter steps. Step 1 has boolean `isMobileSdk` with `default: false`. Step 2 has `properties` of its own and `dependencies.isMobileSdk` in the `allOf`/`if` form, whose `then` adds a required `sdkVersion`.",
+      "3. Second YAML example: the same step 1, and a step 2 with a top-level `if`/`then` reading `isMobileSdk`. The `if` uses `const: true` and also lists the key in `required`. Explain that without `required`, the condition passes while the question has no answer.",
+      "4. Say what happens to a hidden value: Review does not list it and it is not submitted, unless another step still shows a field with the same key. If the user turns the condition back on before submitting, the value they typed returns.",
+      "5. Say how same-step conditions differ: a condition that reads only fields of its own step behaves as it always has, so a hidden value stays in Review and is submitted. A condition that reads an earlier-step field and a field of its own step counts as cross-step.",
+      "6. List the limits: only conditions at the top level of a step can read earlier steps, because a nested object's conditions see only that object's data; a condition cannot read a later step; a task or dry run validates parameters as before.",
+      "7. Use one short paragraph per point and code style for keys. Do not mention internal function names."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 343,
+        "to": 343,
+        "first_line": "## Conditionally set parameters",
+        "rule": "Add the new `###` section and a blank line, so it closes the `## Use parameters as conditional for fields` section."
+      }
+    ],
+    "style_from": {
+      "path": "docs/features/software-templates/input-examples.md",
+      "lines": [262, 341],
+      "reason": "Section shape and YAML layout of the conditional field examples."
+    },
+    "uses": [
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [14, 80],
+        "reason": "Language, tone and formatting rules for this page."
+      }
+    ],
+    "depends_on": ["U02"],
+    "covers": ["FR-10", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U08",
+    "path": ".changeset/scaffolder-cross-step-conditions.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Release note for adopters of the scaffolder form.",
+    "rules": [
+      "1. Front matter names one package: `'@backstage/plugin-scaffolder-react': minor`.",
+      "2. The body is exactly: Conditional template fields written with `dependencies` or `if`/`then` can now depend on answers given in earlier form steps. A field hidden by such a condition is no longer required, and its value is left out of the review step and the submitted values. Conditions that read only fields of their own step behave as before."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/fix-bui-array-item-titles.md",
+      "reason": "Changeset front matter and body layout."
+    },
+    "depends_on": ["U02"],
+    "covers": ["FR-11", "AC-10"],
+    "checks": ["prettier"]
+  }
+]

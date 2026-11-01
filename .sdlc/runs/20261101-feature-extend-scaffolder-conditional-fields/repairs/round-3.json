@@ -1,0 +1,139 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261101-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": ".changeset/scaffolder-cross-step-conditions.md",
+    "instruction": "Fix `.changeset/scaffolder-cross-step-conditions.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review, accepted at Gate 3: the changeset says a hidden field's value is left out of the review step and the submitted values, which is false for secret fields. A value entered in a secret field is still sent with the task's secrets even when its field is hidden. Keep the frontmatter and the rest of the text as they are, and add that exception in plain language for Backstage adopters, consistent with the sentence at docs/features/software-templates/input-examples.md line 412. Name no internal functions, classes or variables.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/scaffolder-cross-step-conditions.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/scaffolder-cross-step-conditions.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": ".changeset/scaffolder-cross-step-conditions.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261101-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/util.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review, accepted at Gate 3: line 72 reads `formState.hasOwnProperty(conditionKey)` on data that can come from the `?formData=` query string, so a crafted link with an own `hasOwnProperty` key can crash Review. Change it to `Object.prototype.hasOwnProperty.call(formState, conditionKey)` and change nothing else.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261101-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review, accepted at Gate 3: masking of a field under a cross-step condition is not pinned by any test. Add one test to this file, matching its style: a field with `ui:widget: password` defined in the `then` of a top-level `if`/`then` in a later step, whose `if` reads a field of an earlier step, with the condition true and a value in form state. Assert the value is masked in Review and the plain value is not on screen. Use `screen` queries and add no test IDs.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [],
+      "baseline": false,
+      "max_retries": 2
+    }
+  }
+]

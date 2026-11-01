@@ -18,6 +18,7 @@ import { JsonObject, JsonValue } from '@backstage/types';
 import { startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { Draft07 as JSONSchema } from 'json-schema-library';
+import { getCrossStepConditionKeys } from '../../lib/crossStepConditions';
 
 export function isJsonObject(value?: JsonValue): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -37,7 +38,7 @@ export function findSchemaForKey(
   schemas: ParsedTemplateSchema[],
   formState: Partial<{ [key: string]: JsonValue }>,
 ): ParsedTemplateSchema | null {
-  for (const step of schemas) {
+  for (const [index, step] of schemas.entries()) {
     /*
       To determine if a key is defined in a schema we need to call getSchema
       with an empty form state. Otherwise, it will never return undefined as it
@@ -58,6 +59,21 @@ export function findSchemaForKey(
         if (formState.hasOwnProperty(dep)) {
           data[dep] = formState[dep]; // Add each dependency key from formState
         }
+      }
+    }
+
+    // A cross-step condition needs the answers it reads to select its branch.
+    // The looked-up key stays out so getSchema cannot fall back to a schema
+    // made from its value.
+    for (const conditionKey of getCrossStepConditionKeys(
+      schemas.map(({ schema: stepSchema }) => stepSchema),
+      index,
+    )) {
+      if (
+        conditionKey !== key &&
+        Object.prototype.hasOwnProperty.call(formState, conditionKey)
+      ) {
+        data[conditionKey] = formState[conditionKey];
       }
     }
 

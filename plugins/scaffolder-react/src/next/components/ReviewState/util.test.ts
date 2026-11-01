@@ -170,4 +170,107 @@ describe('findSchemaForKey', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
   });
+
+  it('should find a key defined under a cross-step if', () => {
+    const firstSchema = {
+      type: 'object',
+      properties: {
+        flag: {
+          type: 'boolean',
+        },
+      },
+    };
+    const secondSchema = {
+      type: 'object',
+      if: {
+        properties: {
+          flag: {
+            const: true,
+          },
+        },
+        required: ['flag'],
+      },
+      then: {
+        properties: {
+          enabledKey: {
+            type: 'string',
+          },
+        },
+      },
+      else: {
+        properties: {
+          disabledKey: {
+            type: 'string',
+          },
+        },
+      },
+    };
+    const crossStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: firstSchema,
+        schema: firstSchema,
+        title: 'Schema 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: secondSchema,
+        schema: secondSchema,
+        title: 'Schema 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('enabledKey', crossStepSchemas, {
+        flag: true,
+        enabledKey: 'value',
+      }),
+    ).toBe(crossStepSchemas[1]);
+    expect(
+      findSchemaForKey('disabledKey', crossStepSchemas, {
+        flag: false,
+        disabledKey: 'value',
+      }),
+    ).toBe(crossStepSchemas[1]);
+  });
+
+  it('should not use form state for a same-step if', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        flag: {
+          type: 'boolean',
+        },
+      },
+      if: {
+        properties: {
+          flag: {
+            const: true,
+          },
+        },
+        required: ['flag'],
+      },
+      then: {
+        properties: {
+          enabledKey: {
+            type: 'string',
+          },
+        },
+      },
+    };
+    const sameStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: schema,
+        schema,
+        title: 'Schema 1',
+        uiSchema: {},
+      },
+    ];
+
+    const result = findSchemaForKey('enabledKey', sameStepSchemas, {
+      flag: true,
+      enabledKey: 'value',
+    });
+    expect(result).toBeNull();
+  });
 });

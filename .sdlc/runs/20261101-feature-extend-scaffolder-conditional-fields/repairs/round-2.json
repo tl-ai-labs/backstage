@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261101-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.test.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/crossStepConditions.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior review findings on crossStepConditions.ts were fixed in round 1 with no test pinning them. Add test cases to this file, matching its style, for the current code. (1) A step with no `allOf` of its own and a dependency on an earlier-step key that yields no conditions (dependency value `{}`, and a `oneOf` dependency where no option has a schema for the key): the rewritten schema must have no `allOf` key at all, because `allOf: []` makes the repo's validator report `schema is invalid: data/allOf must NOT have fewer than 1 items`. (2) A plain schema dependency on an earlier-step key that repeats its own key in `properties`: it must count as cross-step and be rewritten, and another condition in that step reading the same key must count as cross-step too.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/crossStepConditions.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/crossStepConditions.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]

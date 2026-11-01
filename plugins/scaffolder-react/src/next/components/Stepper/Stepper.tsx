@@ -47,6 +47,10 @@ import {
 import { scaffolderReactTranslationRef } from '../../../translation';
 import { useFormDataFromQuery, useTemplateSchema } from '../../hooks';
 import { useTransformSchemaToProps } from '../../hooks/useTransformSchemaToProps';
+import {
+  omitHiddenCrossStepValues,
+  rewriteCrossStepDependencies,
+} from '../../lib/crossStepConditions';
 import { Form } from '../Form';
 import { PasswordWidget } from '../PasswordWidget/PasswordWidget';
 import { ReviewState, type ReviewStateProps } from '../ReviewState';
@@ -174,6 +178,13 @@ export const Stepper = (stepperProps: StepperProps) => {
 
   const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
 
+  const stepSchemas = steps.map(step => step.schema);
+  const visibleState = omitHiddenCrossStepValues(
+    stepSchemas,
+    stepsState,
+    validator,
+  );
+
   const {
     formContext: propFormContext,
     uiSchema: propUiSchema,
@@ -251,11 +262,11 @@ export const Stepper = (stepperProps: StepperProps) => {
     setIsCreating(true);
     analytics.captureEvent('click', `${createLabel}`);
     try {
-      await onCreate(stepsState);
+      await onCreate(visibleState);
     } finally {
       setIsCreating(false);
     }
-  }, [analytics, createLabel, onCreate, stepsState]);
+  }, [analytics, createLabel, onCreate, visibleState]);
 
   return (
     <>
@@ -293,9 +304,9 @@ export const Stepper = (stepperProps: StepperProps) => {
             key={activeStep}
             validator={validator}
             extraErrors={errors as unknown as ErrorSchema}
-            formData={stepsState}
+            formData={visibleState}
             formContext={{ ...propFormContext, formData: stepsState }}
-            schema={currentStep.schema}
+            schema={rewriteCrossStepDependencies(stepSchemas, activeStep)}
             uiSchema={mergedUiSchema}
             onSubmit={handleNext}
             fields={fields}
@@ -328,7 +339,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         ReviewStepComponent ? (
           <ReviewStepComponent
             disableButtons={isValidating}
-            formData={stepsState}
+            formData={visibleState}
             handleBack={handleBack}
             handleReset={() => {}}
             steps={steps}
@@ -336,7 +347,7 @@ export const Stepper = (stepperProps: StepperProps) => {
           />
         ) : (
           <>
-            <ReviewStateComponent formState={stepsState} schemas={steps} />
+            <ReviewStateComponent formState={visibleState} schemas={steps} />
             <div className={styles.footer}>
               <Button
                 variant="tertiary"

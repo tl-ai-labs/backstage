@@ -15,7 +15,7 @@
  */
 
 import { ReviewState } from './ReviewState';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('ReviewState', () => {
@@ -612,5 +612,73 @@ describe('ReviewState', () => {
 
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
+  });
+
+  it('should mask a password field under a cross-step condition', async () => {
+    const formState = {
+      target: 'production',
+      apiToken: 'plain-secret',
+    };
+
+    const firstStepSchema = {
+      type: 'object',
+      properties: {
+        target: {
+          type: 'string',
+        },
+      },
+    };
+
+    const condition = {
+      properties: {
+        target: {
+          const: 'production',
+        },
+      },
+      required: ['target'],
+    };
+
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: firstStepSchema,
+        schema: firstStepSchema,
+        title: 'Schema 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: condition,
+          then: {
+            properties: {
+              apiToken: {
+                type: 'string',
+                'ui:widget': 'password',
+              },
+            },
+          },
+        },
+        schema: {
+          type: 'object',
+          if: condition,
+          then: {
+            properties: {
+              apiToken: {
+                type: 'string',
+              },
+            },
+          },
+        },
+        title: 'Schema 2',
+        uiSchema: {},
+      },
+    ];
+
+    render(<ReviewState formState={formState} schemas={schemas} />);
+
+    expect(
+      await screen.findByRole('row', { name: 'Api Token ******' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('plain-secret')).not.toBeInTheDocument();
   });
 });
