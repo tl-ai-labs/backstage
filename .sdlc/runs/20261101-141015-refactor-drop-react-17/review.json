@@ -1,0 +1,18 @@
+{
+  "module": "refactor-drop-react-17",
+  "verdict": "approved",
+  "tool_calls": 12,
+  "findings": [],
+  "refinement_packets": [],
+  "notes": [
+    "All 95 files in provenance.json match git status against cb8b07905b, with no extra or missing paths.",
+    "Manifests: 57 changed. Only the planned React peer ranges and the planned use-sync-external-store removals changed; key order and commas are intact.",
+    "yarn.lock: 168 peer-range lines replaced, plus removal of the @types/use-sync-external-store entry and its dependents' lines. No resolved version moved.",
+    "Changesets: every non-private manifest is covered at the level the plan sets, checked against .changeset/pre.json initialVersions; private packages have none; @backstage/ui follows .changeset/README.md.",
+    "Residuals: no HAS_REACT_DOM_CLIENT, hasReactDomClient, legacyRoot, LegacyRootOption, ReactDOMPromise, checkReactVersion or peerDependenciesReact18Only outside changesets, CHANGELOGs and docs/releases; no use-sync-external-store under packages or plugins; remaining React 16/17 mentions in docs are the ones the plan keeps.",
+    "Root rendering: dev-utils, frontend-dev-utils and techdocs declare react-dom, and the now-synchronous createRoot call does not alter what the techdocs transformers do after it, because root.render stays scheduled.",
+    "UI ids: the React useId values are only used as id, aria-describedby and <use href='#id'> targets, never in CSS selectors.",
+    "cli-module-new templates: the ^18.0.0 hint takes the same path through createPackageVersionProvider as the old hint, so a lockfile match is not newly introduced. Tests for this package and cli-module-test-jest were not run, by Gate 2 decision; those units were reviewed by diff only.",
+    "Env-fixture check skipped: intent is refactor."
+  ]
+}

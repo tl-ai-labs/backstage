@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { forwardRef } from 'react';
-import { useId } from 'react-aria';
+import { forwardRef, useId } from 'react';
 import { OverlayArrow, Popover as AriaPopover } from 'react-aria-components';
 import { PopoverProps } from './types';
 import { useDefinition } from '../../hooks/useDefinition';

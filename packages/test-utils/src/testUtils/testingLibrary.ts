@@ -24,13 +24,6 @@ import {
 
 /**
  * @public
- * Set legacy mode when using React 18/RTL 13+.
- * Mock this option while we're working against React 17 or lower.
- */
-export type LegacyRootOption = { legacyRoot?: boolean };
-
-/**
- * @public
  * Simplifies rendering of async components in by taking care of the wrapping inside act
  *
  * @remarks
@@ -43,7 +36,7 @@ export type LegacyRootOption = { legacyRoot?: boolean };
  */
 export async function renderWithEffects(
   nodes: ReactElement,
-  options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,
+  options?: Pick<RenderOptions, 'wrapper'>,
 ): Promise<RenderResult> {
   let value: RenderResult;
   await act(async () => {
