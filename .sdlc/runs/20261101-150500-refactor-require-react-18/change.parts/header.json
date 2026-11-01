@@ -1,0 +1,186 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Match each file's own style and change only the lines its sites name. Never change a copyright year. This change adds no new .ts, .tsx, .js or .jsx file.",
+      "Prettier formats every TS, JS, JSON and Markdown file: 80 columns, 2 spaces, semicolons, single quotes in code, trailing commas, arrow parens avoided.",
+      "Import React members in the file's existing `from 'react'` import, alphabetically, as packages/ui/src/components/Slider/Slider.tsx does. Add no second import from 'react'.",
+      "Tests use Jest and React Testing Library. A test changes only where it asserted the React 17 path, and no ID test is added (Gate 1).",
+      "Docs and changesets are written for adopters in plain language. They name no internal function, class or variable. Public API names such as `LegacyRootOption` are allowed. Docs follow docs/contribute/doc-style-guide.md.",
+      "A changeset is written by hand: YAML front matter with one `'<package>': <bump>` line per package, a blank line, then the message. A `@backstage/ui` changeset ends with an `**Affected components:**` line.",
+      "`yarn.lock`, `report*.api.md` and `knip-report.md` are written by their tools and never typed. Manifest key order stays as it is.",
+      "Never run `yarn build`, `yarn changesets version`, `yarn release` or the changeset CLI, and never edit `.changeset/pre.json`, `tsconfig.json` or lint config."
+    ],
+    "decisions": [
+      {
+        "topic": "FR-10: where the startFrontend.ts warning goes",
+        "choice": "The warning and its import are deleted from startFrontend.ts and replaced by the version check in server.ts, which serveBundle always runs. The check warns for every major below 18, names React 18 as the minimum and links the migration guide. It resolves `react/package.json` from `options.targetDir ?? targetPaths.dir`.",
+        "rejected": [
+          "Move the warning text into startFrontend.ts behind a new version check: two checks would print for one problem",
+          "Keep resolving from targetPaths.rootDir: a React below 18 installed only in the served package would get no diagnostic, which the deleted check caught"
+        ],
+        "reason": "One diagnostic, on the one path every frontend start takes, that sees the React the served package resolves. React 18 users get no output."
+      },
+      {
+        "topic": "Keep the render paths asynchronous",
+        "choice": "Each render path keeps a module-level `const ReactDOMPromise = import('react-dom/client');` and its `.then(...)` call. Only the condition, the union type and the `ReactDOM.render` branch go.",
+        "rejected": [
+          "A static `import { createRoot } from 'react-dom/client'`: rendering would become synchronous, which FR-7 forbids, and it would pull react-dom/client out of its lazy chunk"
+        ],
+        "reason": "FR-7 keeps each function's sync or async behaviour."
+      },
+      {
+        "topic": "The bare `import 'react-dom'` lines",
+        "choice": "Line 53 of packages/dev-utils/src/devApp/render.tsx and line 24 of packages/frontend-dev-utils/src/createDevApp.tsx stay.",
+        "rejected": [
+          "Remove them: they render nothing, FR-7 does not name them, and removing them would add a change the requirements do not ask for"
+        ],
+        "reason": "A refactor changes only what its requirements name."
+      },
+      {
+        "topic": "FR-11: the runtime path of legacyRoot",
+        "choice": "`renderWithEffects` calls `render(nodes, { wrapper: options?.wrapper })` instead of passing `options` on, so a JavaScript or `as any` caller's `legacyRoot` no longer reaches `render`. `renderInTestApp` passes only `wrapper`.",
+        "rejected": [
+          "Change only the types and leave `render(nodes, options)`: the option would still work at runtime"
+        ],
+        "reason": "FR-11 names the runtime path. `wrapper` is the only option the type allows and in-repo callers pass nothing else, and RTL treats a missing `wrapper` the same as `{ wrapper: undefined }`."
+      },
+      {
+        "topic": "How the 56 manifests change",
+        "choice": "One tooling unit runs `yarn lint:peer-deps --fix` after peer-deps.ts changes, instead of 56 typed units. packages/repo-tools/bin runs from src in this repo, so the tool uses the new ranges.",
+        "rejected": [
+          "One typed unit per manifest: 56 premium-model edits for one mechanical change",
+          "A sed-style step: it bypasses the check that FR-2 makes the source of truth"
+        ],
+        "reason": "Checked read-only against every manifest at this HEAD: the tool writes 57 packages (the 56 plus @backstage/ui), none of the 56 has a standalone role it skips, each file round-trips byte-identical through its writer, and no branch other than the range branch fires, so peerDependenciesMeta stays as it is."
+      },
+      {
+        "topic": "Order of the typed manifest edits",
+        "choice": "The five typed manifest edits run before the peer-deps tool, which runs before `yarn install`.",
+        "rejected": [
+          "Tool first: the typed edits' sites were checked against the manifests as they are now"
+        ],
+        "reason": "The tool rewrites four of those five files, so the typed sites must land first. Each dependency is removed only after the import that used it is gone."
+      },
+      {
+        "topic": "Deleting hasReactDomClient.ts",
+        "choice": "A tooling unit runs `rm` on the file after config.ts and startFrontend.ts stop importing it. `rm`, not `git rm`, so the index stays untouched.",
+        "rejected": [
+          "A typed edit that empties the file: FR-9 deletes it"
+        ],
+        "reason": "A typed unit can only create or edit a file."
+      },
+      {
+        "topic": "useId swap in packages/ui",
+        "choice": "Plain import swap in Popover, Tooltip, Table and TablePagination, with no other change. react-aria stays a dependency.",
+        "rejected": [
+          "Add a prefix to keep the old format: nothing reads the format"
+        ],
+        "reason": "All four call `useId()` with no argument and use the value only in `id`, `aria-describedby` and `<use href>`, never in a selector. No test or stylesheet reads it. VisuallyHidden and Text take the value through plain props with no mergeProps, so react-aria's id-merge registry is not involved. Under React 18 react-aria's ID is React's ID with a `react-aria-` prefix, so the colons in `<use href>` are not new. Slider already uses React's useId, and react-aria stays used by Combobox, Header, Link, SearchAutocomplete and Select. React 18's client IDs come from one counter per react-dom copy, so IDs stay unique across roots."
+      },
+      {
+        "topic": "Changeset bumps",
+        "choice": "`major` for the 17 public packages at or above 1.0.0. `minor` for the 37 public packages below 1.0.0, and for @backstage/repo-tools, @backstage/cli-module-build and @backstage/cli-module-test-jest, which change behaviour their users rely on. `patch` for @backstage/ui, whose peer range is already ^18.0.0, and for @backstage/cli-module-new, whose templates affect only newly created packages.",
+        "rejected": [
+          "`minor` for every package: Gate 1 kept `major` for the 17",
+          "`minor` for @backstage/ui: generated IDs are not API"
+        ],
+        "reason": "The repo rule and FR-16. No existing changeset covers this change. The two private manifests get no changeset."
+      },
+      {
+        "topic": "Report regeneration",
+        "choice": "Run the full `yarn build:api-reports` and `yarn build:knip-reports` after `yarn install`, not per-package runs.",
+        "rejected": [
+          "Per-package runs: they do not prove the reports are current"
+        ],
+        "reason": "FR-17 and AC-9. Expected changes: packages/test-utils/report.api.md, and six knip reports where a removed entry or a shifted line number shows. Any other report change is reported to the person, not kept silently."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 180
+      },
+      {
+        "id": "jest",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint"
+      },
+      {
+        "id": "test-repo-tools",
+        "run": "CI=1 yarn test packages/repo-tools"
+      },
+      {
+        "id": "test-frontend-plugin-api",
+        "run": "CI=1 yarn test packages/frontend-plugin-api"
+      },
+      {
+        "id": "test-ui",
+        "run": "CI=1 yarn test packages/ui"
+      },
+      {
+        "id": "test-dev-utils",
+        "run": "CI=1 yarn test packages/dev-utils"
+      },
+      {
+        "id": "test-frontend-dev-utils",
+        "run": "CI=1 yarn test packages/frontend-dev-utils"
+      },
+      {
+        "id": "test-techdocs",
+        "run": "CI=1 yarn test plugins/techdocs/"
+      },
+      {
+        "id": "test-cli-module-build",
+        "run": "CI=1 yarn test packages/cli-module-build"
+      },
+      {
+        "id": "test-cli-module-test-jest",
+        "run": "CI=1 yarn test packages/cli-module-test-jest"
+      },
+      {
+        "id": "test-test-utils",
+        "run": "CI=1 yarn test packages/test-utils"
+      },
+      {
+        "id": "test-cli-module-new",
+        "run": "CI=1 yarn test packages/cli-module-new"
+      },
+      {
+        "id": "test-core-app-api",
+        "run": "CI=1 yarn test packages/core-app-api"
+      },
+      {
+        "id": "test-catalog-react",
+        "run": "CI=1 yarn test plugins/catalog-react"
+      },
+      {
+        "id": "test-app",
+        "run": "CI=1 yarn test plugins/app/"
+      }
+    ]
+  },
+  "hashes": {}
+}

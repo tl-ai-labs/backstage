@@ -1,0 +1,107 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The peer-deps command requires ^18.0.0 for react, react-dom and @types/react on every package, with one range table and no exception list.",
+    "rules": [
+      "`peerDependencies` is the only range table; `desiredLocalVersionsOfDependencies` stays as it is.",
+      "Every former use of `expected` or `expectedPeerDeps` reads `peerDependencies`, cast with `keyof typeof peerDependencies`."
+    ],
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 36, "to": 38, "first_line": "'@types/react': '^17.0.0 || ^18.0.0',", "last_line": "'react-dom': '^17.0.0 || ^18.0.0',", "rule": "Each of the three ranges becomes '^18.0.0'." },
+      { "id": "S2", "at": "delete", "from": 42, "to": 51, "first_line": "// Packages that have dropped React 17 support and only support React 18+", "last_line": "", "rule": "Remove the comment, peerDependenciesReact18Only, react18OnlyPackages and the blank line after it." },
+      { "id": "S3", "at": "delete", "from": 92, "to": 98, "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {", "last_line": "", "rule": "Remove getExpectedPeerDependencies and the blank line after it." },
+      { "id": "S4", "at": "delete", "from": 103, "to": 103, "first_line": "const expected = getExpectedPeerDependencies(packageJson);", "rule": "Remove the local." },
+      { "id": "S5", "at": "replace", "from": 106, "to": 106, "first_line": "packageJson.peerDependencies[dep] === expected[dep as keyof typeof expected]", "rule": "Compare with `peerDependencies[dep as keyof typeof peerDependencies]`, broken after `===` as prettier needs." },
+      { "id": "S6", "at": "delete", "from": 145, "to": 145, "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);", "rule": "Remove the local." },
+      { "id": "S7", "at": "replace", "from": 218, "to": 218, "first_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];", "rule": "Read `peerDependencies[groupDep as keyof typeof peerDependencies];`." },
+      { "id": "S8", "at": "replace", "from": 245, "to": 245, "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];", "rule": "Read `peerDependencies[dep as keyof typeof peerDependencies];`." },
+      { "id": "S9", "at": "replace", "from": 255, "to": 255, "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];", "rule": "Read `peerDependencies[dep as keyof typeof peerDependencies];`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-2", "AC-4"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "useRouteRef imports useSyncExternalStore from react; the call site and its arguments stay as they are.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 17, "to": 18, "first_line": "import { useMemo } from 'react';", "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';", "rule": "One line: `import { useMemo, useSyncExternalStore } from 'react';`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/ui/src/hooks/useBreakpoint.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "useBreakpoint imports useSyncExternalStore from react; the call site and its three arguments stay as they are.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 16, "to": 17, "first_line": "import { useMemo } from 'react';", "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';", "rule": "One line: `import { useMemo, useSyncExternalStore } from 'react';`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/ui/src/components/Popover/Popover.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Popover takes useId from react; the single svgPathId still supplies the path id and both use hrefs.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 17, "to": 18, "first_line": "import { forwardRef } from 'react';", "last_line": "import { useId } from 'react-aria';", "rule": "One line: `import { forwardRef, useId } from 'react';`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-7"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U05",
+    "path": "packages/ui/src/components/Tooltip/Tooltip.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Tooltip takes useId from react; the single svgPathId still supplies the path id and both use hrefs.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 17, "to": 18, "first_line": "import { forwardRef } from 'react';", "last_line": "import { useId } from 'react-aria';", "rule": "One line: `import { forwardRef, useId } from 'react';`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-7"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/ui/src/components/Table/components/Table.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Table takes useId from react; liveRegionId still links the live region's id to the table's aria-describedby.",
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 17, "to": 17, "first_line": "import { useId } from 'react-aria';", "rule": "Remove the import." },
+      { "id": "S2", "at": "replace", "from": 39, "to": 39, "first_line": "import { useMemo } from 'react';", "rule": "Read `import { useId, useMemo } from 'react';`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-7"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U07",
+    "path": "packages/ui/src/components/TablePagination/TablePagination.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "TablePagination takes useId from react; labelId still links the label's id to both buttons' aria-describedby.",
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 17, "to": 17, "first_line": "import { useId } from 'react-aria';", "rule": "Remove the import." },
+      { "id": "S2", "at": "replace", "from": 25, "to": 25, "first_line": "import { useMemo } from 'react';", "rule": "Read `import { useId, useMemo } from 'react';`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "AC-7"],
+    "checks": ["prettier", "eslint"]
+  }
+]

@@ -1,0 +1,1641 @@
+{
+  "header": {
+    "conventions": [
+      "Match each file's own style and change only the lines its sites name. Never change a copyright year. This change adds no new .ts, .tsx, .js or .jsx file.",
+      "Prettier formats every TS, JS, JSON and Markdown file: 80 columns, 2 spaces, semicolons, single quotes in code, trailing commas, arrow parens avoided.",
+      "Import React members in the file's existing `from 'react'` import, alphabetically, as packages/ui/src/components/Slider/Slider.tsx does. Add no second import from 'react'.",
+      "Tests use Jest and React Testing Library. A test changes only where it asserted the React 17 path, and no ID test is added (Gate 1).",
+      "Docs and changesets are written for adopters in plain language. They name no internal function, class or variable. Public API names such as `LegacyRootOption` are allowed. Docs follow docs/contribute/doc-style-guide.md.",
+      "A changeset is written by hand: YAML front matter with one `'<package>': <bump>` line per package, a blank line, then the message. A `@backstage/ui` changeset ends with an `**Affected components:**` line.",
+      "`yarn.lock`, `report*.api.md` and `knip-report.md` are written by their tools and never typed. Manifest key order stays as it is.",
+      "Never run `yarn build`, `yarn changesets version`, `yarn release` or the changeset CLI, and never edit `.changeset/pre.json`, `tsconfig.json` or lint config."
+    ],
+    "decisions": [
+      {
+        "topic": "FR-10: where the startFrontend.ts warning goes",
+        "choice": "The warning and its import are deleted from startFrontend.ts and replaced by the version check in server.ts, which serveBundle always runs. The check warns for every major below 18, names React 18 as the minimum and links the migration guide. It resolves `react/package.json` from `options.targetDir ?? targetPaths.dir`.",
+        "rejected": [
+          "Move the warning text into startFrontend.ts behind a new version check: two checks would print for one problem",
+          "Keep resolving from targetPaths.rootDir: a React below 18 installed only in the served package would get no diagnostic, which the deleted check caught"
+        ],
+        "reason": "One diagnostic, on the one path every frontend start takes, that sees the React the served package resolves. React 18 users get no output."
+      },
+      {
+        "topic": "Keep the render paths asynchronous",
+        "choice": "Each render path keeps a module-level `const ReactDOMPromise = import('react-dom/client');` and its `.then(...)` call. Only the condition, the union type and the `ReactDOM.render` branch go.",
+        "rejected": [
+          "A static `import { createRoot } from 'react-dom/client'`: rendering would become synchronous, which FR-7 forbids, and it would pull react-dom/client out of its lazy chunk"
+        ],
+        "reason": "FR-7 keeps each function's sync or async behaviour."
+      },
+      {
+        "topic": "The bare `import 'react-dom'` lines",
+        "choice": "Line 53 of packages/dev-utils/src/devApp/render.tsx and line 24 of packages/frontend-dev-utils/src/createDevApp.tsx stay.",
+        "rejected": [
+          "Remove them: they render nothing, FR-7 does not name them, and removing them would add a change the requirements do not ask for"
+        ],
+        "reason": "A refactor changes only what its requirements name."
+      },
+      {
+        "topic": "FR-11: the runtime path of legacyRoot",
+        "choice": "`renderWithEffects` calls `render(nodes, { wrapper: options?.wrapper })` instead of passing `options` on, so a JavaScript or `as any` caller's `legacyRoot` no longer reaches `render`. `renderInTestApp` passes only `wrapper`.",
+        "rejected": [
+          "Change only the types and leave `render(nodes, options)`: the option would still work at runtime"
+        ],
+        "reason": "FR-11 names the runtime path. `wrapper` is the only option the type allows and in-repo callers pass nothing else, and RTL treats a missing `wrapper` the same as `{ wrapper: undefined }`."
+      },
+      {
+        "topic": "How the 56 manifests change",
+        "choice": "One tooling unit runs `yarn lint:peer-deps --fix` after peer-deps.ts changes, instead of 56 typed units. packages/repo-tools/bin runs from src in this repo, so the tool uses the new ranges.",
+        "rejected": [
+          "One typed unit per manifest: 56 premium-model edits for one mechanical change",
+          "A sed-style step: it bypasses the check that FR-2 makes the source of truth"
+        ],
+        "reason": "Checked read-only against every manifest at this HEAD: the tool writes 57 packages (the 56 plus @backstage/ui), none of the 56 has a standalone role it skips, each file round-trips byte-identical through its writer, and no branch other than the range branch fires, so peerDependenciesMeta stays as it is."
+      },
+      {
+        "topic": "Order of the typed manifest edits",
+        "choice": "The five typed manifest edits run before the peer-deps tool, which runs before `yarn install`.",
+        "rejected": [
+          "Tool first: the typed edits' sites were checked against the manifests as they are now"
+        ],
+        "reason": "The tool rewrites four of those five files, so the typed sites must land first. Each dependency is removed only after the import that used it is gone."
+      },
+      {
+        "topic": "Deleting hasReactDomClient.ts",
+        "choice": "A tooling unit runs `rm` on the file after config.ts and startFrontend.ts stop importing it. `rm`, not `git rm`, so the index stays untouched.",
+        "rejected": [
+          "A typed edit that empties the file: FR-9 deletes it"
+        ],
+        "reason": "A typed unit can only create or edit a file."
+      },
+      {
+        "topic": "useId swap in packages/ui",
+        "choice": "Plain import swap in Popover, Tooltip, Table and TablePagination, with no other change. react-aria stays a dependency.",
+        "rejected": [
+          "Add a prefix to keep the old format: nothing reads the format"
+        ],
+        "reason": "All four call `useId()` with no argument and use the value only in `id`, `aria-describedby` and `<use href>`, never in a selector. No test or stylesheet reads it. VisuallyHidden and Text take the value through plain props with no mergeProps, so react-aria's id-merge registry is not involved. Under React 18 react-aria's ID is React's ID with a `react-aria-` prefix, so the colons in `<use href>` are not new. Slider already uses React's useId, and react-aria stays used by Combobox, Header, Link, SearchAutocomplete and Select. React 18's client IDs come from one counter per react-dom copy, so IDs stay unique across roots."
+      },
+      {
+        "topic": "Changeset bumps",
+        "choice": "`major` for the 17 public packages at or above 1.0.0. `minor` for the 37 public packages below 1.0.0, and for @backstage/repo-tools, @backstage/cli-module-build and @backstage/cli-module-test-jest, which change behaviour their users rely on. `patch` for @backstage/ui, whose peer range is already ^18.0.0, and for @backstage/cli-module-new, whose templates affect only newly created packages.",
+        "rejected": [
+          "`minor` for every package: Gate 1 kept `major` for the 17",
+          "`minor` for @backstage/ui: generated IDs are not API"
+        ],
+        "reason": "The repo rule and FR-16. No existing changeset covers this change. The two private manifests get no changeset."
+      },
+      {
+        "topic": "Report regeneration",
+        "choice": "Run the full `yarn build:api-reports` and `yarn build:knip-reports` after `yarn install`, not per-package runs.",
+        "rejected": [
+          "Per-package runs: they do not prove the reports are current"
+        ],
+        "reason": "FR-17 and AC-9. Expected changes: packages/test-utils/report.api.md, and six knip reports where a removed entry or a shifted line number shows. Any other report change is reported to the person, not kept silently."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 180
+      },
+      {
+        "id": "jest",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint"
+      },
+      {
+        "id": "test-repo-tools",
+        "run": "CI=1 yarn test packages/repo-tools"
+      },
+      {
+        "id": "test-frontend-plugin-api",
+        "run": "CI=1 yarn test packages/frontend-plugin-api"
+      },
+      {
+        "id": "test-ui",
+        "run": "CI=1 yarn test packages/ui"
+      },
+      {
+        "id": "test-dev-utils",
+        "run": "CI=1 yarn test packages/dev-utils"
+      },
+      {
+        "id": "test-frontend-dev-utils",
+        "run": "CI=1 yarn test packages/frontend-dev-utils"
+      },
+      {
+        "id": "test-techdocs",
+        "run": "CI=1 yarn test plugins/techdocs/"
+      },
+      {
+        "id": "test-cli-module-build",
+        "run": "CI=1 yarn test packages/cli-module-build"
+      },
+      {
+        "id": "test-cli-module-test-jest",
+        "run": "CI=1 yarn test packages/cli-module-test-jest"
+      },
+      {
+        "id": "test-test-utils",
+        "run": "CI=1 yarn test packages/test-utils"
+      },
+      {
+        "id": "test-cli-module-new",
+        "run": "CI=1 yarn test packages/cli-module-new"
+      },
+      {
+        "id": "test-core-app-api",
+        "run": "CI=1 yarn test packages/core-app-api"
+      },
+      {
+        "id": "test-catalog-react",
+        "run": "CI=1 yarn test plugins/catalog-react"
+      },
+      {
+        "id": "test-app",
+        "run": "CI=1 yarn test plugins/app/"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The peer-deps command requires ^18.0.0 for react, react-dom and @types/react on every package, with one range table and no exception list.",
+      "rules": [
+        "`peerDependencies` is the only range table; `desiredLocalVersionsOfDependencies` stays as it is.",
+        "Every former use of `expected` or `expectedPeerDeps` reads `peerDependencies`, cast with `keyof typeof peerDependencies`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 36,
+          "to": 38,
+          "first_line": "'@types/react': '^17.0.0 || ^18.0.0',",
+          "last_line": "'react-dom': '^17.0.0 || ^18.0.0',",
+          "rule": "Each of the three ranges becomes '^18.0.0'."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 42,
+          "to": 51,
+          "first_line": "// Packages that have dropped React 17 support and only support React 18+",
+          "last_line": "",
+          "rule": "Remove the comment, peerDependenciesReact18Only, react18OnlyPackages and the blank line after it."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 92,
+          "to": 98,
+          "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+          "last_line": "",
+          "rule": "Remove getExpectedPeerDependencies and the blank line after it."
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 103,
+          "to": 103,
+          "first_line": "const expected = getExpectedPeerDependencies(packageJson);",
+          "rule": "Remove the local."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 106,
+          "to": 106,
+          "first_line": "packageJson.peerDependencies[dep] === expected[dep as keyof typeof expected]",
+          "rule": "Compare with `peerDependencies[dep as keyof typeof peerDependencies]`, broken after `===` as prettier needs."
+        },
+        {
+          "id": "S6",
+          "at": "delete",
+          "from": 145,
+          "to": 145,
+          "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+          "rule": "Remove the local."
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 218,
+          "to": 218,
+          "first_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];",
+          "rule": "Read `peerDependencies[groupDep as keyof typeof peerDependencies];`."
+        },
+        {
+          "id": "S8",
+          "at": "replace",
+          "from": 245,
+          "to": 245,
+          "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+          "rule": "Read `peerDependencies[dep as keyof typeof peerDependencies];`."
+        },
+        {
+          "id": "S9",
+          "at": "replace",
+          "from": 255,
+          "to": 255,
+          "first_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+          "rule": "Read `peerDependencies[dep as keyof typeof peerDependencies];`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "AC-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useRouteRef imports useSyncExternalStore from react; the call site and its arguments stay as they are.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "One line: `import { useMemo, useSyncExternalStore } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "packages/ui/src/hooks/useBreakpoint.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useBreakpoint imports useSyncExternalStore from react; the call site and its three arguments stay as they are.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "One line: `import { useMemo, useSyncExternalStore } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "packages/ui/src/components/Popover/Popover.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Popover takes useId from react; the single svgPathId still supplies the path id and both use hrefs.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { forwardRef } from 'react';",
+          "last_line": "import { useId } from 'react-aria';",
+          "rule": "One line: `import { forwardRef, useId } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "packages/ui/src/components/Tooltip/Tooltip.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Tooltip takes useId from react; the single svgPathId still supplies the path id and both use hrefs.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { forwardRef } from 'react';",
+          "last_line": "import { useId } from 'react-aria';",
+          "rule": "One line: `import { forwardRef, useId } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "packages/ui/src/components/Table/components/Table.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Table takes useId from react; liveRegionId still links the live region's id to the table's aria-describedby.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useId } from 'react-aria';",
+          "rule": "Remove the import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 39,
+          "to": 39,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Read `import { useId, useMemo } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "packages/ui/src/components/TablePagination/TablePagination.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "TablePagination takes useId from react; labelId still links the label's id to both buttons' aria-describedby.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useId } from 'react-aria';",
+          "rule": "Remove the import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 25,
+          "to": 25,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Read `import { useId, useMemo } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "packages/dev-utils/src/devApp/render.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "DevAppBuilder.render renders only through react-dom/client and createRoot, still asynchronously after the dynamic import resolves.",
+      "rules": [
+        "The signature of `render(): void` and everything before the `ReactDOMPromise.then` call stay as they are.",
+        "Line 53 `import 'react-dom';` stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 65,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "One line: `const ReactDOMPromise = import('react-dom/client');`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 320,
+          "to": 328,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Keep the `.then` call; its callback's only statement is `ReactDOM.createRoot(document.getElementById('root')!).render(<DevApp />);` on one line."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "createDevApp renders only through react-dom/client and createRoot, still asynchronously after the dynamic import resolves.",
+      "rules": [
+        "`createDevApp` stays `void`, the missing-root error still throws synchronously, and `rootNode` stays as it is.",
+        "Line 24 `import 'react-dom';` stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 50,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "One line: `const ReactDOMPromise = import('react-dom/client');`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 119,
+          "to": 123,
+          "first_line": "if ('createRoot' in ReactDOM) {",
+          "last_line": "}",
+          "rule": "One line: `ReactDOM.createRoot(rootElement).render(rootNode);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "The case that exercised the legacy render path is gone; every other case stays unchanged and passes.",
+      "rules": [
+        "The 'should render a dev app with a plugin', 'should forward bindRoutes to createApp' and 'should throw a clear error when the root element is missing' cases, the isolated loader and the env handling stay as they are."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 149,
+          "to": 192,
+          "first_line": "",
+          "last_line": "});",
+          "rule": "Remove the blank line and the whole 'should fall back to legacy react-dom rendering when createRoot is unavailable' case; the closing `});` of the describe on line 193 stays."
+        }
+      ],
+      "depends_on": [
+        "U09"
+      ],
+      "covers": [
+        "FR-8",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "renderReactElement renders only through react-dom/client and createRoot, still asynchronously after the dynamic import resolves.",
+      "rules": [
+        "The signature `renderReactElement(element: JSX.Element, root: HTMLElement)` and its `@internal` tag stay as they are."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 24,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "One line: `const ReactDOMPromise = import('react-dom/client');`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 29,
+          "to": 33,
+          "first_line": "if ('createRoot' in ReactDOM) {",
+          "last_line": "}",
+          "rule": "One line: `ReactDOM.createRoot(root).render(element);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Neither bundler branch defines process.env.HAS_REACT_DOM_CLIENT, and the comment that explained the flag is gone.",
+      "rules": [
+        "`process.env.BUILD_INFO` and `process.env.APP_CONFIG` stay in both branches."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37,
+          "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+          "rule": "Remove the import."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 272,
+          "to": 276,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the comment and the flag from the webpack branch."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 281,
+          "to": 285,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the comment and the flag from the rspack branch."
+        }
+      ],
+      "depends_on": [
+        "U08",
+        "U09",
+        "U11"
+      ],
+      "covers": [
+        "FR-9",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "startFrontend no longer depends on hasReactDomClient; its warning is replaced by the version check serveBundle runs.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+          "rule": "Remove the import."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 45,
+          "to": 50,
+          "first_line": "if (!hasReactDomClient()) {",
+          "last_line": "",
+          "rule": "Remove the check, its warning and the blank line after it; do not add another diagnostic here."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-10",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The React version check warns for every major below 18, names React 18 as the minimum, links the migration guide, and looks at the React the served package resolves.",
+      "rules": [
+        "Signature: `function checkReactVersion(targetDir: string)`.",
+        "Resolve `react/package.json` with `paths: [targetDir]`, and replace the old comment with one line saying it resolves React as the served package does.",
+        "`const majorVersion = parseInt(reactPkg.version, 10);` and warn when `majorVersion < 18`, so a version that does not parse and React 18 or newer print nothing.",
+        "Keep `console.log(chalk.yellow(...))` with a template literal that has a leading and trailing newline, and the surrounding try/catch with its `/* ignored */` catch.",
+        "The three message lines, each starting with the warning sign and two spaces: `You are using React version ${majorVersion}, which is not supported by Backstage.`, `React 18 is the minimum. Please upgrade by following the migration guide:`, `https://backstage.io/docs/tutorials/react18-migration/`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 54,
+          "to": 54,
+          "first_line": "checkReactVersion();",
+          "rule": "Read `checkReactVersion(options.targetDir ?? targetPaths.dir);`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 269,
+          "to": 291,
+          "first_line": "function checkReactVersion() {",
+          "last_line": "}",
+          "rule": "The whole function, as the rules say."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-10"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Deletes hasReactDomClient.ts once nothing imports it; the step writes only this path.",
+      "run": "rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "depends_on": [
+        "U12",
+        "U13"
+      ],
+      "covers": [
+        "FR-9",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": "packages/cli-module-test-jest/config/jest.js",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The Jest config no longer sets process.env.HAS_REACT_DOM_CLIENT.",
+      "rules": [
+        "`paths` stays; the rest of the file still uses it."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 52,
+          "to": 60,
+          "first_line": "try {",
+          "last_line": "",
+          "rule": "Remove the try/catch block and the blank line after it."
+        }
+      ],
+      "depends_on": [
+        "U08",
+        "U09",
+        "U11"
+      ],
+      "covers": [
+        "FR-9",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U17",
+      "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "LegacyRootOption is gone and renderWithEffects forwards only wrapper to render, so legacyRoot cannot reach render at runtime.",
+      "rules": [
+        "`renderWithEffects` keeps its name, async shape and `Promise<RenderResult>` return.",
+        "A caller that never set `legacyRoot` renders exactly as before."
+      ],
+      "exports": [
+        {
+          "name": "renderWithEffects",
+          "kind": "function",
+          "params": [
+            {
+              "name": "nodes",
+              "type": "ReactElement"
+            },
+            {
+              "name": "options",
+              "type": "Pick<RenderOptions, 'wrapper'> | undefined"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 25,
+          "to": 31,
+          "first_line": "/**",
+          "last_line": "",
+          "rule": "Remove the LegacyRootOption type, its doc comment and the blank line after it."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 46,
+          "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+          "rule": "Read `options?: Pick<RenderOptions, 'wrapper'>,`."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 50,
+          "to": 50,
+          "first_line": "value = render(nodes, options);",
+          "rule": "Read `value = render(nodes, { wrapper: options?.wrapper });`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-11",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U18",
+      "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "renderInTestApp no longer accepts or forwards legacyRoot and passes only wrapper to renderWithEffects.",
+      "rules": [
+        "The blank line before `return renderWithEffects(` stays."
+      ],
+      "exports": [
+        {
+          "name": "renderInTestApp",
+          "kind": "function",
+          "params": [
+            {
+              "name": "Component",
+              "type": "ComponentType<PropsWithChildren<{}>> | ReactNode"
+            },
+            {
+              "name": "options",
+              "type": "TestAppOptions"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+          "rule": "Read `import { renderWithEffects } from './testingLibrary';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257,
+          "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+          "rule": "Read `options: TestAppOptions = {},`."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 265,
+          "to": 265,
+          "first_line": "const { legacyRoot } = options;",
+          "rule": "Remove the line."
+        },
+        {
+          "id": "S4",
+          "at": "delete",
+          "from": 269,
+          "to": 269,
+          "first_line": "legacyRoot,",
+          "rule": "Remove the line."
+        }
+      ],
+      "depends_on": [
+        "U17"
+      ],
+      "covers": [
+        "FR-11",
+        "AC-1",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U19",
+      "path": "packages/frontend-plugin-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Removes use-sync-external-store and @types/use-sync-external-store now that useRouteRef uses React's hook.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 52,
+          "to": 53,
+          "first_line": "\"@standard-schema/spec\": \"^1.1.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "One line, `\"@standard-schema/spec\": \"^1.1.0\"` with no trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 64,
+          "to": 64,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Remove the line."
+        }
+      ],
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "FR-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U20",
+      "path": "packages/ui/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Removes use-sync-external-store and @types/use-sync-external-store now that useBreakpoint uses React's hook; react-aria stays.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 59,
+          "first_line": "\"react-stately\": \"~3.51.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "One line, `\"react-stately\": \"~3.51.0\"` with no trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 70,
+          "to": 70,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Remove the line."
+        }
+      ],
+      "depends_on": [
+        "U03"
+      ],
+      "covers": [
+        "FR-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U21",
+      "path": "plugins/app/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Removes the unused use-sync-external-store dependency; plugins/app already imports React's hook.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 78,
+          "to": 78,
+          "first_line": "\"use-sync-external-store\": \"^1.4.0\",",
+          "rule": "Remove the line."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U22",
+      "path": "packages/core-app-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Removes the unused @testing-library/react-hooks dev dependency.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 69,
+          "to": 69,
+          "first_line": "\"@testing-library/react-hooks\": \"^8.0.0\",",
+          "rule": "Remove the line."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-13"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U23",
+      "path": "plugins/catalog-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Removes the unused react-test-renderer dev dependency.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 110,
+          "to": 111,
+          "first_line": "\"react-router-dom\": \"^6.30.2\",",
+          "last_line": "\"react-test-renderer\": \"^16.13.1\"",
+          "rule": "One line, `\"react-router-dom\": \"^6.30.2\"` with no trailing comma."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-13"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U24",
+      "path": "packages/app-defaults/package.json",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Moves react, react-dom and @types/react to ^18.0.0 in peerDependencies of the 56 manifests, leaving peerDependenciesMeta as it is. The step writes these files: packages/{app-defaults,app-example-plugin,core-app-api,core-compat-api,core-components,core-plugin-api,dev-utils,frontend-app-api,frontend-defaults,frontend-dev-utils,frontend-dynamic-feature-loader,frontend-plugin-api,frontend-test-utils,integration-react,module-federation-common,test-utils,theme,version-bridge}/package.json and plugins/{api-docs,api-docs-module-protoc-gen-doc,app,app-react,app-visualizer,auth,auth-react,catalog,catalog-graph,catalog-import,catalog-react,catalog-unprocessed-entities,config-schema,devtools,devtools-react,example-todo-list,home,home-react,kubernetes,kubernetes-cluster,kubernetes-react,mui-to-bui,notifications,org,org-react,permission-react,scaffolder,scaffolder-node-test-utils,scaffolder-react,search,search-react,signals,signals-react,techdocs,techdocs-addons-test-utils,techdocs-module-addons-contrib,techdocs-react,user-settings}/package.json. It also rewrites packages/ui/package.json with the same content.",
+      "run": "yarn lint:peer-deps --fix",
+      "depends_on": [
+        "U01",
+        "U19",
+        "U20",
+        "U21",
+        "U22",
+        "U23"
+      ],
+      "covers": [
+        "FR-1",
+        "AC-4",
+        "AC-5"
+      ]
+    },
+    {
+      "id": "U25",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates yarn.lock to match the manifests; react@17.0.2 may remain through @yarnpkg/libui.",
+      "run": "yarn install",
+      "depends_on": [
+        "U24"
+      ],
+      "covers": [
+        "FR-3"
+      ]
+    },
+    {
+      "id": "U26",
+      "path": "packages/cli-module-new/templates/frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New frontend plugins allow only React 18.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 41,
+          "to": 41,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-14",
+        "AC-5"
+      ]
+    },
+    {
+      "id": "U27",
+      "path": "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New legacy frontend plugins allow only React 18.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 34,
+          "to": 35,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Keep the versionQuery form and the commas; each hint becomes '^18.0.0'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 47,
+          "to": 48,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Keep the versionQuery form and the commas; each hint becomes '^18.0.0'."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-14",
+        "AC-5"
+      ]
+    },
+    {
+      "id": "U28",
+      "path": "packages/cli-module-new/templates/plugin-web-library/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New web libraries allow only React 18.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 31,
+          "to": 31,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-14",
+        "AC-5"
+      ]
+    },
+    {
+      "id": "U29",
+      "path": "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New scaffolder field extension modules allow only React 18.",
+      "rules": [
+        "This file's peer range has no versionQuery, and it gets none; the devDependency on line 32 stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 35,
+          "first_line": "\"react\": \"^17.0.0 || ^18.0.0\"",
+          "rule": "Read `\"react\": \"^18.0.0\"`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-14",
+        "AC-5"
+      ]
+    },
+    {
+      "id": "U30",
+      "path": "docs/tutorials/react18-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The guide states that React 18 is required, shows ^18 ranges, drops the advice that keeps a plugin on React 17, and gives the LegacyRootOption migration.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 9,
+          "to": 9,
+          "first_line": "This guide has been updated to include steps for removing support for React 16, as it is now deprecated.",
+          "rule": "Read `Backstage now requires React 18. React 16 and React 17 are no longer supported.`"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 13,
+          "to": 13,
+          "first_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+          "rule": "Read `The Backstage core libraries and plugins require React 18, and their peer dependency ranges no longer include React 17. Migrate your project before you upgrade to a release with this requirement. React 18 also brings performance improvements, in particular in tests.`"
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 86,
+          "to": 88,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "The added devDependency lines read `\"@types/react\": \"^18.0.0\",`, `\"react\": \"^18.0.2\",` and `\"react-dom\": \"^18.0.2\",`."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 103,
+          "to": 105,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Each added peerDependency range becomes `^18.0.0`."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 125,
+          "to": 125,
+          "first_line": "The good news is that these errors can be fixed while still staying on React 17. If you have a large number of errors to fix you can address as few or many is you like at a time and merge them into your main branch **without** the version bumps from step 1. This lets you gradually migrate the types in your project while not yet fully moving over to React 18. Once all type breakages are fixed you can move on to the next step of migrating tests.",
+          "rule": "Change only the first sentence, to `The good news is that these errors can be fixed while you are still on React 17 and on a Backstage release that allows it.`"
+        },
+        {
+          "id": "S6",
+          "at": "delete",
+          "from": 131,
+          "to": 134,
+          "first_line": ":::info",
+          "last_line": "",
+          "rule": "Remove the info block about keeping plugins on React 17 and the blank line after it."
+        },
+        {
+          "id": "S7",
+          "at": "insert_before",
+          "from": 149,
+          "to": 149,
+          "first_line": "#### Test Updates",
+          "rule": "Insert a heading `#### Removed `LegacyRootOption``, a blank line, the paragraph `` `@backstage/test-utils` no longer exports the `LegacyRootOption` type, and `renderInTestApp` and `renderWithEffects` no longer accept the `legacyRoot` option. Remove the option and any import of the type so that your tests run on a React 18 concurrent root. If a test still needs a legacy root while you update it, call `render` from `@testing-library/react` with `legacyRoot: true` and wrap the element with `wrapInTestApp`. ``, and a blank line."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-12",
+        "FR-15"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U31",
+      "path": "docs/tutorials/migrate-to-mui5.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The guide states that React 18 is required and shows the ^18 peer ranges.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 43,
+          "first_line": "Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:",
+          "rule": "Read `Keep in mind that Material UI v5 is meant to be used with React 17 or higher, and that Backstage requires React 18. Your plugins must declare React 18 as a peer dependency:`"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 48,
+          "to": 49,
+          "first_line": "\"react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Each range becomes `^18.0.0`."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 69,
+          "to": 69,
+          "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency",
+          "rule": "Read ``5. Ensure you are using `\"react\": \"^18.0.0\"` as a peer dependency``."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-15"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U32",
+      "path": "docs/tutorials/jsx-transform-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The future-configuration statement no longer waits on React 17; the setting itself does not change.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 61,
+          "to": 61,
+          "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+          "rule": "Read ``This setting will change to `preserve` in a future release, now that Backstage requires React 18.``"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-15"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U33",
+      "path": ".gitignore",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Git ignores the .sdlc/ run state folder.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 193,
+          "to": 193,
+          "first_line": ".claude/worktrees/",
+          "rule": "Add a blank line, the comment `# SDLC run state`, and `.sdlc/`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-18"
+      ]
+    },
+    {
+      "id": "U34",
+      "path": ".changeset/require-react-18-major.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Major changeset for the 17 public packages at or above 1.0.0 that now require React 18.",
+      "rules": [
+        "Each package below gets bump `major`: @backstage/app-defaults, @backstage/core-app-api, @backstage/core-plugin-api, @backstage/dev-utils, @backstage/integration-react, @backstage/test-utils, @backstage/version-bridge, @backstage/plugin-catalog, @backstage/plugin-catalog-react, @backstage/plugin-scaffolder, @backstage/plugin-scaffolder-react, @backstage/plugin-search, @backstage/plugin-search-react, @backstage/plugin-techdocs, @backstage/plugin-techdocs-addons-test-utils, @backstage/plugin-techdocs-module-addons-contrib, @backstage/plugin-techdocs-react.",
+        "Message: `**BREAKING**: React 18 is now required. The peer dependency ranges for `react`, `react-dom` and `@types/react` no longer include React 17. If your project still uses React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/) before you upgrade.`"
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U35",
+      "path": ".changeset/require-react-18-minor.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Minor changeset for the 37 public packages below 1.0.0 that now require React 18.",
+      "rules": [
+        "Each package below gets bump `minor`: @backstage/core-compat-api, @backstage/core-components, @backstage/frontend-app-api, @backstage/frontend-defaults, @backstage/frontend-dev-utils, @backstage/frontend-dynamic-feature-loader, @backstage/frontend-plugin-api, @backstage/frontend-test-utils, @backstage/module-federation-common, @backstage/theme, @backstage/plugin-api-docs, @backstage/plugin-api-docs-module-protoc-gen-doc, @backstage/plugin-app, @backstage/plugin-app-react, @backstage/plugin-app-visualizer, @backstage/plugin-auth, @backstage/plugin-auth-react, @backstage/plugin-catalog-graph, @backstage/plugin-catalog-import, @backstage/plugin-catalog-unprocessed-entities, @backstage/plugin-config-schema, @backstage/plugin-devtools, @backstage/plugin-devtools-react, @backstage/plugin-home, @backstage/plugin-home-react, @backstage/plugin-kubernetes, @backstage/plugin-kubernetes-cluster, @backstage/plugin-kubernetes-react, @backstage/plugin-mui-to-bui, @backstage/plugin-notifications, @backstage/plugin-org, @backstage/plugin-org-react, @backstage/plugin-permission-react, @backstage/plugin-scaffolder-node-test-utils, @backstage/plugin-signals, @backstage/plugin-signals-react, @backstage/plugin-user-settings.",
+        "Message: the same text as U34's message."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "unit": "U34",
+        "reason": "Same message, different packages and bump."
+      },
+      "depends_on": [
+        "U34"
+      ],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U36",
+      "path": ".changeset/test-utils-remove-legacy-root.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Major changeset for @backstage/test-utils with the LegacyRootOption removal and its migration.",
+      "rules": [
+        "`@backstage/test-utils` gets bump `major`.",
+        "Message: `**BREAKING**: Removed the `LegacyRootOption` type and the `legacyRoot` option of `renderInTestApp` and `renderWithEffects`. Remove the option and any import of the type so that your tests run on a React 18 concurrent root. If a test still needs a legacy root while you update it, call `render` from `@testing-library/react` with `legacyRoot: true` and wrap the element with `wrapInTestApp`. See the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/).`"
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-12",
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U37",
+      "path": ".changeset/cli-module-build-require-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Minor changeset for @backstage/cli-module-build.",
+      "rules": [
+        "`@backstage/cli-module-build` gets bump `minor`.",
+        "Message: `**BREAKING**: React 18 is now required to build and start frontend packages. Frontend builds no longer provide the flag that reported whether `react-dom/client` is available. Starting a frontend package now prints a warning for any React version below 18, with a link to the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/).`"
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U38",
+      "path": ".changeset/cli-module-test-jest-require-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Minor changeset for @backstage/cli-module-test-jest.",
+      "rules": [
+        "`@backstage/cli-module-test-jest` gets bump `minor`.",
+        "Message: `**BREAKING**: The Jest configuration no longer sets the flag that reported whether `react-dom/client` is available, since React 18 is now required.`"
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U39",
+      "path": ".changeset/cli-module-new-react-18-templates.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for @backstage/cli-module-new.",
+      "rules": [
+        "`@backstage/cli-module-new` gets bump `patch`.",
+        "Message: `Updated the frontend plugin, legacy frontend plugin, web library and scaffolder field extension templates so that new packages require React 18 instead of allowing React 16 or 17.`"
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U40",
+      "path": ".changeset/repo-tools-peer-deps-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Minor changeset for @backstage/repo-tools.",
+      "rules": [
+        "`@backstage/repo-tools` gets bump `minor`.",
+        "Message: `**BREAKING**: The `peer-deps` command now requires `^18.0.0` as the peer dependency range for `react`, `react-dom` and `@types/react` in all packages. Run `backstage-repo-tools peer-deps --fix` to update your packages.`"
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U41",
+      "path": ".changeset/ui-native-react-hooks.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Patch changeset for @backstage/ui in the format .changeset/README.md requires.",
+      "rules": [
+        "`@backstage/ui` gets bump `patch`.",
+        "Message: `Generated element IDs now use React's built-in format, and the package no longer depends on `use-sync-external-store`. References between elements and accessibility relationships are unchanged.`",
+        "The message ends with a blank line and `**Affected components:** Popover, Tooltip, Table, TablePagination`."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/quiet-owls-revoke.md",
+        "reason": "Front matter and message layout."
+      },
+      "uses": [
+        {
+          "path": ".changeset/README.md",
+          "reason": "The Backstage UI changeset format."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U42",
+      "path": "packages/test-utils/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates the API reports. Expected diff: packages/test-utils/report.api.md loses LegacyRootOption and its uses in renderInTestApp and renderWithEffects; report any other changed report rather than keeping it silently.",
+      "run": "yarn build:api-reports",
+      "depends_on": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U11",
+        "U14",
+        "U15",
+        "U16",
+        "U18",
+        "U25"
+      ],
+      "covers": [
+        "FR-17",
+        "AC-9"
+      ]
+    },
+    {
+      "id": "U43",
+      "path": "packages/cli-module-build/knip-report.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates the knip reports. Expected files, with removed entries or shifted line numbers only: packages/cli-module-build/knip-report.md, packages/core-app-api/knip-report.md, packages/frontend-plugin-api/knip-report.md, packages/ui/knip-report.md, plugins/app/knip-report.md, plugins/catalog-react/knip-report.md; report any other changed report rather than keeping it silently.",
+      "run": "yarn build:knip-reports",
+      "depends_on": [
+        "U10",
+        "U42"
+      ],
+      "covers": [
+        "FR-17",
+        "AC-2",
+        "AC-9",
+        "AC-10"
+      ]
+    }
+  ]
+}

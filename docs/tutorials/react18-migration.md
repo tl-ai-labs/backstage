@@ -6,11 +6,11 @@ description: A guide to migrating your project to React 18
 
 :::info
 
-This guide has been updated to include steps for removing support for React 16, as it is now deprecated.
+Backstage now requires React 18. React 16 and React 17 are no longer supported.
 
 :::
 
-The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.
+The Backstage core libraries and plugins require React 18, and their peer dependency ranges no longer include React 17. Migrate your project before you upgrade to a release with this requirement. React 18 also brings performance improvements, in particular in tests.
 
 ## Migration
 
@@ -83,9 +83,9 @@ To migrate a Backstage instance to React 18, follow these steps:
        "react-dom": "^16.13.1 || ^17.0.0",
        // highlight-remove-end
        // highlight-add-start
-       "@types/react": "^17.0.0 || ^18.0.0",
-       "react": "^17.0.0 || ^18.0.0",
-       "react-dom": "^17.0.0 || ^18.0.0",
+       "@types/react": "^18.0.0",
+       "react": "^18.0.2",
+       "react-dom": "^18.0.2",
        // highlight-add-end
        ...
      },
@@ -100,9 +100,9 @@ To migrate a Backstage instance to React 18, follow these steps:
        "react-dom": "^16.13.1 || ^17.0.0",
        // highlight-remove-end
        // highlight-add-start
-       "@types/react": "^17.0.0 || ^18.0.0",
-       "react": "^17.0.0 || ^18.0.0",
-       "react-dom": "^17.0.0 || ^18.0.0",
+       "@types/react": "^18.0.0",
+       "react": "^18.0.0",
+       "react-dom": "^18.0.0",
        // highlight-add-end
        ...
      },
@@ -122,15 +122,11 @@ When upgrading to React 18 you are likely to see a fair number of TypeScript typ
 
 Run `yarn tsc:full` to assess the damage.
 
-The good news is that these errors can be fixed while still staying on React 17. If you have a large number of errors to fix you can address as few or many is you like at a time and merge them into your main branch **without** the version bumps from step 1. This lets you gradually migrate the types in your project while not yet fully moving over to React 18. Once all type breakages are fixed you can move on to the next step of migrating tests.
+The good news is that these errors can be fixed while you are still on React 17 and on a Backstage release that allows it. If you have a large number of errors to fix you can address as few or many is you like at a time and merge them into your main branch **without** the version bumps from step 1. This lets you gradually migrate the types in your project while not yet fully moving over to React 18. Once all type breakages are fixed you can move on to the next step of migrating tests.
 
 ### Migrating Tests
 
 At this point the app hopefully works and you have no type errors, but if you run your tests you may see that a lot of them are failing. This is because the current version of the `@testing-library/react` package does not support React 18. Unfortunately the new version that we will be moving to does not support React 17, which is why we need to do this all at once.
-
-:::info
-If migrating your entire project at once is not feasible, you can try to add `devDependencies` for `react` and `react-dom` v17 to individual plugins to be migrated later. This is not something we have tried ourselves in practice, so let us know in the community Discord if you attempt this and how it goes.
-:::
 
 #### Dependency Upgrades
 
@@ -145,6 +141,10 @@ Replace: `"@testing-library/react": "^14.0.0"`
 
 Find: `"@testing-library/react-hooks": ".*",?`<br>
 Replace: `<nothing>`
+
+#### Removed `LegacyRootOption`
+
+`@backstage/test-utils` no longer exports the `LegacyRootOption` type, and `renderInTestApp` and `renderWithEffects` no longer accept the `legacyRoot` option. Remove the option and any import of the type so that your tests run on a React 18 concurrent root. If a test still needs a legacy root while you update it, call `render` from `@testing-library/react` with `legacyRoot: true` and wrap the element with `wrapInTestApp`.
 
 #### Test Updates
 

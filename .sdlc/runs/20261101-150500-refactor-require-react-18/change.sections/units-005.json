@@ -1,0 +1,253 @@
+[
+  {
+    "id": "U26",
+    "path": "packages/cli-module-new/templates/frontend-plugin/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "New frontend plugins allow only React 18.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 30, "to": 30, "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"", "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'." },
+      { "id": "S2", "at": "replace", "from": 41, "to": 41, "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"", "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14", "AC-5"]
+  },
+  {
+    "id": "U27",
+    "path": "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "New legacy frontend plugins allow only React 18.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 34, "to": 35, "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",", "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",", "rule": "Keep the versionQuery form and the commas; each hint becomes '^18.0.0'." },
+      { "id": "S2", "at": "replace", "from": 47, "to": 48, "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",", "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",", "rule": "Keep the versionQuery form and the commas; each hint becomes '^18.0.0'." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14", "AC-5"]
+  },
+  {
+    "id": "U28",
+    "path": "packages/cli-module-new/templates/plugin-web-library/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "New web libraries allow only React 18.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 31, "to": 31, "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"", "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'." },
+      { "id": "S2", "at": "replace", "from": 38, "to": 38, "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"", "rule": "Keep the versionQuery form; the hint becomes '^18.0.0'." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14", "AC-5"]
+  },
+  {
+    "id": "U29",
+    "path": "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "New scaffolder field extension modules allow only React 18.",
+    "rules": [
+      "This file's peer range has no versionQuery, and it gets none; the devDependency on line 32 stays."
+    ],
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 35, "to": 35, "first_line": "\"react\": \"^17.0.0 || ^18.0.0\"", "rule": "Read `\"react\": \"^18.0.0\"`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14", "AC-5"]
+  },
+  {
+    "id": "U30",
+    "path": "docs/tutorials/react18-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The guide states that React 18 is required, shows ^18 ranges, drops the advice that keeps a plugin on React 17, and gives the LegacyRootOption migration.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 9, "to": 9, "first_line": "This guide has been updated to include steps for removing support for React 16, as it is now deprecated.", "rule": "Read `Backstage now requires React 18. React 16 and React 17 are no longer supported.`" },
+      { "id": "S2", "at": "replace", "from": 13, "to": 13, "first_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.", "rule": "Read `The Backstage core libraries and plugins require React 18, and their peer dependency ranges no longer include React 17. Migrate your project before you upgrade to a release with this requirement. React 18 also brings performance improvements, in particular in tests.`" },
+      { "id": "S3", "at": "replace", "from": 86, "to": 88, "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",", "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",", "rule": "The added devDependency lines read `\"@types/react\": \"^18.0.0\",`, `\"react\": \"^18.0.2\",` and `\"react-dom\": \"^18.0.2\",`." },
+      { "id": "S4", "at": "replace", "from": 103, "to": 105, "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",", "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",", "rule": "Each added peerDependency range becomes `^18.0.0`." },
+      { "id": "S5", "at": "replace", "from": 125, "to": 125, "first_line": "The good news is that these errors can be fixed while still staying on React 17. If you have a large number of errors to fix you can address as few or many is you like at a time and merge them into your main branch **without** the version bumps from step 1. This lets you gradually migrate the types in your project while not yet fully moving over to React 18. Once all type breakages are fixed you can move on to the next step of migrating tests.", "rule": "Change only the first sentence, to `The good news is that these errors can be fixed while you are still on React 17 and on a Backstage release that allows it.`" },
+      { "id": "S6", "at": "delete", "from": 131, "to": 134, "first_line": ":::info", "last_line": "", "rule": "Remove the info block about keeping plugins on React 17 and the blank line after it." },
+      { "id": "S7", "at": "insert_before", "from": 149, "to": 149, "first_line": "#### Test Updates", "rule": "Insert a heading `#### Removed `LegacyRootOption``, a blank line, the paragraph `` `@backstage/test-utils` no longer exports the `LegacyRootOption` type, and `renderInTestApp` and `renderWithEffects` no longer accept the `legacyRoot` option. Remove the option and any import of the type so that your tests run on a React 18 concurrent root. If a test still needs a legacy root while you update it, call `render` from `@testing-library/react` with `legacyRoot: true` and wrap the element with `wrapInTestApp`. ``, and a blank line." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-12", "FR-15"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U31",
+    "path": "docs/tutorials/migrate-to-mui5.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The guide states that React 18 is required and shows the ^18 peer ranges.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 43, "to": 43, "first_line": "Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:", "rule": "Read `Keep in mind that Material UI v5 is meant to be used with React 17 or higher, and that Backstage requires React 18. Your plugins must declare React 18 as a peer dependency:`" },
+      { "id": "S2", "at": "replace", "from": 48, "to": 49, "first_line": "\"react\": \"^17.0.0 || ^18.0.0\",", "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",", "rule": "Each range becomes `^18.0.0`." },
+      { "id": "S3", "at": "replace", "from": 69, "to": 69, "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency", "rule": "Read ``5. Ensure you are using `\"react\": \"^18.0.0\"` as a peer dependency``." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-15"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U32",
+    "path": "docs/tutorials/jsx-transform-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The future-configuration statement no longer waits on React 17; the setting itself does not change.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 61, "to": 61, "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.", "rule": "Read ``This setting will change to `preserve` in a future release, now that Backstage requires React 18.``" }
+    ],
+    "depends_on": [],
+    "covers": ["FR-15"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U33",
+    "path": ".gitignore",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Git ignores the .sdlc/ run state folder.",
+    "sites": [
+      { "id": "S1", "at": "insert_after", "from": 193, "to": 193, "first_line": ".claude/worktrees/", "rule": "Add a blank line, the comment `# SDLC run state`, and `.sdlc/`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-18"]
+  },
+  {
+    "id": "U34",
+    "path": ".changeset/require-react-18-major.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Major changeset for the 17 public packages at or above 1.0.0 that now require React 18.",
+    "rules": [
+      "Each package below gets bump `major`: @backstage/app-defaults, @backstage/core-app-api, @backstage/core-plugin-api, @backstage/dev-utils, @backstage/integration-react, @backstage/test-utils, @backstage/version-bridge, @backstage/plugin-catalog, @backstage/plugin-catalog-react, @backstage/plugin-scaffolder, @backstage/plugin-scaffolder-react, @backstage/plugin-search, @backstage/plugin-search-react, @backstage/plugin-techdocs, @backstage/plugin-techdocs-addons-test-utils, @backstage/plugin-techdocs-module-addons-contrib, @backstage/plugin-techdocs-react.",
+      "Message: `**BREAKING**: React 18 is now required. The peer dependency ranges for `react`, `react-dom` and `@types/react` no longer include React 17. If your project still uses React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/) before you upgrade.`"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U35",
+    "path": ".changeset/require-react-18-minor.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for the 37 public packages below 1.0.0 that now require React 18.",
+    "rules": [
+      "Each package below gets bump `minor`: @backstage/core-compat-api, @backstage/core-components, @backstage/frontend-app-api, @backstage/frontend-defaults, @backstage/frontend-dev-utils, @backstage/frontend-dynamic-feature-loader, @backstage/frontend-plugin-api, @backstage/frontend-test-utils, @backstage/module-federation-common, @backstage/theme, @backstage/plugin-api-docs, @backstage/plugin-api-docs-module-protoc-gen-doc, @backstage/plugin-app, @backstage/plugin-app-react, @backstage/plugin-app-visualizer, @backstage/plugin-auth, @backstage/plugin-auth-react, @backstage/plugin-catalog-graph, @backstage/plugin-catalog-import, @backstage/plugin-catalog-unprocessed-entities, @backstage/plugin-config-schema, @backstage/plugin-devtools, @backstage/plugin-devtools-react, @backstage/plugin-home, @backstage/plugin-home-react, @backstage/plugin-kubernetes, @backstage/plugin-kubernetes-cluster, @backstage/plugin-kubernetes-react, @backstage/plugin-mui-to-bui, @backstage/plugin-notifications, @backstage/plugin-org, @backstage/plugin-org-react, @backstage/plugin-permission-react, @backstage/plugin-scaffolder-node-test-utils, @backstage/plugin-signals, @backstage/plugin-signals-react, @backstage/plugin-user-settings.",
+      "Message: the same text as U34's message."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "unit": "U34", "reason": "Same message, different packages and bump." },
+    "depends_on": ["U34"],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U36",
+    "path": ".changeset/test-utils-remove-legacy-root.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Major changeset for @backstage/test-utils with the LegacyRootOption removal and its migration.",
+    "rules": [
+      "`@backstage/test-utils` gets bump `major`.",
+      "Message: `**BREAKING**: Removed the `LegacyRootOption` type and the `legacyRoot` option of `renderInTestApp` and `renderWithEffects`. Remove the option and any import of the type so that your tests run on a React 18 concurrent root. If a test still needs a legacy root while you update it, call `render` from `@testing-library/react` with `legacyRoot: true` and wrap the element with `wrapInTestApp`. See the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/).`"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "depends_on": [],
+    "covers": ["FR-12", "FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U37",
+    "path": ".changeset/cli-module-build-require-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for @backstage/cli-module-build.",
+    "rules": [
+      "`@backstage/cli-module-build` gets bump `minor`.",
+      "Message: `**BREAKING**: React 18 is now required to build and start frontend packages. Frontend builds no longer provide the flag that reported whether `react-dom/client` is available. Starting a frontend package now prints a warning for any React version below 18, with a link to the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/).`"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U38",
+    "path": ".changeset/cli-module-test-jest-require-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for @backstage/cli-module-test-jest.",
+    "rules": [
+      "`@backstage/cli-module-test-jest` gets bump `minor`.",
+      "Message: `**BREAKING**: The Jest configuration no longer sets the flag that reported whether `react-dom/client` is available, since React 18 is now required.`"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U39",
+    "path": ".changeset/cli-module-new-react-18-templates.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/cli-module-new.",
+    "rules": [
+      "`@backstage/cli-module-new` gets bump `patch`.",
+      "Message: `Updated the frontend plugin, legacy frontend plugin, web library and scaffolder field extension templates so that new packages require React 18 instead of allowing React 16 or 17.`"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U40",
+    "path": ".changeset/repo-tools-peer-deps-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for @backstage/repo-tools.",
+    "rules": [
+      "`@backstage/repo-tools` gets bump `minor`.",
+      "Message: `**BREAKING**: The `peer-deps` command now requires `^18.0.0` as the peer dependency range for `react`, `react-dom` and `@types/react` in all packages. Run `backstage-repo-tools peer-deps --fix` to update your packages.`"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U41",
+    "path": ".changeset/ui-native-react-hooks.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/ui in the format .changeset/README.md requires.",
+    "rules": [
+      "`@backstage/ui` gets bump `patch`.",
+      "Message: `Generated element IDs now use React's built-in format, and the package no longer depends on `use-sync-external-store`. References between elements and accessibility relationships are unchanged.`",
+      "The message ends with a blank line and `**Affected components:** Popover, Tooltip, Table, TablePagination`."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": { "path": ".changeset/quiet-owls-revoke.md", "reason": "Front matter and message layout." },
+    "uses": [ { "path": ".changeset/README.md", "reason": "The Backstage UI changeset format." } ],
+    "depends_on": [],
+    "covers": ["FR-16", "AC-8"],
+    "checks": ["prettier"]
+  }
+]

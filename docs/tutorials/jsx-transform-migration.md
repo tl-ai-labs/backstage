@@ -58,7 +58,7 @@ Update the `compilerOptions.jsx` setting in `tsconfig.json` to `react-jsx`. This
 }
 ```
 
-In the future, this setting will change to `preserve` once React 17 is fully deprecated.
+This setting will change to `preserve` in a future release, now that Backstage requires React 18.
 
 ##### Explanation of `compilerOptions.jsx` Values
 

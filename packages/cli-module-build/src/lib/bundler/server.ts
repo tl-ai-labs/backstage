@@ -51,7 +51,7 @@ DEPRECATION WARNING: React Router Beta is deprecated and support for it will be 
     }
   }
 
-  checkReactVersion();
+  checkReactVersion(options.targetDir ?? targetPaths.dir);
 
   const { name } = await fs.readJson(
     resolvePath(options.targetDir ?? targetPaths.dir, 'package.json'),
@@ -266,21 +266,21 @@ DEPRECATION WARNING: React Router Beta is deprecated and support for it will be 
   return waitForExit;
 }
 
-function checkReactVersion() {
+function checkReactVersion(targetDir: string) {
   try {
-    // Make sure we're looking at the root of the target repo
+    // Resolve React the same way the served package does
     const reactPkgPath = require.resolve('react/package.json', {
-      paths: [targetPaths.rootDir],
+      paths: [targetDir],
     });
     const reactPkg = require(reactPkgPath);
-    if (reactPkg.version.startsWith('16.')) {
+    const majorVersion = parseInt(reactPkg.version, 10);
+    if (majorVersion < 18) {
       console.log(
         chalk.yellow(
           `
-⚠️                                                                           ⚠️
-⚠️ You are using React version 16, which is deprecated for use in Backstage. ⚠️
-⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️
-⚠️                                                                           ⚠️
+⚠️  You are using React version ${majorVersion}, which is not supported by Backstage.
+⚠️  React 18 is the minimum. Please upgrade by following the migration guide:
+⚠️  https://backstage.io/docs/tutorials/react18-migration/
 `,
         ),
       );

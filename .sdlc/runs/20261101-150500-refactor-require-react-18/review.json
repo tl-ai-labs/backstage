@@ -1,0 +1,19 @@
+{
+  "module": "refactor-require-react-18",
+  "verdict": "approved",
+  "tool_calls": 11,
+  "scope": "93 non-knip paths from provenance.json against f20fd9b598285c88401406b3812fe00d7708136c; knip-report.md files skipped as instructed",
+  "findings": [],
+  "refinement_packets": [],
+  "checks_passed": [
+    "Correctness: every code, test, doc and .gitignore diff matches its change_plan.md unit; git-changed paths and provenance paths are the same set",
+    "Manifests: 56 react/@types/react and 56 react-dom range edits to ^18.0.0, no key reorder, peerDependenciesMeta untouched, only the plan's dependency removals (use-sync-external-store, @types/use-sync-external-store, @testing-library/react-hooks, react-test-renderer), no ^16 or ^17 react range left in any package manifest",
+    "yarn.lock: only one key rewritten (react-is, narrowed), four entries removed with the dropped dependencies, no third-party version change seen",
+    "Leftovers: no HAS_REACT_DOM_CLIENT, hasReactDomClient, legacyRoot, LegacyRootOption or use-sync-external-store in packages or plugins outside docs and changesets; no react-aria useId import left in packages/ui",
+    "Type safety: no new any; union ReactDOM type removed; report.api.md diff is exactly the LegacyRootOption removal and no other API report changed",
+    "Error handling: checkReactVersion keeps its try/catch; a version that does not parse prints nothing, per U14 rule 3",
+    "Changesets: all 55 public manifests covered, 2 private manifests excluded, 4 CLI/tooling packages covered; bumps follow the repo rule at each package's current version; no internal symbol names",
+    "Templates: versionQuery falls through to the literal hint for '^18.0.0', because semver.satisfies rejects a range as a version and packageVersions has no react key",
+    "Authz, PII: not applicable, no routes or personal data touched; env-fixture check skipped for refactor intent"
+  ]
+}
