@@ -1,0 +1,38 @@
+{
+  "module": "userouteref-startup (core-plugin-api, frontend-plugin-api, frontend-app-api routing and wiring)",
+  "verdict": "approved",
+  "tool_calls": 7,
+  "round_1_findings": [
+    {
+      "severity": "blocker",
+      "issue": "finalizeApp deadlock in 'tolerates an unresolved route behind a sign-in page'",
+      "status": "resolved",
+      "evidence": "finalizeApp now subscribes first, fires the trigger in a synchronous act, then awaits the promise in a separate async act, which is the R-6 shape. onFinalized starts finalization only through promise continuations, and the helper has no await before the async act opens, so that work runs inside the act scope. Suite: 6 of 6 selected cases pass, 173 of 173 overall, 0 act warnings, so the three cascade failures cleared too."
+    },
+    {
+      "severity": "minor",
+      "issue": "No test reached markFinalized() on the bootstrap-error path",
+      "status": "resolved",
+      "evidence": "'ends the tolerance when finalization fails' reaches the path through a rejected authorize. The mutation removes the second of exactly two markFinalized() calls, which is prepareSpecializedApp.tsx:777, and the case then fails at its 'No path for' assertion with Array [] while the other 5 pass. The case cannot pass by the session path: there the route would resolve to /target and no error would post."
+    }
+  ],
+  "findings": [],
+  "passing_checks": [
+    "R-5 scope: createSpecializedApp.test.tsx is the only file the revision moved. All 9 provenance sha_after values match the working tree, and the status shows the same file set.",
+    "U01 revision: the import, finalizeApp and the new case match units-001.json, including no rerender and no assertion on finalizedApp.errors. change_plan.md is stale for U01 by design.",
+    "Test comments: both are accurate. classifyBootstrapTree clears `if` only on bootstrap-visible nodes, so a deferred app/root.elements root keeps its predicate, and the finalizeApp comment matches the sign-in flow.",
+    "Correctness: product files are unchanged since round 1 and match FR-2 to FR-6, D-1 and D-2. markFinalized is the last step on both finalization paths. When the error fallback itself throws, the promise rejects and nothing marks finalized, which is correct because the app did not finalize.",
+    "Compatibility: APIs without the lifecycle key count as finalized, and the Symbol.for key survives bundled copies.",
+    "Type safety: casts are the planned ones; tsc exit 0 as reported.",
+    "Sensitive files: no manifest, env, CLAUDE.md or config file touched.",
+    "Changeset and docs: unchanged since round 1 and cover all three published packages.",
+    "API reports: frontend-plugin-api exit 1 is pre-existing and its report is byte-identical.",
+    "Authz, PII: not applicable. Env fixtures: skipped for a bugfix intent."
+  ],
+  "evidence_limits": [
+    "Suites were not re-run here; results are the orchestrator's summary.",
+    "The new case has no red run on unfixed code. R-3 and R-7 allow this, and the mutation is the direct proof of what it guards. On unfixed code it could only fail at bootstrap, which would say nothing about line 777.",
+    "The new case asserts on the bootstrap element without the createApp swap. It proves the marking, not what a user sees after a failed finalization. By reading, the hook update and the swap should land in the same render in production, so the real error should show; no test or run confirms this."
+  ],
+  "refinement_packets": []
+}

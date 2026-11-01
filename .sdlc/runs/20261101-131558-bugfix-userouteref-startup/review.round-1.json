@@ -1,0 +1,31 @@
+{
+  "module": "userouteref-startup (core-plugin-api, frontend-plugin-api, frontend-app-api routing and wiring)",
+  "verdict": "needs_changes",
+  "tool_calls": 6,
+  "findings": [
+    {
+      "severity": "blocker",
+      "file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "line": 2021,
+      "issue": "The `finalizeApp` helper deadlocks in 'tolerates an unresolved route behind a sign-in page'. It calls `onSignInSuccess` inside `await act(async () => ...)` and then awaits finalization in the same callback. `onSignInSuccess` is the `setIdentityApi` state setter of SignInPageWrapper (plugins/app/src/extensions/AppRoot.tsx:158-168), and `appIdentityProxy.setTarget` only runs when that component re-renders. That target call is what starts finalization. React holds updates made inside an async act scope until the callback settles, so the render never happens, finalization never starts, and the callback never settles. This matches the reported 5000 ms timeout with no assertion failure. Confidence is high that this is a test harness defect and not a product hang, because production has no act queue. The timed-out test leaves its act scope open, which very likely causes the other three failures: they pass alone and fail only after this case. Plan U01 rule 6 and the sign-in test text ask for this shape, so the plan wording is the source.",
+      "fix": "Keep the promise outside act and trigger in a synchronous act, as the existing tests do at lines 1486-1495: `const finalizedAppPromise = waitForFinalizedApp(preparedApp); if (trigger) act(() => trigger()); await act(async () => { finalizedApp = await finalizedAppPromise; });`. This intentionally departs from U01 rule 6, so the fix brief must not restate that rule. Re-run the whole describe to confirm the three cascade failures clear."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "line": 2250,
+      "issue": "No test reaches `markFinalized()` on the error path at prepareSpecializedApp.tsx:777. The plan's 'What finalized means' decision requires that path so tolerance does not outlive finalization (FR-4), but deleting that line would fail no test. The plan's test list omits this case.",
+      "fix": "Add one case to the 'useRouteRef during app bootstrap' describe that makes finalization fail so it goes through `finalizeFromBootstrapError`, then assert a mounted core element stops showing the placeholder and `No path for` reaches the error API."
+    }
+  ],
+  "passing_checks": [
+    "Correctness: all product files match U03-U07 and D-1/D-2; both finalization paths mark finalized last; no product defect found.",
+    "Compatibility: APIs without the lifecycle key, including CompatRouteResolutionApi, count as finalized; the Symbol.for key survives bundled copies.",
+    "Type safety: casts and RouteFunc<any> are the ones the plan specifies; typecheck passes.",
+    "Sensitive files: no manifest, env, CLAUDE.md or config file touched.",
+    "Changeset and docs: match U08 and U09; all three published packages are covered.",
+    "API reports: frontend-plugin-api exit 1 is pre-existing and its report is byte-identical before and after.",
+    "Authz, PII: not applicable. Env fixtures: skipped for a bugfix intent."
+  ],
+  "refinement_packets": []
+}

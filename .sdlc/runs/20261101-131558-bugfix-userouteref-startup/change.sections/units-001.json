@@ -1,0 +1,196 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Reproduces the startup crash with a real prepared app and pins bootstrap, finalization, compat and wiring-error behaviour of both useRouteRef hooks.",
+    "rules": [
+      "Every case sits in the existing describe 'useRouteRef during app bootstrap', so the red check `-t during.app.bootstrap` selects these cases and no others.",
+      "The describe's helpers stay as they are, apart from `finalizeApp`: `noSignInAppPlugin`, `makeTestPlugin`, `makeErrorCapture`, `makeCoreElement`, `makeFrontendElement` and `renderBootstrap`.",
+      "`finalizeApp` keeps its name, parameters and returned value. It calls `waitForFinalizedApp(preparedApp)` first, fires the optional trigger in a synchronous `act(() => { trigger?.(); })`, then runs `await act(async () => { finalizedApp = await finalizedAppPromise; })` (Gate 3, R-6). The trigger has flushed before that callback starts, so the wait cannot deadlock. Its callers do not change, and they still call `rerender(finalizedApp.element)`, the swap PreparedAppRoot does in createApp.",
+      "The new case makes finalization fail through `predicateContextLoader.load()`, the path that really reaches the catch in the finalization controller. A plugin with `pluginId: 'permission'` provides `localPermissionApiRef` through `ApiBlueprint.make`, with `factory: () => ({ authorize })` and `const authorize = jest.fn().mockRejectedValue(new Error('Permission backend unavailable'))`. That plugin also holds a root element shaped like lines 1113-1121, with `name: 'gated-element'` and `if: { permissions: { $contains: 'test.gated' } }`.",
+      "The predicate sits on that root element because a deferred root keeps its `if`: on a bootstrap-visible extension `classifyBootstrapTree` clears it before the references are collected, and finalization takes the normal path. A throwing feature flags API is no substitute: without sign-in it throws synchronously out of `onFinalized`, past the catch.",
+      "The new case does not call `rerender(finalizedApp.element)`. Its assertions read the bootstrap element that stayed mounted, because the finalized element's throwing child replaces the whole of AppRouter, root elements included, through app/root's boundary.",
+      "The new case does not assert on `finalizedApp.errors`: it is undefined on both finalization paths when nothing was collected.",
+      "Compare the error helper's result to [] as the first bootstrap assertion.",
+      "No case navigates, and each mount counter must end at exactly one call, so a remount fails the test.",
+      "Assert with `screen` and `findBy*`, in the file's `await expect(screen.findByText(...)).resolves.toBeInTheDocument()` style."
+    ],
+    "sites": [
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 43,
+        "to": 43,
+        "first_line": "} from './prepareSpecializedApp';",
+        "rule": "Add `import { localPermissionApiRef } from './predicates';`."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 2021,
+        "to": 2032,
+        "first_line": "async function finalizeApp(",
+        "last_line": "}",
+        "rule": "Rewrite `finalizeApp` to the shape the rules give, keeping its name, parameters and returned value."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 2249,
+        "to": 2249,
+        "first_line": "});",
+        "rule": "Add the new case here, after 'catches a finalization between render and subscribe' and inside the describe."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "lines": [
+        2226,
+        2249
+      ],
+      "reason": "The last case of the describe, which the new case follows in shape."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-app-api/src/wiring/predicates.ts",
+        "lines": [
+          68,
+          144
+        ],
+        "reason": "localPermissionApiRef, and the load path whose rejected authorize call fails finalization."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-4",
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4"
+    ],
+    "tests": [
+      {
+        "name": "keeps both hooks working from bootstrap through finalization",
+        "given": "an app with no sign-in page and two root elements: one calls the core hook and renders `<Link to={routeFunc()}>Core link</Link>` plus the text `Core route: ${routeFunc()}`, the other calls the frontend hook and renders `Frontend route: ${routeFunc?.() ?? 'none'}`",
+        "expect": "at bootstrap no error is posted, the texts are 'Core route: #' and 'Frontend route: none', and the link's href is '/'; after finalization both texts end in '/target', the href is '/target', and each element mounted exactly once"
+      },
+      {
+        "name": "tolerates an unresolved route behind a sign-in page",
+        "given": "the core element plus a sign-in page override, with `finalizeApp` firing the captured onSignInSuccess as its trigger",
+        "expect": "'Custom Sign In' and 'Core route: #' show with no error posted; after sign-in and finalization the text is 'Core route: /target' and the element mounted exactly once"
+      },
+      {
+        "name": "refreshes both hooks under compatWrapper",
+        "given": "the same two elements as the first case, each element passed through compatWrapper",
+        "expect": "'Core route: #' and 'Frontend route: none' at bootstrap with no error posted; both end in '/target' after finalization, each element mounted exactly once"
+      },
+      {
+        "name": "keeps wiring errors visible once finalized",
+        "given": "a root element calling the core hook with `createCoreRouteRef({ id: 'unmounted' })`, which nothing mounts, and a root element rendering `compatWrapper(<Routable />)`, where Routable comes from `createPlugin({ id: 'legacy' }).provide(createRoutableExtension({ name: 'Routable', component: async () => () => <div>Routable Content</div>, mountPoint: createCoreRouteRef({ id: 'unmounted-mount-point' }) }))`",
+        "expect": "at bootstrap no error is posted and 'Routable Content' shows; after finalization the error helper returns one entry containing 'No path for', and `screen.findAllByText(/was not discovered in the app element tree/)` finds the mount point check's message"
+      },
+      {
+        "name": "catches a finalization between render and subscribe",
+        "given": "the core element also calling `preparedApp.finalize()` once in a `useLayoutEffect`, which runs after render and before the hook's passive subscribe effect",
+        "expect": "with no onFinalized call and no rerender, `findByText('Core route: /target')` resolves, no error is posted, and the element mounted exactly once"
+      },
+      {
+        "name": "ends the tolerance when finalization fails",
+        "given": "`noSignInAppPlugin`, the core element, the error capture and the 'permission' plugin from the rules, whose `authorize` rejects, finalized with `await finalizeApp(preparedApp)`",
+        "expect": "at bootstrap no error is posted and 'Core route: #' shows; after finalization `authorize` was called once, the error helper returns one entry containing 'No path for', `screen.queryByText('Core route: #')` is null, and the element mounted exactly once. The route is absent because the page sits behind the throwing child, so this entry appears only if the bootstrap-error path marks the app finalized"
+      }
+    ],
+    "checks": [
+      "format",
+      "lint"
+    ],
+    "red_checks": [
+      "red"
+    ]
+  },
+  {
+    "id": "U02",
+    "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Pins the core hook against a fake API carrying the lifecycle signal, and guards the legacy and signal-less behaviour that must not change.",
+    "rules": [
+      "The reproducing case sits in a new describe named 'during app bootstrap', nested in the 'new app system' describe. The two guard cases sit outside it, so the red check judges the reproducing case only.",
+      "The fake API is `{ resolve, [Symbol.for('@backstage/frontend-plugin-api:route-resolution-lifecycle')]: { isFinalized, subscribe } }`. Spell the key out literally, because it pins the wire contract and U03's file does not exist when this test first runs. `subscribe` adds to a Set and returns a remover. A local `finalize()` sets the flag and calls the listeners.",
+      "Existing cases stay exactly as they are; only the listed sites change."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { renderHook } from '@testing-library/react';",
+        "rule": "Import line only: also import `act`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 164,
+        "to": 164,
+        "first_line": "});",
+        "rule": "Add the legacy guard case at the end of the 'old app system' describe."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 218,
+        "to": 218,
+        "first_line": "});",
+        "rule": "Add the signal-less guard case, then the nested 'during app bootstrap' describe, at the end of the 'new app system' describe."
+      }
+    ],
+    "style_from": {
+      "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+      "lines": [
+        167,
+        218
+      ],
+      "reason": "renderHook with a TestApiProvider and MemoryRouter wrapper."
+    },
+    "depends_on": [],
+    "covers": [
+      "FR-2",
+      "FR-3",
+      "FR-5",
+      "FR-6",
+      "NFR-1",
+      "NFR-2",
+      "AC-5"
+    ],
+    "tests": [
+      {
+        "name": "should keep its errors without a route resolution API",
+        "given": "no route resolution API, first with `context.set({ 1: { resolve: () => undefined } })`, then after `context.reset()`",
+        "expect": "rendering the hook throws 'No path for' in the first setup and 'Routing context is not available' in the second"
+      },
+      {
+        "name": "should throw for an unresolved route when the API has no lifecycle signal",
+        "given": "`{ resolve: () => undefined }` as the route resolution API and a non-optional route ref",
+        "expect": "rendering the hook throws 'No path for'"
+      },
+      {
+        "name": "returns a stable placeholder and then the real route function",
+        "given": "the fake API not finalized, with `resolve` returning undefined and a render counter in the hook callback",
+        "expect": "`result.current()` is '#' and the function is the same one after `rerender()`; after `resolve` starts returning `() => '/target'` and `act(() => finalize())` runs with the pathname unchanged, `result.current()` is '/target' and the counter rose by exactly one"
+      }
+    ],
+    "checks": [
+      "format",
+      "lint"
+    ],
+    "red_checks": [
+      "red"
+    ]
+  }
+]

@@ -21,6 +21,7 @@ import { RouteRef } from './RouteRef';
 import { SubRouteRef } from './SubRouteRef';
 import { ExternalRouteRef } from './ExternalRouteRef';
 import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
+import { useRouteResolutionFinalized } from '../apis/definitions/RouteResolutionLifecycle';
 
 /**
  * React hook for constructing URLs to routes.
@@ -28,6 +29,10 @@ import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
  * @remarks
  *
  * See {@link https://backstage.io/docs/plugins/composability#routing-system}
+ *
+ * While the app is bootstrapping, a route that is not available yet resolves to
+ * `undefined`, and the hook returns the route function once the app is
+ * finalized, with no navigation needed.
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`, or `undefined` if the route is not available.
@@ -41,10 +46,12 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const finalized = useRouteResolutionFinalized(routeResolutionApi);
 
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, finalized],
   );
 
   return routeFunc;

@@ -30,6 +30,9 @@ import {
   useApi,
   analyticsApiRef,
   createExtensionDataRef,
+  AppRootElementBlueprint,
+  PageBlueprint,
+  errorApiRef,
 } from '@backstage/frontend-plugin-api';
 import { act, render, screen } from '@testing-library/react';
 import { createSpecializedApp } from './createSpecializedApp';
@@ -38,18 +41,32 @@ import {
   prepareSpecializedApp,
   PreparedSpecializedApp,
 } from './prepareSpecializedApp';
+import { localPermissionApiRef } from './predicates';
 import { mockApis, TestApiRegistry } from '@backstage/test-utils';
 import {
   configApiRef,
   featureFlagsApiRef,
   IdentityApi,
   identityApiRef,
+  RouteRef as CoreRouteRef,
+  createPlugin,
+  createRoutableExtension,
+  createRouteRef as createCoreRouteRef,
+  useRouteRef as useCoreRouteRef,
 } from '@backstage/core-plugin-api';
-import { MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter } from 'react-router-dom';
 import { ApiProvider, ConfigReader } from '@backstage/core-app-api';
-import { ComponentType, Fragment, useEffect, useState } from 'react';
+import {
+  ComponentType,
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from 'react';
 import appPluginOriginal from '@backstage/plugin-app';
 import { z } from 'zod/v4';
+// eslint-disable-next-line @backstage/no-relative-monorepo-imports
+import { compatWrapper } from '../../../core-compat-api/src/compatWrapper/compatWrapper';
 
 const signInPageComponentDataRef = createExtensionDataRef<
   ComponentType<{ onSignInSuccess(identity: IdentityApi): void }>
@@ -1910,6 +1927,387 @@ describe('createSpecializedApp', () => {
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
+    });
+  });
+
+  describe('useRouteRef during app bootstrap', () => {
+    const pageRouteRef = createRouteRef();
+    const noSignInAppPlugin = appPlugin.withOverrides({
+      extensions: [
+        appPlugin.getExtension('sign-in-page:app').override({ disabled: true }),
+      ],
+    });
+
+    function makeTestPlugin(elements: Record<string, JSX.Element>) {
+      return createFrontendPlugin({
+        pluginId: 'test',
+        routes: { page: pageRouteRef },
+        extensions: [
+          PageBlueprint.make({
+            params: {
+              path: '/target',
+              routeRef: pageRouteRef,
+              loader: async () => <div>Target Page</div>,
+            },
+          }),
+          ...Object.entries(elements).map(([name, element]) =>
+            AppRootElementBlueprint.make({ name, params: { element } }),
+          ),
+        ],
+      });
+    }
+
+    function makeErrorCapture() {
+      const post = jest.fn();
+      return {
+        module: createFrontendModule({
+          pluginId: 'app',
+          extensions: [
+            ApiBlueprint.make({
+              params: defineParams =>
+                defineParams({
+                  api: errorApiRef,
+                  deps: {},
+                  factory: () =>
+                    ({
+                      post,
+                      error$: jest.fn(),
+                    } as unknown as typeof errorApiRef.T),
+                }),
+            }),
+          ],
+        }),
+        getErrors: () => post.mock.calls.map(([error]) => String(error)),
+      };
+    }
+
+    function makeCoreElement(onMount: () => void, onLayoutEffect?: () => void) {
+      function CoreElement() {
+        const routeFunc = useCoreRouteRef(
+          pageRouteRef as unknown as CoreRouteRef,
+        );
+        useLayoutEffect(() => {
+          onLayoutEffect?.();
+        }, []);
+        useEffect(() => {
+          onMount();
+        }, []);
+        return (
+          <div>
+            <Link to={routeFunc()}>Core link</Link>
+            <div>{`Core route: ${routeFunc()}`}</div>
+          </div>
+        );
+      }
+      return <CoreElement />;
+    }
+
+    function makeFrontendElement(onMount: () => void) {
+      function FrontendElement() {
+        const routeFunc = useRouteRef(pageRouteRef);
+        useEffect(() => {
+          onMount();
+        }, []);
+        return <div>{`Frontend route: ${routeFunc?.() ?? 'none'}`}</div>;
+      }
+      return <FrontendElement />;
+    }
+
+    async function renderBootstrap(preparedApp: PreparedSpecializedApp) {
+      const result = render(preparedApp.getBootstrapApp().element);
+      await act(async () => {});
+      return result;
+    }
+
+    async function finalizeApp(
+      preparedApp: PreparedSpecializedApp,
+      trigger?: () => void,
+    ) {
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      // Sign-in success is a state update, and finalization needs the render it
+      // causes, so it has to flush before the wait below starts.
+      act(() => {
+        trigger?.();
+      });
+      let finalizedApp: FinalizedSpecializedApp | undefined;
+      await act(async () => {
+        finalizedApp = await finalizedAppPromise;
+      });
+      return finalizedApp!;
+    }
+
+    it('keeps both hooks working from bootstrap through finalization', async () => {
+      const errors = makeErrorCapture();
+      const coreMounted = jest.fn();
+      const frontendMounted = jest.fn();
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          makeTestPlugin({
+            core: makeCoreElement(coreMounted),
+            frontend: makeFrontendElement(frontendMounted),
+          }),
+          errors.module,
+        ],
+      });
+
+      const { rerender } = await renderBootstrap(preparedApp);
+
+      expect(errors.getErrors()).toEqual([]);
+      await expect(
+        screen.findByText('Core route: #'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('Frontend route: none'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByRole('link', { name: 'Core link' }),
+      ).resolves.toHaveAttribute('href', '/');
+
+      const finalizedApp = await finalizeApp(preparedApp);
+      rerender(finalizedApp.element);
+
+      await expect(
+        screen.findByText('Core route: /target'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('Frontend route: /target'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByRole('link', { name: 'Core link' }),
+      ).resolves.toHaveAttribute('href', '/target');
+      expect(errors.getErrors()).toEqual([]);
+      expect(coreMounted).toHaveBeenCalledTimes(1);
+      expect(frontendMounted).toHaveBeenCalledTimes(1);
+    });
+
+    it('tolerates an unresolved route behind a sign-in page', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const errors = makeErrorCapture();
+      const coreMounted = jest.fn();
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPlugin,
+          makeTestPlugin({ core: makeCoreElement(coreMounted) }),
+          errors.module,
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPlugin.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const { rerender } = await renderBootstrap(preparedApp);
+
+      expect(errors.getErrors()).toEqual([]);
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('Core route: #'),
+      ).resolves.toBeInTheDocument();
+
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      const finalizedApp = await finalizeApp(preparedApp, () =>
+        triggerSignInSuccess(identityApi),
+      );
+      rerender(finalizedApp.element);
+
+      await expect(
+        screen.findByText('Core route: /target'),
+      ).resolves.toBeInTheDocument();
+      expect(errors.getErrors()).toEqual([]);
+      expect(coreMounted).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes both hooks under compatWrapper', async () => {
+      const errors = makeErrorCapture();
+      const coreMounted = jest.fn();
+      const frontendMounted = jest.fn();
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          makeTestPlugin({
+            core: compatWrapper(makeCoreElement(coreMounted)),
+            frontend: compatWrapper(makeFrontendElement(frontendMounted)),
+          }),
+          errors.module,
+        ],
+      });
+
+      const { rerender } = await renderBootstrap(preparedApp);
+
+      expect(errors.getErrors()).toEqual([]);
+      await expect(
+        screen.findByText('Core route: #'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('Frontend route: none'),
+      ).resolves.toBeInTheDocument();
+
+      const finalizedApp = await finalizeApp(preparedApp);
+      rerender(finalizedApp.element);
+
+      await expect(
+        screen.findByText('Core route: /target'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('Frontend route: /target'),
+      ).resolves.toBeInTheDocument();
+      expect(errors.getErrors()).toEqual([]);
+      expect(coreMounted).toHaveBeenCalledTimes(1);
+      expect(frontendMounted).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps wiring errors visible once finalized', async () => {
+      const errors = makeErrorCapture();
+      const unmountedRouteRef = createCoreRouteRef({ id: 'unmounted' });
+      function UnmountedRouteElement() {
+        useCoreRouteRef(unmountedRouteRef);
+        return <div>Unmounted Route</div>;
+      }
+      const Routable = createPlugin({ id: 'legacy' }).provide(
+        createRoutableExtension({
+          name: 'Routable',
+          component: async () => () => <div>Routable Content</div>,
+          mountPoint: createCoreRouteRef({ id: 'unmounted-mount-point' }),
+        }),
+      );
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          makeTestPlugin({
+            unmounted: <UnmountedRouteElement />,
+            routable: compatWrapper(<Routable />),
+          }),
+          errors.module,
+        ],
+      });
+
+      const { rerender } = await renderBootstrap(preparedApp);
+
+      expect(errors.getErrors()).toEqual([]);
+      await expect(
+        screen.findByText('Routable Content'),
+      ).resolves.toBeInTheDocument();
+
+      const finalizedApp = await finalizeApp(preparedApp);
+      rerender(finalizedApp.element);
+
+      await expect(
+        screen.findAllByText(/was not discovered in the app element tree/),
+      ).resolves.not.toHaveLength(0);
+      expect(errors.getErrors()).toEqual([
+        expect.stringContaining('No path for'),
+      ]);
+    });
+
+    it('catches a finalization between render and subscribe', async () => {
+      const errors = makeErrorCapture();
+      const coreMounted = jest.fn();
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          makeTestPlugin({
+            core: makeCoreElement(coreMounted, () => {
+              preparedApp.finalize();
+            }),
+          }),
+          errors.module,
+        ],
+      });
+
+      await renderBootstrap(preparedApp);
+
+      expect(errors.getErrors()).toEqual([]);
+      await expect(
+        screen.findByText('Core route: /target'),
+      ).resolves.toBeInTheDocument();
+      expect(errors.getErrors()).toEqual([]);
+      expect(coreMounted).toHaveBeenCalledTimes(1);
+    });
+
+    it('ends the tolerance when finalization fails', async () => {
+      const errors = makeErrorCapture();
+      const coreMounted = jest.fn();
+      const authorize = jest
+        .fn()
+        .mockRejectedValue(new Error('Permission backend unavailable'));
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          makeTestPlugin({ core: makeCoreElement(coreMounted) }),
+          errors.module,
+          createFrontendPlugin({
+            pluginId: 'permission',
+            extensions: [
+              ApiBlueprint.make({
+                params: defineParams =>
+                  defineParams({
+                    api: localPermissionApiRef,
+                    deps: {},
+                    factory: () => ({ authorize }),
+                  }),
+              }),
+              // A deferred root keeps its predicate, so finalization has to
+              // load the permission and fails when that rejects.
+              createExtension({
+                name: 'gated-element',
+                attachTo: { id: 'app/root', input: 'elements' },
+                if: { permissions: { $contains: 'test.gated' } },
+                output: [coreExtensionData.reactElement],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Gated Element</div>),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      await renderBootstrap(preparedApp);
+
+      expect(errors.getErrors()).toEqual([]);
+      await expect(
+        screen.findByText('Core route: #'),
+      ).resolves.toBeInTheDocument();
+
+      // No rerender here: the finalized element replaces the whole of AppRouter
+      // with the error, so this reads the bootstrap element that stayed mounted.
+      await finalizeApp(preparedApp);
+
+      expect(authorize).toHaveBeenCalledTimes(1);
+      expect(errors.getErrors()).toEqual([
+        expect.stringContaining('No path for'),
+      ]);
+      expect(screen.queryByText('Core route: #')).not.toBeInTheDocument();
+      expect(coreMounted).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -29,6 +29,8 @@ import {
   RouteRef,
   SubRouteRef,
 } from './types';
+// eslint-disable-next-line @backstage/no-relative-monorepo-imports
+import { useRouteResolutionFinalized } from '../../../frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle';
 
 /**
  * @internal
@@ -51,12 +53,21 @@ function useRouteResolutionApi(): RouteResolutionApi | undefined {
   }
 }
 
+// Used until the app is finalized. '#' stays on the current page whether it
+// reaches a router link, navigate or a plain anchor.
+const bootstrapRouteFunc: RouteFunc<any> = () => '#';
+
 /**
  * React hook for constructing URLs to routes.
  *
  * @remarks
  *
  * See {@link https://backstage.io/docs/plugins/composability#routing-system}
+ *
+ * While the app is bootstrapping, a non-optional route that is not available
+ * yet resolves to a placeholder function that returns `#`. The hook returns the
+ * real route function once the app is finalized, and a route that is still
+ * missing then throws an error.
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`.
@@ -73,6 +84,11 @@ export function useRouteRef<Optional extends boolean, Params extends AnyParams>(
  *
  * See {@link https://backstage.io/docs/plugins/composability#routing-system}
  *
+ * While the app is bootstrapping, a non-optional route that is not available
+ * yet resolves to a placeholder function that returns `#`. The hook returns the
+ * real route function once the app is finalized, and a route that is still
+ * missing then throws an error.
+ *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`.
  * @public
@@ -87,6 +103,11 @@ export function useRouteRef<Params extends AnyParams>(
  * @remarks
  *
  * See {@link https://backstage.io/docs/plugins/composability#routing-system}
+ *
+ * While the app is bootstrapping, a non-optional route that is not available
+ * yet resolves to a placeholder function that returns `#`. The hook returns the
+ * real route function once the app is finalized, and a route that is still
+ * missing then throws an error.
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`.
@@ -106,6 +127,8 @@ export function useRouteRef<Params extends AnyParams>(
 
   const resolver = versionedContext?.atVersion(1);
 
+  const finalized = useRouteResolutionFinalized(routeResolutionApi);
+
   const newRouteFunc = useMemo(() => {
     if (!routeResolutionApi) {
       return null;
@@ -118,16 +141,21 @@ export function useRouteRef<Params extends AnyParams>(
     } catch {
       return null;
     }
-  }, [routeResolutionApi, routeRef, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeResolutionApi, routeRef, pathname, finalized]);
 
   const legacyRouteFunc = useMemo(
     () => resolver && resolver.resolve(routeRef, { pathname }),
-    [resolver, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resolver, routeRef, pathname, finalized],
   );
 
   if (newRouteFunc !== null) {
     const isOptional = 'optional' in routeRef && routeRef.optional;
     if (!newRouteFunc && !isOptional) {
+      if (!finalized) {
+        return bootstrapRouteFunc as RouteFunc<Params>;
+      }
       throw new Error(`No path for ${routeRef}`);
     }
     return newRouteFunc;

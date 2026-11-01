@@ -1,0 +1,239 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Reproduces the startup crash with a real prepared app and pins bootstrap, finalization, compat and wiring-error behaviour of both useRouteRef hooks.",
+      "rules": [
+        "Every new case sits in one new describe named 'useRouteRef during app bootstrap', so the red check `-t during.app.bootstrap` selects these cases and no others.",
+        "Fixture: `const pageRouteRef = createRouteRef()` and a frontend plugin 'test' with `routes: { page: pageRouteRef }` holding `PageBlueprint.make({ params: { path: '/target', routeRef: pageRouteRef, loader: async () => <div>Target Page</div> } })`. Use the outer describe's `appPlugin`, which keeps that page behind app/root.children.",
+        "Root elements are `AppRootElementBlueprint.make({ name, params: { element } })` extensions of plugin 'test'. Call the core hook as `useCoreRouteRef(pageRouteRef as unknown as CoreRouteRef)`.",
+        "Capture errors with a module on plugin 'app' whose `ApiBlueprint.make` provides errorApiRef, shaped like the featureFlagsApiRef override at lines 1707-1714, with `{ post: jest.fn(), error$: jest.fn() } as unknown as typeof errorApiRef.T`. A local helper returns `post.mock.calls.map(([error]) => String(error))`.",
+        "Compare that helper's result to [] as the first bootstrap assertion, so on the unfixed code the test fails printing the `No path for` message (AC-1).",
+        "Render with `const { rerender } = render(preparedApp.getBootstrapApp().element)`. Finalize inside `await act(async () => { ... })`, assigning the result of `waitForFinalizedApp(preparedApp)` to a local, then call `rerender(finalizedApp.element)`. This is the swap PreparedAppRoot does in createApp.",
+        "Each element reports mounts from a `useEffect` with empty deps to a jest.fn, so a remount fails the test. The location stays at the jsdom default '/', and no case navigates.",
+        "Assert with `screen` and `findBy*`, in the file's `await expect(screen.findByText(...)).resolves.toBeInTheDocument()` style."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32,
+          "first_line": "createExtensionDataRef,",
+          "rule": "Add `AppRootElementBlueprint`, `PageBlueprint` and `errorApiRef` to this import."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 46,
+          "to": 46,
+          "first_line": "identityApiRef,",
+          "rule": "Add `RouteRef as CoreRouteRef`, `createPlugin`, `createRoutableExtension`, `createRouteRef as createCoreRouteRef` and `useRouteRef as useCoreRouteRef` to this import."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 48,
+          "to": 48,
+          "first_line": "import { MemoryRouter } from 'react-router-dom';",
+          "rule": "Import line only: also import `Link`."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 50,
+          "to": 50,
+          "first_line": "import { ComponentType, Fragment, useEffect, useState } from 'react';",
+          "rule": "Import line only: also import `useLayoutEffect`."
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52,
+          "first_line": "import { z } from 'zod/v4';",
+          "rule": "Add `import { compatWrapper } from '../../../core-compat-api/src/compatWrapper/compatWrapper';` with the eslint-disable line above it. This package has no dependency on core-compat-api, and package.json is outside the write contract."
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 1914,
+          "to": 1914,
+          "first_line": "});",
+          "rule": "Add the new describe here, after the `prepareSpecializedApp` describe closes and inside the top-level describe."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "lines": [
+          1660,
+          1750
+        ],
+        "reason": "A root element, a sign-in page override and an API override in a prepared app."
+      },
+      "uses": [
+        {
+          "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+          "lines": [
+            17,
+            94
+          ],
+          "reason": "Existing imports, the helpers renderPreparedBootstrap and waitForFinalizedApp, and the outer appPlugin."
+        },
+        {
+          "path": "packages/frontend-plugin-api/src/blueprints/AppRootElementBlueprint.tsx",
+          "reason": "The params the root element extension takes."
+        },
+        {
+          "path": "packages/core-compat-api/src/compatWrapper/compatWrapper.tsx",
+          "reason": "compatWrapper's signature."
+        },
+        {
+          "path": "packages/core-plugin-api/src/extensions/extensions.tsx",
+          "lines": [
+            76,
+            112
+          ],
+          "reason": "The mount point check whose error message the wiring-error case looks for."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4"
+      ],
+      "tests": [
+        {
+          "name": "keeps both hooks working from bootstrap through finalization",
+          "given": "an app with no sign-in page and two root elements: one calls the core hook and renders `<Link to={routeFunc()}>Core link</Link>` plus the text `Core route: ${routeFunc()}`, the other calls the frontend hook and renders `Frontend route: ${routeFunc?.() ?? 'none'}`",
+          "expect": "at bootstrap no error is posted, the texts are 'Core route: #' and 'Frontend route: none', and the link's href is '/'; after finalization both texts end in '/target', the href is '/target', and each element mounted exactly once"
+        },
+        {
+          "name": "tolerates an unresolved route behind a sign-in page",
+          "given": "the core element plus a sign-in page override as at lines 1877-1887, finalized by calling the captured onSignInSuccess inside the act",
+          "expect": "'Custom Sign In' and 'Core route: #' show with no error posted; after sign-in and finalization the text is 'Core route: /target' and the element mounted exactly once"
+        },
+        {
+          "name": "refreshes both hooks under compatWrapper",
+          "given": "the same two elements as the first case, each element passed through compatWrapper",
+          "expect": "'Core route: #' and 'Frontend route: none' at bootstrap with no error posted; both end in '/target' after finalization, each element mounted exactly once"
+        },
+        {
+          "name": "keeps wiring errors visible once finalized",
+          "given": "a root element calling the core hook with `createCoreRouteRef({ id: 'unmounted' })`, which nothing mounts, and a root element rendering `compatWrapper(<Routable />)`, where Routable comes from `createPlugin({ id: 'legacy' }).provide(createRoutableExtension({ name: 'Routable', component: async () => () => <div>Routable Content</div>, mountPoint: createCoreRouteRef({ id: 'unmounted-mount-point' }) }))`",
+          "expect": "at bootstrap no error is posted and 'Routable Content' shows; after finalization the error helper returns one entry containing 'No path for', and `screen.findAllByText(/was not discovered in the app element tree/)` finds the mount point check's message"
+        },
+        {
+          "name": "catches a finalization between render and subscribe",
+          "given": "the core element also calling `preparedApp.finalize()` once in a `useLayoutEffect`, which runs after render and before the hook's passive subscribe effect",
+          "expect": "with no onFinalized call and no rerender, `findByText('Core route: /target')` resolves, no error is posted, and the element mounted exactly once"
+        }
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ],
+      "red_checks": [
+        "red"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Pins the core hook against a fake API carrying the lifecycle signal, and guards the legacy and signal-less behaviour that must not change.",
+      "rules": [
+        "The reproducing case sits in a new describe named 'during app bootstrap', nested in the 'new app system' describe. The two guard cases sit outside it, so the red check judges the reproducing case only.",
+        "The fake API is `{ resolve, [Symbol.for('@backstage/frontend-plugin-api:route-resolution-lifecycle')]: { isFinalized, subscribe } }`. Spell the key out literally, because it pins the wire contract and U03's file does not exist when this test first runs. `subscribe` adds to a Set and returns a remover. A local `finalize()` sets the flag and calls the listeners.",
+        "Existing cases stay exactly as they are; only the listed sites change."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { renderHook } from '@testing-library/react';",
+          "rule": "Import line only: also import `act`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 164,
+          "to": 164,
+          "first_line": "});",
+          "rule": "Add the legacy guard case at the end of the 'old app system' describe."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 218,
+          "to": 218,
+          "first_line": "});",
+          "rule": "Add the signal-less guard case, then the nested 'during app bootstrap' describe, at the end of the 'new app system' describe."
+        }
+      ],
+      "style_from": {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+        "lines": [
+          167,
+          218
+        ],
+        "reason": "renderHook with a TestApiProvider and MemoryRouter wrapper."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "FR-6",
+        "NFR-1",
+        "NFR-2",
+        "AC-5"
+      ],
+      "tests": [
+        {
+          "name": "should keep its errors without a route resolution API",
+          "given": "no route resolution API, first with `context.set({ 1: { resolve: () => undefined } })`, then after `context.reset()`",
+          "expect": "rendering the hook throws 'No path for' in the first setup and 'Routing context is not available' in the second"
+        },
+        {
+          "name": "should throw for an unresolved route when the API has no lifecycle signal",
+          "given": "`{ resolve: () => undefined }` as the route resolution API and a non-optional route ref",
+          "expect": "rendering the hook throws 'No path for'"
+        },
+        {
+          "name": "returns a stable placeholder and then the real route function",
+          "given": "the fake API not finalized, with `resolve` returning undefined and a render counter in the hook callback",
+          "expect": "`result.current()` is '#' and the function is the same one after `rerender()`; after `resolve` starts returning `() => '/target'` and `act(() => finalize())` runs with the pathname unchanged, `result.current()` is '/target' and the counter rose by exactly one"
+        }
+      ],
+      "checks": [
+        "format",
+        "lint"
+      ],
+      "red_checks": [
+        "red"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx": "5b4498841b202c82eac68a3281853980e7f96261af1a831be4c057d1ee49fd74",
+    "packages/frontend-plugin-api/src/blueprints/AppRootElementBlueprint.tsx": "b92b425beeeda9c864dcdc91c0a5bc5f7efccf75c19d34b7650fedd15e854a05",
+    "packages/core-compat-api/src/compatWrapper/compatWrapper.tsx": "33c99321ac24735d2d4108d5f77839dded1727b2c5ff7b5d73ca14ce97d13f50",
+    "packages/core-plugin-api/src/extensions/extensions.tsx": "baf5c35f37820d42996c7bb9f0424e4e7e17215a5a672a79833b5a3133cd1673",
+    "packages/core-plugin-api/src/routing/useRouteRef.test.tsx": "ef622c50a5dcc8ae5dbc62684ced7c2f51c515b89a99fd8a049dcd68930c3804"
+  }
+}

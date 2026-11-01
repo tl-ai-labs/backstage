@@ -1,0 +1,308 @@
+[
+  {
+    "id": "U03",
+    "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Defines the internal lifecycle contract between the route resolution API proxy and both useRouteRef hooks.",
+    "rules": [
+      "This file is not exported from definitions/index.ts or any other index. Say so in a short comment at the top of the file, with the reason: each package bundles its own copy of this file through a relative import, so the key is global.",
+      "Its only runtime import is `useEffect` and `useState` from 'react'. Import RouteResolutionApi with `import type` from './RouteResolutionApi', so a relative import from another package pulls in nothing else.",
+      "Define the key with the exact string `Symbol.for('@backstage/frontend-plugin-api:route-resolution-lifecycle')`, as an `export const` so its type is a unique symbol.",
+      "RouteResolutionLifecycle has `isFinalized(): boolean`, which moves from false to true at most once, and `subscribe(listener: () => void): () => void`, which returns the unsubscribe function.",
+      "useRouteResolutionFinalized reads the lifecycle from the API under the key through a cast. An undefined API, or an API without the key, has no lifecycle.",
+      "State is `useState(() => lifecycle?.isFinalized() ?? true)`.",
+      "In a `useEffect` with `[lifecycle]` deps: with no lifecycle, return undefined and set no state. Otherwise define `update` as `setFinalized(lifecycle.isFinalized())`, call `update()` once to catch a finalization between render and subscribe, and return `lifecycle.subscribe(update)`.",
+      "Return `lifecycle ? finalized : true`, so an API without the signal always counts as finalized.",
+      "Mark each export `@internal` in its TSDoc."
+    ],
+    "exports": [
+      {
+        "name": "routeResolutionLifecycleKey",
+        "kind": "const",
+        "params": [],
+        "returns": "unique symbol"
+      },
+      {
+        "name": "RouteResolutionLifecycle",
+        "kind": "interface",
+        "params": [],
+        "returns": "{ isFinalized(): boolean; subscribe(listener: () => void): () => void }"
+      },
+      {
+        "name": "useRouteResolutionFinalized",
+        "kind": "function",
+        "params": [
+          {
+            "name": "routeResolutionApi",
+            "type": "RouteResolutionApi | undefined"
+          }
+        ],
+        "returns": "boolean"
+      }
+    ],
+    "import_line": "import { useRouteResolutionFinalized } from '../apis/definitions/RouteResolutionLifecycle';",
+    "style_from": {
+      "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+      "reason": "Header, TSDoc and interface layout of the neighbouring definition."
+    },
+    "depends_on": ["U01", "U02"],
+    "covers": ["FR-6", "NFR-1", "NFR-2", "NFR-3", "NFR-4"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "RouteResolutionApiProxy carries the lifecycle signal and can be marked finalized once.",
+    "rules": [
+      "resolve, initialize and getRouteObjects stay unchanged.",
+      "subscribe on an already finalized proxy adds no listener and returns a no-op unsubscribe.",
+      "markFinalized does nothing on a second call. On the first call it sets the flag, copies the listeners, clears the Set, then calls each copied listener once."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 55,
+        "to": 55,
+        "first_line": "import { type ErrorCollector } from './createErrorCollector';",
+        "rule": "Import `routeResolutionLifecycleKey` and `type RouteResolutionLifecycle` from '../../../frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle', with the eslint-disable line above the import."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 115,
+        "to": 115,
+        "first_line": "#routeObjects: BackstageRouteObject[] | undefined;",
+        "rule": "Add `#finalized = false`, `#listeners = new Set<() => void>()` and `readonly [routeResolutionLifecycleKey]: RouteResolutionLifecycle = { isFinalized: ..., subscribe: ... }`, using arrow functions that read the private fields."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 164,
+        "to": 164,
+        "first_line": "}",
+        "rule": "Add the `markFinalized()` method after getRouteObjects, with a one-line comment that it is called once the final route info is in place."
+      }
+    ],
+    "exports": [
+      {
+        "name": "RouteResolutionApiProxy.markFinalized",
+        "kind": "method",
+        "params": [],
+        "returns": "void"
+      }
+    ],
+    "depends_on": ["U03"],
+    "covers": ["FR-3", "NFR-2"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U05",
+    "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Both finalization paths mark route resolution finalized as their last step before returning.",
+    "rules": [
+      "The call goes after the root element check, so a finalization that throws leaves the app in bootstrap and tolerance in place.",
+      "Do not change the bootstrap path, the finalization controller or any public type."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 707,
+        "to": 707,
+        "first_line": "return {",
+        "rule": "In finalizeFromSessionState, add `options.phase.routeResolutionApi.markFinalized();` followed by a blank line."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 775,
+        "to": 775,
+        "first_line": "return {",
+        "rule": "In finalizeFromBootstrapError, add `options.phase.routeResolutionApi.markFinalized();` followed by a blank line."
+      }
+    ],
+    "depends_on": ["U04"],
+    "covers": ["FR-3", "FR-4"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The frontend hook re-resolves once when the app finalizes, with no pathname change.",
+    "rules": [
+      "The return type and the `undefined` result for a route that is not available stay as they are."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 23,
+        "to": 23,
+        "first_line": "import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';",
+        "rule": "Add `import { useRouteResolutionFinalized } from '../apis/definitions/RouteResolutionLifecycle';`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 30,
+        "to": 30,
+        "first_line": "* See {@link https://backstage.io/docs/plugins/composability#routing-system}",
+        "rule": "Add a blank TSDoc line, then: while the app is bootstrapping, a route that is not available yet resolves to `undefined`, and the hook returns the route function once the app is finalized, with no navigation needed."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 43,
+        "to": 43,
+        "first_line": "const routeResolutionApi = useApi(routeResolutionApiRef);",
+        "rule": "Add `const finalized = useRouteResolutionFinalized(routeResolutionApi);`."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 47,
+        "to": 47,
+        "first_line": "[routeResolutionApi, routeRef, pathname],",
+        "rule": "Add `finalized` to the deps, with the eslint-disable line from the 'Refreshing the memos' decision above it."
+      }
+    ],
+    "depends_on": ["U03"],
+    "covers": ["FR-3", "FR-7", "NFR-1", "AC-3"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U07",
+    "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The core hook tolerates an unresolved non-optional ref only until the app is finalized, refreshes at finalization, and still throws for a real wiring error.",
+    "rules": [
+      "The placeholder applies only in the new-system branch, and only when `newRouteFunc` is undefined, the ref is not optional and `finalized` is false.",
+      "The legacy branch and its messages, including the `No path for` throw at line 146, do not change.",
+      "All new hook calls run before any throw, so hook order is the same on every render. The overload signatures do not change."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 31,
+        "to": 31,
+        "first_line": "} from './types';",
+        "rule": "Add `import { useRouteResolutionFinalized } from '../../../frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle';` with the eslint-disable line above it."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 52,
+        "to": 52,
+        "first_line": "}",
+        "rule": "Add `const bootstrapRouteFunc: RouteFunc<any> = () => '#';` with a short comment: used until the app is finalized, and '#' stays on the current page whether it reaches a router link, navigate or a plain anchor."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 59,
+        "to": 59,
+        "first_line": "* See {@link https://backstage.io/docs/plugins/composability#routing-system}",
+        "rule": "Add the TSDoc note: a blank TSDoc line, then: while the app is bootstrapping, a non-optional route that is not available yet resolves to a placeholder function that returns `#`. The hook returns the real route function once the app is finalized, and a route that is still missing then throws an error."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 74,
+        "to": 74,
+        "first_line": "* See {@link https://backstage.io/docs/plugins/composability#routing-system}",
+        "rule": "Add the same TSDoc note as S3."
+      },
+      {
+        "id": "S5",
+        "at": "insert_after",
+        "from": 89,
+        "to": 89,
+        "first_line": "* See {@link https://backstage.io/docs/plugins/composability#routing-system}",
+        "rule": "Add the same TSDoc note as S3."
+      },
+      {
+        "id": "S6",
+        "at": "insert_after",
+        "from": 107,
+        "to": 107,
+        "first_line": "const resolver = versionedContext?.atVersion(1);",
+        "rule": "Add a blank line and `const finalized = useRouteResolutionFinalized(routeResolutionApi);`."
+      },
+      {
+        "id": "S7",
+        "at": "replace",
+        "from": 121,
+        "to": 121,
+        "first_line": "}, [routeResolutionApi, routeRef, pathname]);",
+        "rule": "Add `finalized` to the deps, with the eslint-disable line from the 'Refreshing the memos' decision above it."
+      },
+      {
+        "id": "S8",
+        "at": "replace",
+        "from": 125,
+        "to": 125,
+        "first_line": "[resolver, routeRef, pathname],",
+        "rule": "Add `finalized` to the deps, with the same eslint-disable line above it."
+      },
+      {
+        "id": "S9",
+        "at": "insert_after",
+        "from": 130,
+        "to": 130,
+        "first_line": "if (!newRouteFunc && !isOptional) {",
+        "rule": "Inside this block, before the throw, add: if not `finalized`, `return bootstrapRouteFunc as RouteFunc<Params>;`."
+      }
+    ],
+    "depends_on": ["U03"],
+    "covers": ["FR-2", "FR-3", "FR-4", "FR-5", "FR-6", "FR-7", "NFR-1", "AC-2", "AC-3", "AC-4", "AC-6"],
+    "checks": ["format", "lint"]
+  },
+  {
+    "id": "U08",
+    "path": ".changeset/quiet-routes-wait.md",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Changeset covering the fix in the three published packages it changes.",
+    "rules": [
+      "Front matter: `'@backstage/core-plugin-api': patch`, `'@backstage/frontend-plugin-api': patch` and `'@backstage/frontend-app-api': patch`.",
+      "Body, one paragraph: Fixed `useRouteRef` in elements attached to `app/root.elements`. During app startup, a route that isn't available yet no longer crashes the element: `useRouteRef` from `@backstage/core-plugin-api` returns a temporary function that points at the current page, and `useRouteRef` from `@backstage/frontend-plugin-api` returns `undefined`. Both hooks return the real route function as soon as the app is finalized, with no navigation needed. A route that is still missing after that fails with the same error as before."
+    ],
+    "style_from": {
+      "path": ".changeset/calm-instances-specialize.md",
+      "reason": "Changeset front matter and layout."
+    },
+    "depends_on": ["U05", "U06", "U07"],
+    "covers": ["FR-7"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U09",
+    "path": "docs/frontend-system/architecture/10-app.md",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The phased app section explains how useRouteRef behaves in app root elements during bootstrap.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 97,
+        "to": 97,
+        "first_line": "## Plugin Info Resolution",
+        "rule": "Add this paragraph and a blank line: Routes behind `app/root.children` aren't available until the app is finalized, so an `app/root.elements` element that calls `useRouteRef` during bootstrap can't resolve them yet. The `useRouteRef` hook from `@backstage/frontend-plugin-api` returns `undefined` for such a route. The `useRouteRef` hook from `@backstage/core-plugin-api` returns a temporary function that returns `#`, so a link rendered at this point stays on the current page. Both hooks update as soon as the app is finalized, with no remount or navigation. If a non-optional route is still missing after finalization, the `@backstage/core-plugin-api` hook throws a `No path for` error."
+      }
+    ],
+    "depends_on": ["U05", "U06", "U07"],
+    "covers": ["FR-7"],
+    "checks": ["format"]
+  }
+]

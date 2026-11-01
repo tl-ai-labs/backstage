@@ -53,6 +53,11 @@ import {
 } from './FrontendApiRegistry';
 import { type ExtensionPredicateContext } from './predicates';
 import { type ErrorCollector } from './createErrorCollector';
+// eslint-disable-next-line @backstage/no-relative-monorepo-imports
+import {
+  routeResolutionLifecycleKey,
+  type RouteResolutionLifecycle,
+} from '../../../frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle';
 
 // Helps delay callers from reaching out to the API before the app tree has been materialized
 export class AppTreeApiProxy implements AppTreeApi {
@@ -113,6 +118,22 @@ export class AppTreeApiProxy implements AppTreeApi {
 export class RouteResolutionApiProxy implements RouteResolutionApi {
   #delegate: RouteResolutionApi | undefined;
   #routeObjects: BackstageRouteObject[] | undefined;
+  #finalized = false;
+  #listeners = new Set<() => void>();
+
+  readonly [routeResolutionLifecycleKey]: RouteResolutionLifecycle = {
+    isFinalized: () => this.#finalized,
+    subscribe: listener => {
+      if (this.#finalized) {
+        return () => {};
+      }
+
+      this.#listeners.add(listener);
+      return () => {
+        this.#listeners.delete(listener);
+      };
+    },
+  };
 
   private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   private readonly appBasePath: string;
@@ -161,6 +182,20 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
 
   getRouteObjects() {
     return this.#routeObjects;
+  }
+
+  // Called once the final route info is in place
+  markFinalized() {
+    if (this.#finalized) {
+      return;
+    }
+
+    this.#finalized = true;
+    const listeners = [...this.#listeners];
+    this.#listeners.clear();
+    for (const listener of listeners) {
+      listener();
+    }
   }
 }
 

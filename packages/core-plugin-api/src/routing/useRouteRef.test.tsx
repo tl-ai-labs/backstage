@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -162,6 +162,23 @@ describe('useRouteRef', () => {
 
       expect(resolve).toHaveBeenCalledTimes(1);
     });
+
+    it('should keep its errors without a route resolution API', () => {
+      const routeRef = createRouteRef({ id: 'ref1' });
+      const wrapper = ({ children }: PropsWithChildren<{}>) => (
+        <MemoryRouter initialEntries={['/my-page']} children={children} />
+      );
+
+      context.set({ 1: { resolve: () => undefined } });
+      expect(() =>
+        renderHook(() => useRouteRef(routeRef), { wrapper }),
+      ).toThrow('No path for');
+
+      context.reset();
+      expect(() =>
+        renderHook(() => useRouteRef(routeRef), { wrapper }),
+      ).toThrow('Routing context is not available');
+    });
   });
 
   describe('new app system', () => {
@@ -215,6 +232,86 @@ describe('useRouteRef', () => {
       });
 
       expect(renderedHook.result.current).toBeUndefined();
+    });
+
+    it('should throw for an unresolved route when the API has no lifecycle signal', () => {
+      const routeRef = createRouteRef({ id: 'ref1' });
+
+      const mockRouteResolutionApi: RouteResolutionApi = {
+        resolve: () => undefined,
+      };
+
+      const wrapper = ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider
+          apis={[[routeResolutionApiRef, mockRouteResolutionApi]]}
+        >
+          <MemoryRouter initialEntries={['/my-page']}>{children}</MemoryRouter>
+        </TestApiProvider>
+      );
+
+      expect(() =>
+        renderHook(() => useRouteRef(routeRef), { wrapper }),
+      ).toThrow('No path for');
+    });
+
+    describe('during app bootstrap', () => {
+      it('returns a stable placeholder and then the real route function', () => {
+        const routeRef = createRouteRef({ id: 'ref1' });
+        const resolve = jest.fn((): RouteFunc<any> | undefined => undefined);
+        const listeners = new Set<() => void>();
+        let finalized = false;
+
+        const finalize = () => {
+          finalized = true;
+          listeners.forEach(listener => listener());
+        };
+
+        const lifecycleKey = Symbol.for(
+          '@backstage/frontend-plugin-api:route-resolution-lifecycle',
+        );
+        const fakeApi = {
+          resolve,
+          [lifecycleKey]: {
+            isFinalized: () => finalized,
+            subscribe: (listener: () => void) => {
+              listeners.add(listener);
+              return () => {
+                listeners.delete(listener);
+              };
+            },
+          },
+        };
+
+        const wrapper = ({ children }: PropsWithChildren<{}>) => (
+          <TestApiProvider apis={[[routeResolutionApiRef, fakeApi]]}>
+            <MemoryRouter initialEntries={['/my-page']}>
+              {children}
+            </MemoryRouter>
+          </TestApiProvider>
+        );
+
+        let renders = 0;
+        const { result, rerender } = renderHook(
+          () => {
+            renders += 1;
+            return useRouteRef(routeRef);
+          },
+          { wrapper },
+        );
+
+        const placeholder = result.current;
+        expect(placeholder()).toBe('#');
+
+        rerender();
+        expect(result.current).toBe(placeholder);
+
+        const rendersBeforeFinalize = renders;
+        resolve.mockReturnValue(() => '/target');
+        act(() => finalize());
+
+        expect(result.current()).toBe('/target');
+        expect(renders).toBe(rendersBeforeFinalize + 1);
+      });
     });
   });
 });

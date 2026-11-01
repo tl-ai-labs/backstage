@@ -1,0 +1,690 @@
+[
+  {
+    "id": "tp_tests_U01",
+    "unit": "U01",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "depends_on": [],
+    "subtype": "bug_reproduce",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx` (unit U01) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 32 (line 32 reads `createExtensionDataRef,`) — Add `AppRootElementBlueprint`, `PageBlueprint` and `errorApiRef` to this import.\n- S2: insert after line 46 (line 46 reads `identityApiRef,`) — Add `RouteRef as CoreRouteRef`, `createPlugin`, `createRoutableExtension`, `createRouteRef as createCoreRouteRef` and `useRouteRef as useCoreRouteRef` to this import.\n- S3: replace line 48 (line 48 reads `import { MemoryRouter } from 'react-router-dom';`) — Import line only: also import `Link`.\n- S4: replace line 50 (line 50 reads `import { ComponentType, Fragment, useEffect, useState } from 'react';`) — Import line only: also import `useLayoutEffect`.\n- S5: insert after line 52 (line 52 reads `import { z } from 'zod/v4';`) — Add `import { compatWrapper } from '../../../core-compat-api/src/compatWrapper/compatWrapper';` with the eslint-disable line above it. This package has no dependency on core-compat-api, and package.json is outside the write contract.\n- S6: insert after line 1914 (line 1914 reads `});`) — Add the new describe here, after the `prepareSpecializedApp` describe closes and inside the top-level describe.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/blueprints/AppRootElementBlueprint.tsx",
+        "reason": "uses: The params the root element extension takes."
+      },
+      {
+        "path": "packages/core-compat-api/src/compatWrapper/compatWrapper.tsx",
+        "reason": "uses: compatWrapper's signature."
+      },
+      {
+        "path": "packages/core-plugin-api/src/extensions/extensions.tsx",
+        "lines": [
+          76,
+          112
+        ],
+        "reason": "uses: The mount point check whose error message the wiring-error case looks for."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "keeps both hooks working from bootstrap through finalization: given an app with no sign-in page and two root elements: one calls the core hook and renders `<Link to={routeFunc()}>Core link</Link>` plus the text `Core route: ${routeFunc()}`, the other calls the frontend hook and renders `Frontend route: ${routeFunc?.() ?? 'none'}`, expect at bootstrap no error is posted, the texts are 'Core route: #' and 'Frontend route: none', and the link's href is '/'; after finalization both texts end in '/target', the href is '/target', and each element mounted exactly once",
+      "tolerates an unresolved route behind a sign-in page: given the core element plus a sign-in page override as at lines 1877-1887, finalized by calling the captured onSignInSuccess inside the act, expect 'Custom Sign In' and 'Core route: #' show with no error posted; after sign-in and finalization the text is 'Core route: /target' and the element mounted exactly once",
+      "refreshes both hooks under compatWrapper: given the same two elements as the first case, each element passed through compatWrapper, expect 'Core route: #' and 'Frontend route: none' at bootstrap with no error posted; both end in '/target' after finalization, each element mounted exactly once",
+      "keeps wiring errors visible once finalized: given a root element calling the core hook with `createCoreRouteRef({ id: 'unmounted' })`, which nothing mounts, and a root element rendering `compatWrapper(<Routable />)`, where Routable comes from `createPlugin({ id: 'legacy' }).provide(createRoutableExtension({ name: 'Routable', component: async () => () => <div>Routable Content</div>, mountPoint: createCoreRouteRef({ id: 'unmounted-mount-point' }) }))`, expect at bootstrap no error is posted and 'Routable Content' shows; after finalization the error helper returns one entry containing 'No path for', and `screen.findAllByText(/was not discovered in the app element tree/)` finds the mount point check's message",
+      "catches a finalization between render and subscribe: given the core element also calling `preparedApp.finalize()` once in a `useLayoutEffect`, which runs after render and before the hook's passive subscribe effect, expect with no onFinalized call and no rerender, `findByText('Core route: /target')` resolves, no error is posted, and the element mounted exactly once"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "red",
+          "run": "CI=1 yarn test '{path}' -t during.app.bootstrap",
+          "expect": "fail"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 32,
+          "to": 32
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 46,
+          "to": 46
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 48,
+          "to": 48
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 50,
+          "to": 50
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 1914,
+          "to": 1914
+        }
+      ],
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U02",
+    "unit": "U02",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+    "depends_on": [],
+    "subtype": "bug_reproduce",
+    "instruction": "Edit `packages/core-plugin-api/src/routing/useRouteRef.test.tsx` (unit U02) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 17 (line 17 reads `import { renderHook } from '@testing-library/react';`) — Import line only: also import `act`.\n- S2: insert after line 164 (line 164 reads `});`) — Add the legacy guard case at the end of the 'old app system' describe.\n- S3: insert after line 218 (line 218 reads `});`) — Add the signal-less guard case, then the nested 'during app bootstrap' describe, at the end of the 'new app system' describe.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/core-plugin-api/src/routing/useRouteRef.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/core-plugin-api/src/routing/useRouteRef.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should keep its errors without a route resolution API: given no route resolution API, first with `context.set({ 1: { resolve: () => undefined } })`, then after `context.reset()`, expect rendering the hook throws 'No path for' in the first setup and 'Routing context is not available' in the second",
+      "should throw for an unresolved route when the API has no lifecycle signal: given `{ resolve: () => undefined }` as the route resolution API and a non-optional route ref, expect rendering the hook throws 'No path for'",
+      "returns a stable placeholder and then the real route function: given the fake API not finalized, with `resolve` returning undefined and a render counter in the hook callback, expect `result.current()` is '#' and the function is the same one after `rerender()`; after `resolve` starts returning `() => '/target'` and `act(() => finalize())` runs with the pathname unchanged, `result.current()` is '/target' and the counter rose by exactly one"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "red",
+          "run": "CI=1 yarn test '{path}' -t during.app.bootstrap",
+          "expect": "fail"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 164,
+          "to": 164
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 218,
+          "to": 218
+        }
+      ],
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U03",
+    "unit": "U03",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle.ts",
+    "depends_on": [
+      "tp_tests_U01",
+      "tp_tests_U02"
+    ],
+    "subtype": "new_file_add",
+    "instruction": "Write `packages/frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle.ts` (unit U03) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "reason": "style file: Header, TSDoc and interface layout of the neighbouring definition."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline_from": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U04",
+    "unit": "U04",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "depends_on": [
+      "tp_codegen_U03"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/phaseApis.tsx` (unit U04) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 55 (line 55 reads `import { type ErrorCollector } from './createErrorCollector';`) — Import `routeResolutionLifecycleKey` and `type RouteResolutionLifecycle` from '../../../frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle', with the eslint-disable line above the import.\n- S2: insert after line 115 (line 115 reads `#routeObjects: BackstageRouteObject[] | undefined;`) — Add `#finalized = false`, `#listeners = new Set<() => void>()` and `readonly [routeResolutionLifecycleKey]: RouteResolutionLifecycle = { isFinalized: ..., subscribe: ... }`, using arrow functions that read the private fields.\n- S3: insert after line 164 (line 164 reads `}`) — Add the `markFinalized()` method after getRouteObjects, with a one-line comment that it is called once the final route info is in place.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 55,
+          "to": 55
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 115,
+          "to": 115
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 164,
+          "to": 164
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U05",
+    "unit": "U05",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+    "depends_on": [
+      "tp_codegen_U04"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx` (unit U05) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert before line 707 (line 707 reads `return {`) — In finalizeFromSessionState, add `options.phase.routeResolutionApi.markFinalized();` followed by a blank line.\n- S2: insert before line 775 (line 775 reads `return {`) — In finalizeFromBootstrapError, add `options.phase.routeResolutionApi.markFinalized();` followed by a blank line.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 707,
+          "to": 707
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 775,
+          "to": 775
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U06",
+    "unit": "U06",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "depends_on": [
+      "tp_codegen_U03"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` (unit U06) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 23 (line 23 reads `import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';`) — Add `import { useRouteResolutionFinalized } from '../apis/definitions/RouteResolutionLifecycle';`.\n- S2: insert after line 30 (line 30 reads `* See {@link https://backstage.io/docs/plugins/composability#routing-system}`) — Add a blank TSDoc line, then: while the app is bootstrapping, a route that is not available yet resolves to `undefined`, and the hook returns the route function once the app is finalized, with no navigation needed.\n- S3: insert after line 43 (line 43 reads `const routeResolutionApi = useApi(routeResolutionApiRef);`) — Add `const finalized = useRouteResolutionFinalized(routeResolutionApi);`.\n- S4: replace line 47 (line 47 reads `[routeResolutionApi, routeRef, pathname],`) — Add `finalized` to the deps, with the eslint-disable line from the 'Refreshing the memos' decision above it.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 23,
+          "to": 23
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 30,
+          "to": 30
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 43,
+          "to": 43
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 47,
+          "to": 47
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U07",
+    "unit": "U07",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+    "depends_on": [
+      "tp_codegen_U03"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/core-plugin-api/src/routing/useRouteRef.tsx` (unit U07) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 31 (line 31 reads `} from './types';`) — Add `import { useRouteResolutionFinalized } from '../../../frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle';` with the eslint-disable line above it.\n- S2: insert after line 52 (line 52 reads `}`) — Add `const bootstrapRouteFunc: RouteFunc<any> = () => '#';` with a short comment: used until the app is finalized, and '#' stays on the current page whether it reaches a router link, navigate or a plain anchor.\n- S3: insert after line 59 (line 59 reads `* See {@link https://backstage.io/docs/plugins/composability#routing-system}`) — Add the TSDoc note: a blank TSDoc line, then: while the app is bootstrapping, a non-optional route that is not available yet resolves to a placeholder function that returns `#`. The hook returns the real route function once the app is finalized, and a route that is still missing then throws an error.\n- S4: insert after line 74 (line 74 reads `* See {@link https://backstage.io/docs/plugins/composability#routing-system}`) — Add the same TSDoc note as S3.\n- S5: insert after line 89 (line 89 reads `* See {@link https://backstage.io/docs/plugins/composability#routing-system}`) — Add the same TSDoc note as S3.\n- S6: insert after line 107 (line 107 reads `const resolver = versionedContext?.atVersion(1);`) — Add a blank line and `const finalized = useRouteResolutionFinalized(routeResolutionApi);`.\n- S7: replace line 121 (line 121 reads `}, [routeResolutionApi, routeRef, pathname]);`) — Add `finalized` to the deps, with the eslint-disable line from the 'Refreshing the memos' decision above it.\n- S8: replace line 125 (line 125 reads `[resolver, routeRef, pathname],`) — Add `finalized` to the deps, with the same eslint-disable line above it.\n- S9: insert after line 130 (line 130 reads `if (!newRouteFunc && !isOptional) {`) — Inside this block, before the throw, add: if not `finalized`, `return bootstrapRouteFunc as RouteFunc<Params>;`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/core-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/core-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 31,
+          "to": 31
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 59,
+          "to": 59
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 74,
+          "to": 74
+        },
+        {
+          "id": "S5",
+          "at": "insert_after",
+          "from": 89,
+          "to": 89
+        },
+        {
+          "id": "S6",
+          "at": "insert_after",
+          "from": 107,
+          "to": 107
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 121,
+          "to": 121
+        },
+        {
+          "id": "S8",
+          "at": "replace",
+          "from": 125,
+          "to": 125
+        },
+        {
+          "id": "S9",
+          "at": "insert_after",
+          "from": 130,
+          "to": 130
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U08",
+    "unit": "U08",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": ".changeset/quiet-routes-wait.md",
+    "depends_on": [
+      "tp_codegen_U05",
+      "tp_codegen_U06",
+      "tp_codegen_U07"
+    ],
+    "subtype": "new_file_add",
+    "instruction": "Write `.changeset/quiet-routes-wait.md` (unit U08) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/calm-instances-specialize.md",
+        "reason": "style file: Changeset front matter and layout."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/calm-instances-specialize.md",
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U09",
+    "unit": "U09",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261101-131558-bugfix-userouteref-startup",
+    "artifact_path": "docs/frontend-system/architecture/10-app.md",
+    "depends_on": [
+      "tp_codegen_U05",
+      "tp_codegen_U06",
+      "tp_codegen_U07"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `docs/frontend-system/architecture/10-app.md` (unit U09) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert before line 97 (line 97 reads `## Plugin Info Resolution`) — Add this paragraph and a blank line: Routes behind `app/root.children` aren't available until the app is finalized, so an `app/root.elements` element that calls `useRouteRef` during bootstrap can't resolve them yet. The `useRouteRef` hook from `@backstage/frontend-plugin-api` returns `undefined` for such a route. The `useRouteRef` hook from `@backstage/core-plugin-api` returns a temporary function that returns `#`, so a link rendered at this point stays on the current page. Both hooks update as soon as the app is finalized, with no remount or navigation. If a non-optional route is still missing after finalization, the `@backstage/core-plugin-api` hook throws a `No path for` error.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/frontend-system/architecture/10-app.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/frontend-system/architecture/10-app.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-131558-bugfix-userouteref-startup/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/frontend-system/architecture/10-app.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 97,
+          "to": 97
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    },
+    "verify_deferred": [
+      "CI=1 yarn test 'packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx' -t during.app.bootstrap",
+      "CI=1 yarn test 'packages/core-plugin-api/src/routing/useRouteRef.test.tsx' -t during.app.bootstrap",
+      "yarn tsc",
+      "CI=1 yarn test packages/frontend-app-api/src/wiring packages/core-plugin-api/src/routing packages/core-plugin-api/src/extensions packages/frontend-plugin-api/src/routing packages/core-compat-api/src/compatWrapper",
+      "yarn build:api-reports --ci packages/core-plugin-api packages/frontend-plugin-api packages/frontend-app-api"
+    ]
+  }
+]

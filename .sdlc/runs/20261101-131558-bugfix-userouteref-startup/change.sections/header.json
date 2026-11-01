@@ -1,0 +1,91 @@
+{
+  "conventions": [
+    "Prettier uses the repository config: 2-space indent, single quotes, trailing commas, 80 columns. Every changed file passes `yarn prettier --check`.",
+    "Match the style of the file being edited. Consistency within a package beats consistency across the repo.",
+    "A new .ts or .tsx file starts with the Apache 2.0 header reading `Copyright 2026 The Backstage Authors`. Never change the year on an existing file.",
+    "An import that crosses packages by relative path has `// eslint-disable-next-line @backstage/no-relative-monorepo-imports` on the line before the `import` statement, as in packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx lines 39-43.",
+    "Tests use Jest and React Testing Library. Prefer `screen` with `findBy*` over `waitFor`, add no test IDs to implementation code, and prefer fewer thorough tests with several assertions.",
+    "Docs follow docs/contribute/doc-style-guide.md. A changeset message is written for adopters in plain language and names no internal symbol.",
+    "Do not edit any report.api.md, report-alpha.api.md, package.json, tsconfig, ESLint or Prettier config, packages/core-plugin-api/src/extensions/extensions.tsx, or anything in docs/releases. Never run `yarn build`.",
+    "Nothing in this change comes from upstream `AppLifecycleApi`, and no code refers to it."
+  ],
+  "decisions": [
+    {
+      "topic": "D-1, the bootstrap placeholder",
+      "choice": "While the app is not finalized, the core-plugin-api useRouteRef returns one shared module-level function for a non-optional ref that resolves to undefined. It ignores its params, never throws, and returns the literal string '#'. So a React Router <Link to={fn()}>, including the core-components Link, rendered before finalization has an href of the current page: the current pathname with the app base path and without search or hash (at /base/catalog?x=1 the href is /base/catalog). Clicking it stays on that page and drops any search and hash. A plain <a href={fn()}> stays on the page with no reload, navigate(fn()) stays on the current pathname, and `${fn()}/details` gives '#/details', which also stays on the page. After finalization the element re-renders and the link holds the real path. Optional refs still return undefined, and the frontend-plugin-api hook still returns undefined, because both return types allow it.",
+      "rejected": [
+        "'' : react-router 6.30 treats an empty string as a path, so outside any Route, where app root elements render, the link resolves to / and leaves the page, and a plain anchor with an empty href reloads",
+        "the current pathname from useLocation: it has no app base path, so a plain anchor would be wrong on a sub-path deployment",
+        "returning undefined from the core hook: its non-optional return type must stay callable (FR-2)"
+      ],
+      "reason": "'#' is the only value that stays on the current page in every consumer: Link, navigate, a plain anchor and string concatenation."
+    },
+    {
+      "topic": "D-2, the lifecycle signal",
+      "choice": "An internal contract with no public API change. packages/frontend-plugin-api/src/apis/definitions/RouteResolutionLifecycle.ts holds the key, the interface and the hook that reads it, and definitions/index.ts does not re-export it. RouteResolutionApiProxy carries a RouteResolutionLifecycle under Symbol.for('@backstage/frontend-plugin-api:route-resolution-lifecycle'). frontend-plugin-api imports that file by package-relative path; core-plugin-api and frontend-app-api import it by relative monorepo path. An API without the key counts as finalized.",
+      "rejected": [
+        "an optional member on RouteResolutionApi, or a new utility API ref: both are public (Gate 1 D-2)",
+        "copying the key and reader into each package: the wire contract would live in three places",
+        "a plain Symbol(): each published package bundles its own copy of a relative import, so the key has to be global"
+      ],
+      "reason": "Both hooks already reach the proxy through useApi, so nothing public is needed. A bundled copy of the file in each package still agrees through Symbol.for, and every other RouteResolutionApi keeps today's behaviour (FR-6)."
+    },
+    {
+      "topic": "What finalized means",
+      "choice": "One-way and per app instance. RouteResolutionApiProxy.markFinalized() runs as the last step of both finalizeFromSessionState and finalizeFromBootstrapError, once the final route info is in place and the root element is confirmed, and it notifies listeners once.",
+      "rejected": [
+        "the second initialize() call: finalize() with a reused session state initializes only once",
+        "leaving the bootstrap-error path unfinalized: tolerance would outlive finalization, against FR-4"
+      ],
+      "reason": "A thrown finalization stays in bootstrap and can retry, so marking last is correct. On the error path a non-optional root element ref throws No path for into its own boundary, which is what that element did on first render before this fix."
+    },
+    {
+      "topic": "How the hooks observe finalization",
+      "choice": "useState seeded from isFinalized(), plus a useEffect that re-reads isFinalized() and then subscribes. With no lifecycle the hook returns true, and the effect does nothing.",
+      "rejected": [
+        "useSyncExternalStore: both hook packages allow React 17 in peerDependencies, and package.json is outside the write contract, so the shim cannot be added"
+      ],
+      "reason": "The re-read catches a finalization between render and subscribe (NFR-2), a same-value setState does not re-render (NFR-1), and legacy apps never set state."
+    },
+    {
+      "topic": "Refreshing the memos",
+      "choice": "Add `finalized` to the deps of the frontend hook's memo and of both memos in the core hook, each with `// eslint-disable-next-line react-hooks/exhaustive-deps` directly above the deps array line.",
+      "rejected": [
+        "giving the proxy a new identity at finalization: every useApi consumer would see a changed API"
+      ],
+      "reason": "The memo callback does not read `finalized`, so the lint rule calls it unnecessary, yet it is exactly what invalidates the memo. The repo already disables this rule the same way in useBreadcrumbEntries.tsx and useElementFilter.tsx."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "format",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "lint",
+      "run": "yarn eslint {path}",
+      "timeout_s": 180
+    },
+    {
+      "id": "red",
+      "run": "CI=1 yarn test {path} -t during.app.bootstrap",
+      "timeout_s": 300
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "typecheck",
+      "run": "yarn tsc"
+    },
+    {
+      "id": "tests-touched",
+      "run": "CI=1 yarn test packages/frontend-app-api/src/wiring packages/core-plugin-api/src/routing packages/core-plugin-api/src/extensions packages/frontend-plugin-api/src/routing packages/core-compat-api/src/compatWrapper"
+    },
+    {
+      "id": "api-reports-unchanged",
+      "run": "yarn build:api-reports --ci packages/core-plugin-api packages/frontend-plugin-api packages/frontend-app-api"
+    }
+  ]
+}
