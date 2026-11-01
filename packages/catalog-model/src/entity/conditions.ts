@@ -27,48 +27,80 @@ import {
 import { Entity } from './Entity';
 
 /**
+ * Checks whether `entity.kind` is `API`, ignoring case. The function does not
+ * check `apiVersion` or `spec`, so a match does not prove that the entity is
+ * valid for this kind.
+ *
  * @public
  */
 export function isApiEntity(entity: Entity): entity is ApiEntity {
   return entity.kind.toUpperCase() === 'API';
 }
 /**
+ * Checks whether `entity.kind` is `Component`, ignoring case. The function does
+ * not check `apiVersion` or `spec`, so a match does not prove that the entity
+ * is valid for this kind.
+ *
  * @public
  */
 export function isComponentEntity(entity: Entity): entity is ComponentEntity {
   return entity.kind.toUpperCase() === 'COMPONENT';
 }
 /**
+ * Checks whether `entity.kind` is `Domain`, ignoring case. The function does
+ * not check `apiVersion` or `spec`, so a match does not prove that the entity
+ * is valid for this kind.
+ *
  * @public
  */
 export function isDomainEntity(entity: Entity): entity is DomainEntity {
   return entity.kind.toUpperCase() === 'DOMAIN';
 }
 /**
+ * Checks whether `entity.kind` is `Group`, ignoring case. The function does not
+ * check `apiVersion` or `spec`, so a match does not prove that the entity is
+ * valid for this kind.
+ *
  * @public
  */
 export function isGroupEntity(entity: Entity): entity is GroupEntity {
   return entity.kind.toUpperCase() === 'GROUP';
 }
 /**
+ * Checks whether `entity.kind` is `Location`, ignoring case. The function does
+ * not check `apiVersion` or `spec`, so a match does not prove that the entity
+ * is valid for this kind.
+ *
  * @public
  */
 export function isLocationEntity(entity: Entity): entity is LocationEntity {
   return entity.kind.toUpperCase() === 'LOCATION';
 }
 /**
+ * Checks whether `entity.kind` is `Resource`, ignoring case. The function does
+ * not check `apiVersion` or `spec`, so a match does not prove that the entity
+ * is valid for this kind.
+ *
  * @public
  */
 export function isResourceEntity(entity: Entity): entity is ResourceEntity {
   return entity.kind.toUpperCase() === 'RESOURCE';
 }
 /**
+ * Checks whether `entity.kind` is `System`, ignoring case. The function does
+ * not check `apiVersion` or `spec`, so a match does not prove that the entity
+ * is valid for this kind.
+ *
  * @public
  */
 export function isSystemEntity(entity: Entity): entity is SystemEntity {
   return entity.kind.toUpperCase() === 'SYSTEM';
 }
 /**
+ * Checks whether `entity.kind` is `User`, ignoring case. The function does not
+ * check `apiVersion` or `spec`, so a match does not prove that the entity is
+ * valid for this kind.
+ *
  * @public
  */
 export function isUserEntity(entity: Entity): entity is UserEntity {

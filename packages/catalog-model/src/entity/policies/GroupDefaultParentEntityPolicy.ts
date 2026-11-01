@@ -48,6 +48,22 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * Sets the default parent on a group entity that has no parent.
+   *
+   * @remarks
+   *
+   * The method leaves the entity unchanged if its `kind` is not exactly
+   * `Group`, compared case-sensitively, if `spec.parent` is already set, or if
+   * the entity is itself the default parent. Otherwise, it sets `spec.parent`
+   * to the canonical reference of the default parent that was passed to the
+   * constructor. It writes to the entity passed in, not to a copy.
+   *
+   * @param entity - The entity to update
+   * @returns The same entity object
+   * @throws A `TypeError` if an entity of kind `Group` has no `spec`, since the
+   *         method does no validation of its own
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;

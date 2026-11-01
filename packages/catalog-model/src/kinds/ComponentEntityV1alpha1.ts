@@ -29,8 +29,23 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ComponentEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `Component`.
+   */
   kind: 'Component';
+  /**
+   * The specification data of the component. The JSON schema requires the
+   * non-empty strings `type`, `lifecycle` and `owner`, and allows the optional
+   * non-empty strings `system` and `subcomponentOf` and the optional arrays of
+   * non-empty strings `providesApis`, `consumesApis` and `dependsOn`. All of
+   * these except `type` and `lifecycle` hold entity references. The JSON schema
+   * does not define `dependencyOf`, so it accepts any value for that field.
+   */
   spec: {
     type: string;
     lifecycle: string;

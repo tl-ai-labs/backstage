@@ -25,8 +25,21 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface GroupEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `Group`.
+   */
   kind: 'Group';
+  /**
+   * The specification data of the group. The JSON schema requires a non-empty
+   * `type` and a `children` array, which can be empty, and allows the optional
+   * fields `profile`, `parent` and `members`. `parent`, `children` and
+   * `members` hold entity references, and all fields of `profile` are optional.
+   */
   spec: {
     type: string;
     profile?: {

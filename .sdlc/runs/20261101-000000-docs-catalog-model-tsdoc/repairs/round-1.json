@@ -1,0 +1,146 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261101-000000-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 43): The @returns text says the method returns a new object with the default namespace set whenever the entity has no truthy namespace. That is false for `namespace: ''` and `namespace: null`: the guard falls through to lodash.merge, whose source value overwrites the default. Run against lodash: both inputs return a new object that keeps the empty or null value, and only undefined gets the default. The summary on line 35 has the same gap. The text matches the plan word for word, so this is a defect in the U11 site rule, not in the typing. Confidence: high on behavior, and it is an edge case because the type only allows string or undefined. — fix: Reword @returns to say that a new object gets the default namespace only when `metadata.namespace` is undefined, and that an empty or null namespace is kept in the new object. This needs a matching change to the U11 site text, which the plan requires word for word.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-000000-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-000000-docs-catalog-model-tsdoc/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261101-000000-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 60): The @throws text covers only errors that name a field, but `entity.metadata.name` is read before `require` runs, so an entity with no `metadata` rejects with a plain TypeError that matches none of the listed cases. U12's behaviour line asks for when the method rejects, and the sibling blocks U11 and U13 document this same TypeError case, so the set is inconsistent. The text matches the plan word for word, so this is a gap in the U12 site rule. — fix: Extend @throws with the TypeError for an entity that has no `metadata`, in the wording U11 uses. This needs a matching change to the U12 site text.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-000000-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-000000-docs-catalog-model-tsdoc/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261101-000000-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 65): The @throws continuation line is not hanging-indented: it reads `* method does no validation of its own` at the normal comment column. The plan's style source, types.ts:26-33, aligns continuation lines under the tag text, and the other multi-line tags in this run (DefaultNamespaceEntityPolicy, FieldFormatEntityPolicy, SchemaValidEntityPolicy) all do. — fix: Indent the continuation so it starts under the tag text, as `   *         method does no validation of its own`. Whitespace only; no plan change is needed.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-000000-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-000000-docs-catalog-model-tsdoc/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]

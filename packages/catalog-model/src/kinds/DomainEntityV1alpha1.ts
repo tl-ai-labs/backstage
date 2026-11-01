@@ -29,8 +29,21 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface DomainEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `Domain`.
+   */
   kind: 'Domain';
+  /**
+   * The specification data of the domain. The JSON schema requires a non-empty
+   * `owner` and allows the optional non-empty strings `subdomainOf` and `type`.
+   * `owner` and `subdomainOf` are entity references, and the schema enforces no
+   * set of values for `type`.
+   */
   spec: {
     owner: string;
     subdomainOf?: string;

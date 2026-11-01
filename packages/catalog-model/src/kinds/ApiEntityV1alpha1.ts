@@ -29,8 +29,21 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ApiEntityV1alpha1 extends Entity {
+  /**
+   * The version of the specification format that this entity is written
+   * against, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type, which is always `API`.
+   */
   kind: 'API';
+  /**
+   * The specification data of the API. The JSON schema requires the non-empty
+   * strings `type`, `lifecycle`, `owner` and `definition`, and allows an
+   * optional non-empty `system`. `owner` and `system` are entity references,
+   * and `definition` holds the API definition in the format that `type` names.
+   */
   spec: {
     type: string;
     lifecycle: string;
