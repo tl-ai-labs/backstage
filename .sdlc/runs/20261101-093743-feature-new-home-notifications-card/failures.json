@@ -1,0 +1,9 @@
+[
+  {
+    "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "problem": "All tests in this file pass; these are `yarn tsc` errors. Fix only these and change no assertion. (1) UnreadNotificationsCard.test.tsx:25:3 - error TS2305: Module '\"@backstage/plugin-notifications-common\"' has no exported member 'GetNotificationsResponse'. It is exported from '../../api': remove it from the plugin-notifications-common import and add it to the existing import of `notificationsApiRef` from '../../api'. (2) UnreadNotificationsCard.test.tsx:351:9 - error TS2353: Object literal may only specify known properties, and 'channel' does not exist in type 'NewNotificationSignal'. (3) Lines 362:9 and 373:9 - the same error on 'NotificationReadSignal'. (4) Line 383:9 - the same error on 'NotificationSignal'. Delete the `channel: 'notifications',` line from all four signal messages. A NewNotificationSignal is `{ action: 'new_notification', notification_id: string }`, and a NotificationReadSignal is `{ action: 'notification_read' | 'notification_unread', notification_ids: string[] }`, so add the matching id field to the first three messages, using the id of the notification each step acts on. The fourth message deliberately uses an action outside the type: keep its action and write it as `{ action: 'unrelated_action' } as unknown as NotificationSignal`, matching the action string the file already uses there. Leave every other line as it is.",
+    "context_paths": [
+      "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx"
+    ]
+  }
+]
