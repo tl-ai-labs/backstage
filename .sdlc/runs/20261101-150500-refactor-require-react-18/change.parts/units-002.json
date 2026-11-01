@@ -1,0 +1,164 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U08",
+      "path": "packages/dev-utils/src/devApp/render.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "DevAppBuilder.render renders only through react-dom/client and createRoot, still asynchronously after the dynamic import resolves.",
+      "rules": [
+        "The signature of `render(): void` and everything before the `ReactDOMPromise.then` call stay as they are.",
+        "Line 53 `import 'react-dom';` stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 65,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "One line: `const ReactDOMPromise = import('react-dom/client');`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 320,
+          "to": 328,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Keep the `.then` call; its callback's only statement is `ReactDOM.createRoot(document.getElementById('root')!).render(<DevApp />);` on one line."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "createDevApp renders only through react-dom/client and createRoot, still asynchronously after the dynamic import resolves.",
+      "rules": [
+        "`createDevApp` stays `void`, the missing-root error still throws synchronously, and `rootNode` stays as it is.",
+        "Line 24 `import 'react-dom';` stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 50,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "One line: `const ReactDOMPromise = import('react-dom/client');`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 119,
+          "to": 123,
+          "first_line": "if ('createRoot' in ReactDOM) {",
+          "last_line": "}",
+          "rule": "One line: `ReactDOM.createRoot(rootElement).render(rootNode);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "The case that exercised the legacy render path is gone; every other case stays unchanged and passes.",
+      "rules": [
+        "The 'should render a dev app with a plugin', 'should forward bindRoutes to createApp' and 'should throw a clear error when the root element is missing' cases, the isolated loader and the env handling stay as they are."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 149,
+          "to": 192,
+          "first_line": "",
+          "last_line": "});",
+          "rule": "Remove the blank line and the whole 'should fall back to legacy react-dom rendering when createRoot is unavailable' case; the closing `});` of the describe on line 193 stays."
+        }
+      ],
+      "depends_on": [
+        "U09"
+      ],
+      "covers": [
+        "FR-8",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "renderReactElement renders only through react-dom/client and createRoot, still asynchronously after the dynamic import resolves.",
+      "rules": [
+        "The signature `renderReactElement(element: JSX.Element, root: HTMLElement)` and its `@internal` tag stay as they are."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 24,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "One line: `const ReactDOMPromise = import('react-dom/client');`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 29,
+          "to": 33,
+          "first_line": "if ('createRoot' in ReactDOM) {",
+          "last_line": "}",
+          "rule": "One line: `ReactDOM.createRoot(root).render(element);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/dev-utils/src/devApp/render.tsx": "4a5b88259566013ada28bf823e30c787eb8e80be92699f1dc8da429032372030",
+    "packages/frontend-dev-utils/src/createDevApp.tsx": "804381e8dac2e21629f84155a24560a789fdf33c00a641cb1f1544c30d3e23e3",
+    "packages/frontend-dev-utils/src/createDevApp.test.tsx": "ef4fcafd83e2fbad7850939805fbf89755627daf70d6fc130850a8e25b22856d",
+    "plugins/techdocs/src/reader/transformers/renderReactElement.ts": "75254f6db81daccc0ca51c554ea74fe7aa61fa85453fae3f353e22019de407f9"
+  }
+}

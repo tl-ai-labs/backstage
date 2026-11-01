@@ -1,0 +1,89 @@
+[
+  {
+    "id": "U19",
+    "path": "packages/frontend-plugin-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Removes use-sync-external-store and @types/use-sync-external-store now that useRouteRef uses React's hook.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 52, "to": 53, "first_line": "\"@standard-schema/spec\": \"^1.1.0\",", "last_line": "\"use-sync-external-store\": \"^1.4.0\"", "rule": "One line, `\"@standard-schema/spec\": \"^1.1.0\"` with no trailing comma." },
+      { "id": "S2", "at": "delete", "from": 64, "to": 64, "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",", "rule": "Remove the line." }
+    ],
+    "depends_on": ["U02"],
+    "covers": ["FR-5", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U20",
+    "path": "packages/ui/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Removes use-sync-external-store and @types/use-sync-external-store now that useBreakpoint uses React's hook; react-aria stays.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 58, "to": 59, "first_line": "\"react-stately\": \"~3.51.0\",", "last_line": "\"use-sync-external-store\": \"^1.4.0\"", "rule": "One line, `\"react-stately\": \"~3.51.0\"` with no trailing comma." },
+      { "id": "S2", "at": "delete", "from": 70, "to": 70, "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",", "rule": "Remove the line." }
+    ],
+    "depends_on": ["U03"],
+    "covers": ["FR-5", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U21",
+    "path": "plugins/app/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Removes the unused use-sync-external-store dependency; plugins/app already imports React's hook.",
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 78, "to": 78, "first_line": "\"use-sync-external-store\": \"^1.4.0\",", "rule": "Remove the line." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-5", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U22",
+    "path": "packages/core-app-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Removes the unused @testing-library/react-hooks dev dependency.",
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 69, "to": 69, "first_line": "\"@testing-library/react-hooks\": \"^8.0.0\",", "rule": "Remove the line." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-13"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U23",
+    "path": "plugins/catalog-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Removes the unused react-test-renderer dev dependency.",
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 110, "to": 111, "first_line": "\"react-router-dom\": \"^6.30.2\",", "last_line": "\"react-test-renderer\": \"^16.13.1\"", "rule": "One line, `\"react-router-dom\": \"^6.30.2\"` with no trailing comma." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-13"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U24",
+    "path": "packages/app-defaults/package.json",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Moves react, react-dom and @types/react to ^18.0.0 in peerDependencies of the 56 manifests, leaving peerDependenciesMeta as it is. The step writes these files: packages/{app-defaults,app-example-plugin,core-app-api,core-compat-api,core-components,core-plugin-api,dev-utils,frontend-app-api,frontend-defaults,frontend-dev-utils,frontend-dynamic-feature-loader,frontend-plugin-api,frontend-test-utils,integration-react,module-federation-common,test-utils,theme,version-bridge}/package.json and plugins/{api-docs,api-docs-module-protoc-gen-doc,app,app-react,app-visualizer,auth,auth-react,catalog,catalog-graph,catalog-import,catalog-react,catalog-unprocessed-entities,config-schema,devtools,devtools-react,example-todo-list,home,home-react,kubernetes,kubernetes-cluster,kubernetes-react,mui-to-bui,notifications,org,org-react,permission-react,scaffolder,scaffolder-node-test-utils,scaffolder-react,search,search-react,signals,signals-react,techdocs,techdocs-addons-test-utils,techdocs-module-addons-contrib,techdocs-react,user-settings}/package.json. It also rewrites packages/ui/package.json with the same content.",
+    "run": "yarn lint:peer-deps --fix",
+    "depends_on": ["U01", "U19", "U20", "U21", "U22", "U23"],
+    "covers": ["FR-1", "AC-4", "AC-5"]
+  },
+  {
+    "id": "U25",
+    "path": "yarn.lock",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerates yarn.lock to match the manifests; react@17.0.2 may remain through @yarnpkg/libui.",
+    "run": "yarn install",
+    "depends_on": ["U24"],
+    "covers": ["FR-3"]
+  }
+]

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { useId } from 'react-aria';
 import { Text } from '../Text';
 import { ButtonIcon } from '../ButtonIcon';
 import { Select } from '../Select';
@@ -22,7 +21,7 @@ import type { TablePaginationProps, PageSizeOption } from './types';
 import { useDefinition } from '../../hooks/useDefinition';
 import { TablePaginationDefinition } from './definition';
 import { RiArrowLeftSLine, RiArrowRightSLine } from '@remixicon/react';
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 
 function getOptionValue(option: number | PageSizeOption): number {
   return typeof option === 'number' ? option : option.value;

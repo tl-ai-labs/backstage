@@ -6,13 +6,12 @@
 | :------ | :---------------- | :------- |
 | history | package.json:55:6 | error    |
 
-## Unused devDependencies (5)
+## Unused devDependencies (4)
 
-| Name                         | Location          | Severity |
-| :--------------------------- | :---------------- | :------- |
-| @testing-library/react-hooks | package.json:69:6 | error    |
-| react-router-dom-stable      | package.json:79:6 | error    |
-| react-router-dom-beta        | package.json:78:6 | error    |
-| react-router-stable          | package.json:80:6 | error    |
-| react-router-beta            | package.json:76:6 | error    |
+| Name                    | Location          | Severity |
+| :---------------------- | :---------------- | :------- |
+| react-router-dom-stable | package.json:78:6 | error    |
+| react-router-dom-beta   | package.json:77:6 | error    |
+| react-router-stable     | package.json:79:6 | error    |
+| react-router-beta       | package.json:75:6 | error    |
 

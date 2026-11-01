@@ -1,0 +1,125 @@
+[
+  {
+    "id": "U12",
+    "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Neither bundler branch defines process.env.HAS_REACT_DOM_CLIENT, and the comment that explained the flag is gone.",
+    "rules": [
+      "`process.env.BUILD_INFO` and `process.env.APP_CONFIG` stay in both branches."
+    ],
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 37, "to": 37, "first_line": "import { hasReactDomClient } from './hasReactDomClient';", "rule": "Remove the import." },
+      { "id": "S2", "at": "delete", "from": 272, "to": 276, "first_line": "// This allows for conditional imports of react-dom/client, since there's no way", "last_line": "),", "rule": "Remove the comment and the flag from the webpack branch." },
+      { "id": "S3", "at": "delete", "from": 281, "to": 285, "first_line": "// This allows for conditional imports of react-dom/client, since there's no way", "last_line": "),", "rule": "Remove the comment and the flag from the rspack branch." }
+    ],
+    "depends_on": ["U08", "U09", "U11"],
+    "covers": ["FR-9", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "startFrontend no longer depends on hasReactDomClient; its warning is replaced by the version check serveBundle runs.",
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 26, "to": 26, "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';", "rule": "Remove the import." },
+      { "id": "S2", "at": "delete", "from": 45, "to": 50, "first_line": "if (!hasReactDomClient()) {", "last_line": "", "rule": "Remove the check, its warning and the blank line after it; do not add another diagnostic here." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-10", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The React version check warns for every major below 18, names React 18 as the minimum, links the migration guide, and looks at the React the served package resolves.",
+    "rules": [
+      "Signature: `function checkReactVersion(targetDir: string)`.",
+      "Resolve `react/package.json` with `paths: [targetDir]`, and replace the old comment with one line saying it resolves React as the served package does.",
+      "`const majorVersion = parseInt(reactPkg.version, 10);` and warn when `majorVersion < 18`, so a version that does not parse and React 18 or newer print nothing.",
+      "Keep `console.log(chalk.yellow(...))` with a template literal that has a leading and trailing newline, and the surrounding try/catch with its `/* ignored */` catch.",
+      "The three message lines, each starting with the warning sign and two spaces: `You are using React version ${majorVersion}, which is not supported by Backstage.`, `React 18 is the minimum. Please upgrade by following the migration guide:`, `https://backstage.io/docs/tutorials/react18-migration/`."
+    ],
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 54, "to": 54, "first_line": "checkReactVersion();", "rule": "Read `checkReactVersion(options.targetDir ?? targetPaths.dir);`." },
+      { "id": "S2", "at": "replace", "from": 269, "to": 291, "first_line": "function checkReactVersion() {", "last_line": "}", "rule": "The whole function, as the rules say." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-10"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U15",
+    "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Deletes hasReactDomClient.ts once nothing imports it; the step writes only this path.",
+    "run": "rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "depends_on": ["U12", "U13"],
+    "covers": ["FR-9", "AC-6"]
+  },
+  {
+    "id": "U16",
+    "path": "packages/cli-module-test-jest/config/jest.js",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The Jest config no longer sets process.env.HAS_REACT_DOM_CLIENT.",
+    "rules": [
+      "`paths` stays; the rest of the file still uses it."
+    ],
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 52, "to": 60, "first_line": "try {", "last_line": "", "rule": "Remove the try/catch block and the blank line after it." }
+    ],
+    "depends_on": ["U08", "U09", "U11"],
+    "covers": ["FR-9", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U17",
+    "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "LegacyRootOption is gone and renderWithEffects forwards only wrapper to render, so legacyRoot cannot reach render at runtime.",
+    "rules": [
+      "`renderWithEffects` keeps its name, async shape and `Promise<RenderResult>` return.",
+      "A caller that never set `legacyRoot` renders exactly as before."
+    ],
+    "exports": [
+      { "name": "renderWithEffects", "kind": "function", "params": [ { "name": "nodes", "type": "ReactElement" }, { "name": "options", "type": "Pick<RenderOptions, 'wrapper'> | undefined" } ], "returns": "Promise<RenderResult>" }
+    ],
+    "sites": [
+      { "id": "S1", "at": "delete", "from": 25, "to": 31, "first_line": "/**", "last_line": "", "rule": "Remove the LegacyRootOption type, its doc comment and the blank line after it." },
+      { "id": "S2", "at": "replace", "from": 46, "to": 46, "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,", "rule": "Read `options?: Pick<RenderOptions, 'wrapper'>,`." },
+      { "id": "S3", "at": "replace", "from": 50, "to": 50, "first_line": "value = render(nodes, options);", "rule": "Read `value = render(nodes, { wrapper: options?.wrapper });`." }
+    ],
+    "depends_on": [],
+    "covers": ["FR-11", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U18",
+    "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "renderInTestApp no longer accepts or forwards legacyRoot and passes only wrapper to renderWithEffects.",
+    "rules": [
+      "The blank line before `return renderWithEffects(` stays."
+    ],
+    "exports": [
+      { "name": "renderInTestApp", "kind": "function", "params": [ { "name": "Component", "type": "ComponentType<PropsWithChildren<{}>> | ReactNode" }, { "name": "options", "type": "TestAppOptions" } ], "returns": "Promise<RenderResult>" }
+    ],
+    "sites": [
+      { "id": "S1", "at": "replace", "from": 38, "to": 38, "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';", "rule": "Read `import { renderWithEffects } from './testingLibrary';`." },
+      { "id": "S2", "at": "replace", "from": 257, "to": 257, "first_line": "options: TestAppOptions & LegacyRootOption = {},", "rule": "Read `options: TestAppOptions = {},`." },
+      { "id": "S3", "at": "delete", "from": 265, "to": 265, "first_line": "const { legacyRoot } = options;", "rule": "Remove the line." },
+      { "id": "S4", "at": "delete", "from": 269, "to": 269, "first_line": "legacyRoot,", "rule": "Remove the line." }
+    ],
+    "depends_on": ["U17"],
+    "covers": ["FR-11", "AC-1", "AC-6"],
+    "checks": ["prettier", "eslint"]
+  }
+]
