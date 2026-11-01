@@ -1,0 +1,91 @@
+{
+  "conventions": [
+    "Change only what a site names. This is a refactor: no renames, no reformatting of nearby lines, no behaviour change for a React 18 user.",
+    "Prettier formats TypeScript, JSON and Markdown here (2 spaces, single quotes, trailing commas, 80 columns, arrowParens avoid). Files matched by .prettierignore (*.hbs, report.api.md, knip-report.md) are edited by hand and keep their exact table and signature layout.",
+    "TypeScript is strict and JSX uses the react-jsx transform, so never add `import React`. Do not add default exports or React.FC.",
+    "Leave existing copyright years as they are. This change creates no new source file, so no new Apache header is needed.",
+    "Keep the existing key order in every package.json. JSON has no trailing commas, so when the last entry of an object is removed, the entry before it loses its comma.",
+    "Do not run yarn build, yarn changesets version, yarn release or the changeset CLI. yarn.lock is written only by the install step.",
+    "Tests are Jest, run from the repo root as `CI=1 yarn test <path>`, with `describe`/`it` and React Testing Library's `findBy*` and `waitFor`.",
+    "Changesets are Markdown with YAML front matter: single-quoted package names, one per line, then a blank line and the message. Messages are for adopters, in plain language, and name only public API."
+  ],
+  "decisions": [
+    {
+      "topic": "Root rendering in dev-utils, frontend-dev-utils and techdocs",
+      "choice": "A static named import, `import { createRoot } from 'react-dom/client';`, called directly. It replaces the side-effect `import 'react-dom';` in the two dev packages and the module-level ReactDOMPromise everywhere.",
+      "rejected": [
+        "Keep a promise from `import('react-dom/client')`: the lazy import existed only because React 17 has no such module",
+        "A default import: the mock in createDevApp.test.tsx provides only a named createRoot"
+      ],
+      "reason": "FR-8 asks for direct use. react-dom/client requires react-dom, so the side-effect import is redundant, and react-dom is an eager shared dependency on the module federation host, so a static import is safe there."
+    },
+    {
+      "topic": "The React 16 advice in server.ts (FR-12)",
+      "choice": "Remove the checkReactVersion function and its call.",
+      "rejected": [
+        "Reword it to name React 18: it would still fire only on React 16, which was already unsupported"
+      ],
+      "reason": "The check can no longer fire on a supported setup, which is the case FR-12 says to remove."
+    },
+    {
+      "topic": "Changeset bump levels",
+      "choice": "Peer range change: major for packages at 1.0.0 or above, minor below, in two changesets with one message. legacyRoot: major for @backstage/test-utils. repo-tools, cli-module-build and cli-module-test-jest: minor. cli-module-new, ui and eslint-plugin: patch. app-example-plugin and @internal/plugin-todo-list are private and get none.",
+      "rejected": [
+        "One minor or patch changeset for all packages: Gate 1 chose the repo rule read literally"
+      ],
+      "reason": "Gate 1 approved the literal bump rule. Versions come from .changeset/pre.json initialVersions. dev-utils, frontend-dev-utils, frontend-plugin-api, plugin-app and techdocs source changes need no extra entry because the peer range message covers them."
+    },
+    {
+      "topic": "Knip reports",
+      "choice": "Hand-edit only cli-module-build and plugins/app, whose entries change. Leave the frontend-plugin-api and ui reports as they are.",
+      "rejected": [
+        "Run yarn build:knip-reports: it would rewrite reports unrelated to this change"
+      ],
+      "reason": "No entry in those two reports is removed, and their line numbers already differ from their manifests today."
+    },
+    {
+      "topic": "Project check order",
+      "choice": "The last typed unit depends on the install step and the file removal.",
+      "reason": "Project checks ride on the last typed packet, so both shell steps must finish before they run."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "prettier",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "test",
+      "run": "CI=1 yarn test {path}",
+      "timeout_s": 300
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "install-immutable",
+      "run": "yarn install --immutable"
+    },
+    {
+      "id": "typecheck",
+      "run": "yarn tsc"
+    },
+    {
+      "id": "lint-all",
+      "run": "yarn lint:all"
+    },
+    {
+      "id": "lint-peer-deps",
+      "run": "yarn lint:peer-deps"
+    },
+    {
+      "id": "test-gate-0",
+      "run": "CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+    },
+    {
+      "id": "test-changed-packages",
+      "run": "CI=true yarn test packages/repo-tools packages/cli-module-build packages/dev-utils packages/frontend-dev-utils packages/frontend-plugin-api packages/ui plugins/techdocs"
+    }
+  ]
+}

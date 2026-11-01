@@ -1,0 +1,467 @@
+[
+  {
+    "id": "U81",
+    "path": "yarn.lock",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerates yarn.lock from the changed manifests. --no-immutable keeps the step working where CI is set in the shell.",
+    "run": "yarn install --no-immutable",
+    "depends_on": [
+      "U24",
+      "U25",
+      "U26",
+      "U27",
+      "U28",
+      "U29",
+      "U30",
+      "U31",
+      "U32",
+      "U33",
+      "U34",
+      "U35",
+      "U36",
+      "U37",
+      "U38",
+      "U39",
+      "U40",
+      "U41",
+      "U42",
+      "U43",
+      "U44",
+      "U45",
+      "U46",
+      "U47",
+      "U48",
+      "U49",
+      "U50",
+      "U51",
+      "U52",
+      "U53",
+      "U54",
+      "U55",
+      "U56",
+      "U57",
+      "U58",
+      "U59",
+      "U60",
+      "U61",
+      "U62",
+      "U63",
+      "U64",
+      "U65",
+      "U66",
+      "U67",
+      "U68",
+      "U69",
+      "U70",
+      "U71",
+      "U72",
+      "U73",
+      "U74",
+      "U75",
+      "U76",
+      "U77",
+      "U78",
+      "U79",
+      "U80"
+    ],
+    "covers": ["FR-2", "NFR-4", "AC-9"]
+  },
+  {
+    "id": "U82",
+    "path": "plugins/app/knip-report.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The report drops the removed dependency and follows the line it shifted in package.json.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 3,
+        "to": 3,
+        "first_line": "## Unused dependencies (7)",
+        "rule": "## Unused dependencies (6)"
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 8,
+        "to": 8,
+        "first_line": "| use-sync-external-store      | package.json:78:6 | error    |",
+        "rule": "Remove this row. The other rows keep their widths."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 19,
+        "to": 19,
+        "first_line": "| @backstage/dev-utils | package.json:84:6 | error    |",
+        "rule": "| @backstage/dev-utils | package.json:83:6 | error    |"
+      }
+    ],
+    "depends_on": ["U47"],
+    "covers": ["FR-6", "FR-15"]
+  },
+  {
+    "id": "U83",
+    "path": "packages/cli-module-build/knip-report.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The report drops the Unlisted dependencies section: both of its entries came from code this change removes.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 10,
+        "to": 16,
+        "first_line": "",
+        "last_line": "| react     | src/lib/bundler/server.ts:274:43           | error    |",
+        "rule": "Remove the blank line, the heading, the table and both rows. The file still ends with line 17, a blank line."
+      }
+    ],
+    "depends_on": ["U13", "U14"],
+    "covers": ["FR-15"]
+  },
+  {
+    "id": "U84",
+    "path": "docs/tutorials/react18-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The guide says React 18 is required and no longer offers staying on React 17.",
+    "rules": [
+      "The highlight-remove blocks that show a project's old React 16 and 17 ranges stay: they are the state a reader migrates from.",
+      "Line 129, on @testing-library/react not supporting React 17, stays: it is a true account of why tests move at once."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 9,
+        "to": 9,
+        "first_line": "This guide has been updated to include steps for removing support for React 16, as it is now deprecated.",
+        "rule": "Backstage now requires React 18. React 16 and React 17 are no longer supported."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 13,
+        "to": 13,
+        "first_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+        "rule": "The Backstage core libraries and plugins require React 18. If your project is still on an older version of React, follow this guide before you upgrade to a Backstage release that requires React 18. React 18 also brings performance improvements, in particular in tests."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 86,
+        "to": 88,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three ranges to ^18.0.0; keep the indentation and commas."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 103,
+        "to": 105,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three ranges to ^18.0.0; keep the indentation and commas."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 125,
+        "to": 125,
+        "first_line": "The good news is that these errors can be fixed while still staying on React 17. If you have a large number of errors to fix you can address as few or many is you like at a time and merge them into your main branch **without** the version bumps from step 1. This lets you gradually migrate the types in your project while not yet fully moving over to React 18. Once all type breakages are fixed you can move on to the next step of migrating tests.",
+        "rule": "Change only the first sentence, to: The good news is that these errors can be fixed before you bump the React version. The rest of the paragraph stays."
+      },
+      {
+        "id": "S6",
+        "at": "delete",
+        "from": 131,
+        "to": 134,
+        "first_line": ":::info",
+        "last_line": "",
+        "rule": "Remove the info block that suggests keeping React 17 dev dependencies in individual plugins, and the blank line after it."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U85",
+    "path": "docs/tutorials/jsx-transform-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The guide no longer lists React 17 as a version a reader can run. The notes on the transform's history stay.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 11,
+        "to": 11,
+        "first_line": "- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (17, 18, or when 19 becomes available for Backstage).",
+        "rule": "- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (18, or 19 when it becomes available for Backstage)."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 12,
+        "to": 12,
+        "first_line": "- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended even on React 17 or 18, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.",
+        "rule": "Change only the sentence that starts 'This is recommended even on', to: This is recommended on React 18 as well, as it was a change introduced with React 17."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 61,
+        "to": 61,
+        "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+        "rule": "In the future, this setting will change to `preserve`."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U86",
+    "path": "docs/tutorials/migrate-to-mui5.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The guide tells plugins to peer on React 18 instead of React 17 or newer.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 43,
+        "to": 43,
+        "first_line": "Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:",
+        "rule": "Important to keep in mind is that Backstage requires React 18. If you intend to use the Material UI v5 components in your plugins, make sure these plugins declare React 18 as a peer dependency:"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 48,
+        "to": 49,
+        "first_line": "\"react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set both ranges to ^18.0.0; keep the indentation and commas."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 69,
+        "to": 69,
+        "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency",
+        "rule": "5. Ensure you are using `\"react\": \"^18.0.0\"` as a peer dependency"
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U87",
+    "path": "packages/eslint-plugin/docs/rules/no-undeclared-imports.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The rule's example package.json uses React 18.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 35,
+        "to": 35,
+        "first_line": "\"react\": \"^17.0.0\"",
+        "rule": "\"react\": \"^18.0.0\""
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U88",
+    "path": ".changeset/require-react-18-major.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Major changeset for the React 18 requirement, for published packages at 1.0.0 or above.",
+    "rules": [
+      "Front matter, each at major, in this order: @backstage/app-defaults, @backstage/core-app-api, @backstage/core-plugin-api, @backstage/dev-utils, @backstage/integration-react, @backstage/test-utils, @backstage/version-bridge, @backstage/plugin-catalog, @backstage/plugin-catalog-react, @backstage/plugin-scaffolder, @backstage/plugin-scaffolder-react, @backstage/plugin-search, @backstage/plugin-search-react, @backstage/plugin-techdocs, @backstage/plugin-techdocs-addons-test-utils, @backstage/plugin-techdocs-module-addons-contrib, @backstage/plugin-techdocs-react",
+      "Message, one paragraph: **BREAKING**: React 18 is now required. The peer dependency ranges for `react`, `react-dom` and `@types/react` are now `^18.0.0`, and React 17 is no longer supported. If your project is still on React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/) before you upgrade."
+    ],
+    "style_from": {
+      "path": ".changeset/type-only-deps-kubernetes.md",
+      "reason": "A changeset with several packages."
+    },
+    "depends_on": [],
+    "covers": ["FR-16", "NFR-2", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U89",
+    "path": ".changeset/require-react-18-minor.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for the React 18 requirement, for published packages below 1.0.0.",
+    "rules": [
+      "Front matter, each at minor, in this order: @backstage/core-compat-api, @backstage/core-components, @backstage/frontend-app-api, @backstage/frontend-defaults, @backstage/frontend-dev-utils, @backstage/frontend-dynamic-feature-loader, @backstage/frontend-plugin-api, @backstage/frontend-test-utils, @backstage/module-federation-common, @backstage/theme, @backstage/plugin-api-docs, @backstage/plugin-api-docs-module-protoc-gen-doc, @backstage/plugin-app, @backstage/plugin-app-react, @backstage/plugin-app-visualizer, @backstage/plugin-auth, @backstage/plugin-auth-react, @backstage/plugin-catalog-graph, @backstage/plugin-catalog-import, @backstage/plugin-catalog-unprocessed-entities, @backstage/plugin-config-schema, @backstage/plugin-devtools, @backstage/plugin-devtools-react, @backstage/plugin-home, @backstage/plugin-home-react, @backstage/plugin-kubernetes, @backstage/plugin-kubernetes-cluster, @backstage/plugin-kubernetes-react, @backstage/plugin-mui-to-bui, @backstage/plugin-notifications, @backstage/plugin-org, @backstage/plugin-org-react, @backstage/plugin-permission-react, @backstage/plugin-scaffolder-node-test-utils, @backstage/plugin-signals, @backstage/plugin-signals-react, @backstage/plugin-user-settings",
+      "Message, one paragraph: **BREAKING**: React 18 is now required. The peer dependency ranges for `react`, `react-dom` and `@types/react` are now `^18.0.0`, and React 17 is no longer supported. If your project is still on React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration/) before you upgrade."
+    ],
+    "style_from": {
+      "path": ".changeset/type-only-deps-kubernetes.md",
+      "reason": "A changeset with several packages."
+    },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U90",
+    "path": ".changeset/test-utils-remove-legacy-root.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Major changeset for the removed legacyRoot option.",
+    "rules": [
+      "Front matter: @backstage/test-utils at major.",
+      "Message, one paragraph: **BREAKING**: Removed the `LegacyRootOption` type and the `legacyRoot` option of `renderInTestApp` and `renderWithEffects`. Tests now always render with a React 18 root, so a test that passed `legacyRoot: true` needs to be updated to work with it."
+    ],
+    "style_from": {
+      "path": ".changeset/techdocs-toc-alignment.md",
+      "reason": "A changeset for one package."
+    },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U91",
+    "path": ".changeset/repo-tools-peer-deps-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for the stricter peer-deps command.",
+    "rules": [
+      "Front matter: @backstage/repo-tools at minor.",
+      "Message, one paragraph: **BREAKING**: The `peer-deps` command now expects `^18.0.0` as the peer dependency range for `react`, `react-dom` and `@types/react`. Packages that still allow React 17 are reported as having incorrect peer dependencies."
+    ],
+    "style_from": {
+      "path": ".changeset/techdocs-toc-alignment.md",
+      "reason": "A changeset for one package."
+    },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U92",
+    "path": ".changeset/cli-remove-react-17-handling.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Minor changeset for the build and test tooling, which no longer handles React 17.",
+    "rules": [
+      "Front matter, each at minor: @backstage/cli-module-build, @backstage/cli-module-test-jest",
+      "Message, one paragraph: **BREAKING**: The frontend build and test tooling no longer detects whether React 18 is installed, and starting a frontend no longer prints warnings about React 16 and 17. Older versions of Backstage packages rely on that detection and fall back to legacy rendering, so upgrade them together with this release."
+    ],
+    "style_from": {
+      "path": ".changeset/type-only-deps-kubernetes.md",
+      "reason": "A changeset with several packages."
+    },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U93",
+    "path": ".changeset/cli-new-templates-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for the new-package templates.",
+    "rules": [
+      "Front matter: @backstage/cli-module-new at patch.",
+      "Message, one paragraph: New plugins and libraries now start with `^18.0.0` as their React range, instead of a range that includes React 16 and 17."
+    ],
+    "style_from": {
+      "path": ".changeset/techdocs-toc-alignment.md",
+      "reason": "A changeset for one package."
+    },
+    "depends_on": [],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U94",
+    "path": ".changeset/ui-native-react-hooks.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/ui, in the format .changeset/README.md requires for that package.",
+    "rules": [
+      "Front matter: @backstage/ui at patch.",
+      "Summary paragraph: Switched to the `useId` and `useSyncExternalStore` hooks from React and removed the `use-sync-external-store` dependency. Generated element ids in the affected components now use the format from React, which can change snapshots that include them.",
+      "Last paragraph: **Affected components:** Popover, Tooltip, Table, TablePagination"
+    ],
+    "style_from": {
+      "path": ".changeset/techdocs-toc-alignment.md",
+      "reason": "A changeset for one package."
+    },
+    "uses": [
+      {
+        "path": ".changeset/README.md",
+        "lines": [12, 44],
+        "reason": "The required @backstage/ui changeset format."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U95",
+    "path": ".changeset/eslint-plugin-react-18-docs.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for the rule doc, which ships in the published package because it has no files list. This is the last unit, so it waits for every other leaf unit and both shell steps.",
+    "rules": [
+      "Front matter: @backstage/eslint-plugin at patch.",
+      "Message, one paragraph: Updated the example in the `no-undeclared-imports` rule documentation to use React 18."
+    ],
+    "style_from": {
+      "path": ".changeset/techdocs-toc-alignment.md",
+      "reason": "A changeset for one package."
+    },
+    "depends_on": [
+      "U03",
+      "U04",
+      "U05",
+      "U06",
+      "U07",
+      "U09",
+      "U10",
+      "U14",
+      "U15",
+      "U18",
+      "U19",
+      "U20",
+      "U21",
+      "U22",
+      "U23",
+      "U81",
+      "U82",
+      "U83",
+      "U84",
+      "U85",
+      "U86",
+      "U87",
+      "U88",
+      "U89",
+      "U90",
+      "U91",
+      "U92",
+      "U93",
+      "U94"
+    ],
+    "covers": ["FR-16", "NFR-3", "AC-10"],
+    "checks": ["prettier"]
+  }
+]

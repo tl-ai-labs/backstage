@@ -8,8 +8,8 @@ Backstage core libraries currently support React 18. We are actively evaluating 
 
 ## What this means for you
 
-- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (17, 18, or when 19 becomes available for Backstage).
-- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended even on React 17 or 18, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.
+- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (18, or 19 when it becomes available for Backstage).
+- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended on React 18 as well, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.
 
 ## Action Required
 
@@ -58,7 +58,7 @@ Update the `compilerOptions.jsx` setting in `tsconfig.json` to `react-jsx`. This
 }
 ```
 
-In the future, this setting will change to `preserve` once React 17 is fully deprecated.
+In the future, this setting will change to `preserve`.
 
 ##### Explanation of `compilerOptions.jsx` Values
 
