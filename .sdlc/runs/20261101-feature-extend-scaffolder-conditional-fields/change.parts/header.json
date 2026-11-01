@@ -1,0 +1,164 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "New .ts and .tsx files start with the Apache 2.0 header reading `Copyright 2026 The Backstage Authors`, copied from an existing file in the same folder. Never change the year on an existing file.",
+      "Prettier uses the @backstage/cli config: 2 spaces, single quotes, trailing commas, `x => x` arrow functions without parentheses, 80 columns.",
+      "Named lodash imports (`import { omit } from 'lodash'`). Inline `type` modifiers where the file already uses them.",
+      "Whole-word names, PascalCase types with no `I` prefix, type parameters prefixed with `T` (STYLE.md).",
+      "Tests sit beside the source as `<name>.test.ts(x)`, run by Jest through `backstage-cli repo test`, with `describe` and `it`.",
+      "New React tests use `screen` and `findBy*` queries over `waitFor`, add no test IDs to the implementation, and prefer fewer thorough tests with several assertions.",
+      "This change adds no user-facing string in code. Any that became necessary would go through `scaffolderReactTranslationRef`.",
+      "Exports of `lib/crossStepConditions.ts` are package-internal: never re-export them from `lib/index.ts`, and give them a short TSDoc comment with no release tag.",
+      "Comments explain why, not what. Keep the existing comments in edited files.",
+      "Changesets and docs are written for adopters: plain language, no internal symbol names, U.S. English, following docs/contribute/doc-style-guide.md.",
+      "Never run `yarn build`, `yarn changesets version`, `yarn release` or the changesets CLI."
+    ],
+    "decisions": [
+      {
+        "topic": "How cross-step `dependencies` resolve",
+        "choice": "Rewrite the active step's schema just before it reaches rjsf: every top-level `dependencies` entry whose key is an earlier-step field moves to a top-level `allOf` entry of `if`/`then` guarded by `required: [key]`. The logic lives in `lib/crossStepConditions.ts`.",
+        "rejected": [
+          "Inject earlier-step properties into later schemas as hidden fields, as #35196 does",
+          "Add earlier-step properties to `useTemplateSchema` output",
+          "Resolve the conditions by hand and render a flattened schema"
+        ],
+        "reason": "`processDependencies` in @rjsf/utils 5.24.13 skips a dependency whose key is not in the step's `properties`, and that is the only cause of the bug. The rewrite means the same thing in JSON Schema and adds no property, whereas injection breaks `ui:order` (`orderProperties` throws on an unlisted property), exposes earlier fields to custom layouts and validates them in the later step (FR-4)."
+      },
+      {
+        "topic": "Where the rewrite is applied",
+        "choice": "Only at `Stepper`'s `schema` prop on `Form`. `steps[n].schema` and `steps[n].mergedSchema` stay as `useTemplateSchema` returns them.",
+        "rejected": [
+          "Rewrite inside `useTemplateSchema`"
+        ],
+        "reason": "`useTemplateSchema` is a public alpha hook and its existing test pins `second.schema` to `{ dependencies }`. Review and the async validators read `mergedSchema` through json-schema-library, which already resolves a dependency without its key in `properties`."
+      },
+      {
+        "topic": "What counts as an earlier-step field",
+        "choice": "A key defined by a step before this one (its `properties`, top-level `allOf` entries' `properties`, or any conditional branch) and defined nowhere in this step, over the feature-flag-filtered `steps`, read from each step's `.schema`.",
+        "rejected": [
+          "Count a key defined in both steps as earlier-step"
+        ],
+        "reason": "The requirements define a same-step condition as one reading fields of its own step, so a key the step defines itself stays with today's rjsf path (FR-7). Branch-defined keys count so chained conditions work."
+      },
+      {
+        "topic": "Drop rule",
+        "choice": "`omitHiddenCrossStepValues` drops a top-level key only when it is defined in a cross-step branch and no step's schema, resolved by rjsf `retrieveSchema` against the current values, holds it. It repeats until nothing more drops, so a value dropped in one pass stops satisfying later conditions.",
+        "rejected": [
+          "Evaluate each branch's condition separately with ajv",
+          "Drop every field missing from the resolved schemas, same-step ones included"
+        ],
+        "reason": "FR-5 conditions a to d reduce to this, because a selected branch always resolves its field, and using rjsf's own resolver means the rule cannot disagree with what the form renders. Repeating makes chained conditions agree with Review (FR-8)."
+      },
+      {
+        "topic": "Filtered view, not filtered state",
+        "choice": "`stepsState` keeps every value. Stepper derives `visibleState` once per render and passes it to `Form`'s `formData`, the review step and `onCreate`. `formContext.formData` stays `stepsState`. The function returns its input object when nothing drops.",
+        "rejected": [
+          "Delete dropped keys from `stepsState`",
+          "Keep `formData={stepsState}` on Form and filter only Review and onCreate"
+        ],
+        "reason": "Q1 default: a value returns with its field because state is untouched. Form needs the view too: otherwise a stale value from a hidden step-2 field keeps a step-3 condition selected, showing a field whose value Review then drops."
+      },
+      {
+        "topic": "Q3: how form data reaches onChange and the query string (checked in code)",
+        "choice": "The default holds, with no extra code. `Stepper` writes nothing to the URL: `useFormDataFromQuery` only reads `window.location.search` once at mount. `FormProps` has no `onChange`, so `handleChange` is the only typed receiver, and it merges `e.formData` over `stepsState`, so the state is the same as today.",
+        "rejected": [
+          "Filter the query-string seed at mount"
+        ],
+        "reason": "Two consequences to know. `e.formData` no longer carries a dropped key, but the merge keeps it in `stepsState`. The only `?formData=` writers are the OngoingTask start-over paths, built from `task.spec.parameters`, so that draft loses dropped values because they were never submitted (FR-5); OngoingTask is not edited."
+      },
+      {
+        "topic": "Scope of the condition walk (Q2)",
+        "choice": "The walk reads only a step's top-level `if`, top-level `allOf` entries and top-level `dependencies`, and recurses through branches. It never descends into `properties.<name>`. Top-level `oneOf` and `anyOf` are not conditional branches.",
+        "rejected": [
+          "Walk nested object schemas"
+        ],
+        "reason": "Accepted default of Q2: rjsf evaluates a nested object's conditions against that object's own data. The docs say so."
+      },
+      {
+        "topic": "Review lookup for cross-step `if`",
+        "choice": "`findSchemaForKey` also adds the keys read by the step's cross-step conditions to its lookup data, never the looked-up key itself. Same-step conditions get no new data.",
+        "rejected": [
+          "Leave the lookup as it is",
+          "Add all of formState to the lookup data"
+        ],
+        "reason": "It passes only `dependencies` keys today, so a field in a cross-step `if` that uses `required`, or in an `else`, is not found: Review falls back to the raw key and skips masking and `ui:backstage.review`. The docs tell authors to use `required` in `if`, so this must work. Passing the looked-up key makes json-schema-library invent a schema for it, which the comment in that function warns about."
+      },
+      {
+        "topic": "Public API",
+        "choice": "No export is added or changed: the new functions stay out of `lib/index.ts`, and `ReviewStepProps`, `ReviewStateProps` and `StepperProps` keep their shapes, so API reports do not change.",
+        "rejected": [
+          "Export the helpers from `lib/index.ts`"
+        ],
+        "reason": "NFR-2. `next/index.ts` re-exports `lib`, so any barrel export becomes alpha public API."
+      },
+      {
+        "topic": "Template editor preview (FR-9)",
+        "choice": "No edit in `plugins/scaffolder`. `TemplateEditorForm` renders the same `Stepper` and passes its `onCreate` values to the dry run, so FR-9 is delivered by the `Stepper` unit.",
+        "rejected": [
+          "Add a TemplateEditorForm test"
+        ],
+        "reason": "`TemplateEditorForm` has no test file today, and a new one would repeat the Stepper cases. The requirement allows no change."
+      },
+      {
+        "topic": "Property-array dependencies",
+        "choice": "`dependencies: { a: ['b'] }` and boolean dependency values stay in `dependencies`, unrewritten and outside the drop rule.",
+        "rejected": [
+          "Rewrite them to `if`/`then`"
+        ],
+        "reason": "The requirements define a conditional branch as a schema dependency, and an array entry defines no field. Its target is already on screen, so it is not a dead end."
+      },
+      {
+        "topic": "`oneOf` dependency options",
+        "choice": "Each option with a schema for the dependency key becomes `if: { properties: { key: <that schema> }, required: [key] }` with `then` holding the option minus `properties[key]`. Options with no schema for the key are skipped, as rjsf skips them.",
+        "rejected": [
+          "Keep `oneOf` inside the `then` of a single `if`"
+        ],
+        "reason": "`then: { oneOf }` renders rjsf's option selector, not the matching option's fields, and stripping `properties[key]` keeps the earlier-step field out of the later step (FR-4). A value matching no option now blocks nothing, in line with FR-3."
+      },
+      {
+        "topic": "Release coverage",
+        "choice": "One new changeset with `'@backstage/plugin-scaffolder-react': minor`. No changeset for `@backstage/plugin-scaffolder`.",
+        "rejected": [
+          "`patch` for scaffolder-react",
+          "Add `@backstage/plugin-scaffolder` to the changeset"
+        ],
+        "reason": "A non-breaking feature in a package at 1.0.0 or higher takes `minor`. `pre.json` holds it in prerelease mode. `plugins/scaffolder` source does not change, and no existing changeset describes this behaviour."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 180
+      },
+      {
+        "id": "jest",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "test",
+        "run": "CI=1 yarn test plugins/scaffolder-react"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint"
+      }
+    ]
+  },
+  "hashes": {}
+}

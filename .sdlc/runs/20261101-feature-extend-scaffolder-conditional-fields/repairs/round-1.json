@@ -1,0 +1,94 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261101-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/crossStepConditions.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 195): rewriteCrossStepDependencies always writes an allOf key, even when dependencyToConditions returns nothing and the step has no existing allOf. This is reachable with a dependency on an earlier key whose value is {} or whose oneOf options all lack a schema for the key (the skip path the plan describes). The result is allOf: [], which ajv rejects against the draft-07 metaschema. Confirmed with the repo's validator: validateFormData returns 'schema is invalid: data/allOf must NOT have fewer than 1 items', so the step cannot be submitted. Before this change such a dependency did not stop the form with a schema error. — fix: Only set allOf when the combined list is non-empty, and still remove the rewritten key from dependencies. Add a case to crossStepConditions.test.ts asserting the result has no allOf key for a dependency that yields no conditions.\n2. minor (line 103): A plain schema dependency that repeats its own key, such as dependencies: { flag: { properties: { flag: { const: true }, extra: {...} }, required: ['extra'] } }, is not treated as cross-step. walk records flag as a field of the step because only oneOf options go through withoutProperty, so fieldKeys contains flag and earlierFieldKeys removes it. The dependency stays unrewritten and rjsf still skips it, which leaves the original dead end. Every other condition in that step reading flag also loses its cross-step status, so its stale values are not dropped. — fix: Use withoutProperty(value, key) in walk for the plain dependency value, and strip the key from then at line 151 in dependencyToConditions so the earlier field does not render in the later step. Add a test for this form.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/crossStepConditions.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/crossStepConditions.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/crossStepConditions.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261101-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "docs/features/software-templates/input-examples.md",
+    "instruction": "Fix `docs/features/software-templates/input-examples.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 412): The docs say a hidden value is not submitted, but that is not true for a Secret field. SecretWidget stores the real value in SecretsContext through setSecrets, and TemplateWizardPage passes that context to scaffold() as secrets. omitHiddenCrossStepValues only removes the masked string from the form values, so a secret typed before the condition was turned off still reaches the backend. Confidence is high on the data flow. Whether FR-5 was meant to cover secrets could not be checked, because the requirements are not in change_plan.md. — fix: Add one sentence saying a value entered in a secret field stays in the task's secrets even when its field is hidden, so template steps should guard their use of it with the same condition. Clearing the secret in code would need a removal path in SecretsContext, which merges only today and is outside this plan, so that needs an operator decision.\n2. minor (line 420): 'A task or dry run validates parameters as before' hides a consequence of the oneOf rewrite. The plan accepts that a value matching no oneOf option blocks nothing in the form, but plugins/scaffolder-backend/src/service/router.ts (lines 590 and 1073) still validates values against the original parameters, where that oneOf is enforced. If the oneOf list does not cover every value, the user gets through every step and Review and is then rejected at Create or in a dry run. Backend rejection is inferred from the router's validate call on the original parameters and was not run. — fix: Extend the sentence to tell authors that a dependencies oneOf must have an option for every value of the earlier field, because a value with no matching option passes the form but fails task validation.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-templates/input-examples.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-templates/input-examples.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-feature-extend-scaffolder-conditional-fields/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

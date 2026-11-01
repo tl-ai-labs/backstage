@@ -1,0 +1,21 @@
+[
+  {
+    "path": ".changeset/scaffolder-cross-step-conditions.md",
+    "problem": "Security review, accepted at Gate 3: the changeset says a hidden field's value is left out of the review step and the submitted values, which is false for secret fields. A value entered in a secret field is still sent with the task's secrets even when its field is hidden. Keep the frontmatter and the rest of the text as they are, and add that exception in plain language for Backstage adopters, consistent with the sentence at docs/features/software-templates/input-examples.md line 412. Name no internal functions, classes or variables.",
+    "context_paths": [
+      "docs/features/software-templates/input-examples.md"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "problem": "Security review, accepted at Gate 3: line 72 reads `formState.hasOwnProperty(conditionKey)` on data that can come from the `?formData=` query string, so a crafted link with an own `hasOwnProperty` key can crash Review. Change it to `Object.prototype.hasOwnProperty.call(formState, conditionKey)` and change nothing else."
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "problem": "Security review, accepted at Gate 3: masking of a field under a cross-step condition is not pinned by any test. Add one test to this file, matching its style: a field with `ui:widget: password` defined in the `then` of a top-level `if`/`then` in a later step, whose `if` reads a field of an earlier step, with the condition true and a value in form state. Assert the value is masked in Review and the plain value is not on screen. Use `screen` queries and add no test IDs.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "plugins/scaffolder-react/src/next/components/ReviewState/util.ts"
+    ]
+  }
+]
