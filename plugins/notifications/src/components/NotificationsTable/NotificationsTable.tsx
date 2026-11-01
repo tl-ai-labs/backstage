@@ -59,6 +59,8 @@ export type NotificationsTableProps = Pick<
   isLoading?: boolean;
   isUnread: boolean;
   notifications?: Notification[];
+  /** Id of the notification to highlight in the table */
+  highlightedNotificationId?: string;
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
@@ -70,6 +72,7 @@ export const NotificationsTable = ({
   markAsReadOnLinkOpen,
   isLoading,
   notifications = [],
+  highlightedNotificationId,
   isUnread,
   onUpdate,
   setContainsText,
@@ -199,7 +202,20 @@ export const NotificationsTable = ({
         render: (notification: Notification) => {
           // Compact content
           return (
-            <Flex gap="4" align="center">
+            <Flex
+              gap="4"
+              align="center"
+              aria-current={
+                notification.id === highlightedNotificationId
+                  ? 'true'
+                  : undefined
+              }
+              className={
+                notification.id === highlightedNotificationId
+                  ? styles.highlightedNotification
+                  : undefined
+              }
+            >
               <div className={styles.severityItem}>
                 <NotificationIcon notification={notification} />
               </div>
@@ -290,6 +306,7 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    highlightedNotificationId,
   ]);
 
   return (

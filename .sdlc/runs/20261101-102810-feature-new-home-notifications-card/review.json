@@ -1,0 +1,29 @@
+{
+  "module": "plugins/notifications, plugins/home-react (home notifications card)",
+  "verdict": "approved",
+  "tool_calls": 12,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "line": 91,
+      "issue": "The severity wrapper is a div. change_plan.md (Severity display decision, U11 rule 8) calls for a span with role=\"img\", and SeverityIcon renders only an inline svg, so nothing requires a block element. No visible or accessibility effect, because .severity is inline-flex and the role and label are correct.",
+      "fix": "Change the wrapper at lines 91-97 from div to span and keep className, role and aria-label as they are."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "line": 289,
+      "issue": "NFR-3's rule that no refresh starts while one is running (useNotificationsRefresh.ts lines 52-57) has no test. Every timer case resolves getNotifications at once, so removing the !loading guard would leave the suite green. No acceptance criterion requires this test, and the code reads correctly.",
+      "fix": "Add one fake-timer case: leave a refresh's getNotifications promise pending, send a signal and advance past the 2000 ms window, assert no extra call, then resolve the promise and assert exactly one more call."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+      "line": 88,
+      "issue": "Two planned page behaviours have no test: U18 S6, where a refresh also re-fetches the highlighted item so its read state stays current, and U18 S7, where the previous item is discarded while a new id loads. No test emits a signal or changes the id, so removing retryHighlight() or the id comparison would pass.",
+      "fix": "Add a fake signalApiRef to one case, emit a signal and assert getNotification is called a second time. If it stays cheap, also navigate from one id to another with the second fetch pending and assert the first item is gone."
+    }
+  ],
+  "refinement_packets": []
+}

@@ -117,5 +117,13 @@ export const notificationsTranslationRef = createTranslationRef({
           'useNotificationFormat must be used within a NotificationFormatProvider',
       },
     },
+    unreadCard: {
+      title: 'Unread notifications',
+      emptyState: 'No unread notifications',
+      markAsRead: 'Mark as read',
+      errors: {
+        loadFailed: 'Failed to load notifications',
+      },
+    },
   },
 });

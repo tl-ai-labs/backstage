@@ -1,0 +1,311 @@
+[
+  {
+    "id": "U16",
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the highlighted row style.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 35,
+        "to": 35,
+        "first_line": "}",
+        "rule": "Add a blank line, then .highlightedNotification { background-color: var(--bui-bg-neutral-2); border-radius: var(--bui-radius-2); outline: 2px solid var(--bui-ring); outline-offset: var(--bui-space-1); } formatted over several lines."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-9", "NFR-1"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U17",
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds an optional id prop that marks the matching row as highlighted.",
+    "rules": [
+      "Without the prop the table renders exactly as today: aria-current and className are undefined on every row."
+    ],
+    "exports": [
+      {
+        "name": "NotificationsTableProps",
+        "kind": "type",
+        "params": [],
+        "returns": "the existing type plus highlightedNotificationId?: string"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 61,
+        "to": 61,
+        "first_line": "notifications?: Notification[];",
+        "rule": "Add a one-line TSDoc comment, 'Id of the notification to highlight in the table', then highlightedNotificationId?: string;"
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 72,
+        "to": 72,
+        "first_line": "notifications = [],",
+        "rule": "Add highlightedNotificationId, to the destructured props."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 202,
+        "to": 202,
+        "first_line": "<Flex gap=\"4\" align=\"center\">",
+        "rule": "Keep gap and align; add aria-current={notification.id === highlightedNotificationId ? 'true' : undefined} and className={notification.id === highlightedNotificationId ? styles.highlightedNotification : undefined}."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 292,
+        "to": 292,
+        "first_line": "markAsReadOnLinkOpen,",
+        "rule": "Add highlightedNotificationId, to the compactColumns dependency array."
+      }
+    ],
+    "depends_on": ["U16"],
+    "covers": ["FR-9", "FR-15", "NFR-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U18",
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Reads ?id= from the URL, fetches that notification and highlights it, showing it alongside the current rows when it is not among them.",
+    "rules": [
+      "No filter, sort, page number or page size state changes because of the id.",
+      "An error from the by-id fetch is never rendered and never joins the list's error, so an unknown or inaccessible id leaves the page working normally.",
+      "With no id, or an empty id, getNotification is not called and the table gets the list rows unchanged."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 26,
+        "to": 26,
+        "first_line": "import { useTranslationRef } from '@backstage/core-plugin-api/alpha';",
+        "rule": "Add import { useSearchParams } from 'react-router-dom';"
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 50,
+        "to": 50,
+        "first_line": "NotificationSeverity,",
+        "rule": "Add Notification, to the import from @backstage/plugin-notifications-common."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 54,
+        "to": 54,
+        "first_line": "const ThrottleDelayMs = 2000;",
+        "rule": "Add a blank line, then a file-local function withHighlightedNotification(notifications: Notification[] | undefined, highlighted: Notification | undefined, pageSize: number): it returns notifications when highlighted is undefined or already among them by id, else [highlighted, ...(notifications ?? [])].slice(0, pageSize)."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 84,
+        "to": 84,
+        "first_line": "const { lastSignal } = useSignal('notifications');",
+        "rule": "Add const [searchParams] = useSearchParams(); and const highlightedNotificationId = searchParams.get('id') || undefined;"
+      },
+      {
+        "id": "S5",
+        "at": "insert_after",
+        "from": 141,
+        "to": 141,
+        "first_line": ");",
+        "rule": "Add a blank line, then const { value: fetchedHighlight, retry: retryHighlight } = useNotificationsApi(api => highlightedNotificationId ? api.getNotification(highlightedNotificationId) : Promise.resolve(undefined), [highlightedNotificationId]);"
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 148,
+        "to": 153,
+        "first_line": "useEffect(() => {",
+        "last_line": "}, [refresh, setRefresh, retry, loading]);",
+        "rule": "Keep the effect and also call retryHighlight() after retry() when highlightedNotificationId is set, so a shown item's read state stays current; add retryHighlight and highlightedNotificationId to the dependency array."
+      },
+      {
+        "id": "S7",
+        "at": "insert_after",
+        "from": 163,
+        "to": 163,
+        "first_line": "};",
+        "rule": "Add a blank line, then const notifications = value?.[0]?.notifications; then const displayedNotifications = useMemo(...) calling withHighlightedNotification(notifications, fetchedHighlight?.id === highlightedNotificationId ? fetchedHighlight : undefined, pageSize) with dependencies notifications, fetchedHighlight, highlightedNotificationId and pageSize. The id comparison discards the previous item while a new id loads. This stays above the early return for error so hook order holds."
+      },
+      {
+        "id": "S8",
+        "at": "delete",
+        "from": 169,
+        "to": 169,
+        "first_line": "const notifications = value?.[0]?.notifications;",
+        "rule": "Delete this line; S7 now declares notifications."
+      },
+      {
+        "id": "S9",
+        "at": "replace",
+        "from": 217,
+        "to": 217,
+        "first_line": "notifications={notifications}",
+        "rule": "notifications={displayedNotifications} and, on the next line, highlightedNotificationId={highlightedNotificationId}. pageSize and totalCount stay as they are."
+      }
+    ],
+    "depends_on": ["U17"],
+    "covers": ["FR-9", "FR-10", "FR-11", "NFR-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U19",
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Covers deep link highlighting on the notifications page.",
+    "rules": [
+      "Render with renderInTestApp(<TestApiProvider apis={[[notificationsApiRef, api], [toastApiRef, { post: jest.fn() }]]}><NotificationsPage /></TestApiProvider>, { routeEntries: ['/notifications?id=...'] }).",
+      "The mock API is jest.Mocked<NotificationsApi>; getStatus resolves { unread: 1, read: 0 } and getTopics resolves { topics: [] }.",
+      "Find the highlighted row with closest('[aria-current=\"true\"]') from the title element; use the page's default page size of 5 for the capped case."
+    ],
+    "tests": [
+      {
+        "name": "highlights an item that is in the current list",
+        "given": "The list holds items a and b, getNotification resolves a, and the URL has ?id=a",
+        "expect": "getNotification is called with 'a'; a's title has an aria-current ancestor, b's does not, and a shows once"
+      },
+      {
+        "name": "shows an item outside the current list within the page size",
+        "given": "The list holds five rows, getNotification resolves a read item not among them, and the URL has its id",
+        "expect": "The item shows highlighted as the first row, four list rows show and the fifth does not; getNotifications is still called with read false and offset 0"
+      },
+      {
+        "name": "keeps working for an unknown id",
+        "given": "getNotification rejects and the URL has ?id=missing",
+        "expect": "The list rows show, nothing has aria-current and no error panel shows"
+      },
+      {
+        "name": "ignores a missing or empty id",
+        "given": "One render at /notifications and one at /notifications?id=",
+        "expect": "The list rows show, getNotification is not called and nothing has aria-current"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "lines": [16, 60],
+      "reason": "Test scaffolding of this package."
+    },
+    "uses": [
+      {
+        "path": "plugins/notifications/src/api/NotificationsApi.ts",
+        "lines": [69, 89],
+        "reason": "The interface the mock API implements."
+      }
+    ],
+    "depends_on": ["U18"],
+    "covers": ["AC-7", "AC-10"],
+    "checks": ["prettier", "eslint", "test"]
+  },
+  {
+    "id": "U20",
+    "path": "docs/notifications/usage.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Documents the home page card, how to add it, its refresh behaviour and the deep link.",
+    "rules": [
+      "State that the card is available in the new frontend system only and that it shows the latest 5 unread notifications with a mark-as-read action.",
+      "State that installing the plugin provides the widget home-page-widget:notifications/unread-notifications, that it is added to a layout as component UnreadNotifications under defaultConfig of page:home with a short app-config.yaml example, and that setting the extension to false disables it.",
+      "State that the card refreshes on notification signals, and polls every 60 seconds only when the signals API is not installed in the app; it does not poll when signals are installed but disconnected.",
+      "State that each item links to the notifications page with ?id=<id>, that the page highlights that notification, and that it also shows the notification when it is outside the current filter or page."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 32,
+        "to": 32,
+        "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+        "rule": "Add a blank line, then a '### Home page card' subsection holding the content of this unit's rules."
+      }
+    ],
+    "uses": [
+      {
+        "path": "docs/getting-started/homepage.md",
+        "lines": [186, 215],
+        "reason": "The defaultConfig shape to copy in the example."
+      },
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "reason": "The documentation style to follow."
+      }
+    ],
+    "depends_on": ["U14", "U18"],
+    "covers": ["FR-15", "AC-13"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U21",
+    "path": ".changeset/notifications-unread-home-card.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/plugin-notifications.",
+    "rules": [
+      "Front matter is exactly one entry: '@backstage/plugin-notifications': patch",
+      "The body is: Added an unread notifications card for the home page, available as a home page widget in the new frontend system. The card lists your latest unread notifications, lets you mark them as read, and stays up to date through signals, or by polling when signals are not installed. The notifications page now highlights the notification given by the `id` query parameter."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/add-logviewer-copy-button.md",
+      "reason": "Changeset file shape."
+    },
+    "depends_on": ["U14", "U18"],
+    "covers": ["FR-16"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U22",
+    "path": ".changeset/home-react-card-renderer-app-context.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Patch changeset for @backstage/plugin-home-react.",
+    "rules": [
+      "Front matter is exactly one entry: '@backstage/plugin-home-react': patch",
+      "The body is: Home page cards that use a custom `Renderer` no longer need app context to render. While such a card loads, it shows a generic progress indicator instead of the app's progress component."
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/add-logviewer-copy-button.md",
+      "reason": "Changeset file shape."
+    },
+    "depends_on": ["U04"],
+    "covers": ["FR-16"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U23",
+    "path": "plugins/notifications/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Compiles and regenerates the API reports of both changed packages, once the code is in.",
+    "run": "yarn build:api-reports plugins/notifications plugins/home-react",
+    "depends_on": ["U04", "U07", "U09", "U12", "U14", "U17", "U18"],
+    "covers": ["FR-17", "AC-12", "NFR-7"]
+  },
+  {
+    "id": "U24",
+    "path": "plugins/notifications/report-alpha.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Reruns extraction on the declarations U23 compiled, so the alpha report is recorded as a step's output; a second run leaves it unchanged.",
+    "run": "yarn build:api-reports:only plugins/notifications",
+    "depends_on": ["U23"],
+    "covers": ["FR-17", "AC-10", "AC-11", "AC-12", "NFR-7"]
+  }
+]

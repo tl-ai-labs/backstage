@@ -1,0 +1,116 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-102810-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior review (minor), near line 289: NFR-3's rule that no refresh starts while one is running (useNotificationsRefresh.ts lines 52-57) has no test. Every timer case resolves getNotifications at once, so removing the !loading guard would leave the suite green. Add one fake-timer case: leave a refresh's getNotifications promise pending, send a signal and advance past the 2000 ms window, assert no extra call, then resolve the promise and assert exactly one more call. Change only this test file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-102810-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-102810-feature-new-home-notifications-card/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/hooks/useNotificationsRefresh.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261101-102810-feature-new-home-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior review (minor), near line 88: two planned page behaviours have no test: U18 S6, where a refresh also re-fetches the highlighted item so its read state stays current, and U18 S7, where the previous item is discarded while a new id loads. No test emits a signal or changes the id, so removing retryHighlight() or the id comparison would pass. Add a fake signalApiRef to one case, emit a signal and assert getNotification is called a second time. If it stays cheap, also navigate from one id to another with the second fetch pending and assert the first item is gone. Change only this test file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261101-102810-feature-new-home-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261101-102810-feature-new-home-notifications-card/briefs/U19.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]

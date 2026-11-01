@@ -24,6 +24,7 @@ import {
 import { Grid } from '@backstage/ui';
 import { useSignal } from '@backstage/plugin-signals-react';
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { useSearchParams } from 'react-router-dom';
 import { notificationsTranslationRef } from '../../translation';
 
 const TableTitleKeys = {
@@ -47,11 +48,23 @@ import {
   GetTopicsResponse,
 } from '../../api';
 import {
+  Notification,
   NotificationSeverity,
   NotificationStatus,
 } from '@backstage/plugin-notifications-common';
 
 const ThrottleDelayMs = 2000;
+
+function withHighlightedNotification(
+  notifications: Notification[] | undefined,
+  highlighted: Notification | undefined,
+  pageSize: number,
+) {
+  if (!highlighted || notifications?.some(n => n.id === highlighted.id)) {
+    return notifications;
+  }
+  return [highlighted, ...(notifications ?? [])].slice(0, pageSize);
+}
 
 /** @public */
 export type NotificationsPageProps = {
@@ -82,6 +95,8 @@ function NotificationsPageContent(
 
   const [refresh, setRefresh] = useState(false);
   const { lastSignal } = useSignal('notifications');
+  const [searchParams] = useSearchParams();
+  const highlightedNotificationId = searchParams.get('id') || undefined;
   const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(true);
   const [saved, setSaved] = useState<boolean | undefined>(undefined);
   const [pageNumber, setPageNumber] = useState(0);
@@ -140,6 +155,15 @@ function NotificationsPageContent(
     ],
   );
 
+  const { value: fetchedHighlight, retry: retryHighlight } =
+    useNotificationsApi<Notification | undefined>(
+      api =>
+        highlightedNotificationId
+          ? api.getNotification(highlightedNotificationId)
+          : Promise.resolve(undefined),
+      [highlightedNotificationId],
+    );
+
   const throttledSetRefresh = useMemo(
     () => throttle(setRefresh, ThrottleDelayMs),
     [setRefresh],
@@ -148,9 +172,19 @@ function NotificationsPageContent(
   useEffect(() => {
     if (refresh && !loading) {
       retry();
+      if (highlightedNotificationId) {
+        retryHighlight();
+      }
       setRefresh(false);
     }
-  }, [refresh, setRefresh, retry, loading]);
+  }, [
+    refresh,
+    setRefresh,
+    retry,
+    retryHighlight,
+    highlightedNotificationId,
+    loading,
+  ]);
 
   useEffect(() => {
     if (lastSignal && lastSignal.action) {
@@ -162,11 +196,23 @@ function NotificationsPageContent(
     throttledSetRefresh(true);
   };
 
+  const notifications = value?.[0]?.notifications;
+  const displayedNotifications = useMemo(
+    () =>
+      withHighlightedNotification(
+        notifications,
+        fetchedHighlight?.id === highlightedNotificationId
+          ? fetchedHighlight
+          : undefined,
+        pageSize,
+      ),
+    [notifications, fetchedHighlight, highlightedNotificationId, pageSize],
+  );
+
   if (error) {
     return <ResponseErrorPanel error={error} />;
   }
 
-  const notifications = value?.[0]?.notifications;
   const totalCount = value?.[0]?.totalCount;
   const isUnread = !!value?.[1]?.unread;
   const allTopics = value?.[2]?.topics;
@@ -214,7 +260,8 @@ function NotificationsPageContent(
             isLoading={loading}
             isUnread={isUnread}
             markAsReadOnLinkOpen={markAsReadOnLinkOpen}
-            notifications={notifications}
+            notifications={displayedNotifications}
+            highlightedNotificationId={highlightedNotificationId}
             onUpdate={onUpdate}
             setContainsText={setContainsText}
             onPageChange={setPageNumber}

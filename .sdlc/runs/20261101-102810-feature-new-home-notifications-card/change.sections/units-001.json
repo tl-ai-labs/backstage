@@ -1,0 +1,167 @@
+[
+  {
+    "id": "U01",
+    "path": "plugins/home-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the dev dependencies the new CardExtension test needs.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 67,
+        "to": 67,
+        "first_line": "\"@backstage/cli\": \"workspace:^\",",
+        "rule": "Add four devDependencies in this order: \"@backstage/test-utils\": \"workspace:^\", \"@testing-library/dom\": \"^10.0.0\", \"@testing-library/jest-dom\": \"^6.0.0\", \"@testing-library/react\": \"^16.0.0\"."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U02",
+    "path": "plugins/notifications/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds @backstage/plugin-home-react as a dependency of the notifications plugin.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 57,
+        "to": 57,
+        "first_line": "\"@backstage/frontend-plugin-api\": \"workspace:^\",",
+        "rule": "Add \"@backstage/plugin-home-react\": \"workspace:^\", to dependencies."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-12"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U03",
+    "path": "yarn.lock",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Installs so yarn.lock records the new workspace dependencies and node_modules matches them.",
+    "run": "yarn install",
+    "depends_on": ["U01", "U02"],
+    "covers": ["FR-12"]
+  },
+  {
+    "id": "U04",
+    "path": "plugins/home-react/src/extensions.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Splits CardExtension into a custom Renderer path that needs no app context and an unchanged default path.",
+    "rules": [
+      "CardExtension keeps its name, generic and props type; it stays a thin dispatcher with no hooks, so no hook runs conditionally.",
+      "The custom Renderer path calls neither useApp nor useTranslationRef and passes Renderer the same props as today.",
+      "The default path keeps the same InfoCard, settings modal, actions, ContextProvider handling and the app's Progress as Suspense fallback."
+    ],
+    "exports": [
+      {
+        "name": "CardExtension",
+        "kind": "function",
+        "params": [{ "name": "props", "type": "CardExtensionComponentProps<T>" }],
+        "returns": "JSX.Element"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 18,
+        "to": 18,
+        "first_line": "import IconButton from '@material-ui/core/IconButton';",
+        "rule": "Add import CircularProgress from '@material-ui/core/CircularProgress';"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 124,
+        "to": 155,
+        "first_line": "export function CardExtension<T>(props: CardExtensionComponentProps<T>) {",
+        "last_line": "}",
+        "rule": "Replace with a non-exported CardExtensionWithCustomRenderer<T>, whose props are CardExtensionComponentProps<T> & { Renderer: NonNullable<ComponentRenderer['Renderer']> } and which holds the old destructuring and the old Renderer block inside <Suspense fallback={<CircularProgress />}>, followed by the header of a non-exported DefaultCardExtension<T>(props: CardExtensionComponentProps<T>) with the old destructuring minus Renderer and the lines from useApp through useTranslationRef. The following const cardProps stays as the rest of DefaultCardExtension."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 202,
+        "to": 202,
+        "first_line": "}",
+        "rule": "Add a blank line, then export function CardExtension<T>(props: CardExtensionComponentProps<T>) that returns <CardExtensionWithCustomRenderer {...props} Renderer={props.Renderer} /> when props.Renderer is set, else <DefaultCardExtension {...props} />."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-13", "FR-14", "NFR-6"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U05",
+    "path": "plugins/home-react/src/setupTests.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Loads the jest-dom matchers for plugins/home-react tests.",
+    "rules": ["The file is the licence header followed by import '@testing-library/jest-dom';"],
+    "import_line": "",
+    "style_from": {
+      "path": "plugins/notifications/src/setupTests.ts",
+      "reason": "Same file in a sibling package; only the copyright year differs."
+    },
+    "depends_on": ["U03"],
+    "covers": ["AC-9"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U06",
+    "path": "plugins/home-react/src/extensions.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Shows CardExtension rendering with a custom Renderer and no app context, and the default path unchanged.",
+    "rules": [
+      "Import CardExtension and type RendererProps from './extensions', render and screen from @testing-library/react, renderInTestApp from @backstage/test-utils.",
+      "The custom Renderer case uses plain render, with no renderInTestApp or provider around it.",
+      "The fallback case passes the option components: { Progress: () => <div>App progress</div> } to renderInTestApp and a Content made with React lazy over a promise that never resolves, cast to the Content type."
+    ],
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "lines": [16, 60],
+      "reason": "Test scaffolding with renderInTestApp and the testing-library imports."
+    },
+    "uses": [
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "lines": [27, 54],
+        "reason": "RendererProps and the component part types the test builds on."
+      }
+    ],
+    "tests": [
+      {
+        "name": "renders a custom Renderer without app context",
+        "given": "CardExtension with title, a Renderer that shows title and Content, and a Content, rendered with plain render",
+        "expect": "The render does not throw and the heading and the content are in the document"
+      },
+      {
+        "name": "renders the default card with its title, content, actions and context provider",
+        "given": "CardExtension with no Renderer, with title, Content, Actions and a ContextProvider that wraps children in a labelled element, in renderInTestApp",
+        "expect": "The title, the content and the actions show, inside the element the ContextProvider adds"
+      },
+      {
+        "name": "opens the settings modal from the default card",
+        "given": "CardExtension with no Renderer and a Settings part, in renderInTestApp",
+        "expect": "Pressing the settings icon button shows the Settings content"
+      },
+      {
+        "name": "uses the app Progress as the fallback on the default path",
+        "given": "CardExtension with no Renderer and a Content that never finishes loading, with a custom Progress app component",
+        "expect": "'App progress' shows"
+      }
+    ],
+    "depends_on": ["U03", "U04", "U05"],
+    "covers": ["FR-13", "FR-14", "AC-9"],
+    "checks": ["prettier", "eslint", "test"]
+  }
+]

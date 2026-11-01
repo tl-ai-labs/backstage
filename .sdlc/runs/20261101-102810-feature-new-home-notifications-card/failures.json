@@ -1,0 +1,12 @@
+[
+  {
+    "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "problem": "Senior review (minor), near line 289: NFR-3's rule that no refresh starts while one is running (useNotificationsRefresh.ts lines 52-57) has no test. Every timer case resolves getNotifications at once, so removing the !loading guard would leave the suite green. Add one fake-timer case: leave a refresh's getNotifications promise pending, send a signal and advance past the 2000 ms window, assert no extra call, then resolve the promise and assert exactly one more call. Change only this test file.",
+    "context_paths": ["plugins/notifications/src/hooks/useNotificationsRefresh.ts"]
+  },
+  {
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "problem": "Senior review (minor), near line 88: two planned page behaviours have no test: U18 S6, where a refresh also re-fetches the highlighted item so its read state stays current, and U18 S7, where the previous item is discarded while a new id loads. No test emits a signal or changes the id, so removing retryHighlight() or the id comparison would pass. Add a fake signalApiRef to one case, emit a signal and assert getNotification is called a second time. If it stays cheap, also navigate from one id to another with the second fetch pending and assert the first item is gone. Change only this test file.",
+    "context_paths": ["plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx"]
+  }
+]

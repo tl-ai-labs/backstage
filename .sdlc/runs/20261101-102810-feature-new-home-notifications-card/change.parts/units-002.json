@@ -1,0 +1,505 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U07",
+      "path": "plugins/notifications/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the unread card's messages to the notifications translation ref.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 119,
+          "to": 119,
+          "first_line": "},",
+          "rule": "After the settings block, add unreadCard: { title: 'Unread notifications', emptyState: 'No unread notifications', markAsRead: 'Mark as read', errors: { loadFailed: 'Failed to load notifications' } }, formatted as nested object lines."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/notifications/src/hooks/useNotificationsRefresh.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Internal hook that drives a data hook's retry from notification signals, with a polling fallback, one throttle and no overlapping refresh.",
+      "rules": [
+        "Module constants: ThrottleDelayMs = 2000 and DefaultPollIntervalMs = 60_000.",
+        "Import useSignal from '@backstage/plugin-signals-react'. It returns { lastSignal: JsonObject | null; isSignalsAvailable: boolean }. Call useSignal('notifications') without a generic, as NotificationsPage does.",
+        "Hold a pending boolean in useState and create one throttled setter with useMemo(() => throttle(setPending, ThrottleDelayMs), []); throttle is the default lodash/throttle, so leading and trailing edges both fire.",
+        "An effect with cleanup calls the throttled setter's cancel() on unmount.",
+        "An effect runs retry() and then setPending(false) only when pending is true and loading is false, so no refresh starts while one is running.",
+        "An effect calls the throttled setter with true when lastSignal && lastSignal.action.",
+        "An effect returns undefined when isSignalsAvailable is true; otherwise it starts setInterval calling the throttled setter with true every pollIntervalMs, and its cleanup clears the interval.",
+        "requestRefresh is a useCallback over the same throttled setter, so a manual request shares the throttle window with signals."
+      ],
+      "exports": [
+        {
+          "name": "useNotificationsRefresh",
+          "kind": "function",
+          "params": [
+            {
+              "name": "options",
+              "type": "{ loading: boolean; retry: () => void; pollIntervalMs?: number }"
+            }
+          ],
+          "returns": "{ requestRefresh: () => void }"
+        }
+      ],
+      "import_line": "import { useNotificationsRefresh } from '../../hooks';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "lines": [
+          143,
+          159
+        ],
+        "reason": "The throttled refresh pattern the hook carries over, plus cancel and polling."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "NFR-2",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/notifications/src/hooks/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the new hook to the hooks barrel. src/index.ts names its hook exports, so the public surface does not change.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 16,
+          "to": 16,
+          "first_line": "export * from './useNotificationsApi';",
+          "rule": "Add export * from './useNotificationsRefresh';"
+        }
+      ],
+      "depends_on": [
+        "U08"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.module.css",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Styles for the unread notifications card.",
+      "rules": [
+        "Define exactly these classes: card (height 100%), list (no list style, margin and padding 0), item (flex row, align center, gap var(--bui-space-3), vertical padding var(--bui-space-2)), severity (inline-flex, flex-shrink 0), text (flex 1, min-width 0), title (overflow hidden, text-overflow ellipsis, white-space nowrap).",
+        "No colours or sizes beyond --bui-* tokens and the values above."
+      ],
+      "import_line": "import styles from './UnreadNotificationsCard.module.css';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+        "reason": "Licence comment, @layer wrapper and --bui-* token use."
+      },
+      "depends_on": [],
+      "covers": [
+        "NFR-1",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Home page card that lists the signed-in user's latest unread notifications, with mark-as-read and a deep link on each row.",
+      "rules": [
+        "Props default to limit = 5, and pollIntervalMs passes through to the hook unset, so the hook's default applies.",
+        "Load with useNotificationsApi(api => api.getNotifications({ read: false, limit, sort: 'created', sortOrder: 'desc' }), [limit]).",
+        "Hold rows in useState<Notification[]>() and copy value.notifications into it from an effect only when value is set, so a failed refresh, which clears value, leaves rows in place.",
+        "Call useNotificationsRefresh({ loading, retry, pollIntervalMs }) and keep requestRefresh.",
+        "Render Card with className styles.card, CardHeader holding <Text as=\"h3\" variant=\"title-x-small\">{t('unreadCard.title')}</Text>, and CardBody, all from @backstage/ui.",
+        "CardBody content, first match wins: rows with items gives ul.list of rows; rows empty gives Text t('unreadCard.emptyState'); no rows and error gives <Alert status=\"danger\" title={t('unreadCard.errors.loadFailed')} /> from @backstage/ui; otherwise Progress from @backstage/core-components.",
+        "Each row is a file-local UnreadNotificationRow in li.item: the severity span, then div.text holding the title and the time, then the mark-as-read control.",
+        "Severity: span.severity with role=\"img\" and aria-label t(`filters.severity.${severity}`) around SeverityIcon, where severity is notification.payload.severity ?? 'normal'.",
+        "Title: <Text variant=\"body-medium\" as=\"div\" className={styles.title}> around Link from @backstage/core-components, whose to is `${notificationsRoute}?id=${encodeURIComponent(notification.id)}` and whose children are notification.payload.title. notification.payload.link is never read.",
+        "Time: <Text variant=\"body-small\" color=\"secondary\" as=\"div\"> around <RelativeTime value={notification.created} />, imported with the // @ts-ignore line NotificationsTable uses.",
+        "notificationsRoute comes from useRouteRef(rootRouteRef)() in the card and is passed to rows as a prop.",
+        "Mark-as-read control: TooltipTrigger, ButtonIcon with aria-label t('unreadCard.markAsRead'), icon <RiCheckboxCircleLine size={16} />, variant secondary, isDisabled while the call runs, and Tooltip, as in BulkActions.",
+        "The row runs the call with useAsyncFn from react-use: await notificationsApi.updateNotifications({ ids: [notification.id], read: true }) and then onMarkedRead(notification.id); on a rejected call use the decided toast and leave the row.",
+        "onMarkedRead in the card returns at once when useMountedState() from react-use reports unmounted; otherwise it removes the id from rows with a functional setRows and calls requestRefresh()."
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCardProps",
+          "kind": "type",
+          "params": [],
+          "returns": "{ limit?: number; pollIntervalMs?: number }"
+        },
+        {
+          "name": "UnreadNotificationsCard",
+          "kind": "const",
+          "params": [
+            {
+              "name": "props",
+              "type": "UnreadNotificationsCardProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { UnreadNotificationsCard } from './UnreadNotificationsCard';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "lines": [
+          16,
+          49
+        ],
+        "reason": "Import order, the RelativeTime import, translation and API hooks, and CSS module use."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/BulkActions.tsx",
+          "lines": [
+            97,
+            112
+          ],
+          "reason": "The TooltipTrigger, ButtonIcon and Tooltip shape of the mark-as-read control."
+        },
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/SeverityIcon.tsx",
+          "lines": [
+            25,
+            33
+          ],
+          "reason": "SeverityIcon's props and its export, from '../NotificationsTable/SeverityIcon'."
+        },
+        {
+          "path": "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx",
+          "lines": [
+            171,
+            176
+          ],
+          "reason": "How this package gets the page path from rootRouteRef in '../../routes'."
+        },
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+          "lines": [
+            129,
+            144
+          ],
+          "reason": "The toast failure pattern with toastApiRef."
+        }
+      ],
+      "depends_on": [
+        "U07",
+        "U09",
+        "U10"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-7",
+        "FR-8",
+        "NFR-1",
+        "NFR-2",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/index.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Barrel for the card folder, loaded only by the widget's dynamic import.",
+      "rules": [
+        "The file is the licence header followed by export * from './UnreadNotificationsCard';",
+        "Nothing adds this folder to plugins/notifications/src/components/index.ts."
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCard",
+          "kind": "const",
+          "params": [
+            {
+              "name": "props",
+              "type": "UnreadNotificationsCardProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import('./components/UnreadNotificationsCard')",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsPage/index.ts",
+        "reason": "Same barrel shape."
+      },
+      "depends_on": [
+        "U11"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Covers the card's states, mark-as-read, deep links, signal refresh, the polling fallback and cleanup.",
+      "rules": [
+        "Render with renderInTestApp(<TestApiProvider apis={...}><UnreadNotificationsCard /></TestApiProvider>, { mountedRoutes: { '/notifications': rootRouteRef } }). Always register notificationsApiRef and toastApiRef mocks; toast is { post: jest.fn() }.",
+        "The fake signal API is { subscribe: jest.fn((_channel, onMessage) => { emit = onMessage; return { unsubscribe }; }) } registered under signalApiRef from @backstage/plugin-signals-react. Leave it out to make signals unavailable. Each emit passes a new object such as { action: 'new_notification', notification_id: 'x' }.",
+        "Timer cases call jest.useFakeTimers() before rendering, restore real timers in afterEach, and advance time with await act(async () => { jest.advanceTimersByTime(ms); }).",
+        "Press the mark-as-read button with fireEvent.click from @testing-library/react; user-event is not a dependency of this package.",
+        "In the mark-as-read success case, later getNotifications calls resolve to an empty list, because the card refreshes after marking.",
+        "For the loading state use a getNotifications promise that stays pending and findByTestId('progress'), the id Progress already has."
+      ],
+      "tests": [
+        {
+          "name": "lists unread notifications with title, severity and time",
+          "given": "Two notifications, one with severity critical, and default props",
+          "expect": "getNotifications is called with { read: false, limit: 5, sort: 'created', sortOrder: 'desc' }; both titles show; an img named 'Critical' shows; each row shows a relative time"
+        },
+        {
+          "name": "passes a custom limit to the API",
+          "given": "limit={3}",
+          "expect": "getNotifications is called with limit 3"
+        },
+        {
+          "name": "shows the loading state",
+          "given": "getNotifications never resolves",
+          "expect": "The progress element shows and no list or empty text does"
+        },
+        {
+          "name": "shows the empty state",
+          "given": "getNotifications resolves an empty list",
+          "expect": "'No unread notifications' shows"
+        },
+        {
+          "name": "shows the error state when the first load fails",
+          "given": "getNotifications rejects",
+          "expect": "'Failed to load notifications' shows"
+        },
+        {
+          "name": "keeps the list when a background refresh fails",
+          "given": "A loaded list, then getNotifications rejects, then a signal arrives",
+          "expect": "getNotifications was called again, the title still shows and the load error text does not"
+        },
+        {
+          "name": "marks an item as read and removes it",
+          "given": "One item, updateNotifications resolves, and the mark-as-read button is pressed",
+          "expect": "updateNotifications is called with { ids: [id], read: true }; the title leaves the document and 'No unread notifications' shows"
+        },
+        {
+          "name": "keeps the item and reports the failure when marking as read fails",
+          "given": "One item, updateNotifications rejects, and the button is pressed",
+          "expect": "toast post is called with title 'Failed to mark notification as read' and status 'danger'; the title stays"
+        },
+        {
+          "name": "links each item to the notifications page by id",
+          "given": "An item whose id has a space and a slash and whose payload.link is /catalog",
+          "expect": "The link named by the title has href /notifications?id=<encodeURIComponent(id)>"
+        },
+        {
+          "name": "follows a non-default mount path",
+          "given": "rootRouteRef mounted at /inbox",
+          "expect": "The link href starts with /inbox?id="
+        },
+        {
+          "name": "refreshes on signals within the throttle",
+          "given": "Fake timers, the signal API present, and a loaded list",
+          "expect": "A first signal adds one getNotifications call; three more signals inside 2000 ms add none until the window ends, and then exactly one"
+        },
+        {
+          "name": "polls when signals are unavailable",
+          "given": "Fake timers and no signal API",
+          "expect": "getNotifications is called once more after 60000 ms and not before; a pollIntervalMs prop changes the period"
+        },
+        {
+          "name": "does not poll when signals are available",
+          "given": "Fake timers and the signal API present",
+          "expect": "Advancing 180000 ms adds no getNotifications call"
+        },
+        {
+          "name": "cleans up on unmount",
+          "given": "One render with signals and a trailing throttled call pending, and one without signals; each is unmounted",
+          "expect": "unsubscribe is called; advancing 180000 ms adds no getNotifications call in either render"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+        "lines": [
+          16,
+          60
+        ],
+        "reason": "Test scaffolding of this package."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "lines": [
+            69,
+            89
+          ],
+          "reason": "The interface the mock API implements as jest.Mocked<NotificationsApi>."
+        }
+      ],
+      "depends_on": [
+        "U12"
+      ],
+      "covers": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/notifications/src/alpha.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Registers the unread notifications card as a home page widget on the notifications frontend plugin.",
+      "rules": [
+        "The card stays behind the dynamic import in components, so importing ./alpha does not load it.",
+        "The widget is not a named export of alpha.tsx."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 24,
+          "to": 24,
+          "first_line": "import { RiNotification3Line } from '@remixicon/react';",
+          "rule": "Add import type { RendererProps } from '@backstage/plugin-home-react'; and import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 47,
+          "to": 47,
+          "first_line": "});",
+          "rule": "Add a file-local UnreadNotificationsWidgetRenderer({ Content, ...props }: RendererProps) returning <Content {...props} />, then const unreadNotificationsHomeWidget = HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: { name: 'UnreadNotifications', title: 'Unread notifications', description: 'Shows your latest unread notifications', layout: { width: { minColumns: 4, maxColumns: 12, defaultColumns: 6 }, height: { minRows: 4, maxRows: 14, defaultRows: 8 } }, componentProps: { Renderer: UnreadNotificationsWidgetRenderer }, components: () => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCard })) } });"
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "extensions: [page, api],",
+          "rule": "extensions: [page, api, unreadNotificationsHomeWidget],"
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx",
+          "lines": [
+            37,
+            67
+          ],
+          "reason": "The blueprint's params."
+        }
+      ],
+      "depends_on": [
+        "U03",
+        "U04",
+        "U12"
+      ],
+      "covers": [
+        "FR-12",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "plugins/notifications/src/alpha.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Shows the widget is registered as a home page widget extension of the notifications plugin.",
+      "rules": [
+        "Import the plugin with import notificationsPlugin from './alpha'; and use its getExtension method."
+      ],
+      "tests": [
+        {
+          "name": "registers the unread notifications home page widget",
+          "given": "notificationsPlugin.getExtension('home-page-widget:notifications/unread-notifications')",
+          "expect": "It is defined and matches kind 'home-page-widget', name 'unread-notifications' and attachTo { id: 'page:home', input: 'widgets' }"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/notifications/src/plugin.test.ts",
+        "reason": "The plugin test shape of this package."
+      },
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "AC-8",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/src/translation.ts": "8ac1ee9920c2d73124cfff7826ee11deadcc9eaf1b09f92494f927f4fadf1f4a",
+    "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx": "5c82ffcf77e140195480bdc27eca15e49994f5b749d5b856fef28d4a8714d247",
+    "plugins/notifications/src/hooks/index.ts": "1eedc3f4b05ec9344097ab97148c99c1352c17fe40e876ff75517110df9eaa00",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css": "6a76ba9b1b187732c563ddae568a12b3522f0eef5615f464d28e4c5640bcc344",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx": "e5c70ee41407f8f1a66ff2bf61c697523e094df60b47c4cb6785daec1fda4584",
+    "plugins/notifications/src/components/NotificationsTable/BulkActions.tsx": "c1cdc4491a50aeb3d95691d3245fcb39cb865c80864845223163a43e94363d54",
+    "plugins/notifications/src/components/NotificationsTable/SeverityIcon.tsx": "f8198b29af93308c33777f7d45e283958050c6772c4c32c61a3d0e08be9e3809",
+    "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx": "850880333b4f0f1c4021d0b66e441461a45a73ef3a4e147510f7cb5c33a55873",
+    "plugins/notifications/src/components/NotificationsPage/index.ts": "115173fa6479be09b687b9bc1c8221268baf71b14b841c7cad477530031a13a8",
+    "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx": "2e6bc2225e74af0543c1a2eac2ad73f195697aa407bae4e086f73f34ecd02566",
+    "plugins/notifications/src/api/NotificationsApi.ts": "a6e26256a031f43baae212207ee06ad5700c1155a59b43ea1073ce393872ea6b",
+    "plugins/notifications/src/alpha.tsx": "e4a38d69ca6209bf2f1625ca9681591341f07652f87fe29c19eb2d621e2b314c",
+    "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx": "004e033f9cd975b49f3949eb54fd74c8d18cef2fab610c61f2737a244452ea15",
+    "plugins/notifications/src/plugin.test.ts": "9b2af92fcc488f50454ae00ddc5cdfd8a4634f9752c6fcc3184ffbadf51d6903"
+  }
+}
