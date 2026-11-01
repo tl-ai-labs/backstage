@@ -40,6 +40,20 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * Checks the format of the envelope fields with the validators given to the
+   * constructor (the `makeValidator` defaults when none were given). The
+   * `apiVersion`, `kind` and `metadata.name` fields are required,
+   * `metadata.namespace` is checked when present, and every key and value of
+   * `metadata.labels` and `metadata.annotations` and every entry of
+   * `metadata.tags` is checked. Each entry of `metadata.links` needs a valid
+   * `url`, and a non-empty `title` and `icon` when present; these link checks
+   * always use `CommonValidatorFunctions`. Returns the input entity unchanged
+   * when every check passes, and otherwise throws an error that names the first
+   * field that is missing, invalid or could not be validated.
+   *
+   * @param entity - The entity to enforce the policy on
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,

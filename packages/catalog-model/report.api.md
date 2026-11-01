@@ -34,11 +34,8 @@ export const ANNOTATION_VIEW_URL = 'backstage.io/view-url';
 
 // @public
 interface ApiEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'API';
-  // (undocumented)
   spec: {
     type: string;
     lifecycle: string;
@@ -74,11 +71,8 @@ export class CommonValidatorFunctions {
 
 // @public
 interface ComponentEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'Component';
-  // (undocumented)
   spec: {
     type: string;
     lifecycle: string;
@@ -110,17 +104,13 @@ export const DEFAULT_NAMESPACE = 'default';
 // @public
 export class DefaultNamespaceEntityPolicy implements EntityPolicy {
   constructor(namespace?: string);
-  // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
 
 // @public
 interface DomainEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'Domain';
-  // (undocumented)
   spec: {
     owner: string;
     subdomainOf?: string;
@@ -209,7 +199,6 @@ export function entitySchemaValidator<T extends Entity = Entity>(
 // @public
 export class FieldFormatEntityPolicy implements EntityPolicy {
   constructor(validators?: Validators);
-  // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
 
@@ -225,17 +214,13 @@ export function getEntitySourceLocation(entity: Entity): {
 // @public
 export class GroupDefaultParentEntityPolicy implements EntityPolicy {
   constructor(parentEntityRef: string);
-  // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
 
 // @public
 interface GroupEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'Group';
-  // (undocumented)
   spec: {
     type: string;
     profile?: {
@@ -254,34 +239,34 @@ export { GroupEntityV1alpha1 };
 // @public
 export const groupEntityV1alpha1Validator: KindValidator;
 
-// @public (undocumented)
+// @public
 export function isApiEntity(entity: Entity): entity is ApiEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isComponentEntity(
   entity: Entity,
 ): entity is ComponentEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isDomainEntity(entity: Entity): entity is DomainEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isGroupEntity(entity: Entity): entity is GroupEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isLocationEntity(
   entity: Entity,
 ): entity is LocationEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isResourceEntity(
   entity: Entity,
 ): entity is ResourceEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isSystemEntity(entity: Entity): entity is SystemEntityV1alpha1;
 
-// @public (undocumented)
+// @public
 export function isUserEntity(entity: Entity): entity is UserEntityV1alpha1;
 
 // @public
@@ -291,31 +276,20 @@ export type KindValidator = {
 
 // @public
 export class KubernetesValidatorFunctions {
-  // (undocumented)
   static isValidAnnotationKey(value: unknown): boolean;
-  // (undocumented)
   static isValidAnnotationValue(value: unknown): boolean;
-  // (undocumented)
   static isValidApiVersion(value: unknown): boolean;
-  // (undocumented)
   static isValidKind(value: unknown): boolean;
-  // (undocumented)
   static isValidLabelKey(value: unknown): boolean;
-  // (undocumented)
   static isValidLabelValue(value: unknown): boolean;
-  // (undocumented)
   static isValidNamespace(value: unknown): boolean;
-  // (undocumented)
   static isValidObjectName(value: unknown): boolean;
 }
 
 // @public
 interface LocationEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'Location';
-  // (undocumented)
   spec: {
     type?: string;
     target?: string;
@@ -335,7 +309,6 @@ export function makeValidator(overrides?: Partial<Validators>): Validators;
 // @public
 export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
   constructor(knownFields?: string[]);
-  // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
 
@@ -404,11 +377,8 @@ export const RELATION_PROVIDES_API = 'providesApi';
 
 // @public
 interface ResourceEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'Resource';
-  // (undocumented)
   spec: {
     type: string;
     owner: string;
@@ -425,7 +395,6 @@ export const resourceEntityV1alpha1Validator: KindValidator;
 
 // @public
 export class SchemaValidEntityPolicy implements EntityPolicy {
-  // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
 
@@ -448,11 +417,8 @@ export function stringifyLocationRef(ref: {
 
 // @public
 interface SystemEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'System';
-  // (undocumented)
   spec: {
     owner: string;
     domain?: string;
@@ -467,11 +433,8 @@ export const systemEntityV1alpha1Validator: KindValidator;
 
 // @public
 interface UserEntityV1alpha1 extends Entity {
-  // (undocumented)
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
-  // (undocumented)
   kind: 'User';
-  // (undocumented)
   spec: {
     profile?: {
       displayName?: string;
