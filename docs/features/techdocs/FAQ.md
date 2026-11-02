@@ -13,6 +13,7 @@ This page answers frequently asked questions about [TechDocs](README.md).
 - [What is the mkdocs-techdocs-core plugin?](#what-is-the-mkdocs-techdocs-core-plugin)
 - [Does TechDocs support file formats other than Markdown (e.g. RST, AsciiDoc)?](#does-techdocs-support-file-formats-other-than-markdown-eg-rst-asciidoc)
 - [What should be the value of `backstage.io/techdocs-ref` when using external build and storage?](#what-should-be-the-value-of-backstageiotechdocs-ref-when-using-external-build-and-storage)
+- [What happens to old TechDocs links when an entity is renamed?](#what-happens-to-old-techdocs-links-when-an-entity-is-renamed)
 - [Is it possible for users to suggest changes or provide feedback on a TechDocs page?](#is-it-possible-for-users-to-suggest-changes-or-provide-feedback-on-a-techdocs-page)
 
 #### What static site generator is TechDocs using?
@@ -51,6 +52,16 @@ entity.
 #### What happens when you navigate to a TechDocs URL for an entity uses the `backstage.io/techdocs-entity` annotation?
 
 If you navigate to a TechDocs URL in the format `docs/{namespace}/{kind}/{name}` for an entity that has the `backstage.io/techdocs-entity` annotation (instead of the `backstage.io/techdocs-ref` annotation), then Backstage will redirect to the TechDocs page of the entity referenced in the value of that annotation.
+
+#### What happens to old TechDocs links when an entity is renamed?
+
+An old docs link redirects to the docs of the entity that lists the old name in the [`backstage.io/former-names`](../software-catalog/well-known-annotations.md#backstageioformer-names) annotation. The redirect keeps the page path, query, and hash, and shows a notice that the entity was renamed.
+
+The docs must already be published under the new name. The redirect only changes the URL and nothing is moved in storage, so if you publish from CI, publish under the new name first.
+
+The redirect waits for the old entity to go. Until then, the old URL keeps showing the old docs. For details, see [Renaming an entity](../software-catalog/life-of-an-entity.md#renaming-an-entity).
+
+Search results and links inside other docs are not rewritten.
 
 #### Is it possible for users to suggest changes or provide feedback on a TechDocs page?
 

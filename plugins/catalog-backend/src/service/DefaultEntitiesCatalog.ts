@@ -32,10 +32,12 @@ import {
   EntityPagination,
   QueryEntitiesRequest,
   QueryEntitiesResponse,
+  ResolveFormerEntityRefRequest,
   TotalItemsMode,
 } from '../catalog/types';
 import {
   DbFinalEntitiesRow,
+  DbFormerEntityRefsRow,
   DbPageInfo,
   DbRefreshStateReferencesRow,
   DbRefreshStateRow,
@@ -786,6 +788,26 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
       rootEntityRef: stringifyEntityRef(rootEntity),
       items,
     };
+  }
+
+  async resolveFormerEntityRef(
+    request: ResolveFormerEntityRefRequest,
+  ): Promise<string | undefined> {
+    const rows = await this.database<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    )
+      .where('former_entity_refs.former_entity_ref', request.formerEntityRef)
+      .whereNotExists(qb =>
+        qb
+          .from('final_entities')
+          .whereRaw(
+            'final_entities.entity_ref = former_entity_refs.former_entity_ref',
+          ),
+      )
+      .select('former_entity_refs.entity_ref')
+      .limit(2);
+
+    return rows.length === 1 ? rows[0].entity_ref : undefined;
   }
 
   async facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse> {

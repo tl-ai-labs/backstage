@@ -168,6 +168,14 @@ export interface ProcessingDatabase {
     txOpaque: Transaction,
     options: ListParentsOptions,
   ): Promise<ListParentsResult>;
+
+  /**
+   * Lists which of the given former refs another entity also claims.
+   */
+  listContestedFormerRefs(
+    txOpaque: Transaction,
+    options: { entityId: string; formerRefs: string[] },
+  ): Promise<string[]>;
 }
 
 /**

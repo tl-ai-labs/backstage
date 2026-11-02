@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Hash } from 'node:crypto';
+import { createHash, Hash } from 'node:crypto';
 import { DateTime } from 'luxon';
 import waitForExpect from 'wait-for-expect';
 import { DefaultProcessingDatabase } from '../database/DefaultProcessingDatabase';
@@ -36,6 +36,7 @@ describe('DefaultCatalogProcessingEngine', () => {
     updateProcessedEntityErrors: jest.fn(),
     updateEntityCache: jest.fn(),
     listParents: jest.fn(),
+    listContestedFormerRefs: jest.fn(),
     setRefreshKeys: jest.fn(),
   } as unknown as jest.Mocked<DefaultProcessingDatabase>;
   const orchestrator: jest.Mocked<CatalogProcessingOrchestrator> = {
@@ -1018,5 +1019,105 @@ describe('DefaultCatalogProcessingEngine', () => {
       expect.arrayContaining(['k:ns/me', 'k:ns/other2']),
     );
     await engine.stop();
+  });
+
+  describe('former names', () => {
+    const makeEngine = () =>
+      new DefaultCatalogProcessingEngine({
+        config: new ConfigReader({}),
+        logger: mockServices.logger.mock(),
+        processingDatabase: db,
+        knex: {} as any,
+        orchestrator: orchestrator,
+        scheduler: mockServices.scheduler(),
+        createHash: () => createHash('sha1'),
+        pollingIntervalMs: 100,
+        events: mockServices.events.mock(),
+        metrics: metricsServiceMock.mock(),
+      });
+
+    const processable = (entity: any) => ({
+      entityRef: 'component:default/new-name',
+      id: '1',
+      unprocessedEntity: entity,
+      resultHash: '',
+      state: {},
+      nextUpdateAt: DateTime.now(),
+      lastDiscoveryAt: DateTime.now(),
+    });
+
+    const processed = (entity: any) => ({
+      ok: true as const,
+      completedEntity: entity,
+      relations: [],
+      errors: [],
+      deferredEntities: [],
+      state: {},
+      refreshKeys: [],
+    });
+
+    it('changes the result hash when a claim becomes contested', async () => {
+      const entity = {
+        apiVersion: '1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          annotations: { 'backstage.io/former-names': 'old-name' },
+        },
+      };
+      orchestrator.process.mockResolvedValue(processed(entity));
+      db.transaction.mockImplementation(cb => cb((() => {}) as any));
+      db.listParents.mockResolvedValue({ entityRefs: [] });
+      db.listContestedFormerRefs
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(['component:default/old-name']);
+      db.updateProcessedEntity.mockResolvedValue({
+        relationsChange: { deleted: [], inserted: [] },
+      });
+      db.getProcessableEntities
+        .mockResolvedValueOnce({ items: [processable(entity)] })
+        .mockResolvedValueOnce({ items: [processable(entity)] })
+        .mockResolvedValue({ items: [] });
+
+      const engine = makeEngine();
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(2);
+      });
+      await engine.stop();
+
+      const first = db.updateProcessedEntity.mock.calls[0][1].resultHash;
+      const second = db.updateProcessedEntity.mock.calls[1][1].resultHash;
+      expect(first).toEqual(expect.any(String));
+      expect(second).toEqual(expect.any(String));
+      expect(first).not.toEqual(second);
+      expect(db.listContestedFormerRefs).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves entities without the annotation alone', async () => {
+      const entity = {
+        apiVersion: '1',
+        kind: 'Component',
+        metadata: { name: 'plain' },
+      };
+      orchestrator.process.mockResolvedValue(processed(entity));
+      db.transaction.mockImplementation(cb => cb((() => {}) as any));
+      db.listParents.mockResolvedValue({ entityRefs: [] });
+      db.updateProcessedEntity.mockResolvedValue({
+        relationsChange: { deleted: [], inserted: [] },
+      });
+      db.getProcessableEntities
+        .mockResolvedValueOnce({ items: [processable(entity)] })
+        .mockResolvedValue({ items: [] });
+
+      const engine = makeEngine();
+      await engine.start();
+      await waitForExpect(() => {
+        expect(db.updateProcessedEntity).toHaveBeenCalledTimes(1);
+      });
+      await engine.stop();
+
+      expect(db.listContestedFormerRefs).not.toHaveBeenCalled();
+    });
   });
 });

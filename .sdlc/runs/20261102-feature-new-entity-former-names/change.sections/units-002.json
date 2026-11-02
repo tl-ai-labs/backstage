@@ -1,0 +1,611 @@
+[
+  {
+    "id": "U20",
+    "path": "packages/catalog-client/src/types/api.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the optional former-ref lookup to `CatalogApi`.",
+    "exports": [
+      {
+        "name": "CatalogApi.resolveFormerEntityRef",
+        "kind": "optional method",
+        "params": [
+          { "name": "entityRef", "type": "string | CompoundEntityRef" },
+          { "name": "options", "type": "CatalogRequestOptions | undefined" }
+        ],
+        "returns": "Promise<string | undefined>"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 699,
+        "to": 699,
+        "first_line": "): Promise<Entity | undefined>;",
+        "rule": "Add a blank line, then the optional method `resolveFormerEntityRef?(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<string | undefined>;`. TSDoc in the file's style: it finds the current entity for a former name; use it only after `getEntityByRef` found nothing; it returns the ref of the entity that claims the name, or undefined if nothing claims it, the name is in use or contested, or the caller may not read the target; it is optional so that existing implementations of this interface keep working, and callers treat its absence as undefined."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-12", "NFR-6"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U21",
+    "path": "packages/catalog-client/src/CatalogClient.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Implements the lookup over the generated client, with 404 as undefined.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 480,
+        "to": 480,
+        "first_line": "}",
+        "rule": "Add a blank line, then `{@inheritdoc CatalogApi.resolveFormerEntityRef}` TSDoc and `async resolveFormerEntityRef(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<string | undefined>`. Body: `const body = await this.requestOptional(await this.apiClient.getEntityRefByFormerName({ path: parseEntityRef(entityRef) }, options)); return body?.entityRef;`. `requestOptional` already turns a 404 into undefined, which covers a backend without the route."
+      }
+    ],
+    "depends_on": ["U07", "U20"],
+    "covers": ["FR-12"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U22",
+    "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Implements the lookup in memory with the rules of the real resolver.",
+    "rules": [
+      "1. Normalize with `stringifyEntityRef(parseEntityRef(entityRef))`.",
+      "2. Return undefined if `#createEntityRefMap()` has that ref: a live entity wins.",
+      "3. Filter `#entities` to those whose `parseEntityFormerRefs(e).formerRefs` include the ref.",
+      "4. Return `stringifyEntityRef` of the claimant when there is exactly one, else undefined."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 45,
+        "to": 45,
+        "first_line": "parseEntityRef,",
+        "rule": "Add `parseEntityFormerRefs,`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 623,
+        "to": 623,
+        "first_line": "}",
+        "rule": "Add a blank line, then `async resolveFormerEntityRef(entityRef: string | CompoundEntityRef): Promise<string | undefined>` per the rules."
+      }
+    ],
+    "depends_on": ["U03", "U20"],
+    "covers": ["FR-13"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U23",
+    "path": "plugins/catalog-node/src/catalogService.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Exposes the lookup on `CatalogService` with its usual credentials handling.",
+    "exports": [
+      {
+        "name": "CatalogService.resolveFormerEntityRef",
+        "kind": "optional method",
+        "params": [
+          { "name": "entityRef", "type": "string | CompoundEntityRef" },
+          { "name": "options", "type": "CatalogServiceRequestOptions" }
+        ],
+        "returns": "Promise<string | undefined>"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 91,
+        "to": 91,
+        "first_line": "): Promise<Entity | undefined>;",
+        "rule": "Add a blank line, then the optional `resolveFormerEntityRef?(entityRef: string | CompoundEntityRef, options: CatalogServiceRequestOptions): Promise<string | undefined>;`. A short TSDoc says it is optional so that existing implementations keep working."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 234,
+        "to": 234,
+        "first_line": "}",
+        "rule": "Add a blank line, then the concrete `async resolveFormerEntityRef(entityRef: string | CompoundEntityRef, options: CatalogServiceRequestOptions): Promise<string | undefined>` in the shape of `getEntityByRef`, returning `this.#catalogApi.resolveFormerEntityRef?.(entityRef, await this.#getOptions(options))`."
+      }
+    ],
+    "depends_on": ["U20"],
+    "covers": ["FR-13", "FR-14", "NFR-6"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U24",
+    "path": "plugins/catalog-node/src/testUtils/types.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Redeclares the lookup on `CatalogServiceMock`, which extends both interfaces.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 85,
+        "to": 85,
+        "first_line": "): Promise<Entity | undefined>;",
+        "rule": "Add a blank line, then the required `resolveFormerEntityRef(entityRef: string | CompoundEntityRef, options?: CatalogServiceRequestOptions | CatalogRequestOptions): Promise<string | undefined>;`. Without it TypeScript rejects the interface, since the two bases declare the method with different option types."
+      }
+    ],
+    "depends_on": ["U23"],
+    "covers": ["FR-13"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U25",
+    "path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the lookup to the service mock.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 68,
+        "to": 68,
+        "first_line": "getEntityByRef: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),`."
+      }
+    ],
+    "depends_on": ["U22", "U24"],
+    "covers": ["FR-13"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U26",
+    "path": "plugins/catalog-react/src/testUtils/catalogApiMock.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the lookup to the frontend API mock, whose partial overrides need the key to exist.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 70,
+        "to": 70,
+        "first_line": "getEntityByRef: jest.fn(),",
+        "rule": "Add `resolveFormerEntityRef: jest.fn(),`."
+      }
+    ],
+    "depends_on": ["U20"],
+    "covers": ["FR-13"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U27",
+    "path": "plugins/catalog-react/src/translation.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the strings of the renamed notice.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 175,
+        "to": 175,
+        "first_line": "entityRelationCard: {",
+        "rule": "Add `entityRenamedNotice: { title: 'This entity was renamed from {{formerName}}.', dismiss: 'Dismiss' },`."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-21", "FR-25"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U28",
+    "path": "plugins/catalog-react/src/components/EntityRenamedNotice/resolveEntityRename.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Turns a missed entity ref into a same-origin redirect and its navigation state, or undefined, and never rejects.",
+    "rules": [
+      "1. Wrap the whole body in try/catch; any error returns undefined, so a resolver failure leaves the caller's not-found state untouched.",
+      "2. `const currentRef = await options.catalogApi.resolveFormerEntityRef?.(options.entityRef);`. Return undefined when it is falsy.",
+      "3. `const root = options.routeFunc(options.entityRef);`. The sub-path is `location.pathname.slice(root.length)` when `location.pathname` starts with `root`, else empty.",
+      "4. `to` is `options.routeFunc(entityRouteParams(currentRef))` + sub-path + `location.search` + `location.hash`. Build it only from the route function and the current location; never navigate to a value from an annotation or a response other than through the route function.",
+      "5. `state.entityRenamedFrom` is `namespace/name` of `options.entityRef`, or just `name` when the namespace equals `DEFAULT_NAMESPACE` compared lower-cased."
+    ],
+    "exports": [
+      {
+        "name": "EntityRenamedLocationState",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entityRenamedFrom: string }"
+      },
+      {
+        "name": "resolveEntityRename",
+        "kind": "function",
+        "params": [
+          {
+            "name": "options",
+            "type": "{ catalogApi: Pick<CatalogApi, 'resolveFormerEntityRef'>; entityRef: CompoundEntityRef; location: { pathname: string; search: string; hash: string }; routeFunc: (params: { kind: string; namespace: string; name: string }) => string }"
+          }
+        ],
+        "returns": "Promise<{ to: string; state: EntityRenamedLocationState } | undefined>"
+      }
+    ],
+    "import_line": "import { resolveEntityRename } from '@backstage/plugin-catalog-react';",
+    "style_from": {
+      "path": "plugins/catalog-react/src/routes.ts",
+      "reason": "Header, imports and TSDoc style, and the home of `entityRouteParams`."
+    },
+    "depends_on": ["U20"],
+    "covers": ["FR-18", "FR-19", "FR-23", "FR-24"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U29",
+    "path": "plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Shows a dismissible notice from in-app navigation state, and nothing otherwise.",
+    "rules": [
+      "1. `EntityRenamedNotice` reads `useLocation()` and takes `formerName` from `location.state?.entityRenamedFrom`. If that is not a string it returns null, before any translation hook runs: an inner component holds the `useTranslationRef` call, so a page with no state pays nothing.",
+      "2. Read nothing from the URL, so a crafted link cannot make a page claim a rename.",
+      "3. Dismissal is `useState` holding the `location.key` that was dismissed; the notice is hidden while that key is current.",
+      "4. Render `Alert` from `@backstage/ui` with `status=\"info\"`, `icon`, `mb=\"4\"`, `title={t('entityRenamedNotice.title', { formerName })}`, and `customActions` holding a `Button` with `size=\"small\"`, `variant=\"tertiary\"` and `t('entityRenamedNotice.dismiss')` that dismisses on press.",
+      "5. Use `catalogReactTranslationRef` from `../../translation` and `useTranslationRef` from `@backstage/core-plugin-api/alpha`."
+    ],
+    "exports": [
+      {
+        "name": "EntityRenamedNotice",
+        "kind": "function component",
+        "params": [],
+        "returns": "JSX.Element | null"
+      }
+    ],
+    "import_line": "import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';",
+    "style_from": {
+      "path": "plugins/catalog/src/components/EntityOrphanWarning/EntityOrphanWarning.tsx",
+      "reason": "The `Alert` pattern of the entity page."
+    },
+    "depends_on": ["U27", "U28"],
+    "covers": ["FR-21", "FR-22", "FR-25"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U30",
+    "path": "plugins/catalog-react/src/components/EntityRenamedNotice/index.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Barrel of the folder: re-exports `EntityRenamedNotice`, `resolveEntityRename` and the type `EntityRenamedLocationState`.",
+    "style_from": {
+      "path": "plugins/catalog-react/src/components/EntityInfoCard/index.ts",
+      "reason": "A component folder's barrel."
+    },
+    "depends_on": ["U29"],
+    "covers": ["FR-21"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U31",
+    "path": "plugins/catalog-react/src/components/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Exports the new folder from the package.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 23,
+        "to": 23,
+        "first_line": "export * from './EntityDisplayName';",
+        "rule": "Add `export * from './EntityRenamedNotice';`."
+      }
+    ],
+    "depends_on": ["U30"],
+    "covers": ["FR-21"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U32",
+    "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "After a miss, and only then, asks the resolver within the same async load and redirects with history replace, for both frontend systems.",
+    "rules": [
+      "1. Also use `useLocation` from `react-router-dom`, `useRouteRef` from `@backstage/core-plugin-api` as `entityRoute = useRouteRef(entityRouteRef)`, and `resolveEntityRename` from `@backstage/plugin-catalog-react`.",
+      "2. Compute `routeKey = `${kind}:${namespace}/${name}``.",
+      "3. The `useAsyncRetry` function, with the same deps `[catalogApi, kind, namespace, name]`, awaits `catalogApi.getEntityByRef({ kind, namespace, name })` and returns `{ entity }` when found. Only otherwise it awaits `resolveEntityRename({ catalogApi, entityRef: { kind, namespace, name }, location, routeFunc: entityRoute })` and returns `{ redirect, routeKey }`. A rejection of `getEntityByRef` stays an `error`, with no resolver call.",
+      "4. A `useEffect` calls `navigate(redirect.to, { replace: true, state: redirect.state })` only when `value?.redirect` is set and `value.routeKey === routeKey`, so a stale result cannot navigate again after the route params change.",
+      "5. Keep the existing `!name` effect unchanged.",
+      "6. Return `{ entity: value?.entity, loading: loading || !!value?.redirect, error, refresh }`: `loading` holds across both calls and until the route has changed, so the page never flashes not-found."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 55,
+        "first_line": "import {",
+        "last_line": "};",
+        "rule": "Rewrite the imports and the hook per the rules, keeping the export name and the return type."
+      }
+    ],
+    "depends_on": ["U31"],
+    "covers": ["FR-18", "FR-19", "FR-20", "FR-23", "NFR-1"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U33",
+    "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Shows the renamed notice at the top of the tab content of the legacy layout.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 48,
+        "to": 48,
+        "first_line": "entityRouteRef,",
+        "rule": "Add `EntityRenamedNotice,`."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 277,
+        "to": 277,
+        "first_line": "children: elementProps.children,",
+        "rule": "Set `children` to a fragment holding `<EntityRenamedNotice />` then `{elementProps.children}`. `Page` is a CSS grid, so the notice must not be a direct child of it."
+      }
+    ],
+    "depends_on": ["U31"],
+    "covers": ["FR-21"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U34",
+    "path": "plugins/catalog/src/alpha/components/CatalogEntityPage.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Shows the renamed notice at the top of the tab content of both alpha layouts.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { ComponentType, ReactElement } from 'react';",
+        "rule": "Also import `useMemo`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 21,
+        "to": 21,
+        "first_line": "AsyncEntityProvider,",
+        "rule": "Add `EntityRenamedNotice,`."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 54,
+        "to": 54,
+        "first_line": "const entityFromUrl = useEntityFromUrl();",
+        "rule": "Add `const routes = useMemo(() => props.routes.map(route => ({ ...route, children: <fragment holding <EntityRenamedNotice /> then {route.children}> })), [props.routes]);`. The memo keeps the element identity of tab content across renders."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 81,
+        "to": 81,
+        "first_line": "routes={props.routes}",
+        "rule": "Use `routes={routes}`."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 89,
+        "to": 89,
+        "first_line": "routes={props.routes}",
+        "rule": "Use `routes={routes}`."
+      }
+    ],
+    "depends_on": ["U31", "U32"],
+    "covers": ["FR-20", "FR-21"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U35",
+    "path": "plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Shows catalog-processing warnings on the entity page alongside errors.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 36,
+        "to": 39,
+        "first_line": "const errorFilter = (i: EntityStatusItem) =>",
+        "last_line": "i.type === ENTITY_STATUS_CATALOG_PROCESSING_TYPE;",
+        "rule": "Keep the filter, with the level test widened to `(i.level === 'error' || i.level === 'warning')`."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-5", "FR-8"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U36",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "After the reader's own lookup finds nothing, asks the resolver in the same async step and redirects with history replace, leaving the external annotation handling unchanged.",
+    "rules": [
+      "1. The async value becomes `{ from: string; to: string; state?: EntityRenamedLocationState } | undefined`, where `from` is `entityKey`.",
+      "2. In the existing try: with the external annotation, build `to` with `buildTechDocsURL` as today and return `{ from: entityKey, to }` when it is set.",
+      "3. Else, when `catalogEntity` is undefined and `location.pathname.startsWith(viewTechdocLink(entityRef))`, meaning the reader sits at this entity's own docs URL and not at an embedded `entityRef` prop, await `resolveEntityRename({ catalogApi, entityRef, location, routeFunc: viewTechdocLink })` and return `{ from: entityKey, ...rename }` when it is set.",
+      "4. A throw from `getEntityByRef` stays ignored by the existing catch, with no resolver call. No second `getEntityByRef` is made on any path.",
+      "5. The effect navigates with `navigate(value.to, { replace: true, state: value.state })` only when not loading and `value?.from === entityKey`, so a stale value cannot navigate again after the route changes. The `checkedEntityRef` branch stays as it is.",
+      "6. `shouldShowProgress` stays as it is: while loading it is true, so `TechDocsReaderPageProvider` does not mount and no TechDocs backend route is called with a former name."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 18,
+        "to": 18,
+        "first_line": "import { useNavigate } from 'react-router-dom';",
+        "rule": "Also import `useLocation`."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 21,
+        "to": 21,
+        "first_line": "import { catalogApiRef } from '@backstage/plugin-catalog-react';",
+        "rule": "Also import `EntityRenamedLocationState` and `resolveEntityRename`, in Prettier's multi-line form."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 33,
+        "to": 33,
+        "first_line": "* redirects to the external TechDocs URL if present.",
+        "rule": "Keep the sentence and add one saying that when no entity exists at the ref, it also redirects to the current entity if the ref is a former name."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 45,
+        "to": 45,
+        "first_line": "const navigate = useNavigate();",
+        "rule": "Add `const location = useLocation();`."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 57,
+        "to": 73,
+        "first_line": "// Check if this entity should redirect to external TechDocs",
+        "last_line": "}, [entityKey, catalogApi]);",
+        "rule": "Rewrite the `useAsync` per rules 1 to 4, with the same deps and the same catch."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 75,
+        "to": 92,
+        "first_line": "useEffect(() => {",
+        "last_line": "]);",
+        "rule": "Rewrite the effect per rule 5, with the same deps."
+      }
+    ],
+    "depends_on": ["U31"],
+    "covers": ["FR-24", "FR-26", "NFR-1"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U37",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Shows the renamed notice at the top of the reader content, unless told not to.",
+    "exports": [
+      {
+        "name": "TechDocsReaderPageContentProps.withRenamedNotice",
+        "kind": "optional prop",
+        "params": [],
+        "returns": "boolean | undefined"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 22,
+        "to": 22,
+        "first_line": "import { Content, Progress } from '@backstage/core-components';",
+        "rule": "Add `import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 65,
+        "to": 65,
+        "first_line": "withFeedbackLink?: boolean;",
+        "rule": "Add `withRenamedNotice?: boolean;` with the TSDoc `Show or hide the notice that the entity was renamed, defaults to true.`"
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 85,
+        "to": 85,
+        "first_line": "const { withSearch = true, searchResultUrlMapper } = props;",
+        "rule": "Also destructure `withRenamedNotice = true`, in Prettier's multi-line form."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 119,
+        "to": 119,
+        "first_line": "<Grid container>",
+        "rule": "Add `{withRenamedNotice && (<Grid xs={12} item><EntityRenamedNotice /></Grid>)}`."
+      }
+    ],
+    "depends_on": ["U31"],
+    "covers": ["FR-25"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U72",
+    "path": "plugins/techdocs/src/EntityPageDocs.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Turns the reader's notice off inside the entity page's docs tab, whose tab content already shows it.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 68,
+        "to": 68,
+        "first_line": "withFeedbackLink={withFeedbackLink}",
+        "rule": "Add `withRenamedNotice={false}`."
+      }
+    ],
+    "depends_on": ["U37"],
+    "covers": ["FR-21"],
+    "checks": ["format", "eslint"]
+  },
+  {
+    "id": "U38",
+    "path": "plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Shows the renamed notice at the top of the new-system reader content.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 18,
+        "to": 18,
+        "first_line": "import { Progress } from '@backstage/core-components';",
+        "rule": "Add `import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 48,
+        "to": 48,
+        "first_line": "<>",
+        "rule": "Add `<EntityRenamedNotice />`."
+      }
+    ],
+    "depends_on": ["U31"],
+    "covers": ["FR-25"],
+    "checks": ["format", "eslint"]
+  }
+]

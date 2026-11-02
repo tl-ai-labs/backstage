@@ -628,6 +628,45 @@ wasted scanning entries before a deep cursor.
 
 ---
 
+## 15. Former name resolution
+
+**User action**: Opening an old link after a normal lookup found nothing.
+
+**Method call**:
+
+```ts
+catalog.resolveFormerEntityRef({
+  formerEntityRef: 'component:default/old-name',
+  credentials,
+});
+```
+
+**Reference SQL**:
+
+```sql
+SELECT former_entity_refs.entity_ref
+FROM former_entity_refs
+WHERE former_entity_ref = 'component:default/old-name'
+  AND NOT EXISTS (
+    SELECT 1 FROM final_entities
+    WHERE final_entities.entity_ref = 'component:default/old-name'
+  )
+LIMIT 2;
+```
+
+**Healthy plan**: An Index Only Scan on
+`former_entity_refs_former_entity_ref_idx` and an index probe on
+`final_entities_entity_ref_uniq`.
+
+This scenario has no entry in `baseline.md` yet.
+
+**Anti-patterns**:
+
+- Seq Scan on `former_entity_refs`
+- Any join to `search`
+
+---
+
 ## Global anti-patterns
 
 These should NEVER appear in any of the above queries:

@@ -1,0 +1,54 @@
+{
+  "module": "entity-former-names",
+  "verdict": "approved",
+  "tool_calls": 14,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+      "line": 113,
+      "issue": "FR-25 gap: the notice renders only in the isDomReady branch, here and in plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx. After a redirect, while docs for the new name are building or failing, the !isDomReady branch shows TechDocsStateIndicator with no notice, and isNotFound shows NotFoundErrorPage with no notice. The FAQ names unpublished docs as the expected rename pitfall, so the user lands on a different name with no explanation. Confidence medium: the notice does appear once the dom is ready.",
+      "fix": "Also render the notice in the !isDomReady branch, above TechDocsStateIndicator, honoring withRenamedNotice. Make the same change in the alpha TechDocsReaderContent, and add a test with a not-ready dom."
+    },
+    {
+      "severity": "minor",
+      "file": ".changeset/former-names-techdocs.md",
+      "line": 5,
+      "issue": "The new public prop TechDocsReaderPageContentProps.withRenamedNotice is in plugins/techdocs/report.api.md but not in the changeset. Adopters who embed TechDocsReaderPageContent in their own entity tab now get two notices, because the entity page shows one too, and nothing tells them how to turn the second one off.",
+      "fix": "Add a sentence saying TechDocsReaderPageContent gained a withRenamedNotice prop, defaulting to true, and that adopters who render it inside an entity page should set it to false."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx",
+      "line": 72,
+      "issue": "Widening errorFilter also changes the exported hasCatalogProcessingErrors, which now returns true for an entity that has only warnings. Its TSDoc still says 'any processing errors', and .changeset/former-names-catalog.md mentions only the panel, not this public helper that adopters use in EntitySwitch conditions.",
+      "fix": "Update the TSDoc to say errors or warnings, and add one sentence to .changeset/former-names-catalog.md saying hasCatalogProcessingErrors now also returns true for catalog processing warnings."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+      "issue": "Coverage is weaker than U42 asks. The invalid-entry case asserts the entry ('a/b/c') but not the reason, and no backend test asserts a reason string. 'Level error items are unchanged' only checks an empty list on an entity seeded with errors: '[]', so it would not catch the former-name items overwriting or reordering existing errors.",
+      "fix": "Assert the warning message contains 'it is not on the form'. Seed one entity with a real processing error and assert its error item survives alongside the warning."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+      "line": 63,
+      "issue": "Unplanned edit: U25 asked only for the jest.fn() entry, but the diff also adds a ServiceRef import and casts catalogServiceRef to ServiceRef<CatalogServiceMock, 'plugin', 'singleton'>. The cast is probably needed because the mock declares the method as required and CatalogService as optional, but nothing in the code says so.",
+      "fix": "Keep the cast and add a one-line comment explaining it: the mock declares resolveFormerEntityRef as required, while CatalogService declares it as optional."
+    }
+  ],
+  "refinement_packets": [],
+  "checks": {
+    "correctness": "pass: units U01-U72 match the diff, apart from the U25 cast, the U42 test merge and the findings above; the stale-route guards hold, and stableStringifyArray([]) yields '[]', so entities annotated before the upgrade still get indexed",
+    "type_safety": "pass: no new any in production code; the only new cast is the one in the catalogServiceMock finding",
+    "error_handling": "pass: resolveEntityRename never rejects and a failed getEntityByRef skips the resolver; the audit success-then-fail on a miss mirrors by-name",
+    "authz": "pass: the route uses httpAuth credentials, the target goes through AuthorizedEntitiesCatalog.entitiesBatch, and every miss gives the same 404",
+    "pii": "pass: nothing logs former refs; audit meta uses the default event severity, not checked against the auditor's level mapping; the docs carry the privacy rule",
+    "dry": "pass: resolveEntityRename is shared by the catalog and TechDocs",
+    "tests": "pass with one minor finding; suite results taken from the orchestrator, not re-run",
+    "env_fixtures": "n/a: no validating config module and no new env or config keys",
+    "sensitive_files": "pass: no manifest, .env.example, CLAUDE.md, settings or .mcp.json touched",
+    "database_engines": "not verified: Postgres and MySQL behavior reviewed by reading only, tests ran on SQLite"
+  }
+}

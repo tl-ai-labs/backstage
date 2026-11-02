@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
+import {
+  Entity,
+  parseEntityFormerRefs,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { ConflictError } from '@backstage/errors';
 import { DeferredEntity } from '@backstage/plugin-catalog-node';
 import { Knex } from 'knex';
@@ -45,6 +49,10 @@ import {
   syncRelations,
   SyncRelationsResult,
 } from './operations/relations/syncRelations';
+import {
+  listContestedFormerRefs,
+  syncFormerEntityRefs,
+} from './operations/formerRefs/formerEntityRefs';
 import { EventParams, EventsService } from '@backstage/plugin-events-node';
 import { DateTime } from 'luxon';
 import { CATALOG_CONFLICTS_TOPIC } from '../constants';
@@ -134,6 +142,13 @@ export class DefaultProcessingDatabase implements ProcessingDatabase {
     );
 
     const relationsResult = await syncRelations(tx, id, relationRows);
+
+    // The stitch this transaction schedules sees the claims as they are now.
+    await syncFormerEntityRefs(tx, {
+      entityId: id,
+      entityRef: sourceEntityRef,
+      formerRefs: parseEntityFormerRefs(processedEntity).formerRefs,
+    });
 
     // Delete old refresh keys
     await tx<DbRefreshKeysRow>('refresh_keys')
@@ -282,6 +297,15 @@ export class DefaultProcessingDatabase implements ProcessingDatabase {
     const entityRefs = rows.map(r => r.source_entity_ref!).filter(Boolean);
 
     return { entityRefs };
+  }
+
+  async listContestedFormerRefs(
+    txOpaque: Transaction,
+    options: { entityId: string; formerRefs: string[] },
+  ): Promise<string[]> {
+    const tx = txOpaque as Knex.Transaction;
+
+    return listContestedFormerRefs(tx, options);
   }
 
   async transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T> {

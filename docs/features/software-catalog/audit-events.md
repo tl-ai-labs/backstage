@@ -16,6 +16,7 @@ The Catalog backend emits audit events for various operations. Events are groupe
   - **`all`**: Fetching all entities. (GET `/entities`)
   - **`by-id`**: Fetching a single entity using its UID. (GET `/entities/by-uid/:uid`)
   - **`by-name`**: Fetching a single entity using its kind, namespace, and name. (GET `/entities/by-name/:kind/:namespace/:name`)
+  - **`by-former-name`**: Resolving a former name to the current entity ref, recorded as `currentEntityRef` in `meta` on a match. This record links the former name to the current entity, and that link stays in the audit log after the name is removed from the `backstage.io/former-names` annotation. (GET `/entities/by-former-name/:kind/:namespace/:name`)
   - **`by-query`**: Fetching multiple entities using a filter query. (GET `/entities/by-query`)
   - **`by-refs`**: Fetching a batch of entities by their entity refs. (POST `/entities/by-refs`)
   - **`ancestry`**: Fetching the ancestry of an entity. (GET `/entities/by-name/:kind/:namespace/:name/ancestry`)

@@ -699,6 +699,28 @@ export interface CatalogApi {
   ): Promise<Entity | undefined>;
 
   /**
+   * Finds the current entity for a former name.
+   *
+   * @remarks
+   *
+   * Use this only after {@link CatalogApi.getEntityByRef} found nothing for the
+   * ref. It returns the ref of the entity that claims the name, or undefined if
+   * nothing claims it, the name is in use or contested, or the caller may not
+   * read the target.
+   *
+   * This method is optional so that existing implementations of this interface
+   * keep working. Callers should treat its absence as an undefined result.
+   *
+   * @param entityRef - The former entity ref, either on string or compound form
+   * @param options - Additional options
+   * @returns The ref of the entity that claims the former name, or undefined
+   */
+  resolveFormerEntityRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<string | undefined>;
+
+  /**
    * Removes a single entity from the catalog by entity UID.
    *
    * @param uid - An entity UID

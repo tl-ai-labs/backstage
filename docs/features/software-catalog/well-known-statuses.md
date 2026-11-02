@@ -40,6 +40,12 @@ possible, so the errors described in this state may not seem to align with the
 rest of the entity, because they pertain to a remote that could not be
 successfully ingested. This is normal.
 
+Items of level `warning` report a problem that did not stop ingestion, such as an
+entry in the `backstage.io/former-names` annotation that was skipped or is
+contested. See
+[well-known annotations](well-known-annotations.md) for the rules of that
+annotation.
+
 ```yaml
 # Example:
 status:

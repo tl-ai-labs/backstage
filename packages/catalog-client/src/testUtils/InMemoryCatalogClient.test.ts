@@ -890,6 +890,47 @@ describe('InMemoryCatalogClient', () => {
     });
   });
 
+  describe('resolveFormerEntityRef', () => {
+    it('resolves one claim and refuses live and contested names', async () => {
+      const claimant = (name: string, formerNames: string): Entity => ({
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          namespace: 'default',
+          name,
+          annotations: { 'backstage.io/former-names': formerNames },
+        },
+      });
+      const live: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: { namespace: 'default', name: 'live' },
+      };
+      const client = new InMemoryCatalogClient({
+        entities: [
+          claimant('renamed', 'old'),
+          claimant('squatter', 'live'),
+          live,
+          claimant('first', 'shared'),
+          claimant('second', 'shared'),
+        ],
+      });
+
+      await expect(
+        client.resolveFormerEntityRef('component:default/old'),
+      ).resolves.toBe('component:default/renamed');
+      await expect(
+        client.resolveFormerEntityRef('component:default/live'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.resolveFormerEntityRef('component:default/shared'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.resolveFormerEntityRef('component:default/unknown'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('removeEntityByUid', () => {
     it('removes an entity by uid', async () => {
       const client = new InMemoryCatalogClient({ entities });

@@ -17,6 +17,7 @@
 import {
   createServiceFactory,
   ServiceFactory,
+  ServiceRef,
 } from '@backstage/backend-plugin-api';
 import { InMemoryCatalogClient } from '@backstage/catalog-client/testUtils';
 import { Entity } from '@backstage/catalog-model';
@@ -59,13 +60,15 @@ export namespace catalogServiceMock {
    * some of them overloaded by the caller.
    */
   export const mock = createServiceMock<CatalogServiceMock>(
-    catalogServiceRef,
+    // CatalogServiceMock declares resolveFormerEntityRef as required, while CatalogService declares it as optional.
+    catalogServiceRef as ServiceRef<CatalogServiceMock, 'plugin', 'singleton'>,
     () => ({
       getEntities: jest.fn(),
       getEntitiesByRefs: jest.fn(),
       queryEntities: jest.fn(),
       getEntityAncestors: jest.fn(),
       getEntityByRef: jest.fn(),
+      resolveFormerEntityRef: jest.fn(),
       removeEntityByUid: jest.fn(),
       refreshEntity: jest.fn(),
       getEntityFacets: jest.fn(),

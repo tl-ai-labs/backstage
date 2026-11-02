@@ -31,6 +31,7 @@ import { buildEntitySearch } from './buildEntitySearch';
 import { markDeferredStitchCompleted } from './markDeferredStitchCompleted';
 import { markDeferredStitchFailed } from './markDeferredStitchFailed';
 import { syncSearchRows } from './syncSearchRows';
+import { getFormerRefStatusItems } from '../formerRefs/formerEntityRefs';
 import { StitchLeaseExpiresAt } from './getDeferredStitchableEntities';
 import { LoggerService } from '@backstage/backend-plugin-api';
 import { retryOnDeadlock } from '../../util';
@@ -161,6 +162,9 @@ export async function performStitching(options: {
         }));
       }
     }
+    statusItems.push(
+      ...(await getFormerRefStatusItems(knex, { entityId, entity })),
+    );
     // We opt to do this check here as we otherwise can't guarantee that it will be run after all processors
     for (const annotation of [ANNOTATION_VIEW_URL, ANNOTATION_EDIT_URL]) {
       const value = entity.metadata.annotations?.[annotation];

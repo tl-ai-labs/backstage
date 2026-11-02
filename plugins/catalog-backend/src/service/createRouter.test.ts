@@ -68,6 +68,7 @@ describe('createRouter readonly disabled', () => {
       removeEntityByUid: jest.fn(),
       entityAncestry: jest.fn(),
       facets: jest.fn(),
+      resolveFormerEntityRef: jest.fn(),
       queryEntities: jest.fn(),
     };
     locationService = {
@@ -554,6 +555,103 @@ describe('createRouter readonly disabled', () => {
     });
   });
 
+  describe('GET /entities/by-former-name/:kind/:namespace/:name', () => {
+    it('returns the current ref', async () => {
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue('k:ns/new');
+
+      const response = await request(app).get(
+        '/entities/by-former-name/k/ns/old',
+      );
+
+      expect(response.status).toEqual(200);
+      expect(response.body).toEqual({ entityRef: 'k:ns/new' });
+      expect(entitiesCatalog.resolveFormerEntityRef).toHaveBeenCalledTimes(1);
+      expect(entitiesCatalog.resolveFormerEntityRef).toHaveBeenCalledWith({
+        formerEntityRef: 'k:ns/old',
+        credentials: mockCredentials.user(),
+      });
+    });
+
+    it('answers every miss with one shape', async () => {
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue(undefined);
+
+      const response = await request(app).get(
+        '/entities/by-former-name/k/ns/old',
+      );
+
+      expect(response.status).toEqual(404);
+      expect(response.body.error.message).toBe(
+        "No entity with former name 'old' found, with kind 'k' in namespace 'ns'",
+      );
+    });
+
+    it('audits as a catalog read', async () => {
+      const auditor = mockServices.auditor.mock();
+      const auditorEvent = { success: jest.fn(), fail: jest.fn() };
+      auditor.createEvent.mockResolvedValue(auditorEvent);
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue('k:ns/new');
+      const auditedRouter = await createRouter({
+        entitiesCatalog,
+        locationService,
+        orchestrator,
+        logger: mockServices.logger.mock(),
+        refreshService,
+        config: new ConfigReader(undefined),
+        auth: mockServices.auth(),
+        httpAuth: mockServices.httpAuth(),
+        locationAnalyzer,
+        permissionsService,
+        auditor,
+      });
+      auditedRouter.use(middleware.error());
+
+      const response = await request(express().use(auditedRouter)).get(
+        '/entities/by-former-name/k/ns/old',
+      );
+
+      expect(response.status).toEqual(200);
+      expect(auditor.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: 'entity-fetch',
+          meta: expect.objectContaining({ queryType: 'by-former-name' }),
+        }),
+      );
+      expect(auditorEvent.success).toHaveBeenCalledTimes(1);
+      expect(auditorEvent.success).toHaveBeenCalledWith({
+        meta: { currentEntityRef: 'k:ns/new' },
+      });
+    });
+
+    it('audits a miss as a failed catalog read', async () => {
+      const auditor = mockServices.auditor.mock();
+      const auditorEvent = { success: jest.fn(), fail: jest.fn() };
+      auditor.createEvent.mockResolvedValue(auditorEvent);
+      entitiesCatalog.resolveFormerEntityRef.mockResolvedValue(undefined);
+      const auditedRouter = await createRouter({
+        entitiesCatalog,
+        locationService,
+        orchestrator,
+        logger: mockServices.logger.mock(),
+        refreshService,
+        config: new ConfigReader(undefined),
+        auth: mockServices.auth(),
+        httpAuth: mockServices.httpAuth(),
+        locationAnalyzer,
+        permissionsService,
+        auditor,
+      });
+      auditedRouter.use(middleware.error());
+
+      const response = await request(express().use(auditedRouter)).get(
+        '/entities/by-former-name/k/ns/old',
+      );
+
+      expect(response.status).toEqual(404);
+      expect(auditorEvent.success).not.toHaveBeenCalled();
+      expect(auditorEvent.fail).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('DELETE /entities/by-uid/:uid', () => {
     it('can remove', async () => {
       entitiesCatalog.removeEntityByUid.mockResolvedValue(undefined);
@@ -878,6 +976,7 @@ describe('createRouter readonly disabled', () => {
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          resolveFormerEntityRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,
@@ -1391,6 +1490,7 @@ describe('createRouter readonly and raw json enabled', () => {
       removeEntityByUid: jest.fn(),
       entityAncestry: jest.fn(),
       facets: jest.fn(),
+      resolveFormerEntityRef: jest.fn(),
       queryEntities: jest.fn(),
     };
     locationService = {
@@ -1647,6 +1747,7 @@ describe.each(databases.eachSupportedId())(
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          resolveFormerEntityRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,

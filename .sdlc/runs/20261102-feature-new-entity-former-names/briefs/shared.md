@@ -1,0 +1,117 @@
+## Conventions
+
+- Every new .ts, .tsx and .js source file starts with the Apache 2.0 header of its style file with the line `Copyright 2026 The Backstage Authors`. Never change the year on an existing file. Config, JSON, YAML and Markdown files take no header.
+- Prettier decides layout: 2 spaces, single quotes, trailing commas, 80 columns. Match the import order and the code style of the file and the package you are in; consistency inside a package beats consistency across the repo.
+- Backend code throws typed errors from `@backstage/errors`. Knex row types live in `plugins/catalog-backend/src/database/tables.ts`. Migrations are CommonJS with `// @ts-check` and JSDoc-typed `knex`.
+- Every new export of a package carries TSDoc with `@public`: `yarn build:api-reports` runs with `--validate-release-tags` and fails without it.
+- Backend database tests use `TestDatabases.create()`, `describe.each(databases.eachSupportedId())` or `it.each(...)`, and `applyDatabaseMigrations`. They run against what the environment offers, SQLite at least.
+- Tests: fewer thorough tests with several assertions over many small ones. With React Testing Library use `screen` and `.findBy*` over `waitFor`, and add no test IDs to implementation code. To set navigation state in a test, render react-router's `Navigate` with a constant `state` object from a start route.
+- User-visible strings go through a translation ref; frontend strings of this change live in `catalogReactTranslationRef`. Notice text is rendered as plain React text, never as HTML.
+- Former refs are never logged above debug level. They can hold a person's past name on `User` and `Group` entities.
+- Generated files are never typed: `src/schema/openapi/generated/**`, `report*.api.md`, `report.sql.md`. They come from the tooling units. `plugins/catalog-backend/src/tests/performance/query-battery/baseline.md` is not edited, since the battery is not run.
+- Never run `yarn build`, `yarn changesets version` or `yarn release`. Changesets are plain files in `.changeset/`, written for adopters, without internal symbol names. Packages at 1.0.0 or above take `minor` for a new feature.
+- Docs follow `docs/contribute/doc-style-guide.md`: U.S. English, friendly and precise, sentence-case prose, code style for file names, keys and annotations, bold for UI elements, italics to introduce a term, relative links to sibling docs.
+- Do not touch `plugins/techdocs-backend`, any `package.json`, `plugins/catalog-backend/config.d.ts`, `plugins/catalog-backend/CLAUDE.md` or `docs/releases`. No new dependencies, env vars or app-config keys.
+
+## Decisions
+
+- Who may claim a former name (design question 1): Any entity may claim a former name by listing it in the `backstage.io/former-names` annotation. A claim is valid only if its kind equals the entity's kind and it is not the entity's own current ref. It may name any namespace (approved at Gate 1). Backstage holds no rename history, so a claim cannot be proved: anyone who can register a location can claim a retired name. A claim can never take a live name and never win a contested name, and the docs state this trust model. There is no admin override. (not Same-namespace claims only: drops the namespace move the brief asks for; not Automatic rename detection: out of scope, a new name mints a new entity_id with no link to the old one; not An allowlist of claimers in app-config: `config.d.ts` is outside the write contract) — The person approved cross-namespace claims with the trust model documented; the kind rule holds because a rename never changes kind, and the live-wins and no-guessing rules cap the damage of a false claim.
+- What happens when a new entity takes an old name (design question 2): A live entity always wins. Live means a row in `final_entities` at that ref, the row `by-name` reads, so an orphan is live. Normal lookup returns the new entity, no redirect happens, and the claim row stays dormant, with no write. The resolver checks this in SQL for every caller, so a caller who cannot read the live entity gets the same 404 and is not redirected to the claimant. When the live entity goes, the claim works again by itself. Two or more claimants of one ref resolve to nothing, the user sees the normal not-found page, and each claimant gets a status warning that names no other entity. (not First claim wins: rewards a squatter and needs claim age tracked; not Deleting the claim when a live entity appears: the claim would not come back when that entity goes (FR-7)) — A redirect must never hide a real entity or send a user to the wrong one; the person approved no redirect plus both claimants told.
+- Permission checks on the redirect target (design question 3): `GET /entities/by-former-name/{kind}/{namespace}/{name}` authenticates with `httpAuth.credentials(req)` as `by-name` does. `AuthorizedEntitiesCatalog.resolveFormerEntityRef` takes the candidate from the inner catalog, then reads the target through its own `entitiesBatch` with the caller's credentials, so ALLOW, DENY and CONDITIONAL decisions on `catalog.entity.read` apply exactly as on a normal read, and a target with no `final_entities` row fails the same way. An unknown, dormant, contested or denied ref all raise one `NotFoundError` whose message is built only from the request's own params. A hit returns only `{ entityRef }`. The route audits as `entity-fetch` with `queryType: by-former-name` and no target in its meta. (not A new permission: the target is a catalog read and FR-15 asks for `catalog.entity.read`; not Returning 403 on a denied target: reveals that a claim exists (FR-16)) — One read path means one permission outcome, and one 404 means a caller cannot tell a denied target from an unknown name.
+- How existing lookups stay fast (design question 4): No existing lookup changes: `by-name`, `by-refs`, `by-uid`, `by-query` and listing run the SQL they run today and never touch the new table. The resolver is a separate route that frontends call only after `getEntityByRef` returned nothing. It runs one statement on `former_entity_refs` through the `(former_entity_ref, entity_ref)` index with a NOT EXISTS on the unique `final_entities.entity_ref` index, plus the permission read. Write cost: an entity with no annotation does one indexed SELECT by `entity_id` in `updateProcessedEntity`, only when its result hash changed, no write, and nothing in stitching. An entity with the annotation also writes only the claims that changed, and does one indexed read per processing run and per stitch. The processing hash gains an input only for annotated entities, so upgrading does not reprocess the catalog. (not Resolving inside `by-name`: changes a hit path and trips the `loading` check in the alpha `CatalogEntityPage`; not Scanning annotations in `search`: not indexed for this shape and much larger than a dedicated table) — NFR-1 and NFR-2 forbid any new cost on a hit, and a small dedicated table keeps the miss path to one indexed lookup.
+- Rename timing and orphans: FR-7 stands: an orphan counts as live, so a rename does not redirect at once. Default (`catalog.orphanStrategy: delete`): the old entity becomes an orphan when its parent next stops emitting it (default processing interval 100 to 150 seconds), and the old link keeps showing the orphan, not a redirect, until the `catalog_orphan_cleanup` task deletes it. That task runs every 30 seconds with a 24 second timeout: `orphanCleanupIntervalMs` defaults to `30_000` in `DefaultCatalogProcessingEngine`, `CatalogBuilder` passes no override, and no app-config key sets it. The redirect starts once the old row is gone and the new entity is stitched. With `orphanStrategy: keep`, or while something else keeps the old entity alive (another parent or provider still emits it, or the file moved or became unreadable, which does not orphan it), the redirect does not fire until the orphan is removed by hand or the cause is fixed. Until then the orphan's own claims also stand, so a name both it and its successor claim stays contested. Providers delete eagerly: a full or delta mutation that drops the old ref deletes it in the same transaction with no orphan stage, so the old link shows plain not-found until the new entity is processed and stitched, usually seconds, then redirects. If another source still references the old ref, it stays live. `catalog.orphanProviderStrategy` governs only providers no longer installed and changes none of this. Docs state all of it. (not Treating an orphan as not live: `by-name` returns the orphan and the resolver runs only after a miss, so this needs a change to an existing lookup, which NFR-1 and out-of-scope item 4 forbid) — The code gives no strong reason to leave FR-7, and it gives a strong reason to keep it: an orphan is a hit on every lookup path, so a redirect cannot be reached while it exists.
+- Annotation syntax: The value of `backstage.io/former-names` is a comma-separated list of entries on the form `[<kind>:][<namespace>/]<name>`, with whitespace around entries trimmed. A missing kind or namespace defaults to the entity's own. Parsed refs are lower-cased `kind:namespace/name` strings, deduplicated, in declaration order. An entry fails if it is blank, has more than one `:` or `/`, holds whitespace, or the normalized ref is over 255 characters. (not A JSON array in the annotation: hard to write and read in YAML; not A new `metadata` field: needs schema and validator changes, an annotation does not) — Names cannot hold commas, and the syntax keeps the single-rename case a one-word value.
+- Where the index is written: Table `former_entity_refs` is written by `DefaultProcessingDatabase.updateProcessedEntity`, inside the processing transaction, from the processed entity's parsed annotation. Stitching only reads it. Rows are removed on entity deletion by a foreign key on `refresh_state.entity_id` with ON DELETE CASCADE, so no deletion path changes. The write commits before the stitch it schedules, so a stale claim is gone by the next stitch, which meets FR-9 and AC-2. (not Writing in `performStitching`: the publication transaction warns against new lock-order dependencies, and it returns early on an unchanged hash; not A trigger or a periodic reconciliation task: more moving parts for the same result) — Processing of one entity is serialized by the `refresh_state` row update that opens the transaction, which gives NFR-5 with no duplicate-key risk in a stitch, and stitching gains no write at all (NFR-3).
+- How claimants are told: Invalid entries and contested claims become `status.items` entries with type `backstage.io/catalog-processing` and level `warning`, built in `performStitching`, and `EntityProcessingErrorsPanel` shows level `warning` as well as `error`. The processing engine adds the entity's contested refs to its result hash for annotated entities only, so each claimant learns of a new conflict, or of its end, at its own next processing run (default 100 to 150 seconds), with no change to any deletion path. An entity with such a warning also matches the catalog's processing-status filter, which counts any status item. (not `processingResult.generalError`: any emitted error sets `ok: false` and discards the whole result, which FR-5 forbids; not Marking peers for stitching from the publication transaction: forbidden lock order; not Marking peers from each deletion path: three call sites gain a query for a rare case) — A warning leaves processing untouched, and the hash input reuses the way `listParents` already drives a re-stitch.
+- CatalogApi and CatalogService surface: `resolveFormerEntityRef?(entityRef, options)` is an optional method on `CatalogApi` and on `CatalogService`, returning `Promise<string | undefined>`. It is concrete on `CatalogClient`, `InMemoryCatalogClient` and `DefaultCatalogService`, and required on `CatalogServiceMock`, which must redeclare it because it extends both interfaces. Callers use `?.`. (not A required method: breaks `ReadWriteSplitCatalogClient` and `ReadWriteSplitCatalogService` in `contrib/`, which implement these interfaces outside the write contract, and every adopter who does the same (NFR-6)) — An optional method keeps every implementation outside the allowlist compiling, and a caller on such an implementation sees a miss, which FR-18 and FR-24 already handle.
+- API contract: `GET /entities/by-former-name/{kind}/{namespace}/{name}`, operationId `GetEntityRefByFormerName`, security as `by-name`. 200 body: `{ "entityRef": "component:default/new-name" }`. 404: the standard error body. A single call is one hop. `CatalogClient` treats a 404 as `undefined`, which also covers a backend without the route. No existing route changes, and `by-name` keeps returning 404 for a former name. — A new read route keeps the existing response contracts intact (NFR-6).
+- Frontend redirect mechanics: `resolveEntityRename` in `plugins/catalog-react` is the one shared step. Callers run it inside the same async function as their `getEntityByRef`, only when that returned no entity. It never rejects. It returns `{ to, state }`, where `to` is the target route plus the current sub-path, search and hash, and `state` is `{ entityRenamedFrom: '<name or namespace/name>' }`. Callers `navigate(to, { replace: true, state })` only while the result still belongs to the current ref. `useEntityFromUrl` serves both frontend systems, and `useExternalRedirect` serves the reader, whose progress state keeps `TechDocsReaderPageProvider` unmounted so no TechDocs backend route sees a former name. (not A separate hook with an effect after the miss: flashes not-found, and fires a resolver call for the new ref while the first render after navigating still shows the old miss; not A URL parameter for the notice: a crafted link could make any page claim a rename (FR-22); not A second `getEntityByRef` in the reader: adds a client round trip on a hit (NFR-1)) — Keeping both calls in one async keeps `loading` true across them and guarantees the resolver runs only after a real miss of the same ref.
+- Notice placement: `EntityRenamedNotice` in `plugins/catalog-react` reads `useLocation().state` and renders a dismissible `@backstage/ui` `Alert`. It sits at the top of the tab content: legacy `EntityLayout` wraps each route's children, and the alpha `CatalogEntityPage` wraps its routes once in a `useMemo`, before passing them to either alpha layout, so tab content keeps its element identity. In TechDocs it sits at the top of `TechDocsReaderPageContent` and the alpha `TechDocsReaderContent`. `EntityPageDocs` passes `withRenamedNotice={false}` to the reader, so the docs tab of an entity page shows one notice, not two. (not Rendering beside `RoutedTabs` or `Page` children: `Page` is a CSS grid and a stray child breaks its layout; not A TechDocs Snackbar: a second notice implementation for the same message) — One component in the content area works in both systems and keeps FR-21 and FR-25 the same notice.
+- Configuration: No new env var and no new app-config key. The feature is on for any entity that declares the annotation. — `config.d.ts` is outside the write contract, and the requirements read no new credentials.
+
+## Files of this change
+
+- `packages/catalog-model/src/entity/constants.ts` (U01, edit) — import: `import { ANNOTATION_FORMER_NAMES } from '@backstage/catalog-model';`
+  - `const ANNOTATION_FORMER_NAMES(): 'backstage.io/former-names'`
+- `packages/catalog-model/src/entity/formerNames.ts` (U02, create) — import: `import { parseEntityFormerRefs } from '@backstage/catalog-model';`
+  - `type EntityFormerRefs(): { formerRefs: string[]; problems: Array<{ entry: string; reason: string }> }`
+  - `function parseEntityFormerRefs(entity: Entity): EntityFormerRefs`
+- `packages/catalog-model/src/entity/index.ts` (U03, edit)
+- `packages/catalog-model/src/kinds/annotations.ts` (U04, edit)
+- `packages/catalog-model/src/entity/formerNames.test.ts` (U05, create)
+- `plugins/catalog-backend/src/schema/openapi.yaml` (U06, edit)
+- `plugins/catalog-backend/migrations/20261102000000_former_entity_refs.js` (U08, create)
+- `plugins/catalog-backend/src/database/tables.ts` (U09, edit) — import: `import { DbFormerEntityRefsRow } from '../../tables';`
+  - `type DbFormerEntityRefsRow(): { entity_id: string; entity_ref: string; former_entity_ref: string }`
+- `plugins/catalog-backend/src/database/operations/formerRefs/formerEntityRefs.ts` (U10, create) — import: `import { getFormerRefStatusItems, listContestedFormerRefs, syncFormerEntityRefs } from './operations/formerRefs/formerEntityRefs';`
+  - `function syncFormerEntityRefs(tx: Knex.Transaction, options: { entityId: string; entityRef: string; formerRefs: string[] }): Promise<void>`
+  - `function listContestedFormerRefs(knex: Knex | Knex.Transaction, options: { entityId: string; formerRefs: string[] }): Promise<string[]>`
+  - `function getFormerRefStatusItems(knex: Knex | Knex.Transaction, options: { entityId: string; entity: Entity }): Promise<EntityStatusItem[]>`
+- `plugins/catalog-backend/src/database/types.ts` (U11, edit)
+- `plugins/catalog-backend/src/database/DefaultProcessingDatabase.ts` (U12, edit)
+- `plugins/catalog-backend/src/processing/DefaultCatalogProcessingEngine.ts` (U13, edit)
+- `plugins/catalog-backend/src/database/operations/stitcher/performStitching.ts` (U14, edit)
+- `plugins/catalog-backend/src/catalog/types.ts` (U15, edit)
+  - `interface ResolveFormerEntityRefRequest(): { formerEntityRef: string; credentials: BackstageCredentials }`
+- `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts` (U16, edit)
+- `plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts` (U17, edit)
+- `plugins/catalog-backend/src/service/createRouter.ts` (U18, edit)
+- `plugins/catalog-backend/src/tests/performance/query-battery/queries.md` (U19, edit)
+- `packages/catalog-client/src/types/api.ts` (U20, edit)
+  - `optional method CatalogApi.resolveFormerEntityRef(entityRef: string | CompoundEntityRef, options: CatalogRequestOptions | undefined): Promise<string | undefined>`
+- `packages/catalog-client/src/CatalogClient.ts` (U21, edit)
+- `packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts` (U22, edit)
+- `plugins/catalog-node/src/catalogService.ts` (U23, edit)
+  - `optional method CatalogService.resolveFormerEntityRef(entityRef: string | CompoundEntityRef, options: CatalogServiceRequestOptions): Promise<string | undefined>`
+- `plugins/catalog-node/src/testUtils/types.ts` (U24, edit)
+- `plugins/catalog-node/src/testUtils/catalogServiceMock.ts` (U25, edit)
+- `plugins/catalog-react/src/testUtils/catalogApiMock.ts` (U26, edit)
+- `plugins/catalog-react/src/translation.ts` (U27, edit)
+- `plugins/catalog-react/src/components/EntityRenamedNotice/resolveEntityRename.ts` (U28, create) — import: `import { resolveEntityRename } from '@backstage/plugin-catalog-react';`
+  - `type EntityRenamedLocationState(): { entityRenamedFrom: string }`
+  - `function resolveEntityRename(options: { catalogApi: Pick<CatalogApi, 'resolveFormerEntityRef'>; entityRef: CompoundEntityRef; location: { pathname: string; search: string; hash: string }; routeFunc: (params: { kind: string; namespace: string; name: string }) => string }): Promise<{ to: string; state: EntityRenamedLocationState } | undefined>`
+- `plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.tsx` (U29, create) — import: `import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';`
+  - `function component EntityRenamedNotice(): JSX.Element | null`
+- `plugins/catalog-react/src/components/EntityRenamedNotice/index.ts` (U30, create)
+- `plugins/catalog-react/src/components/index.ts` (U31, edit)
+- `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts` (U32, edit)
+- `plugins/catalog/src/components/EntityLayout/EntityLayout.tsx` (U33, edit)
+- `plugins/catalog/src/alpha/components/CatalogEntityPage.tsx` (U34, edit)
+- `plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx` (U35, edit)
+- `plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts` (U36, edit)
+- `plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx` (U37, edit)
+  - `optional prop TechDocsReaderPageContentProps.withRenamedNotice(): boolean | undefined`
+- `plugins/techdocs/src/EntityPageDocs.tsx` (U72, edit)
+- `plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx` (U38, edit)
+- `plugins/catalog-backend/src/database/operations/formerRefs/formerEntityRefs.test.ts` (U39, create)
+- `plugins/catalog-backend/src/database/DefaultProcessingDatabase.test.ts` (U40, edit)
+- `plugins/catalog-backend/src/processing/DefaultCatalogProcessingEngine.test.ts` (U41, edit)
+- `plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts` (U42, edit)
+- `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts` (U43, edit)
+- `plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts` (U44, edit)
+- `plugins/catalog-backend/src/service/createRouter.test.ts` (U45, edit)
+- `plugins/catalog-backend/src/tests/migrations.test.ts` (U46, edit)
+- `packages/catalog-client/src/CatalogClient.test.ts` (U47, edit)
+- `packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts` (U48, edit)
+- `plugins/catalog-node/src/catalogService.test.ts` (U49, edit)
+- `plugins/catalog-react/src/components/EntityRenamedNotice/resolveEntityRename.test.ts` (U50, create)
+- `plugins/catalog-react/src/components/EntityRenamedNotice/EntityRenamedNotice.test.tsx` (U51, create)
+- `plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx` (U52, create)
+- `plugins/catalog/src/alpha/components/CatalogEntityPage.test.tsx` (U53, create)
+- `plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.test.tsx` (U54, edit)
+- `plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx` (U55, edit)
+- `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx` (U56, edit)
+- `plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.test.tsx` (U57, edit)
+- `plugins/techdocs/src/alpha/components/TechDocsReaderContent.test.tsx` (U58, edit)
+- `docs/features/software-catalog/well-known-annotations.md` (U59, edit)
+- `docs/features/software-catalog/life-of-an-entity.md` (U60, edit)
+- `docs/features/software-catalog/api.md` (U61, edit)
+- `docs/features/software-catalog/audit-events.md` (U62, edit)
+- `docs/features/software-catalog/well-known-statuses.md` (U63, edit)
+- `docs/features/techdocs/FAQ.md` (U64, edit)
+- `.changeset/former-names-catalog-model.md` (U65, create)
+- `.changeset/former-names-catalog-client.md` (U66, create)
+- `.changeset/former-names-catalog-backend.md` (U67, create)
+- `.changeset/former-names-catalog-react.md` (U68, create)
+- `.changeset/former-names-catalog.md` (U69, create)
+- `.changeset/former-names-techdocs.md` (U70, create)

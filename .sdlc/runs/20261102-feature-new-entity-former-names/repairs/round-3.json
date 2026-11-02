@@ -1,0 +1,334 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 113): FR-25 gap: the notice renders only in the isDomReady branch, here and in plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx. After a redirect, while docs for the new name are building or failing, the !isDomReady branch shows TechDocsStateIndicator with no notice, and isNotFound shows NotFoundErrorPage with no notice. The FAQ names unpublished docs as the expected rename pitfall, so the user lands on a different name with no explanation. Confidence medium: the notice does appear once the dom is ready. — fix: Also render the notice in the !isDomReady branch, above TechDocsStateIndicator, honoring withRenamedNotice. Make the same change in the alpha TechDocsReaderContent, and add a test with a not-ready dom.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U37.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPageContent/TechDocsReaderPageContent.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": ".changeset/former-names-techdocs.md",
+    "instruction": "Fix `.changeset/former-names-techdocs.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 5): The new public prop TechDocsReaderPageContentProps.withRenamedNotice is in plugins/techdocs/report.api.md but not in the changeset. Adopters who embed TechDocsReaderPageContent in their own entity tab now get two notices, because the entity page shows one too, and nothing tells them how to turn the second one off. — fix: Add a sentence saying TechDocsReaderPageContent gained a withRenamedNotice prop, defaulting to true, and that adopters who render it inside an entity page should set it to false.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/former-names-techdocs.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/former-names-techdocs.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U70.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/former-names-techdocs.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 72): Widening errorFilter also changes the exported hasCatalogProcessingErrors, which now returns true for an entity that has only warnings. Its TSDoc still says 'any processing errors', and .changeset/former-names-catalog.md mentions only the panel, not this public helper that adopters use in EntitySwitch conditions. — fix: Update the TSDoc to say errors or warnings, and add one sentence to .changeset/former-names-catalog.md saying hasCatalogProcessingErrors now also returns true for catalog processing warnings.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U35.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityProcessingErrorsPanel/EntityProcessingErrorsPanel.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor: Coverage is weaker than U42 asks. The invalid-entry case asserts the entry ('a/b/c') but not the reason, and no backend test asserts a reason string. 'Level error items are unchanged' only checks an empty list on an entity seeded with errors: '[]', so it would not catch the former-name items overwriting or reordering existing errors. — fix: Assert the warning message contains 'it is not on the form'. Seed one entity with a real processing error and assert its error item survives alongside the warning.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U42.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 500,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+    "instruction": "Fix `plugins/catalog-node/src/testUtils/catalogServiceMock.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. minor (line 63): Unplanned edit: U25 asked only for the jest.fn() entry, but the diff also adds a ServiceRef import and casts catalogServiceRef to ServiceRef<CatalogServiceMock, 'plugin', 'singleton'>. The cast is probably needed because the mock declares the method as required and CatalogService as optional, but nothing in the code says so. — fix: Keep the cast and add a one-line comment explaining it: the mock declares resolveFormerEntityRef as required, while CatalogService declares it as optional.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-node/src/testUtils/catalogServiceMock.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-node/src/testUtils/catalogServiceMock.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U25.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_006",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx",
+    "instruction": "Fix `plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior review, FR-25 gap, same as TechDocsReaderPageContent.tsx: the renamed notice renders only when the dom is ready. After a redirect, while docs for the new name are building or failing, the not-ready branch shows TechDocsStateIndicator with no notice. Also render the notice above the state indicator in that branch, with the same condition the ready branch uses.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U38.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/alpha/components/TechDocsReaderContent.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_007",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": ".changeset/former-names-catalog.md",
+    "instruction": "Fix `.changeset/former-names-catalog.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior review: the exported `hasCatalogProcessingErrors` helper now also returns true for an entity that has only catalog processing warnings, and this changeset mentions only the panel. Add one sentence saying so, in plain language for adopters who use it in `EntitySwitch` conditions.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/former-names-catalog.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/former-names-catalog.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U69.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/former-names-catalog.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

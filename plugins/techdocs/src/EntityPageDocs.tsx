@@ -66,6 +66,7 @@ export const EntityPageDocs = ({
       <TechDocsReaderPageContent
         withSearch={withSearch}
         withFeedbackLink={withFeedbackLink}
+        withRenamedNotice={false}
         searchResultUrlMapper={searchResultUrlMapper}
         defaultPath={defaultPath}
       />

@@ -15,10 +15,14 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useAsync from 'react-use/esm/useAsync';
 import { useApi, useRouteRef } from '@backstage/core-plugin-api';
-import { catalogApiRef } from '@backstage/plugin-catalog-react';
+import {
+  catalogApiRef,
+  EntityRenamedLocationState,
+  resolveEntityRename,
+} from '@backstage/plugin-catalog-react';
 import {
   CompoundEntityRef,
   stringifyEntityRef,
@@ -30,7 +34,8 @@ import { rootDocsRouteRef } from '../../../routes';
 /**
  * Hook to handle external TechDocs redirects based on entity annotations.
  * Checks if an entity has the `backstage.io/techdocs-entity` annotation and
- * redirects to the external TechDocs URL if present.
+ * redirects to the external TechDocs URL if present. When no entity exists at
+ * the ref, it also redirects to the current entity if the ref is a former name.
  *
  * @param entityRef - The entity reference to check for external redirects
  * @returns Object containing loading state and whether a redirect is in progress
@@ -43,6 +48,7 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
 } {
   const catalogApi = useApi(catalogApiRef);
   const navigate = useNavigate();
+  const location = useLocation();
   const viewTechdocLink = useRouteRef(rootDocsRouteRef);
 
   // Create a stable string key for the entity to use as a dependency.
@@ -54,15 +60,34 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
   const checkedEntityRef = useRef<string | null>(null);
   const shouldCheckForRedirect = checkedEntityRef.current !== entityKey;
 
-  // Check if this entity should redirect to external TechDocs
-  const externalRedirectResult = useAsync(async () => {
+  // Check if this entity should redirect to external TechDocs, or to its
+  // current name when the ref is a former name
+  const externalRedirectResult = useAsync(async (): Promise<
+    { from: string; to: string; state?: EntityRenamedLocationState } | undefined
+  > => {
     try {
       const catalogEntity = await catalogApi.getEntityByRef(entityRef);
 
       if (
         catalogEntity?.metadata?.annotations?.[TECHDOCS_EXTERNAL_ANNOTATION]
       ) {
-        return buildTechDocsURL(catalogEntity, viewTechdocLink);
+        const to = buildTechDocsURL(catalogEntity, viewTechdocLink);
+        if (to) {
+          return { from: entityKey, to };
+        }
+      } else if (
+        !catalogEntity &&
+        location.pathname.startsWith(viewTechdocLink(entityRef))
+      ) {
+        const rename = await resolveEntityRename({
+          catalogApi,
+          entityRef,
+          location,
+          routeFunc: viewTechdocLink,
+        });
+        if (rename) {
+          return { from: entityKey, ...rename };
+        }
       }
     } catch (error) {
       // Ignore errors and allow the current entity's TechDocs to load.
@@ -73,9 +98,11 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
   }, [entityKey, catalogApi]);
 
   useEffect(() => {
-    // Navigate to external TechDocs if a redirect URL is available
-    if (!externalRedirectResult.loading && externalRedirectResult.value) {
-      navigate(externalRedirectResult.value, { replace: true });
+    // Navigate to external TechDocs or the renamed entity if a redirect URL is
+    // available, ignoring a stale value from a previous entity
+    const value = externalRedirectResult.value;
+    if (!externalRedirectResult.loading && value?.from === entityKey) {
+      navigate(value.to, { replace: true, state: value.state });
     }
 
     // Mark entity as checked once we've determined there's no redirect needed.

@@ -80,6 +80,50 @@ metadata:
     backstage.io/orphan: 'true'
 ```
 
+### backstage.io/former-names
+
+```yaml
+# Example:
+metadata:
+  annotations:
+    backstage.io/former-names: old-name, team-a/older-name
+```
+
+The value of this annotation is a comma-separated list of the names this entity
+used to have. Each entry is on the format `[<kind>:][<namespace>/]<name>`. If
+you leave out the kind or the namespace, it defaults to the entity's own.
+Matching ignores case. Backstage reads the first 100 entries and ignores the
+rest, and any entry holding a control character is ignored; both show up as
+warnings on the entity.
+
+When someone opens an old entity page or TechDocs link, Backstage redirects them
+to this entity and shows a notice about the rename. For the full picture, see
+[Renaming an entity](./life-of-an-entity.md#renaming-an-entity).
+
+A few rules apply:
+
+- **Who may claim a name:** Any entity, in any namespace, may claim a name of
+  its own kind, other than its own current name. Backstage keeps no rename
+  history, so it cannot prove that an entity once held a name. Anyone who can
+  register a location can therefore claim a retired name. If that matters to
+  you, review changes to your descriptors.
+- **Conflicts:** An existing entity at the old ref always wins, including an
+  orphaned one, and the claim waits until that entity is gone. When several
+  entities claim the same name, nothing redirects and each of them gets a
+  warning on its status. Invalid entries are skipped with a warning, and the
+  valid ones still work.
+- **Permissions:** A redirect only happens if the reader may read the target
+  entity. Otherwise, they see the normal not-found page. Because an existing
+  entity always wins, a claim can reveal whether an entity the reader cannot see
+  sits at a name; see
+  [`GET /entities/by-former-name`](./api.md#get-entitiesby-former-namekindnamespacename).
+- **No chains:** Redirects do not follow chains of renames, so list every former
+  name you want honored.
+- **What does not change:** `GET /entities/by-name` still returns a 404 for a
+  former name, and stored references such as `spec.owner` are not rewritten.
+- **Privacy:** Do not use this annotation to record a person's past name on
+  `User` or `Group` entities.
+
 ### backstage.io/techdocs-ref
 
 ```yaml

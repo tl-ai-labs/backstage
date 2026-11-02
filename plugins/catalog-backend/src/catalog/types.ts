@@ -146,6 +146,21 @@ export interface EntityFacetsResponse {
   facets: Record<string, Array<{ value: string; count: number }>>;
 }
 
+/**
+ * The request shape for {@link EntitiesCatalog.resolveFormerEntityRef}.
+ */
+export interface ResolveFormerEntityRefRequest {
+  /**
+   * The normalized entity ref that is no longer in use, for example
+   * `component:default/old-name`.
+   */
+  formerEntityRef: string;
+  /**
+   * The credentials that authorizes the action.
+   */
+  credentials: BackstageCredentials;
+}
+
 export interface EntitiesCatalog {
   /**
    * Fetch entities.
@@ -193,6 +208,17 @@ export interface EntitiesCatalog {
    * @param request - Request options
    */
   facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;
+
+  /**
+   * Returns the ref of the one entity that holds a valid claim on the given
+   * former ref, or undefined when there is none, the ref is in use, or
+   * several entities claim it.
+   *
+   * @param request - Request options
+   */
+  resolveFormerEntityRef(
+    request: ResolveFormerEntityRefRequest,
+  ): Promise<string | undefined>;
 }
 
 /**

@@ -291,6 +291,18 @@ catalog:
   orphanStrategy: keep
 ```
 
+## Renaming an entity
+
+When you rename an entity, for example by changing its `metadata.name`, the catalog sees a new entity. A new name is a new row, and nothing links it to the old one. The one exception is when the new entity lists the old name in the [`backstage.io/former-names`](well-known-annotations.md#backstageioformer-names) annotation. In that case, links to the old name can redirect to the new entity.
+
+The old link redirects only after the old entity is gone. A normal lookup still finds the old entity, and an orphan is still an entity, so the catalog keeps showing it instead of redirecting.
+
+How long that takes depends on how the old entity goes away.
+
+- With the default `orphanStrategy: delete`, the old entity becomes an orphan the next time its parent is processed, which by default happens every 100 to 150 seconds. The old link keeps showing the orphan until the orphan cleanup removes it, which runs every 30 seconds. The redirect starts once the old entity is gone and the new one has been stitched.
+- With `orphanStrategy: keep`, or while something else keeps the old entity alive, the redirect does not fire. Examples are another location or provider that still emits the old entity, or a file that moved or cannot be read. The redirect starts once you remove the old entity by hand, for example with the delete action on the orphan warning, or once you fix the cause. Until then, the former names of the old entity also stay claimed, so a name that both it and the new entity list is contested.
+- Entity providers delete eagerly, as the next section explains, so there is no orphan stage. The old link shows the normal not-found page until the new entity has been processed and stitched, usually a few seconds, and then it redirects.
+
 ## Implicit Deletion
 
 Entity providers - not processors - are subject to _eager_ deletion of entities,

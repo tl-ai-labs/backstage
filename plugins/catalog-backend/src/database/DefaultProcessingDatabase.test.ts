@@ -1014,6 +1014,135 @@ describe.each(databases.eachSupportedId())(
           key: `url:https://example.com/foo-bar-test-group/very-long-group-name-that-exceeds-255-characters-just-to-test-the-limits-of-url-length-in-the-catalog-info-yaml-file-and-see-how-the-back#sha256:edfb606500d184900e63891e5279d35bf0069ea251e90d15c0a430de6023d905`,
         });
       });
+
+      it('indexes valid claims and drops them when the annotation changes', async () => {
+        const { knex, db } = await createDatabase();
+        await insertRefreshStateRow(knex, {
+          entity_id: id,
+          entity_ref: 'location:default/fakelocation',
+          unprocessed_entity: '{}',
+          processed_entity: '{}',
+          errors: '[]',
+          next_update_at: '2021-04-01 13:37:00',
+          last_discovery_at: '2021-04-01 13:37:00',
+        });
+
+        await db.transaction(tx =>
+          db.updateProcessedEntity(tx, {
+            id,
+            processedEntity: {
+              ...processedEntity,
+              metadata: {
+                ...processedEntity.metadata,
+                annotations: {
+                  'backstage.io/former-names':
+                    'old-one, other/old-two, component:wrong-kind',
+                },
+              },
+            },
+            resultHash: 'h1',
+            relations: [],
+            deferredEntities: [],
+            refreshKeys: [],
+          }),
+        );
+
+        await expect(
+          knex('former_entity_refs').orderBy('former_entity_ref'),
+        ).resolves.toEqual([
+          {
+            entity_id: id,
+            entity_ref: 'location:default/fakelocation',
+            former_entity_ref: 'location:default/old-one',
+          },
+          {
+            entity_id: id,
+            entity_ref: 'location:default/fakelocation',
+            former_entity_ref: 'location:other/old-two',
+          },
+        ]);
+
+        await db.transaction(tx =>
+          db.updateProcessedEntity(tx, {
+            id,
+            processedEntity,
+            resultHash: 'h2',
+            relations: [],
+            deferredEntities: [],
+            refreshKeys: [],
+          }),
+        );
+
+        await expect(knex('former_entity_refs')).resolves.toEqual([]);
+      });
+
+      it('lists contested claims', async () => {
+        const { knex, db } = await createDatabase();
+        const otherId = uuid();
+        await insertRefreshStateRow(knex, {
+          entity_id: id,
+          entity_ref: 'location:default/fakelocation',
+          unprocessed_entity: '{}',
+          processed_entity: '{}',
+          errors: '[]',
+          next_update_at: '2021-04-01 13:37:00',
+          last_discovery_at: '2021-04-01 13:37:00',
+        });
+        await insertRefreshStateRow(knex, {
+          entity_id: otherId,
+          entity_ref: 'location:default/otherlocation',
+          unprocessed_entity: '{}',
+          processed_entity: '{}',
+          errors: '[]',
+          next_update_at: '2021-04-01 13:37:00',
+          last_discovery_at: '2021-04-01 13:37:00',
+        });
+
+        await db.transaction(async tx => {
+          await db.updateProcessedEntity(tx, {
+            id,
+            processedEntity: {
+              ...processedEntity,
+              metadata: {
+                ...processedEntity.metadata,
+                annotations: {
+                  'backstage.io/former-names': 'shared, unshared',
+                },
+              },
+            },
+            resultHash: 'h1',
+            relations: [],
+            deferredEntities: [],
+            refreshKeys: [],
+          });
+          await db.updateProcessedEntity(tx, {
+            id: otherId,
+            processedEntity: {
+              ...processedEntity,
+              metadata: {
+                name: 'otherlocation',
+                annotations: {
+                  'backstage.io/former-names': 'shared',
+                },
+              },
+            },
+            resultHash: 'h2',
+            relations: [],
+            deferredEntities: [],
+            refreshKeys: [],
+          });
+
+          await expect(
+            db.listContestedFormerRefs(tx, {
+              entityId: id,
+              formerRefs: [
+                'location:default/shared',
+                'location:default/unshared',
+              ],
+            }),
+          ).resolves.toEqual(['location:default/shared']);
+        });
+      });
     });
 
     describe('updateEntityCache', () => {

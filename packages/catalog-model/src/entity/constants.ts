@@ -36,6 +36,13 @@ export const ANNOTATION_VIEW_URL = 'backstage.io/view-url';
 export const ANNOTATION_EDIT_URL = 'backstage.io/edit-url';
 
 /**
+ * Annotation for listing the former names of an entity.
+ *
+ * @public
+ */
+export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names';
+
+/**
  * Annotation for specifying the API server of a Kubernetes cluster
  *
  * @deprecated Import this constant from `@backstage/plugin-kubernetes-common` instead

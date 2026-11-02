@@ -17,32 +17,56 @@
 import {
   errorApiRef,
   useApi,
+  useRouteRef,
   useRouteRefParams,
 } from '@backstage/core-plugin-api';
 import {
   catalogApiRef,
   EntityLoadingStatus,
   entityRouteRef,
+  resolveEntityRename,
 } from '@backstage/plugin-catalog-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useAsyncRetry from 'react-use/esm/useAsyncRetry';
 
 export const useEntityFromUrl = (): EntityLoadingStatus => {
   const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
   const navigate = useNavigate();
+  const location = useLocation();
+  const entityRoute = useRouteRef(entityRouteRef);
   const errorApi = useApi(errorApiRef);
   const catalogApi = useApi(catalogApiRef);
+  const routeKey = `${kind}:${namespace}/${name}`;
 
   const {
-    value: entity,
+    value,
     error,
     loading,
     retry: refresh,
-  } = useAsyncRetry(
-    () => catalogApi.getEntityByRef({ kind, namespace, name }),
-    [catalogApi, kind, namespace, name],
-  );
+  } = useAsyncRetry(async () => {
+    const entity = await catalogApi.getEntityByRef({ kind, namespace, name });
+    if (entity) {
+      return { entity };
+    }
+    const redirect = await resolveEntityRename({
+      catalogApi,
+      entityRef: { kind, namespace, name },
+      location,
+      routeFunc: entityRoute,
+    });
+    return { redirect, routeKey };
+  }, [catalogApi, kind, namespace, name]);
+
+  const entity = value?.entity;
+  const redirect = value?.redirect;
+  const resolvedRouteKey = value?.routeKey;
+
+  useEffect(() => {
+    if (redirect && resolvedRouteKey === routeKey) {
+      navigate(redirect.to, { replace: true, state: redirect.state });
+    }
+  }, [navigate, redirect, resolvedRouteKey, routeKey]);
 
   useEffect(() => {
     if (!name) {
@@ -51,5 +75,5 @@ export const useEntityFromUrl = (): EntityLoadingStatus => {
     }
   }, [errorApi, navigate, error, loading, entity, name]);
 
-  return { entity, loading, error, refresh };
+  return { entity, loading: loading || !!redirect, error, refresh };
 };

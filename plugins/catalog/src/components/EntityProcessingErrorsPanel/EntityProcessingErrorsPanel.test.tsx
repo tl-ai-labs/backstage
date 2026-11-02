@@ -227,4 +227,52 @@ describe('<EntityProcessErrors />', () => {
       screen.getByText('The error below originates from'),
     ).toBeInTheDocument();
   });
+
+  it('renders catalog processing warnings', async () => {
+    const entity: AlphaEntity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        name: 'software',
+        description: 'This is the description',
+      },
+      spec: {
+        owner: 'guest',
+        type: 'service',
+        lifecycle: 'production',
+      },
+      status: {
+        items: [
+          {
+            type: 'backstage.io/catalog-processing',
+            level: 'warning',
+            message: 'Error: The former name is claimed by another entity',
+            error: {
+              name: 'Error',
+              message: 'The former name is claimed by another entity',
+            },
+          },
+        ],
+      },
+    };
+
+    catalogApi.getEntityAncestors.mockResolvedValue({
+      rootEntityRef: stringifyEntityRef(entity),
+      items: [{ entity, parentEntityRefs: [] }],
+    });
+    await renderInTestApp(
+      <ApiProvider apis={apis}>
+        <EntityProvider entity={entity}>
+          <EntityProcessingErrorsPanel />
+        </EntityProvider>
+      </ApiProvider>,
+    );
+
+    expect(
+      screen.getByText('Error: The former name is claimed by another entity'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('The error below originates from'),
+    ).not.toBeInTheDocument();
+  });
 });

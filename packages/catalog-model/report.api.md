@@ -8,6 +8,9 @@ import { JsonObject } from '@backstage/types';
 // @public
 export const ANNOTATION_EDIT_URL = 'backstage.io/edit-url';
 
+// @public
+export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names';
+
 // @public @deprecated
 export const ANNOTATION_KUBERNETES_API_SERVER = 'kubernetes.io/api-server';
 
@@ -156,6 +159,15 @@ export type EntityEnvelope = {
 export function entityEnvelopeSchemaValidator<
   T extends EntityEnvelope = EntityEnvelope,
 >(schema?: unknown): (data: unknown) => T;
+
+// @public
+export type EntityFormerRefs = {
+  formerRefs: string[];
+  problems: Array<{
+    entry: string;
+    reason: string;
+  }>;
+};
 
 // @public
 export function entityKindSchemaValidator<T extends Entity>(
@@ -338,6 +350,9 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
   // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
+
+// @public
+export function parseEntityFormerRefs(entity: Entity): EntityFormerRefs;
 
 // @public
 export function parseEntityRef(

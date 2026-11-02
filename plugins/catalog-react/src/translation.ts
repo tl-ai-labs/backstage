@@ -172,6 +172,10 @@ export const catalogReactTranslationRef = createTranslationRef({
       label: 'Label',
       domain: 'Domain',
     },
+    entityRenamedNotice: {
+      title: 'This entity was renamed from {{formerName}}.',
+      dismiss: 'Dismiss',
+    },
     entityRelationCard: {
       emptyHelpLinkTitle: 'Learn how to change this.',
     },

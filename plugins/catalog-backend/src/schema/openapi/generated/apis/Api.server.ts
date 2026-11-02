@@ -24,6 +24,7 @@ import { EntitiesQueryResponse } from '../models/EntitiesQueryResponse.model';
 import { Entity } from '../models/Entity.model';
 import { EntityAncestryResponse } from '../models/EntityAncestryResponse.model';
 import { EntityFacetsResponse } from '../models/EntityFacetsResponse.model';
+import { FormerEntityRefResponse } from '../models/FormerEntityRefResponse.model';
 import { GetEntitiesByRefsRequest } from '../models/GetEntitiesByRefsRequest.model';
 import { QueryEntitiesByPredicateRequest } from '../models/QueryEntitiesByPredicateRequest.model';
 import { QueryEntityFacetsByPredicateRequest } from '../models/QueryEntityFacetsByPredicateRequest.model';
@@ -121,6 +122,17 @@ export type GetEntityFacets = {
     filter?: Array<string>;
   };
   response: EntityFacetsResponse | Error | Error;
+};
+/**
+ * @public
+ */
+export type GetEntityRefByFormerName = {
+  path: {
+    kind: string;
+    namespace: string;
+    name: string;
+  };
+  response: FormerEntityRefResponse | Error | Error;
 };
 /**
  * @public
@@ -247,6 +259,8 @@ export type EndpointMap = {
   '#get|/entities/by-uid/{uid}': GetEntityByUid;
 
   '#get|/entity-facets': GetEntityFacets;
+
+  '#get|/entities/by-former-name/{kind}/{namespace}/{name}': GetEntityRefByFormerName;
 
   '#post|/entities/by-query': QueryEntitiesByPredicate;
 

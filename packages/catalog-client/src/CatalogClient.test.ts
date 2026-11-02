@@ -1169,6 +1169,74 @@ describe('CatalogClient', () => {
     });
   });
 
+  describe('resolveFormerEntityRef', () => {
+    beforeEach(() => {
+      server.use(
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/customkind/default/old`,
+          () => {
+            return HttpResponse.json({ entityRef: 'customkind:default/new' });
+          },
+        ),
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/customkind/default/unknown`,
+          () => {
+            return HttpResponse.json(
+              {
+                error: { name: 'NotFoundError', message: 'Not found' },
+                response: { statusCode: 404 },
+              },
+              { status: 404 },
+            );
+          },
+        ),
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/customkind/default/no-route`,
+          () => {
+            return new HttpResponse(null, { status: 404 });
+          },
+        ),
+        http.get(
+          `${mockBaseUrl}/entities/by-former-name/customkind/default/broken`,
+          () => {
+            return new HttpResponse(null, { status: 500 });
+          },
+        ),
+      );
+    });
+
+    it('returns the current ref', async () => {
+      await expect(
+        client.resolveFormerEntityRef('customkind:default/old'),
+      ).resolves.toBe('customkind:default/new');
+      await expect(
+        client.resolveFormerEntityRef({
+          kind: 'CustomKind',
+          namespace: 'default',
+          name: 'old',
+        }),
+      ).resolves.toBe('customkind:default/new');
+    });
+
+    it('returns undefined for a 404', async () => {
+      await expect(
+        client.resolveFormerEntityRef('customkind:default/unknown'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined for a backend without the route', async () => {
+      await expect(
+        client.resolveFormerEntityRef('customkind:default/no-route'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('throws on other failures', async () => {
+      await expect(
+        client.resolveFormerEntityRef('customkind:default/broken'),
+      ).rejects.toThrow(/Request failed with 500/);
+    });
+  });
+
   describe('getLocations', () => {
     const defaultResponse = [
       {

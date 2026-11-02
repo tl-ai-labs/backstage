@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { ComponentType, ReactElement } from 'react';
+import { ComponentType, ReactElement, useMemo } from 'react';
 import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import { useRouteRefParams } from '@backstage/core-plugin-api';
 import {
   AsyncEntityProvider,
+  EntityRenamedNotice,
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
 import {
@@ -52,6 +53,19 @@ export interface CatalogEntityPageProps {
 export function CatalogEntityPage(props: CatalogEntityPageProps) {
   const routeParams = useRouteRefParams(entityRouteRef);
   const entityFromUrl = useEntityFromUrl();
+  const routes = useMemo(
+    () =>
+      props.routes.map(route => ({
+        ...route,
+        children: (
+          <>
+            <EntityRenamedNotice />
+            {route.children}
+          </>
+        ),
+      })),
+    [props.routes],
+  );
   const matchesRoute =
     !!entityFromUrl.entity &&
     stringifyEntityRef(entityFromUrl.entity) ===
@@ -78,7 +92,7 @@ export function CatalogEntityPage(props: CatalogEntityPageProps) {
   const layout =
     HeaderComponent || !legacyHeader ? (
       <EntityLayoutBui
-        routes={props.routes}
+        routes={routes}
         HeaderComponent={HeaderComponent}
         contextMenuItems={filteredMenuItems}
         groupDefinitions={props.groupDefinitions}
@@ -86,7 +100,7 @@ export function CatalogEntityPage(props: CatalogEntityPageProps) {
       />
     ) : (
       <EntityLayout
-        routes={props.routes}
+        routes={routes}
         header={legacyHeader}
         contextMenuItems={filteredMenuItems}
         groupDefinitions={props.groupDefinitions}

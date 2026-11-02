@@ -485,6 +485,18 @@ export const spec = {
         required: ['items', 'rootEntityRef'],
         additionalProperties: false,
       },
+      FormerEntityRefResponse: {
+        type: 'object',
+        properties: {
+          entityRef: {
+            type: 'string',
+            description:
+              'The ref of the entity that currently holds the former name.',
+          },
+        },
+        required: ['entityRef'],
+        additionalProperties: false,
+      },
       EntitiesBatchResponse: {
         type: 'object',
         properties: {
@@ -1077,6 +1089,49 @@ export const spec = {
               'application/json': {
                 schema: {
                   $ref: '#/components/schemas/EntityAncestryResponse',
+                },
+              },
+            },
+          },
+          '400': {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+        },
+        security: [
+          {},
+          {
+            JWT: [],
+          },
+        ],
+        parameters: [
+          {
+            $ref: '#/components/parameters/kind',
+          },
+          {
+            $ref: '#/components/parameters/namespace',
+          },
+          {
+            $ref: '#/components/parameters/name',
+          },
+        ],
+      },
+    },
+    '/entities/by-former-name/{kind}/{namespace}/{name}': {
+      get: {
+        operationId: 'GetEntityRefByFormerName',
+        tags: ['Entity'],
+        description:
+          'Resolve a former entity ref to the ref of the entity that currently claims it. Returns 404 if the ref is unknown, in use, contested, or not readable by the caller.',
+        responses: {
+          '200': {
+            description: 'Ok',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/FormerEntityRefResponse',
                 },
               },
             },

@@ -251,6 +251,8 @@ export const catalogReactTranslationRef: TranslationRef<
     readonly 'entityTableColumnTitle.owner': 'Owner';
     readonly 'entityTableColumnTitle.lifecycle': 'Lifecycle';
     readonly 'entityTableColumnTitle.targets': 'Targets';
+    readonly 'entityRenamedNotice.title': 'This entity was renamed from {{formerName}}.';
+    readonly 'entityRenamedNotice.dismiss': 'Dismiss';
     readonly 'entityRelationCard.emptyHelpLinkTitle': 'Learn how to change this.';
     readonly 'missingAnnotationEmptyState.title': 'Missing Annotation';
     readonly 'missingAnnotationEmptyState.readMore': 'Read more';
@@ -687,6 +689,14 @@ export interface EntityRefPresentationSnapshot {
 }
 
 // @public
+export type EntityRenamedLocationState = {
+  entityRenamedFrom: string;
+};
+
+// @public
+export function EntityRenamedNotice(): JSX_2.Element | null;
+
+// @public
 export function entityRouteParams(
   entityOrRef: Entity | CompoundEntityRef | string,
   options?: EntityRouteParamsOptions,
@@ -924,6 +934,28 @@ export class MockStarredEntitiesApi implements StarredEntitiesApi {
 
 // @public (undocumented)
 export type PaginationMode = 'cursor' | 'offset' | 'none';
+
+// @public
+export function resolveEntityRename(options: {
+  catalogApi: Pick<CatalogApi, 'resolveFormerEntityRef'>;
+  entityRef: CompoundEntityRef;
+  location: {
+    pathname: string;
+    search: string;
+    hash: string;
+  };
+  routeFunc: (params: {
+    kind: string;
+    namespace: string;
+    name: string;
+  }) => string;
+}): Promise<
+  | {
+      to: string;
+      state: EntityRenamedLocationState;
+    }
+  | undefined
+>;
 
 // @public
 export interface StarredEntitiesApi {

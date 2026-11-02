@@ -1,0 +1,342 @@
+[
+  {
+    "id": "tp_debug_r5_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "packages/catalog-model/src/entity/formerNames.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/formerNames.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review M1 and L3, accepted at Gate 3. M1: parseEntityFormerRefs has no cap on entries and does not deduplicate problems, so a small annotation can inflate the stitched entity to megabytes and fill the claim table. Do all of this, keeping the module-private constant style, with no new export: (1) add `const MAX_FORMER_NAMES = 100;` and read only the first 100 comma-separated parts; when there are more, add one problem with entry `<n> more entries` (n is the number ignored) and reason `only the first 100 entries are read`; (2) report at most one problem for empty entries, however many there are; (3) report each distinct entry and reason pair once; (4) add `const MAX_ECHOED_ENTRY_LENGTH = 64;` and shorten the `entry` of every problem to its first 64 characters plus `...` when longer. L3: control characters are accepted. Add `const CONTROL_CHARACTER_PATTERN = /\\p{Cc}/u;` (a Unicode property keeps eslint no-control-regex quiet) and check it right after the empty check, rejecting such an entry with reason `it holds a control character`, before any parsing. In every problem's `entry`, replace each control character with `?`, so none reaches a status item or the database. Add a sentence on the 100-entry limit to the TSDoc of parseEntityFormerRefs. The return shape and every other rule stay as they are.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/formerNames.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/formerNames.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/formerNames.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/createRouter.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/createRouter.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review L1, accepted at Gate 3, in the GET /entities/by-former-name/:kind/:namespace/:name handler. `await auditorEvent?.success()` runs before the not-found check, so a 404 logs initiated, succeeded and failed, and a success omits the resolved ref. Move the success call to after the `if (!currentRef)` check, so a miss logs only initiated and failed, and pass the resolved ref: `await auditorEvent?.success({ meta: { currentEntityRef: currentRef } });`. The person chose this at Gate 3, and it replaces the plan's 'no target in its meta'. Change nothing else, and leave the by-name route as it is.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/createRouter.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/createRouter.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U18.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/createRouter.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "packages/catalog-model/src/entity/formerNames.test.ts",
+    "instruction": "Fix `packages/catalog-model/src/entity/formerNames.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review M1 and L3 changed parseEntityFormerRefs: a test must cover them. The existing test 'reports each invalid entry and keeps the valid ones' expects `{ entry: longName, ... }`, and the entry is now shortened to its first 64 characters plus `...`: update that one expectation. Add to the existing style, in few thorough tests: 150 valid entries give 100 formerRefs and one problem with entry `50 more entries`; many empty entries give one problem; a repeated invalid entry gives one problem; an entry holding NUL (U+0000) is rejected with reason `it holds a control character`, gives no formerRef, its problem's entry has no control character, and the valid entries beside it are kept.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/entity/formerNames.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/entity/formerNames.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/formerNames.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-model/src/entity/formerNames.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 500,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/createRouter.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review L1 changed the by-former-name handler's audit calls. The existing test expects `auditorEvent.success` toHaveBeenCalledWith() with no arguments: change it to expect `{ meta: { currentEntityRef: <the ref the test's mock resolver returns> } }`. Add a test in the same describe, set up the same way, where the resolver finds nothing: the response is 404, `auditorEvent.success` is not called, and `auditorEvent.fail` is called once.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/createRouter.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/createRouter.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U45.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/createRouter.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 500,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "docs/features/software-catalog/well-known-annotations.md",
+    "instruction": "Fix `docs/features/software-catalog/well-known-annotations.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review M1 and L3: in the `backstage.io/former-names` section, after the paragraph on the entry format, add that Backstage reads the first 100 entries and ignores the rest, and that an entry holding a control character is ignored. Both show up as warnings on the entity. Follow docs/contribute/doc-style-guide.md.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-catalog/well-known-annotations.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-catalog/well-known-annotations.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U59.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-catalog/well-known-annotations.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_006",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "docs/features/software-catalog/audit-events.md",
+    "instruction": "Fix `docs/features/software-catalog/audit-events.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review L1: a successful `by-former-name` fetch now records the resolved ref in its audit meta as `currentEntityRef`. Add that in a few words on the `by-former-name` line, only if the entry style allows it, keeping the file's format.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-catalog/audit-events.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-catalog/audit-events.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U62.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-catalog/audit-events.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_007",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "docs/features/software-catalog/api.md",
+    "instruction": "Fix `docs/features/software-catalog/api.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Security review L2, accepted at Gate 3: the sentence `These cases cannot be told apart.` in the `GET /entities/by-former-name` section is false, since the live-entity and contested checks ignore what the caller may read. Replace that sentence with text saying: the 404 response itself is the same in all these cases, but it is not a guarantee that a hidden entity stays hidden. Someone who can read an entity that claims a name, or who can register an entity that claims it, can tell from a 200 or a 404 whether an entity they cannot read sits at that name. The warning on a claimant of a contested name also shows that another entity claims it, even one that the reader cannot see. Keep it to a short paragraph. Follow docs/contribute/doc-style-guide.md and keep prose wrapped as the file does.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-catalog/api.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-catalog/api.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U61.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-catalog/api.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

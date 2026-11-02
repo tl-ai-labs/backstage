@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 import { ReactNode } from 'react';
-import { waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import {
   CompoundEntityRef,
@@ -265,5 +266,61 @@ describe('<TechDocsReaderContent />', () => {
     await waitFor(() => {
       expect(rendered.queryByRole('progressbar')).toBeInTheDocument();
     });
+  });
+
+  it('should show the renamed notice from navigation state', async () => {
+    getEntityMetadata.mockResolvedValue(mockEntityMetadata);
+    getTechDocsMetadata.mockResolvedValue(mockTechDocsMetadata);
+    useTechDocsReaderDom.mockReturnValue(document.createElement('html'));
+    useReaderState.mockReturnValue({ state: 'cached' });
+
+    const state = { entityRenamedFrom: 'old-name' };
+
+    await renderInTestApp(
+      <Routes>
+        <Route path="/start" element={<Navigate to="/page" state={state} />} />
+        <Route
+          path="/page"
+          element={
+            <Wrapper>
+              <TechDocsReaderContent />
+            </Wrapper>
+          }
+        />
+      </Routes>,
+      { routeEntries: ['/start'] },
+    );
+
+    expect(
+      await screen.findByText('This entity was renamed from old-name.'),
+    ).toBeInTheDocument();
+  });
+
+  it('should show the renamed notice while the dom is not ready', async () => {
+    getEntityMetadata.mockResolvedValue(mockEntityMetadata);
+    getTechDocsMetadata.mockResolvedValue(mockTechDocsMetadata);
+    useTechDocsReaderDom.mockReturnValue(undefined);
+    useReaderState.mockReturnValue({ state: 'GENERATE' });
+
+    const state = { entityRenamedFrom: 'old-name' };
+
+    await renderInTestApp(
+      <Routes>
+        <Route path="/start" element={<Navigate to="/page" state={state} />} />
+        <Route
+          path="/page"
+          element={
+            <Wrapper>
+              <TechDocsReaderContent />
+            </Wrapper>
+          }
+        />
+      </Routes>,
+      { routeEntries: ['/start'] },
+    );
+
+    expect(
+      await screen.findByText('This entity was renamed from old-name.'),
+    ).toBeInTheDocument();
   });
 });

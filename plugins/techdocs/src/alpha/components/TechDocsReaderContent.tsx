@@ -16,6 +16,7 @@
 
 import { TechDocsShadowDom } from '@backstage/plugin-techdocs-react';
 import { Progress } from '@backstage/core-components';
+import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';
 
 import { TechDocsStateIndicator } from '../../reader/components/TechDocsStateIndicator';
 import { withTechDocsReaderProvider } from '../../reader/components/TechDocsReaderProvider';
@@ -41,11 +42,17 @@ export const TechDocsReaderContent = withTechDocsReaderProvider(
     if (isNotFound) return <NotFoundErrorPage />;
 
     if (!isDomReady) {
-      return <TechDocsStateIndicator />;
+      return (
+        <>
+          <EntityRenamedNotice />
+          <TechDocsStateIndicator />
+        </>
+      );
     }
 
     return (
       <>
+        <EntityRenamedNotice />
         <TechDocsStateIndicator />
         {showProgress && <Progress />}
         <TechDocsShadowDom element={dom!} onAppend={handleAppend}>

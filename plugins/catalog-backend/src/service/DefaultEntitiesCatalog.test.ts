@@ -2300,6 +2300,229 @@ describe.each(databases.eachSupportedId())(
       });
     });
 
+    describe('resolveFormerEntityRef', () => {
+      it('resolves a single claim, one hop only', async () => {
+        await createDatabase();
+
+        const newId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'new' },
+            spec: {},
+          },
+          [],
+        );
+        const middleId = uuid();
+        await knex<DbRefreshStateRow>('refresh_state').insert({
+          entity_id: middleId,
+          entity_ref: 'k:default/old',
+          unprocessed_entity: '{}',
+          errors: '[]',
+          next_update_at: '2031-01-01 23:00:00',
+          last_discovery_at: '2021-04-01 13:37:00',
+        });
+
+        await knex('former_entity_refs').insert([
+          {
+            entity_id: newId,
+            entity_ref: 'k:default/new',
+            former_entity_ref: 'k:default/old',
+          },
+          {
+            entity_id: middleId,
+            entity_ref: 'k:default/old',
+            former_entity_ref: 'k:default/old-chain',
+          },
+        ]);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBe('k:default/new');
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old-chain',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBe('k:default/old');
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/unknown',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('lets a live entity win and wakes the claim when it goes', async () => {
+        await createDatabase();
+
+        const newId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'new' },
+            spec: {},
+          },
+          [],
+        );
+        const oldId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: {
+              name: 'old',
+              annotations: { 'backstage.io/orphan': 'true' },
+            },
+            spec: {},
+          },
+          [],
+        );
+
+        await knex('former_entity_refs').insert({
+          entity_id: newId,
+          entity_ref: 'k:default/new',
+          former_entity_ref: 'k:default/old',
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+
+        await catalog.removeEntityByUid(oldId);
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBe('k:default/new');
+      });
+
+      it('resolves nothing for a contested name', async () => {
+        await createDatabase();
+
+        const firstId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'first' },
+            spec: {},
+          },
+          [],
+        );
+        const secondId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'second' },
+            spec: {},
+          },
+          [],
+        );
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await knex('former_entity_refs').insert([
+          {
+            entity_id: firstId,
+            entity_ref: 'k:default/first',
+            former_entity_ref: 'k:default/old',
+          },
+          {
+            entity_id: secondId,
+            entity_ref: 'k:default/second',
+            former_entity_ref: 'k:default/old',
+          },
+        ]);
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+
+        await knex('former_entity_refs').delete();
+        await knex('former_entity_refs').insert([
+          {
+            entity_id: secondId,
+            entity_ref: 'k:default/second',
+            former_entity_ref: 'k:default/old',
+          },
+          {
+            entity_id: firstId,
+            entity_ref: 'k:default/first',
+            former_entity_ref: 'k:default/old',
+          },
+        ]);
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('leaves by-name lookups alone', async () => {
+        await createDatabase();
+
+        const newId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'new' },
+            spec: {},
+          },
+          [],
+        );
+        await knex('former_entity_refs').insert({
+          entity_id: newId,
+          entity_ref: 'k:default/new',
+          former_entity_ref: 'k:default/old',
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const batch = await catalog.entitiesBatch({
+          entityRefs: ['k:default/old'],
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(batch.items)).toEqual([null]);
+
+        await expect(
+          catalog.resolveFormerEntityRef({
+            formerEntityRef: 'k:default/old',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBe('k:default/new');
+      });
+    });
+
     describe('facets', () => {
       it('can filter and collect properly', async () => {
         await createDatabase();

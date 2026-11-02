@@ -28,6 +28,7 @@ import { EntitiesQueryResponse } from '../models/EntitiesQueryResponse.model';
 import { Entity } from '../models/Entity.model';
 import { EntityAncestryResponse } from '../models/EntityAncestryResponse.model';
 import { EntityFacetsResponse } from '../models/EntityFacetsResponse.model';
+import { FormerEntityRefResponse } from '../models/FormerEntityRefResponse.model';
 import { GetEntitiesByRefsRequest } from '../models/GetEntitiesByRefsRequest.model';
 import { QueryEntitiesByPredicateRequest } from '../models/QueryEntitiesByPredicateRequest.model';
 import { QueryEntityFacetsByPredicateRequest } from '../models/QueryEntityFacetsByPredicateRequest.model';
@@ -141,6 +142,16 @@ export type GetEntityFacets = {
   query: {
     facet: Array<string>;
     filter?: Array<string>;
+  };
+};
+/**
+ * @public
+ */
+export type GetEntityRefByFormerName = {
+  path: {
+    kind: string;
+    namespace: string;
+    name: string;
   };
 };
 /**
@@ -465,6 +476,36 @@ export class DefaultApiClient {
 
     const uri = parser.parse(uriTemplate).expand({
       ...request.query,
+    });
+
+    return await this.fetchApi.fetch(`${baseUrl}${uri}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.token && { Authorization: `Bearer ${options?.token}` }),
+      },
+      method: 'GET',
+    });
+  }
+
+  /**
+   * Resolve a former entity ref to the ref of the entity that currently claims it. Returns 404 if the ref is unknown, in use, contested, or not readable by the caller.
+   * @param kind -
+   * @param namespace -
+   * @param name -
+   */
+  public async getEntityRefByFormerName(
+    // @ts-ignore
+    request: GetEntityRefByFormerName,
+    options?: RequestOptions,
+  ): Promise<TypedResponse<FormerEntityRefResponse>> {
+    const baseUrl = await this.discoveryApi.getBaseUrl(pluginId);
+
+    const uriTemplate = `/entities/by-former-name/{kind}/{namespace}/{name}`;
+
+    const uri = parser.parse(uriTemplate).expand({
+      kind: request.path.kind,
+      namespace: request.path.namespace,
+      name: request.path.name,
     });
 
     return await this.fetchApi.fetch(`${baseUrl}${uri}`, {

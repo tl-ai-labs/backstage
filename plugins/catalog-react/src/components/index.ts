@@ -21,6 +21,7 @@ export * from './EntityKindPicker';
 export * from './EntityLifecyclePicker';
 export * from './EntityOwnerPicker';
 export * from './EntityDisplayName';
+export * from './EntityRenamedNotice';
 export * from './EntityRefLink';
 export * from './EntityPeekAheadPopover';
 export * from './EntitySearchBar';

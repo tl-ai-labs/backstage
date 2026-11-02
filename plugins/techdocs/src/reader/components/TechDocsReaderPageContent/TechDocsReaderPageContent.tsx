@@ -20,6 +20,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { TechDocsShadowDom } from '@backstage/plugin-techdocs-react';
 import { CompoundEntityRef } from '@backstage/catalog-model';
 import { Content, Progress } from '@backstage/core-components';
+import { EntityRenamedNotice } from '@backstage/plugin-catalog-react';
 
 import { TechDocsSearch } from '../../../search';
 import { TechDocsStateIndicator } from '../TechDocsStateIndicator';
@@ -64,6 +65,10 @@ export type TechDocsReaderPageContentProps = {
    */
   withFeedbackLink?: boolean;
   /**
+   * Show or hide the notice that the entity was renamed, defaults to true.
+   */
+  withRenamedNotice?: boolean;
+  /**
    * If {@link TechDocsReaderPageContentProps.withSearch | withSearch} is true,
    * this will redirect the search result urls, e.g. turn search results into
    * links within the "Docs" tab of the entity page, instead of the global docs
@@ -82,7 +87,11 @@ export type TechDocsReaderPageContentProps = {
  */
 export const TechDocsReaderPageContent = withTechDocsReaderProvider(
   (props: TechDocsReaderPageContentProps) => {
-    const { withSearch = true, searchResultUrlMapper } = props;
+    const {
+      withSearch = true,
+      withRenamedNotice = true,
+      searchResultUrlMapper,
+    } = props;
     const classes = useStyles();
 
     const {
@@ -106,6 +115,11 @@ export const TechDocsReaderPageContent = withTechDocsReaderProvider(
       return (
         <Content>
           <Grid container>
+            {withRenamedNotice && (
+              <Grid xs={12} item>
+                <EntityRenamedNotice />
+              </Grid>
+            )}
             <Grid xs={12} item>
               <TechDocsStateIndicator />
             </Grid>
@@ -117,6 +131,11 @@ export const TechDocsReaderPageContent = withTechDocsReaderProvider(
     return (
       <Content>
         <Grid container>
+          {withRenamedNotice && (
+            <Grid xs={12} item>
+              <EntityRenamedNotice />
+            </Grid>
+          )}
           <Grid xs={12} item>
             <TechDocsStateIndicator />
           </Grid>

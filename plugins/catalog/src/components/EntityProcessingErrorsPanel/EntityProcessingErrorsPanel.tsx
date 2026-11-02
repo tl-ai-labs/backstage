@@ -35,7 +35,7 @@ import { Box } from '@backstage/ui';
 
 const errorFilter = (i: EntityStatusItem) =>
   i.error &&
-  i.level === 'error' &&
+  (i.level === 'error' || i.level === 'warning') &&
   i.type === ENTITY_STATUS_CATALOG_PROCESSING_TYPE;
 
 interface GetOwnAndAncestorsErrorsResponse {
@@ -64,7 +64,7 @@ async function getOwnAndAncestorsErrors(
 }
 
 /**
- * Returns true if the given entity has any processing errors on it.
+ * Returns true if the given entity has any processing errors or warnings on it.
  *
  * @public
  */

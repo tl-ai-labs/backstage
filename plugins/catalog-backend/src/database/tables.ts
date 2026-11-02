@@ -200,3 +200,14 @@ export type DbSearchRow = {
   original_value: string | null;
   value: string | null;
 };
+
+/**
+ * Represents the former_entity_refs table. Each row is one valid claim, with
+ * `entity_id` and `entity_ref` identifying the claiming entity and
+ * `former_entity_ref` holding the normalized ref it claims.
+ */
+export type DbFormerEntityRefsRow = {
+  entity_id: string;
+  entity_ref: string;
+  former_entity_ref: string;
+};

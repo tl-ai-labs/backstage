@@ -29,7 +29,7 @@ import {
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
-import { InputError, serializeError } from '@backstage/errors';
+import { InputError, NotFoundError, serializeError } from '@backstage/errors';
 import { LocationAnalyzer } from '@backstage/plugin-catalog-node';
 import express from 'express';
 import yn from 'yn';
@@ -486,6 +486,46 @@ export async function createRouter(
           });
 
           res.status(200).json(response);
+        } catch (err) {
+          await auditorEvent?.fail({
+            error: err,
+          });
+          throw err;
+        }
+      },
+    )
+    .get(
+      '/entities/by-former-name/:kind/:namespace/:name',
+      async (req, res) => {
+        const { kind, namespace, name } = req.params;
+        const entityRef = stringifyEntityRef({ kind, namespace, name });
+
+        const auditorEvent = await auditor.createEvent({
+          eventId: 'entity-fetch',
+          request: req,
+          meta: {
+            queryType: 'by-former-name',
+            entityRef: entityRef,
+          },
+        });
+
+        try {
+          const currentRef = await entitiesCatalog.resolveFormerEntityRef({
+            formerEntityRef: entityRef,
+            credentials: await httpAuth.credentials(req),
+          });
+
+          if (!currentRef) {
+            throw new NotFoundError(
+              `No entity with former name '${name}' found, with kind '${kind}' in namespace '${namespace}'`,
+            );
+          }
+
+          await auditorEvent?.success({
+            meta: { currentEntityRef: currentRef },
+          });
+
+          res.status(200).json({ entityRef: currentRef });
         } catch (err) {
           await auditorEvent?.fail({
             error: err,

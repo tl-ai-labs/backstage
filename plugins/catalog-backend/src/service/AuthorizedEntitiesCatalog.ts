@@ -34,6 +34,7 @@ import {
   EntityFacetsResponse,
   QueryEntitiesRequest,
   QueryEntitiesResponse,
+  ResolveFormerEntityRefRequest,
 } from '../catalog/types';
 import { FilterPredicate } from '@backstage/filter-predicates';
 import { basicEntityFilter, entityFilterToFilterPredicate } from './request';
@@ -294,6 +295,24 @@ export class AuthorizedEntitiesCatalog implements EntitiesCatalog {
           ),
       ),
     };
+  }
+
+  async resolveFormerEntityRef(
+    request: ResolveFormerEntityRefRequest,
+  ): Promise<string | undefined> {
+    const entityRef = await this.entitiesCatalog.resolveFormerEntityRef(
+      request,
+    );
+    if (!entityRef) {
+      return undefined;
+    }
+
+    const { items } = await this.entitiesBatch({
+      entityRefs: [entityRef],
+      credentials: request.credentials,
+    });
+
+    return items.entities[0] ? entityRef : undefined;
   }
 
   async facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse> {

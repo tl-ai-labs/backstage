@@ -669,6 +669,26 @@ value. These are special in that they form the entity's unique
 The return type is JSON, as a single [`Entity`](descriptor-format.md), or a 404
 error if there was no entity with that reference triplet.
 
+### `GET /entities/by-former-name/<kind>/<namespace>/<name>`
+
+Resolves a former name to the entity that claims it through the
+[`backstage.io/former-names`](well-known-annotations.md) annotation.
+
+The return type is JSON, on the form
+
+```json
+{ "entityRef": "component:default/new-name" }
+```
+
+or a 404 error if the name is unknown, still in use, claimed by several
+entities, or the target cannot be read by the caller. The 404 response itself
+is the same in all these cases, but it is not a guarantee that a hidden entity
+stays hidden. Someone who can read an entity that claims a name, or who can
+register an entity that claims it, can tell from a 200 or a 404 whether an
+entity they cannot read sits at that name. The warning on a claimant of a
+contested name also shows that another entity claims it, even one that the
+reader cannot see.
+
 ### `GET /entities/by-name/{kind}/{namespace}/{name}/ancestry`
 
 Get an entity's ancestry by entity ref.

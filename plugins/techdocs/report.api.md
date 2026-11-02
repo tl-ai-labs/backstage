@@ -425,6 +425,7 @@ export type TechDocsReaderPageContentProps = {
   defaultPath?: string;
   withSearch?: boolean;
   withFeedbackLink?: boolean;
+  withRenamedNotice?: boolean;
   searchResultUrlMapper?: (url: string) => string;
   onReady?: () => void;
 };

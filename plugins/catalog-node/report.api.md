@@ -256,6 +256,10 @@ export interface CatalogService {
     id: string,
     options: CatalogServiceRequestOptions,
   ): Promise<void>;
+  resolveFormerEntityRef?(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<string | undefined>;
   // (undocumented)
   streamEntities(
     request: StreamEntitiesRequest | undefined,

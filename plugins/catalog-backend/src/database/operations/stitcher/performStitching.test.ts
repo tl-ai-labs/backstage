@@ -16,6 +16,7 @@
 
 import { TestDatabases, mockServices } from '@backstage/backend-test-utils';
 import { Entity } from '@backstage/catalog-model';
+import { AlphaEntity } from '@backstage/catalog-model/alpha';
 import { applyDatabaseMigrations } from '../../migrations';
 import {
   DbFinalEntitiesRow,
@@ -1030,6 +1031,139 @@ describe.each(databases.eachSupportedId())(
         ]),
       );
     });
+  },
+);
+
+async function insertFormerNamesEntity(
+  knex: import('knex').Knex,
+  name: string,
+  annotations?: Record<string, string>,
+  errors = '[]',
+) {
+  await knex<DbRefreshStateRow>('refresh_state').insert({
+    entity_id: `id-${name}`,
+    entity_ref: `component:default/${name}`,
+    unprocessed_entity: '{}',
+    processed_entity: JSON.stringify({
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: { name, namespace: 'default', annotations },
+    }),
+    errors,
+    next_update_at: knex.fn.now(),
+    last_discovery_at: knex.fn.now(),
+  });
+}
+
+async function stitchFormerNamesEntity(
+  knex: import('knex').Knex,
+  name: string,
+) {
+  const entityRef = `component:default/${name}`;
+  await markForStitching({ knex, entityRefs: [entityRef] });
+  const result = await performStitching({
+    knex,
+    logger: mockServices.logger.mock(),
+    ...(await getStitchClaim(knex, entityRef)),
+  });
+  const row = await knex<DbFinalEntitiesRow>('final_entities')
+    .where('entity_ref', entityRef)
+    .first();
+  return { result, entity: JSON.parse(row!.final_entity!) as AlphaEntity };
+}
+
+it.each(databases.eachSupportedId())(
+  'publishes former name warnings for contested and invalid claims and clears them for %p',
+  async databaseId => {
+    const knex = await databases.init(databaseId);
+    await applyDatabaseMigrations(knex);
+    const annotations = { 'backstage.io/former-names': 'old' };
+    const existingError = { name: 'Error', message: 'broken processor' };
+    await insertFormerNamesEntity(
+      knex,
+      'entity-a',
+      annotations,
+      JSON.stringify([existingError]),
+    );
+    await insertFormerNamesEntity(knex, 'entity-b', annotations);
+    await knex('former_entity_refs').insert([
+      {
+        entity_id: 'id-entity-a',
+        entity_ref: 'component:default/entity-a',
+        former_entity_ref: 'component:default/old',
+      },
+      {
+        entity_id: 'id-entity-b',
+        entity_ref: 'component:default/entity-b',
+        former_entity_ref: 'component:default/old',
+      },
+    ]);
+
+    const a = await stitchFormerNamesEntity(knex, 'entity-a');
+    const b = await stitchFormerNamesEntity(knex, 'entity-b');
+    const aWarnings = (a.entity.status?.items ?? []).filter(
+      item => item.level === 'warning',
+    );
+    const bWarnings = (b.entity.status?.items ?? []).filter(
+      item => item.level === 'warning',
+    );
+    expect(aWarnings).toHaveLength(1);
+    expect(aWarnings[0].message).toContain('component:default/old');
+    expect(aWarnings[0].message).not.toContain('entity-b');
+    expect(bWarnings).toHaveLength(1);
+    expect(bWarnings[0].message).toContain('component:default/old');
+    expect(bWarnings[0].message).not.toContain('entity-a');
+    expect(
+      (a.entity.status?.items ?? []).filter(item => item.level === 'error'),
+    ).toEqual([
+      {
+        type: 'backstage.io/catalog-processing',
+        level: 'error',
+        message: 'Error: broken processor',
+        error: existingError,
+      },
+    ]);
+
+    // The other claimant goes away, so the conflict ends
+    await knex('former_entity_refs').where('entity_id', 'id-entity-b').delete();
+    const cleared = await stitchFormerNamesEntity(knex, 'entity-a');
+    expect(cleared.result).toBe('changed');
+    expect(
+      (cleared.entity.status?.items ?? []).filter(
+        item => item.level === 'warning',
+      ),
+    ).toEqual([]);
+    expect(
+      (cleared.entity.status?.items ?? []).filter(
+        item => item.level === 'error',
+      ),
+    ).toHaveLength(1);
+  },
+);
+
+it.each(databases.eachSupportedId())(
+  'surfaces an invalid former name entry and adds nothing without the annotation for %p',
+  async databaseId => {
+    const knex = await databases.init(databaseId);
+    await applyDatabaseMigrations(knex);
+    await insertFormerNamesEntity(knex, 'invalid', {
+      'backstage.io/former-names': 'a/b/c',
+    });
+    await insertFormerNamesEntity(knex, 'plain');
+
+    const invalid = await stitchFormerNamesEntity(knex, 'invalid');
+    expect(invalid.result).toBe('changed');
+    const warnings = (invalid.entity.status?.items ?? []).filter(
+      item => item.level === 'warning',
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain('a/b/c');
+    expect(warnings[0].message).toContain('it is not on the form');
+    expect(invalid.entity.metadata.name).toBe('invalid');
+
+    const plain = await stitchFormerNamesEntity(knex, 'plain');
+    expect(plain.result).toBe('changed');
+    expect(plain.entity.status).toBeUndefined();
   },
 );
 

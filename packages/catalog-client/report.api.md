@@ -94,6 +94,10 @@ export interface CatalogApi {
     id: string,
     options?: CatalogRequestOptions,
   ): Promise<void>;
+  resolveFormerEntityRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<string | undefined>;
   streamEntities(
     request?: StreamEntitiesRequest,
     options?: CatalogRequestOptions,
@@ -196,6 +200,10 @@ export class CatalogClient implements CatalogApi {
     id: string,
     options?: CatalogRequestOptions,
   ): Promise<void>;
+  resolveFormerEntityRef(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<string | undefined>;
   streamEntities(
     request?: StreamEntitiesRequest,
     options?: CatalogRequestOptions,

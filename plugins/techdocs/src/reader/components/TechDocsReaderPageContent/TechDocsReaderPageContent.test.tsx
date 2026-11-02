@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 import { ReactNode } from 'react';
-import { waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 import {
   CompoundEntityRef,
@@ -318,5 +319,131 @@ describe('<TechDocsReaderPageContent />', () => {
     await waitFor(() => {
       expect(rendered.queryByRole('progressbar')).toBeInTheDocument();
     });
+  });
+
+  it('should show the renamed notice from navigation state', async () => {
+    getEntityMetadata.mockResolvedValue(mockEntityMetadata);
+    getTechDocsMetadata.mockResolvedValue(mockTechDocsMetadata);
+    useTechDocsReaderDom.mockReturnValue(document.createElement('html'));
+    useReaderState.mockReturnValue({ state: 'cached' });
+    useShadowDomStylesLoading.mockReturnValue(false);
+
+    const state = { entityRenamedFrom: 'old-name' };
+
+    await renderInTestApp(
+      <Routes>
+        <Route path="/start" element={<Navigate to="/page" state={state} />} />
+        <Route
+          path="/page"
+          element={
+            <Wrapper>
+              <TechDocsReaderPageContent withSearch={false} />
+            </Wrapper>
+          }
+        />
+      </Routes>,
+      { routeEntries: ['/start'] },
+    );
+
+    expect(
+      await screen.findByText('This entity was renamed from old-name.'),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('techdocs-native-shadowroot'),
+    ).toBeInTheDocument();
+  });
+
+  it('should hide the renamed notice when told to', async () => {
+    getEntityMetadata.mockResolvedValue(mockEntityMetadata);
+    getTechDocsMetadata.mockResolvedValue(mockTechDocsMetadata);
+    useTechDocsReaderDom.mockReturnValue(document.createElement('html'));
+    useReaderState.mockReturnValue({ state: 'cached' });
+    useShadowDomStylesLoading.mockReturnValue(false);
+
+    const state = { entityRenamedFrom: 'old-name' };
+
+    await renderInTestApp(
+      <Routes>
+        <Route path="/start" element={<Navigate to="/page" state={state} />} />
+        <Route
+          path="/page"
+          element={
+            <Wrapper>
+              <TechDocsReaderPageContent
+                withSearch={false}
+                withRenamedNotice={false}
+              />
+            </Wrapper>
+          }
+        />
+      </Routes>,
+      { routeEntries: ['/start'] },
+    );
+
+    expect(
+      await screen.findByTestId('techdocs-native-shadowroot'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('This entity was renamed from old-name.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should show and hide the renamed notice while docs are still building', async () => {
+    getEntityMetadata.mockResolvedValue(mockEntityMetadata);
+    getTechDocsMetadata.mockResolvedValue(mockTechDocsMetadata);
+    useTechDocsReaderDom.mockReturnValue(undefined);
+    useReaderState.mockReturnValue({ state: 'INITIAL_BUILD' });
+    useShadowDomStylesLoading.mockReturnValue(false);
+
+    const state = { entityRenamedFrom: 'old-name' };
+
+    const { unmount } = await renderInTestApp(
+      <Routes>
+        <Route path="/start" element={<Navigate to="/page" state={state} />} />
+        <Route
+          path="/page"
+          element={
+            <Wrapper>
+              <TechDocsReaderPageContent withSearch={false} />
+            </Wrapper>
+          }
+        />
+      </Routes>,
+      { routeEntries: ['/start'] },
+    );
+
+    expect(
+      await screen.findByText('This entity was renamed from old-name.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('techdocs-native-shadowroot'),
+    ).not.toBeInTheDocument();
+
+    unmount();
+
+    await renderInTestApp(
+      <Routes>
+        <Route path="/start" element={<Navigate to="/page" state={state} />} />
+        <Route
+          path="/page"
+          element={
+            <Wrapper>
+              <TechDocsReaderPageContent
+                withSearch={false}
+                withRenamedNotice={false}
+              />
+            </Wrapper>
+          }
+        />
+      </Routes>,
+      { routeEntries: ['/start'] },
+    );
+
+    expect(
+      screen.queryByTestId('techdocs-native-shadowroot'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('This entity was renamed from old-name.'),
+    ).not.toBeInTheDocument();
   });
 });

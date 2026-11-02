@@ -45,6 +45,7 @@ import {
   EntityDisplayName,
   EntityRefLink,
   EntityRefLinks,
+  EntityRenamedNotice,
   entityRouteRef,
   FavoriteEntity,
   getEntityRelations,
@@ -274,7 +275,12 @@ export const EntityLayout = (props: EntityLayoutProps) => {
             {
               path: elementProps.path,
               title: elementProps.title,
-              children: elementProps.children,
+              children: (
+                <>
+                  <EntityRenamedNotice />
+                  {elementProps.children}
+                </>
+              ),
               tabProps: elementProps.tabProps,
             },
           ];

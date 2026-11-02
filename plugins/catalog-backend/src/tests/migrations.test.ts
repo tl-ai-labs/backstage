@@ -1699,4 +1699,69 @@ describe.each(databases.eachSupportedId())('migrations, %p', databaseId => {
       { ...newRequest, failure_count: 0 },
     ]);
   });
+
+  it('20261102000000_former_entity_refs.js', async () => {
+    const knex = await databases.init(databaseId);
+
+    await migrateUntilBefore(knex, '20261102000000_former_entity_refs.js');
+
+    const refreshStateRow = (entityId: string, entityRef: string) => ({
+      entity_id: entityId,
+      entity_ref: entityRef,
+      unprocessed_entity: '{}',
+      errors: '[]',
+      next_update_at: knex.fn.now(),
+      last_discovery_at: knex.fn.now(),
+    });
+
+    await knex('refresh_state').insert(refreshStateRow('e1', 'k:ns/n1'));
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(false);
+
+    await migrateUpOnce(knex);
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(true);
+
+    await knex('former_entity_refs').insert({
+      entity_id: 'e1',
+      entity_ref: 'k:ns/n1',
+      former_entity_ref: 'k:ns/old',
+    });
+    await expect(knex('former_entity_refs')).resolves.toEqual([
+      {
+        entity_id: 'e1',
+        entity_ref: 'k:ns/n1',
+        former_entity_ref: 'k:ns/old',
+      },
+    ]);
+
+    // The same entity cannot claim the same former ref twice
+    await expect(
+      knex('former_entity_refs').insert({
+        entity_id: 'e1',
+        entity_ref: 'k:ns/n1',
+        former_entity_ref: 'k:ns/old',
+      }),
+    ).rejects.toEqual(expect.anything());
+
+    // Deleting the entity removes its claims
+    await knex('refresh_state').insert(refreshStateRow('e2', 'k:ns/n2'));
+    await knex('former_entity_refs').insert({
+      entity_id: 'e2',
+      entity_ref: 'k:ns/n2',
+      former_entity_ref: 'k:ns/older',
+    });
+    await knex('refresh_state').where({ entity_id: 'e2' }).delete();
+    await expect(
+      knex('former_entity_refs').where({ entity_id: 'e2' }),
+    ).resolves.toEqual([]);
+
+    await migrateDownOnce(knex);
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(false);
+    await expect(
+      knex('refresh_state').select('entity_id', 'entity_ref'),
+    ).resolves.toEqual([{ entity_id: 'e1', entity_ref: 'k:ns/n1' }]);
+
+    await migrateUpOnce(knex);
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(true);
+    await expect(knex('former_entity_refs')).resolves.toEqual([]);
+  });
 });

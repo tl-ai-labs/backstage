@@ -117,4 +117,39 @@ describe('catalogServiceRef', () => {
       { credentials: mockCredentials.service() },
     );
   });
+
+  it('should pass credentials to the former ref lookup', async () => {
+    expect.assertions(2);
+
+    server.use(
+      http.get(
+        'http://localhost:0/api/catalog/entities/by-former-name/component/default/old',
+        ({ request }) => {
+          expect(request.headers.get('authorization')).toBe(
+            mockCredentials.service.header({
+              onBehalfOf: mockCredentials.user(),
+              targetPluginId: 'catalog',
+            }),
+          );
+          return HttpResponse.json({ entityRef: 'component:default/new' });
+        },
+      ),
+    );
+    const tester = ServiceFactoryTester.from(
+      createServiceFactory({
+        service: createServiceRef<void>({ id: 'unused-dummy' }),
+        deps: {},
+        factory() {},
+      }),
+      { dependencies: [mockServices.discovery.factory()] },
+    );
+
+    const catalogService = await tester.getService(catalogServiceRef);
+
+    await expect(
+      catalogService.resolveFormerEntityRef?.('component:default/old', {
+        credentials: mockCredentials.user(),
+      }),
+    ).resolves.toBe('component:default/new');
+  });
 });

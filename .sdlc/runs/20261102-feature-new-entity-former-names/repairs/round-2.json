@@ -1,0 +1,102 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+    "instruction": "Fix `plugins/catalog-node/src/testUtils/catalogServiceMock.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/catalog-node/src/testUtils/catalogServiceMock.ts:62:5 - error TS2345: Argument of type 'ServiceRef<CatalogService, \"plugin\", \"singleton\">' is not assignable to parameter of type 'ServiceRef<CatalogServiceMock, any>'. Type 'CatalogService' is not assignable to type 'CatalogServiceMock'. Types of property 'resolveFormerEntityRef' are incompatible. Type 'undefined' is not assignable. Cause: `resolveFormerEntityRef` is optional on CatalogService and required on CatalogServiceMock. The method stays required on CatalogServiceMock (the plan's decision), so change only the `createServiceMock` call: cast its first argument so it is accepted as a ref to CatalogServiceMock, the same way this file already casts its factory with `as ServiceFactory<CatalogServiceMock, 'plugin', 'singleton'>`. Keep the mock's jest.fn() entries as they are.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-node/src/testUtils/catalogServiceMock.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-node/src/testUtils/catalogServiceMock.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U25.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261102-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts lines 1096, 1099, 1109, 1117, 1136, 1145: error TS2339: Property 'status' does not exist on type 'Entity'; lines 1097, 1100, 1109, 1118, 1137: error TS7006: Parameter 'item' implicitly has an 'any' type. The new former-name tests read `.status` on a plain `Entity`. Type the stitched entity as `AlphaEntity` from `@backstage/catalog-model/alpha`, as DefaultCatalogProcessingEngine and performStitching do, for example by having the local helper `stitchFormerNamesEntity` return that type, so every `.status` read types and `item` is inferred. Change types only: every assertion stays as it is.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261102-feature-new-entity-former-names/briefs/U42.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 500,
+      "max_retries": 2
+    }
+  }
+]

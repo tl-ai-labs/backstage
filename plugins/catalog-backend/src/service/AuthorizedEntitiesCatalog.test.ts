@@ -33,6 +33,7 @@ describe('AuthorizedEntitiesCatalog', () => {
     removeEntityByUid: jest.fn(),
     entityAncestry: jest.fn(),
     facets: jest.fn(),
+    resolveFormerEntityRef: jest.fn(),
     refresh: jest.fn(),
     listAncestors: jest.fn(),
     queryEntities: jest.fn(),
@@ -624,6 +625,96 @@ describe('AuthorizedEntitiesCatalog', () => {
           },
         ],
       });
+    });
+  });
+
+  describe('resolveFormerEntityRef', () => {
+    const request = {
+      formerEntityRef: 'component:default/old-name',
+      credentials: mockCredentials.none(),
+    };
+    const entity = {
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: { name: 'new-name' },
+    };
+
+    it('returns the ref on ALLOW', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValueOnce(
+        'component:default/new-name',
+      );
+      fakePermissionApi.authorizeConditional.mockResolvedValueOnce([
+        { result: AuthorizeResult.ALLOW },
+      ]);
+      fakeCatalog.entitiesBatch.mockResolvedValueOnce({
+        items: { type: 'object', entities: [entity] },
+      });
+      const catalog = createCatalog();
+
+      await expect(catalog.resolveFormerEntityRef(request)).resolves.toBe(
+        'component:default/new-name',
+      );
+
+      expect(fakeCatalog.resolveFormerEntityRef).toHaveBeenCalledWith(request);
+      expect(fakeCatalog.entitiesBatch).toHaveBeenCalledWith({
+        entityRefs: ['component:default/new-name'],
+        credentials: request.credentials,
+      });
+    });
+
+    it('returns undefined on DENY', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValueOnce(
+        'component:default/new-name',
+      );
+      fakePermissionApi.authorizeConditional.mockResolvedValueOnce([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog();
+
+      await expect(
+        catalog.resolveFormerEntityRef(request),
+      ).resolves.toBeUndefined();
+
+      expect(fakeCatalog.entitiesBatch).not.toHaveBeenCalled();
+    });
+
+    it('applies conditions to the target', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValueOnce(
+        'component:default/new-name',
+      );
+      fakePermissionApi.authorizeConditional.mockResolvedValueOnce([
+        {
+          result: AuthorizeResult.CONDITIONAL,
+          conditions: { rule: 'IS_ENTITY_KIND', params: { kinds: ['b'] } },
+        },
+      ]);
+      fakeCatalog.entitiesBatch.mockResolvedValueOnce({
+        items: { type: 'object', entities: [null] },
+      });
+      const catalog = createCatalog(isEntityKind);
+
+      await expect(
+        catalog.resolveFormerEntityRef(request),
+      ).resolves.toBeUndefined();
+
+      expect(fakeCatalog.entitiesBatch).toHaveBeenCalledWith({
+        entityRefs: ['component:default/new-name'],
+        credentials: request.credentials,
+        filter: { kind: 'b' },
+      });
+    });
+
+    it('does not authorize an unknown ref', async () => {
+      fakeCatalog.resolveFormerEntityRef.mockResolvedValueOnce(undefined);
+      const catalog = createCatalog();
+
+      await expect(
+        catalog.resolveFormerEntityRef(request),
+      ).resolves.toBeUndefined();
+
+      expect(fakePermissionApi.authorizeConditional).not.toHaveBeenCalled();
+      expect(fakePermissionApi.authorize).not.toHaveBeenCalled();
+      expect(fakeCatalog.entitiesBatch).not.toHaveBeenCalled();
     });
   });
 

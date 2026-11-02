@@ -90,6 +90,17 @@ export interface CatalogService {
     options: CatalogServiceRequestOptions,
   ): Promise<Entity | undefined>;
 
+  /**
+   * Resolves a former entity ref to the ref of the entity that now claims it.
+   *
+   * This method is optional so that existing implementations of the interface
+   * keep working.
+   */
+  resolveFormerEntityRef?(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<string | undefined>;
+
   removeEntityByUid(
     uid: string,
     options: CatalogServiceRequestOptions,
@@ -228,6 +239,16 @@ class DefaultCatalogService implements CatalogService {
     options: CatalogServiceRequestOptions,
   ): Promise<Entity | undefined> {
     return this.#catalogApi.getEntityByRef(
+      entityRef,
+      await this.#getOptions(options),
+    );
+  }
+
+  async resolveFormerEntityRef(
+    entityRef: string | CompoundEntityRef,
+    options: CatalogServiceRequestOptions,
+  ): Promise<string | undefined> {
+    return this.#catalogApi.resolveFormerEntityRef?.(
       entityRef,
       await this.#getOptions(options),
     );

@@ -17,6 +17,7 @@
 import {
   ANNOTATION_LOCATION,
   Entity,
+  parseEntityFormerRefs,
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { serializeError, stringifyError, toError } from '@backstage/errors';
@@ -238,6 +239,24 @@ export class DefaultCatalogProcessingEngine {
                 .update(stableStringifyArray([...result.relations]))
                 .update(stableStringifyArray([...result.refreshKeys]))
                 .update(stableStringifyArray([...parents]));
+
+              // An entity with no claims must keep its hash, so that
+              // upgrading reprocesses nothing.
+              const { formerRefs } = parseEntityFormerRefs(
+                result.completedEntity,
+              );
+              if (formerRefs.length) {
+                const contested = await this.processingDatabase.transaction(
+                  tx =>
+                    this.processingDatabase.listContestedFormerRefs(tx, {
+                      entityId: id,
+                      formerRefs,
+                    }),
+                );
+                hashBuilder = hashBuilder.update(
+                  stableStringifyArray(contested),
+                );
+              }
             }
 
             const resultHash = hashBuilder.digest('hex');

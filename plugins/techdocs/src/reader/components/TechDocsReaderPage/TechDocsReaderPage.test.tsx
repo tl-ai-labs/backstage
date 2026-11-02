@@ -447,4 +447,34 @@ describe('<TechDocsReaderPage />', () => {
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
+
+  it('should redirect a former name without calling the TechDocs backend', async () => {
+    catalogApiMock.getEntityByRef.mockReset();
+    catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+    (catalogApiMock.resolveFormerEntityRef as jest.Mock).mockResolvedValueOnce(
+      'component:default/new-name',
+    );
+
+    await renderInTestApp(
+      <Wrapper>
+        <FlatRoutes>
+          <Route
+            path="/docs/:namespace/:kind/:name/*"
+            element={<TechDocsReaderPage />}
+          />
+        </FlatRoutes>
+      </Wrapper>,
+      {
+        mountedRoutes,
+        routeEntries: ['/docs/default/component/old-name/sub'],
+      },
+    );
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/docs/default/component/new-name/sub',
+      expect.objectContaining({ replace: true }),
+    );
+    expect(getEntityMetadata).not.toHaveBeenCalled();
+    expect(getTechDocsMetadata).not.toHaveBeenCalled();
+  });
 });
