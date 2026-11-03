@@ -15,7 +15,7 @@
  */
 
 import { ReviewState } from './ReviewState';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('ReviewState', () => {
@@ -612,5 +612,221 @@ describe('ReviewState', () => {
 
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
+  });
+
+  it('should render active cross-step conditional fields and omit inactive ones in ReviewState', async () => {
+    const formState = {
+      choice: 'a',
+      mode: 'off',
+      kind: 'x',
+      extra: 'e1',
+      onlyOn: 'hidden-value',
+      thenField: 't1',
+      elseField: 'e2',
+    };
+
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            choice: { type: 'string', enum: ['a', 'b'] },
+            mode: { type: 'string', enum: ['on', 'off'] },
+            kind: { type: 'string', enum: ['x', 'y'] },
+          },
+        },
+        schema: {},
+        title: 'Schema 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          dependencies: {
+            choice: {
+              oneOf: [
+                {
+                  properties: {
+                    choice: { enum: ['a'] },
+                    extra: {
+                      type: 'string',
+                      title: 'Extra Field',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    choice: { enum: ['b'] },
+                  },
+                },
+              ],
+            },
+            mode: {
+              oneOf: [
+                {
+                  properties: {
+                    mode: { enum: ['on'] },
+                    onlyOn: {
+                      type: 'string',
+                      title: 'Only On Field',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    mode: { enum: ['off'] },
+                  },
+                },
+              ],
+            },
+          },
+          if: {
+            properties: { kind: { const: 'x' } },
+          },
+          then: {
+            properties: {
+              thenField: {
+                type: 'string',
+                'ui:backstage': { review: { name: 'Then Field' } },
+              },
+            },
+          },
+          else: {
+            properties: {
+              elseField: {
+                type: 'string',
+                title: 'Else Field',
+              },
+            },
+          },
+        },
+        schema: {},
+        title: 'Schema 2',
+        uiSchema: {},
+      },
+    ];
+
+    render(<ReviewState formState={formState} schemas={schemas} />);
+
+    // satisfied cross-step dependency renders with its schema title
+    expect(
+      screen.getByRole('row', { name: 'Extra Field e1' }),
+    ).toBeInTheDocument();
+
+    // satisfied if/then branch renders with its review options
+    expect(
+      screen.getByRole('row', { name: 'Then Field t1' }),
+    ).toBeInTheDocument();
+
+    // unsatisfied cross-step dependency is omitted
+    expect(
+      screen.queryByRole('row', { name: 'Only On Field hidden-value' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('hidden-value')).not.toBeInTheDocument();
+
+    // unsatisfied else branch is omitted
+    expect(
+      screen.queryByRole('row', { name: 'Else Field e2' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('e2')).not.toBeInTheDocument();
+  });
+
+  it('should omit cross-step hidden fields while displaying same-step hidden fields with their formatted key', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: { type: 'boolean' },
+            sameStepFlag: { type: 'boolean' },
+          },
+          dependencies: {
+            sameStepFlag: {
+              oneOf: [
+                {
+                  properties: {
+                    sameStepFlag: { const: true },
+                    sameStepExtra: {
+                      type: 'string',
+                      title: 'Same Step Extra Title',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    sameStepFlag: { const: false },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          dependencies: {
+            isMobileSdk: {
+              oneOf: [
+                {
+                  properties: {
+                    isMobileSdk: { const: true },
+                    sdkName: {
+                      type: 'string',
+                      title: 'SDK Name',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    isMobileSdk: { const: false },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const { rerender } = render(
+      <ReviewState
+        schemas={schemas}
+        formState={{
+          isMobileSdk: false,
+          sameStepFlag: false,
+          sameStepExtra: 'kept-value',
+          sdkName: 'hidden-sdk',
+        }}
+      />,
+    );
+
+    expect(screen.queryByText('SDK Name')).toBeNull();
+    expect(screen.queryByText('hidden-sdk')).toBeNull();
+    expect(screen.getByText('Same Step Extra')).toBeInTheDocument();
+    expect(screen.getByText('kept-value')).toBeInTheDocument();
+
+    rerender(
+      <ReviewState
+        schemas={schemas}
+        formState={{
+          isMobileSdk: true,
+          sameStepFlag: false,
+          sameStepExtra: 'kept-value',
+          sdkName: 'hidden-sdk',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('SDK Name')).toBeInTheDocument();
+    expect(screen.getByText('hidden-sdk')).toBeInTheDocument();
+    expect(screen.getByText('Same Step Extra')).toBeInTheDocument();
+    expect(screen.getByText('kept-value')).toBeInTheDocument();
   });
 });

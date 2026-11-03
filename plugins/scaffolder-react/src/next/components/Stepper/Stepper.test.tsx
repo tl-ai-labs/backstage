@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,277 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditional fields', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/');
+    });
+
+    it('shows and requires cross-step conditional fields only when earlier step condition is met and clears values when navigating back', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross-step Conditional Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                enableDb: {
+                  type: 'boolean',
+                  title: 'Enable DB',
+                },
+                enableCache: {
+                  type: 'boolean',
+                  title: 'Enable Cache',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                serviceName: {
+                  type: 'string',
+                  title: 'Service Name',
+                },
+              },
+              dependencies: {
+                enableDb: {
+                  oneOf: [
+                    {
+                      properties: {
+                        enableDb: { const: true },
+                        dbHost: {
+                          type: 'string',
+                          title: 'DB Host',
+                        },
+                      },
+                      required: ['dbHost'],
+                    },
+                    {
+                      properties: {
+                        enableDb: { not: { const: true } },
+                      },
+                    },
+                  ],
+                },
+              },
+              if: {
+                properties: {
+                  enableCache: { const: true },
+                },
+              },
+              then: {
+                properties: {
+                  cacheTtl: {
+                    type: 'string',
+                    title: 'Cache TTL',
+                  },
+                },
+                required: ['cacheTtl'],
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} onCreate={onCreate} extensions={[]} />
+        </SecretsContextProvider>,
+      );
+
+      // Step 1: leave both flags unset and advance to Step 2
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2: neither conditional field should be visible, and Review should succeed without filling them
+      expect(
+        screen.queryByRole('textbox', { name: /DB Host/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /Cache TTL/ }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(screen.getByRole('textbox', { name: 'Service Name' }), {
+          target: { value: 'orders' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+
+      // Navigate back to Step 1 and enable both flags
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Enable DB' }));
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Enable Cache' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2: both conditional fields should now be rendered and required
+      expect(
+        screen.getByRole('textbox', { name: /DB Host/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('textbox', { name: /Cache TTL/ }),
+      ).toBeInTheDocument();
+
+      // Attempting to Review without filling required conditional fields keeps user on Step 2
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+
+      // Fill the conditional fields and advance to Review
+      await act(async () => {
+        fireEvent.change(screen.getByRole('textbox', { name: /DB Host/ }), {
+          target: { value: 'db.internal' },
+        });
+        fireEvent.change(screen.getByRole('textbox', { name: /Cache TTL/ }), {
+          target: { value: '300s' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('cell', { name: 'db.internal' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: '300s' })).toBeInTheDocument();
+
+      // Navigate back to Step 1 and unset Enable DB while keeping Enable Cache
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Enable DB' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // DB Host should no longer be rendered on Step 2, while Cache TTL remains
+      expect(
+        screen.queryByRole('textbox', { name: /DB Host/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('textbox', { name: /Cache TTL/ }),
+      ).toHaveValue('300s');
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      // Review and onCreate should not contain dbHost
+      expect(
+        screen.queryByRole('cell', { name: 'db.internal' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: '300s' })).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({
+        enableDb: false,
+        enableCache: true,
+        serviceName: 'orders',
+        cacheTtl: '300s',
+      });
+    });
+
+    it('preserves hidden field values for same-step conditions', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Same-step Conditional Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                moreInfo: {
+                  type: 'boolean',
+                  title: 'More info',
+                },
+              },
+              dependencies: {
+                moreInfo: {
+                  oneOf: [
+                    {
+                      properties: {
+                        moreInfo: { const: true },
+                        details: {
+                          type: 'string',
+                          title: 'Details',
+                        },
+                      },
+                    },
+                    {
+                      properties: {
+                        moreInfo: { not: { const: true } },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} onCreate={onCreate} extensions={[]} />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'More info' }));
+      });
+
+      await act(async () => {
+        fireEvent.change(screen.getByRole('textbox', { name: 'Details' }), {
+          target: { value: 'kept value' },
+        });
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'More info' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({
+        moreInfo: false,
+        details: 'kept value',
+      });
     });
   });
 });

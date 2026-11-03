@@ -538,4 +538,82 @@ describe('createAsyncValidators', () => {
 
     expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();
   });
+
+  it('should validate cross-step conditional fields in dependencies and if/then only when active', async () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+        },
+      },
+      if: {
+        properties: { kind: { const: 'service' } },
+      },
+      then: {
+        properties: {
+          serviceName: {
+            type: 'string',
+            'ui:field': 'ServiceField',
+          },
+        },
+      },
+      dependencies: {
+        tier: {
+          oneOf: [
+            {
+              properties: {
+                tier: { enum: ['gold'] },
+                goldContact: {
+                  type: 'string',
+                  'ui:field': 'GoldField',
+                },
+              },
+            },
+            {
+              properties: {
+                tier: { enum: ['silver'] },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const activeValidators = {
+      ServiceField: jest.fn(),
+      GoldField: jest.fn(),
+    };
+
+    await createAsyncValidators(schema, activeValidators, {
+      apiHolder: { get: jest.fn() },
+    })({
+      kind: 'service',
+      tier: 'gold',
+      name: 'my-name',
+      serviceName: 'my-service',
+      goldContact: 'someone',
+    });
+
+    expect(activeValidators.ServiceField).toHaveBeenCalled();
+    expect(activeValidators.GoldField).toHaveBeenCalled();
+
+    const inactiveValidators = {
+      ServiceField: jest.fn(),
+      GoldField: jest.fn(),
+    };
+
+    await createAsyncValidators(schema, inactiveValidators, {
+      apiHolder: { get: jest.fn() },
+    })({
+      kind: 'website',
+      tier: 'silver',
+      name: 'my-name',
+      serviceName: 'my-service',
+      goldContact: 'someone',
+    });
+
+    expect(inactiveValidators.ServiceField).not.toHaveBeenCalled();
+    expect(inactiveValidators.GoldField).not.toHaveBeenCalled();
+  });
 });

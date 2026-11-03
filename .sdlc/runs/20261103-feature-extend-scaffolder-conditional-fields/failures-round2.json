@@ -1,0 +1,10 @@
+[
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "problem": "Gate 3 revise from the user: add a ReviewState test for both cases. ReviewState now omits a declared field only when it is hidden by a condition that depends on an earlier step's answer (a cross-step condition); a field hidden by a same-step condition displays exactly as before this run, i.e. findSchemaForKey returns null for it and the row is rendered with the formatted key (startCase of the key, e.g. `sameStepExtra` -> `Same Step Extra`) and its value, not its schema title. Add ONE thorough test (append it inside the existing top-level describe, after the cross-step tests this run added) that renders <ReviewState schemas={...} formState={...} /> with two steps: step 1 has a boolean `isMobileSdk` and a boolean `sameStepFlag` plus a `dependencies: { sameStepFlag: { oneOf: [{ properties: { sameStepFlag: { const: true }, sameStepExtra: { type: 'string', title: 'Same Step Extra Title' } } }, { properties: { sameStepFlag: { const: false } } }] } }`; step 2 has a `dependencies` (or if/then) on `isMobileSdk` that adds `sdkName: { type: 'string', title: 'SDK Name' }`. formState: { isMobileSdk: false, sameStepFlag: false, sameStepExtra: 'kept-value', sdkName: 'hidden-sdk' }. Assert with `screen` queries (getByText / queryByText; no test IDs, no waitFor): the cross-step hidden field is omitted (`queryByText('SDK Name')` and `queryByText('hidden-sdk')` are null) and the same-step hidden field is still shown with its formatted key and value (`getByText('Same Step Extra')` and `getByText('kept-value')` are in the document). In the same test, re-render with isMobileSdk: true and assert `SDK Name` and `hidden-sdk` are shown. Use the same imports and render style as the file's existing tests; change no existing test.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "plugins/scaffolder-react/src/next/components/ReviewState/util.ts"
+    ]
+  }
+]

@@ -23,6 +23,7 @@ import {
   JsonSchema,
 } from 'json-schema-library';
 import { createFieldValidation, extractSchemaFromStep } from '../../lib';
+import { collectAllSchemaKeys, resolveConditionalSchema } from '../../lib/schema';
 import {
   CustomFieldValidator,
   FieldExtensionUiSchema,
@@ -55,7 +56,14 @@ export const createAsyncValidators = (
     pathPrefix: string = '#',
     current: JsonObject = formData,
   ): Promise<FormValidation> {
-    const parsedSchema = new JSONSchema(rootSchema);
+    const resolvedRootSchema = resolveConditionalSchema(rootSchema, formData);
+    const activeTopLevelKeys = collectAllSchemaKeys([
+      { mergedSchema: resolvedRootSchema },
+    ]);
+    const allRootSchemaKeys = collectAllSchemaKeys([
+      { mergedSchema: rootSchema },
+    ]);
+    const parsedSchema = new JSONSchema(resolvedRootSchema);
     const formValidation: FormValidation = {};
 
     const validateForm = async (
@@ -83,6 +91,13 @@ export const createAsyncValidators = (
     };
 
     for (const [key, value] of Object.entries(current)) {
+      if (
+        pathPrefix === '#' &&
+        allRootSchemaKeys.has(key) &&
+        !activeTopLevelKeys.has(key)
+      ) {
+        continue;
+      }
       const pointer = `${pathPrefix}/${key}`;
       const definitionInSchema = parsedSchema.getSchema({
         pointer,

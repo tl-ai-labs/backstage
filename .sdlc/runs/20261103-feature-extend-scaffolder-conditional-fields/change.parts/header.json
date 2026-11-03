@@ -1,0 +1,76 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Every new .ts or .tsx file must start with the standard Backstage Apache 2.0 license header dated 2026; existing files must preserve their current copyright year.",
+      "Use TypeScript with explicit types matching @backstage/types (JsonObject, JsonValue) and @rjsf/utils (UiSchema, FieldValidation).",
+      "Do not modify public or @alpha exported signatures in @backstage/plugin-scaffolder-react so report.api.md and report-alpha.api.md stay unchanged.",
+      "React Testing Library tests must use screen and findBy*/getBy*/queryBy* queries rather than waitFor where possible, must not add data-testid attributes, and must prefer fewer, thorough user-journey tests."
+    ],
+    "decisions": [
+      {
+        "topic": "Where shared cross-step schema resolution helpers live",
+        "choice": "Export resolveConditionalSchema, resolveStepSchema, collectCrossStepHiddenKeys, and collectAllSchemaKeys from plugins/scaffolder-react/src/next/lib/schema.ts without re-exporting them from src/next/lib/index.ts",
+        "rejected": [
+          "Re-exporting from src/next/lib/index.ts (would alter @alpha public API report)",
+          "Creating a separate helper file (unnecessary extra file when lib/schema.ts already owns step schema extraction)"
+        ],
+        "reason": "Keeps all schema extraction and conditional resolution in lib/schema.ts while preserving report.api.md and report-alpha.api.md unchanged."
+      },
+      {
+        "topic": "Condition evaluation semantics for JSON Schema if and dependencies branches",
+        "choice": "Strip undefined values from formData and normalize condition schemas so properties keys without a 'not' keyword are added to required before calling Draft07.isValid from json-schema-library",
+        "rejected": [
+          "Calling Draft07.isValid or AJV on raw condition schemas without required (causes undefined/unanswered fields to vacuously pass properties constraints in Draft-07)"
+        ],
+        "reason": "In JSON Schema Draft-07, properties constraints pass vacuously when a key is absent; requiring positive condition keys ensures unanswered fields do not trigger then/oneOf branches."
+      },
+      {
+        "topic": "Distinguishing cross-step conditions from same-step conditions",
+        "choice": "Treat a dependency key or if/allOf/oneOf/anyOf condition as cross-step when its controlling property is not in the current step's own top-level properties, resolving and removing cross-step conditions while leaving same-step conditions intact in the step schema",
+        "rejected": [
+          "Resolving both same-step and cross-step conditions into static properties (would break RJSF live same-step toggling and same-step hidden value retention)"
+        ],
+        "reason": "RJSF natively handles same-step conditions when the trigger property is in the current step's properties, whereas cross-step triggers are fixed while on a later step."
+      },
+      {
+        "topic": "Selective clearing of hidden field values in Stepper stepsState",
+        "choice": "Prune keys in collectCrossStepHiddenKeys(steps, nextState) inside Stepper handleChange and handleNext by removing keys defined in a step's mergedSchema that are absent from any step's cross-step-resolved mergedSchema",
+        "rejected": [
+          "Enabling RJSF liveOmit/omitExtraData globally (would strip values from other steps and clear same-step hidden fields)",
+          "Pruning only on handleCreate (would leave stale cross-step hidden values visible or retained when navigating between steps)"
+        ],
+        "reason": "Cross-step-resolved mergedSchema retains all same-step conditional branches and active cross-step branches, so only fields from inactive cross-step branches are removed."
+      },
+      {
+        "topic": "ReviewState handling of conditional fields and findSchemaForKey",
+        "choice": "Resolve each step's mergedSchema with resolveConditionalSchema in findSchemaForKey and processSchema, return the original step object from findSchemaForKey when matched, and in ReviewState omit keys where findSchemaForKey returns null if the key belongs to collectAllSchemaKeys(props.schemas)",
+        "rejected": [
+          "Returning a cloned step object from findSchemaForKey (breaks reference-equality checks in util.test.ts)",
+          "Unconditionally returning [] when findSchemaForKey returns null (breaks ReviewState.test.tsx cases where schemas is empty or formState has undeclared keys)"
+        ],
+        "reason": "Preserves backward compatibility for undeclared keys and reference equality in findSchemaForKey while hiding inactive conditional fields and resolving active conditional schemas."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "verify",
+        "run": "CI=true yarn test plugins/scaffolder-react plugins/scaffolder && yarn tsc && yarn lint:all"
+      }
+    ]
+  },
+  "hashes": {}
+}

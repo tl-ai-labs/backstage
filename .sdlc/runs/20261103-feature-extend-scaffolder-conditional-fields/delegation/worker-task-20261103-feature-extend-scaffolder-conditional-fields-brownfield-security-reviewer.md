@@ -1,0 +1,5 @@
+Changes asked for this step:
+
+Re-review the final diff after the Gate 3 revise. Changed since your last review: plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx and util.ts (the Review step now omits only fields hidden by an earlier-step condition; fields hidden by a same-step condition display as before, which means a retained same-step value is shown in the Review table again, with the existing password/secret masking and ui:backstage.review mask/show handling unchanged), one added test in ReviewState.test.tsx, and the changeset wording. Check in particular that no masked or secret field can now be shown unmasked in the Review step. Suite results (already run, do not re-run): `CI=true yarn test plugins/scaffolder-react plugins/scaffolder && yarn tsc && yarn lint:all` exit 0; 258/258 suites, 2385 passed, 2 skipped; senior re-review approved, 0 findings. Overwrite security_review.md.
+
+Edit the pieces you handed in and hand each changed one in again.

@@ -15,7 +15,12 @@
  */
 
 import { JsonObject } from '@backstage/types';
-import { extractSchemaFromStep } from './schema';
+import {
+  collectCrossStepHiddenKeys,
+  extractSchemaFromStep,
+  resolveConditionalSchema,
+  resolveStepSchema,
+} from './schema';
 
 describe('extractSchemaFromStep', () => {
   it('transforms deep schema', () => {
@@ -597,5 +602,155 @@ describe('extractSchemaFromStep', () => {
       schema: expectedSchema,
       uiSchema: expectedUiSchema,
     });
+  });
+});
+
+describe('resolveConditionalSchema and collectCrossStepHiddenKeys', () => {
+  type Step = Parameters<typeof collectCrossStepHiddenKeys>[0][number];
+
+  const makeStep = (mergedSchema: JsonObject): Step => {
+    const { schema, uiSchema } = extractSchemaFromStep(mergedSchema);
+    return {
+      title: 'Step',
+      mergedSchema,
+      schema,
+      uiSchema,
+    } as unknown as Step;
+  };
+
+  it('resolves cross-step dependencies and if/then/else when condition is satisfied or unsatisfied', () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        local: { type: 'string' },
+      },
+      dependencies: {
+        choice: {
+          oneOf: [
+            {
+              properties: {
+                choice: { enum: ['a'] },
+                extraA: { type: 'string' },
+              },
+              required: ['extraA'],
+            },
+            {
+              properties: {
+                choice: { enum: ['b'] },
+                extraB: { type: 'string' },
+              },
+            },
+          ],
+        },
+        local: {
+          properties: {
+            localExtra: { type: 'string' },
+          },
+        },
+      },
+      allOf: [
+        {
+          if: { properties: { mode: { const: 'x' } } },
+          then: {
+            properties: { allOfThen: { type: 'string' } },
+            required: ['allOfThen'],
+          },
+        },
+      ],
+      if: { properties: { toggle: { const: true } } },
+      then: { properties: { thenField: { type: 'string' } } },
+      else: { properties: { elseField: { type: 'string' } } },
+    };
+    const prior = new Set(['choice', 'mode', 'toggle']);
+
+    const satisfied = resolveConditionalSchema(
+      schema,
+      { choice: 'a', mode: 'x', toggle: true },
+      prior,
+    );
+    const props = satisfied.properties as JsonObject;
+    expect(props.extraA).toEqual({ type: 'string' });
+    expect(props.extraB).toBeUndefined();
+    expect(props.allOfThen).toEqual({ type: 'string' });
+    expect(props.thenField).toEqual({ type: 'string' });
+    expect(props.elseField).toBeUndefined();
+    expect(satisfied.required).toEqual(
+      expect.arrayContaining(['extraA', 'allOfThen']),
+    );
+    expect(satisfied.if).toBeUndefined();
+    expect(satisfied.then).toBeUndefined();
+    expect(satisfied.else).toBeUndefined();
+    expect(satisfied.allOf).toBeUndefined();
+    expect(satisfied.dependencies).toEqual({
+      local: { properties: { localExtra: { type: 'string' } } },
+    });
+
+    const unsatisfied = resolveConditionalSchema(
+      schema,
+      { choice: 'b', mode: 'y', toggle: false },
+      prior,
+    );
+    const props2 = unsatisfied.properties as JsonObject;
+    expect(props2.extraA).toBeUndefined();
+    expect(props2.extraB).toEqual({ type: 'string' });
+    expect(props2.allOfThen).toBeUndefined();
+    expect(props2.thenField).toBeUndefined();
+    expect(props2.elseField).toEqual({ type: 'string' });
+    expect(unsatisfied.required ?? []).not.toContain('extraA');
+
+    const sameStep: JsonObject = {
+      type: 'object',
+      properties: { flag: { type: 'boolean' } },
+      if: { properties: { flag: { const: true } } },
+      then: { properties: { more: { type: 'string' } } },
+    };
+    expect(resolveConditionalSchema(sameStep, {}, new Set())).toEqual(sameStep);
+
+    const step = makeStep(schema);
+    const resolved = resolveStepSchema(
+      step,
+      { choice: 'a', mode: 'y', toggle: false },
+      prior,
+    );
+    const resolvedProps = (resolved.schema as JsonObject)
+      .properties as JsonObject;
+    expect(resolvedProps.extraA).toBeDefined();
+    expect(resolvedProps.elseField).toBeDefined();
+    expect(resolvedProps.thenField).toBeUndefined();
+  });
+
+  it('collects only cross-step hidden keys and preserves same-step hidden keys', () => {
+    const step1 = makeStep({
+      type: 'object',
+      properties: {
+        toggle: { type: 'boolean' },
+        sameFlag: { type: 'boolean' },
+      },
+      if: { properties: { sameFlag: { const: true } } },
+      then: { properties: { sameField: { type: 'string' } } },
+    });
+    const step2 = makeStep({
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+      if: { properties: { toggle: { const: true } } },
+      then: { properties: { crossField: { type: 'string' } } },
+    });
+
+    const hidden = collectCrossStepHiddenKeys([step1, step2], {
+      toggle: false,
+      sameFlag: false,
+    });
+    expect(hidden.has('crossField')).toBe(true);
+    expect(hidden.has('sameField')).toBe(false);
+    expect(hidden.has('name')).toBe(false);
+
+    const visible = collectCrossStepHiddenKeys([step1, step2], {
+      toggle: true,
+      sameFlag: false,
+    });
+    expect(visible.has('crossField')).toBe(false);
   });
 });
