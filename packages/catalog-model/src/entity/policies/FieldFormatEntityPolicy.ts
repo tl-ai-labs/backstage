@@ -21,7 +21,9 @@ import {
   makeValidator,
   Validators,
 } from '../../validation';
+import { ANNOTATION_FORMER_NAMES, DEFAULT_NAMESPACE } from '../constants';
 import { Entity } from '../Entity';
+import { parseEntityRef } from '../ref';
 
 /**
  * Ensures that the format of individual fields of the entity envelope
@@ -140,6 +142,38 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     for (const [k, v] of Object.entries(entity.metadata.annotations ?? [])) {
       require(`annotations.${k}`, k, this.validators.isValidAnnotationKey);
       require(`annotations.${k}`, v, this.validators.isValidAnnotationValue);
+    }
+
+    const formerNames = entity.metadata.annotations?.[ANNOTATION_FORMER_NAMES];
+    if (formerNames !== undefined) {
+      const formerNamesField = `annotations.${ANNOTATION_FORMER_NAMES}`;
+      require(formerNamesField, formerNames, CommonValidatorFunctions.isNonEmptyString);
+
+      for (const entry of formerNames.split(',')) {
+        const trimmed = entry.trim();
+        require(formerNamesField, trimmed, CommonValidatorFunctions.isNonEmptyString);
+
+        let compound;
+        try {
+          compound = parseEntityRef(trimmed, {
+            defaultKind: entity.kind,
+            defaultNamespace: entity.metadata.namespace || DEFAULT_NAMESPACE,
+          });
+        } catch (e) {
+          throw new Error(
+            `"${formerNamesField}" is not valid; could not parse "${trimmed}", ${e}`,
+          );
+        }
+
+        require(formerNamesField, compound.kind, this.validators.isValidKind);
+        require(formerNamesField, compound.namespace, this.validators
+          .isValidNamespace);
+        require(formerNamesField, compound.name, this.validators
+          .isValidEntityName);
+        require(formerNamesField, compound.kind, (kind: string) =>
+          kind.toLocaleLowerCase('en-US') ===
+          entity.kind.toLocaleLowerCase('en-US'));
+      }
     }
 
     const tags = entity.metadata.tags ?? [];

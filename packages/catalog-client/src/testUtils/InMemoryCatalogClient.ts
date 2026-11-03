@@ -40,6 +40,7 @@ import {
   ValidateEntityResponse,
 } from '@backstage/catalog-client';
 import {
+  ANNOTATION_FORMER_NAMES,
   CompoundEntityRef,
   Entity,
   parseEntityRef,
@@ -620,6 +621,30 @@ export class InMemoryCatalogClient implements CatalogApi {
     return this.#createEntityRefMap().get(
       stringifyEntityRef(parseEntityRef(entityRef)),
     );
+  }
+
+  async getEntityByFormerRef(
+    entityRef: string | CompoundEntityRef,
+  ): Promise<Entity | undefined> {
+    const parsedTarget = parseEntityRef(entityRef);
+    const targetKind = parsedTarget.kind.toLocaleLowerCase('en-US');
+    const targetRef = stringifyEntityRef(parsedTarget);
+    if (this.#createEntityRefMap().has(targetRef)) {
+      return undefined;
+    }
+
+    const searchKey =
+      `metadata.annotations.${ANNOTATION_FORMER_NAMES}`.toLocaleLowerCase(
+        'en-US',
+      );
+    const matches = this.#entities.filter(
+      entity =>
+        entity.kind.toLocaleLowerCase('en-US') === targetKind &&
+        buildEntitySearch('', entity).some(
+          row => row.key === searchKey && row.value === targetRef,
+        ),
+    );
+    return matches.length === 1 ? matches[0] : undefined;
   }
 
   async removeEntityByUid(uid: string): Promise<void> {

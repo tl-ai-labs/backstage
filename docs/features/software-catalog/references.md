@@ -93,3 +93,60 @@ this structure used in Backstage code, but it should normally not be used in any
 form of protocol or between plugins and/or external systems. For those cases,
 instead prefer to use the string form which has clearer semantics and can be
 transported more easily since it's just a string.
+
+## Former Entity References
+
+When an entity is renamed or moved, existing links and bookmarks that point at
+its old reference would normally stop working. To help with this, an entity can
+declare the references it was previously known by, using the
+`backstage.io/former-names` annotation. The value is a comma-separated list of
+string references. Each former reference must be of the same kind as the entity
+that declares it. If the kind or namespace is left out of an entry, it defaults
+to the kind and namespace of the declaring entity.
+
+```yaml
+# Example:
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: new-service
+  namespace: default
+  annotations:
+    backstage.io/former-names: old-service, legacy/old-service
+spec:
+  type: service
+  lifecycle: production
+  owner: group:pet-managers
+```
+
+Here, the entity `component:default/new-service` also claims the former
+references `component:default/old-service` and `component:legacy/old-service`.
+
+When the Catalog entity page or the TechDocs reader page cannot find an entity
+at the requested reference, it checks whether exactly one entity has claimed
+that reference as a former name. If so, the browser is redirected to the route
+of the current entity, any sub-path is preserved, and a notice is shown that
+names the former reference.
+
+There are some important limitations to be aware of:
+
+- A live entity at a reference always takes precedence over any former-name
+  claim on that same reference.
+- While the catalog still retains a record for the former entity in its refresh
+  state, the claiming entity must come from the same source (location
+  provenance) as that record, otherwise the claim is rejected. Note that the
+  default `catalog.orphanStrategy` (`'delete'`) usually removes that record
+  soon after a rename, after which any single entity of the same kind can claim
+  the name.
+- If a reference is claimed by more than one entity, the contested name is not
+  redirected and the lookup results in not-found, so a second claimant can
+  switch off a genuine redirect.
+- Permissions on the target entity are enforced. Users who are not allowed to
+  read it receive not-found.
+- Relations stored in other entities, and references held by other plugins, are
+  not rewritten automatically. You should update those to point at the new
+  reference.
+
+See the
+[`backstage.io/former-names` annotation](well-known-annotations.md#backstageioformer-names)
+for the full description.

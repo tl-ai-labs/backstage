@@ -23,9 +23,12 @@ import { TECHDOCS_EXTERNAL_ANNOTATION } from '@backstage/plugin-techdocs-common'
 const mockNavigate = jest.fn();
 const mockViewTechdocLink = jest.fn(() => '/docs');
 
+const mockUseParams = jest.fn((): Record<string, string> => ({}));
+
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useParams: () => mockUseParams(),
 }));
 
 jest.mock('@backstage/core-plugin-api', () => ({
@@ -36,6 +39,7 @@ jest.mock('@backstage/core-plugin-api', () => ({
 describe('useExternalRedirect', () => {
   const mockCatalogApi = {
     getEntityByRef: jest.fn(),
+    getEntityByFormerRef: jest.fn(),
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -278,5 +282,65 @@ describe('useExternalRedirect', () => {
     await waitFor(() => {
       expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('should redirect to renamed entity TechDocs URL preserving sub-path when getEntityByRef misses and getEntityByFormerRef hits', async () => {
+    mockUseParams.mockReturnValue({ '*': 'sub/path' });
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    mockCatalogApi.getEntityByFormerRef.mockResolvedValue({
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: {
+        name: 'new-component',
+        namespace: 'default',
+      },
+    });
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect({
+          kind: 'Component',
+          name: 'old-component',
+          namespace: 'default',
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/docs/sub/path', {
+        replace: true,
+      });
+    });
+
+    expect(result.current.renamedFrom).toBe('component:default/old-component');
+    expect(result.current.resolvedEntityRef).toEqual({
+      kind: 'component',
+      namespace: 'default',
+      name: 'new-component',
+    });
+  });
+
+  it('should not redirect when both getEntityByRef and getEntityByFormerRef return undefined', async () => {
+    mockUseParams.mockReturnValue({});
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    mockCatalogApi.getEntityByFormerRef.mockResolvedValue(undefined);
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect({
+          kind: 'Component',
+          name: 'old-component',
+          namespace: 'default',
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(mockCatalogApi.getEntityByFormerRef).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(result.current.renamedFrom).toBeUndefined();
   });
 });

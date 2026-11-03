@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_NAMES,
+  ANNOTATION_LOCATION,
+  ANNOTATION_ORIGIN_LOCATION,
+  Entity,
+  parseEntityRef,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { InputError, NotFoundError } from '@backstage/errors';
 import { Knex } from 'knex';
 import { chunk as lodashChunk, isEqual } from 'lodash';
@@ -26,6 +33,8 @@ import {
   EntitiesRequest,
   EntitiesResponse,
   EntityAncestryResponse,
+  EntityByFormerRefRequest,
+  EntityByFormerRefResponse,
   EntityFacetsRequest,
   EntityFacetsResponse,
   EntityOrder,
@@ -847,6 +856,124 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
     }
 
     return { facets };
+  }
+
+  async entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntityByFormerRefResponse> {
+    const parsedTarget = parseEntityRef(request.entityRef);
+    const targetKind = parsedTarget.kind.toLocaleLowerCase('en-US');
+    const targetRef =
+      stringifyEntityRef(parsedTarget).toLocaleLowerCase('en-US');
+
+    const liveRow = await this.database<DbFinalEntitiesRow>('final_entities')
+      .where('entity_ref', targetRef)
+      .whereNotNull('final_entity')
+      .first('entity_id');
+    const formerRow = await this.database<DbRefreshStateRow>('refresh_state')
+      .where('entity_ref', targetRef)
+      .first('location_key', 'processed_entity', 'unprocessed_entity');
+
+    // A former-name claim never shadows a live entity
+    if (liveRow) {
+      return { entity: undefined };
+    }
+
+    const rows: Array<{
+      entityId: string;
+      finalEntity: string | null;
+      locationKey: string | null;
+    }> = await this.database('final_entities')
+      .innerJoin('search', 'final_entities.entity_id', 'search.entity_id')
+      .leftJoin(
+        'refresh_state',
+        'final_entities.entity_id',
+        'refresh_state.entity_id',
+      )
+      .where(
+        'search.key',
+        `metadata.annotations.${ANNOTATION_FORMER_NAMES}`.toLocaleLowerCase(
+          'en-US',
+        ),
+      )
+      .where('search.value', targetRef)
+      .whereNotNull('final_entities.final_entity')
+      .andWhere('final_entities.entity_ref', '<>', targetRef)
+      .orderBy('final_entities.entity_id', 'asc')
+      .limit(2)
+      .select({
+        entityId: 'final_entities.entity_id',
+        finalEntity: 'final_entities.final_entity',
+        locationKey: 'refresh_state.location_key',
+      });
+
+    let formerEntity: Entity | undefined;
+    const formerJson = formerRow
+      ? formerRow.processed_entity ?? formerRow.unprocessed_entity
+      : undefined;
+    if (formerJson) {
+      try {
+        formerEntity = JSON.parse(formerJson) as Entity;
+      } catch {
+        formerEntity = undefined;
+      }
+    }
+    const formerAnnotations = formerEntity?.metadata?.annotations ?? {};
+
+    const legitimateCandidates: Array<{ entityId: string; entity: Entity }> =
+      [];
+    for (const row of rows) {
+      const entity = JSON.parse(row.finalEntity!) as Entity;
+      if (entity.kind.toLocaleLowerCase('en-US') !== targetKind) {
+        continue;
+      }
+      if (formerRow) {
+        const annotations = entity.metadata?.annotations ?? {};
+        if (formerRow.location_key) {
+          if (row.locationKey !== formerRow.location_key) {
+            continue;
+          }
+        } else if (formerAnnotations[ANNOTATION_ORIGIN_LOCATION]) {
+          if (
+            annotations[ANNOTATION_ORIGIN_LOCATION] !==
+            formerAnnotations[ANNOTATION_ORIGIN_LOCATION]
+          ) {
+            continue;
+          }
+        } else if (formerAnnotations[ANNOTATION_LOCATION]) {
+          if (
+            annotations[ANNOTATION_LOCATION] !==
+            formerAnnotations[ANNOTATION_LOCATION]
+          ) {
+            continue;
+          }
+        }
+      }
+      legitimateCandidates.push({ entityId: row.entityId, entity });
+    }
+
+    if (legitimateCandidates.length !== 1) {
+      return { entity: undefined };
+    }
+    const winner = legitimateCandidates[0];
+
+    if (request.filter) {
+      const targetQuery = this.database('final_entities').where(
+        'final_entities.entity_id',
+        winner.entityId,
+      );
+      const allowed = await applyEntityFilterToQuery({
+        filter: request.filter,
+        targetQuery,
+        onEntityIdField: 'final_entities.entity_id',
+        knex: this.database,
+      }).first('final_entities.entity_id');
+      if (!allowed) {
+        return { entity: undefined };
+      }
+    }
+
+    return { entity: winner.entity };
   }
 }
 

@@ -1,0 +1,400 @@
+[
+  {
+    "id": "U13",
+    "path": "plugins/catalog/src/alpha/translation.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add the entityPage.renamedFromMessage translation message to catalogTranslationRef.",
+    "rules": [
+      "1. Under `entityPage` in `catalogTranslationRef`, add `renamedFromMessage: 'This entity has been renamed from {{entityRef}}.'` right after `notFoundLinkText`."
+    ],
+    "exports": [
+      {
+        "name": "catalogTranslationRef",
+        "kind": "const",
+        "params": [],
+        "returns": "TranslationRef"
+      }
+    ],
+    "import_line": "import { catalogTranslationRef } from '../../alpha/translation';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 30,
+        "to": 30,
+        "first_line": "notFoundLinkText: 'kind, namespace, and name',",
+        "rule": "Add `renamedFromMessage: 'This entity has been renamed from {{entityRef}}.',` to `entityPage`."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/alpha/translation.ts",
+      "lines": [20, 35],
+      "reason": "Match message key and interpolation style in catalogTranslationRef."
+    },
+    "depends_on": [],
+    "covers": ["FR-9", "FR-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U14",
+    "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Fall back to getEntityByFormerRef when getEntityByRef misses in useEntityFromUrl and redirect to the current entity route preserving sub-routes.",
+    "rules": [
+      "1. Import `DEFAULT_NAMESPACE` and `stringifyEntityRef` from `@backstage/catalog-model`, and `useLocation` and `useParams` from `'react-router-dom'`.",
+      "2. In `useAsyncRetry`, first call `const existing = await catalogApi.getEntityByRef({ kind, namespace, name });` and return `existing` if defined.",
+      "3. When `existing` is `undefined` and `name` is non-empty, call `const formerTarget = await catalogApi.getEntityByFormerRef?.({ kind, namespace, name });`.",
+      "4. If `formerTarget` is defined, compute `targetKind = formerTarget.kind.toLocaleLowerCase('en-US')`, `targetNamespace = (formerTarget.metadata.namespace ?? DEFAULT_NAMESPACE).toLocaleLowerCase('en-US')`, `targetName = formerTarget.metadata.name`, and extract `const subPath = params['*'] ?? '';`. Compute `const currentSuffix = \\`/${namespace}/${kind}/${name}${subPath ? \\`/${subPath}\\` : ''}\\`;`, `const mountPrefix = location.pathname.endsWith(currentSuffix) ? location.pathname.slice(0, location.pathname.length - currentSuffix.length) : '/catalog';`, and `const targetPath = \\`${mountPrefix}/${targetNamespace}/${targetKind}/${targetName}${subPath ? \\`/${subPath}\\` : ''}${location.search}${location.hash}\\`;`.",
+      "5. Call `navigate(targetPath, { replace: true, state: { ...(typeof location.state === 'object' && location.state !== null ? location.state : {}), renamedFrom: stringifyEntityRef({ kind, namespace, name }) } });` and return `formerTarget`."
+    ],
+    "exports": [
+      {
+        "name": "useEntityFromUrl",
+        "kind": "function",
+        "params": [],
+        "returns": "EntityLoadingStatus"
+      }
+    ],
+    "import_line": "import { useEntityFromUrl } from './useEntityFromUrl';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 55,
+        "first_line": "import {",
+        "last_line": "};",
+        "rule": "Update `useEntityFromUrl` to fall back to `catalogApi.getEntityByFormerRef?.({ kind, namespace, name })` on a `getEntityByRef` miss and replace-navigate to the target entity route with `state: { renamedFrom }` while preserving any sub-route path."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "lines": [1, 56],
+      "reason": "Preserve existing hook signature and error handling for missing name."
+    },
+    "depends_on": ["U10", "U11", "U12"],
+    "covers": ["FR-9", "FR-10", "AC-4", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U15",
+    "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Display a rename notice banner in legacy EntityLayout when navigated via a former entity reference.",
+    "rules": [
+      "1. Read `const renamedFrom = (location.state as { renamedFrom?: string } | null)?.renamedFrom;`.",
+      "2. When `entity && renamedFrom` is truthy, render `<Alert severity=\"info\">{t('entityPage.renamedFromMessage', { entityRef: renamedFrom })}</Alert>` immediately before `{entity && <RoutedTabs routes={routes} />}`."
+    ],
+    "exports": [
+      {
+        "name": "EntityLayout",
+        "kind": "function",
+        "params": [
+          { "name": "props", "type": "EntityLayoutProps" }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { EntityLayout } from './EntityLayout';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 376,
+        "to": 379,
+        "first_line": "{loading && <Progress />}",
+        "last_line": "",
+        "rule": "Render the info Alert with `t('entityPage.renamedFromMessage', { entityRef: renamedFrom })` when `entity` and `(location.state as { renamedFrom?: string } | null)?.renamedFrom` are truthy."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx",
+      "lines": [375, 404],
+      "reason": "Match Alert and translation usage in EntityLayout."
+    },
+    "depends_on": ["U13", "U14"],
+    "covers": ["FR-9", "FR-10", "AC-4", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U16",
+    "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Display a rename notice banner in the alpha MUI EntityLayout when navigated via a former entity reference.",
+    "rules": [
+      "1. Import `useLocation` from `'react-router-dom'`.",
+      "2. Inside `EntityLayout`, call `const location = useLocation();` and extract `const renamedFrom = (location.state as { renamedFrom?: string } | null)?.renamedFrom;`.",
+      "3. When `entity && renamedFrom` is truthy, render `<Alert severity=\"info\">{t('entityPage.renamedFromMessage', { entityRef: renamedFrom })}</Alert>` immediately before `{entity && (<EntityTabs ... />)}`."
+    ],
+    "exports": [
+      {
+        "name": "EntityLayout",
+        "kind": "function",
+        "params": [
+          { "name": "props", "type": "EntityLayoutProps" }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { EntityLayout } from './EntityLayout';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { ComponentProps, ReactNode } from 'react';",
+        "rule": "Import `useLocation` from `'react-router-dom'`."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 80,
+        "to": 100,
+        "first_line": "const { kind } = useRouteRefParams(entityRouteRef);",
+        "last_line": "<EntityTabs",
+        "rule": "Read `renamedFrom` from `useLocation().state` and render `<Alert severity=\"info\">{t('entityPage.renamedFromMessage', { entityRef: renamedFrom })}</Alert>` when `entity && renamedFrom` is truthy."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayout.tsx",
+      "lines": [68, 134],
+      "reason": "Match Alert and translation usage in alpha EntityLayout."
+    },
+    "depends_on": ["U13", "U14"],
+    "covers": ["FR-9", "FR-10", "AC-4", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U17",
+    "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Display a rename notice banner in the alpha Backstage UI EntityLayoutBui when navigated via a former entity reference.",
+    "rules": [
+      "1. Import `useLocation` alongside `useSearchParams` from `'react-router-dom'`.",
+      "2. In `EntityLayoutContent`, read `const location = useLocation();` and `const renamedFrom = (location.state as { renamedFrom?: string } | null)?.renamedFrom;`.",
+      "3. In the `else if (entity)` branch of `EntityLayoutContent`, render `{renamedFrom && <Alert status=\"info\" title={t('entityPage.renamedFromMessage', { entityRef: renamedFrom })} />}` inside `<Container>` above `{props.content ?? <NotFoundErrorPage />}`."
+    ],
+    "exports": [
+      {
+        "name": "EntityLayoutBui",
+        "kind": "function",
+        "params": [
+          { "name": "props", "type": "object" }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { EntityLayoutBui } from './EntityLayout/EntityLayoutBui';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 19,
+        "to": 19,
+        "first_line": "import { useSearchParams } from 'react-router-dom';",
+        "rule": "Import `useLocation` and `useSearchParams` from `'react-router-dom'`."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 106,
+        "to": 119,
+        "first_line": "const { kind } = useRouteRefParams(entityRouteRef);",
+        "last_line": "} else if (!loading) {",
+        "rule": "Read `renamedFrom` from `useLocation().state` and render `<Alert status=\"info\" title={t('entityPage.renamedFromMessage', { entityRef: renamedFrom })} />` inside `<Container>` when `entity` and `renamedFrom` are truthy."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.tsx",
+      "lines": [102, 146],
+      "reason": "Match @backstage/ui Alert and Container usage in EntityLayoutContent."
+    },
+    "depends_on": ["U13", "U14"],
+    "covers": ["FR-9", "FR-10", "AC-4", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U18",
+    "path": "plugins/techdocs/src/translation.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add redirectNotification.renamedFromMessage to techdocsTranslationRef.",
+    "rules": [
+      "1. Under `redirectNotification` in `techdocsTranslationRef`, add `renamedFromMessage: 'This entity has been renamed from {{entityRef}}.'` right after `redirectNow`."
+    ],
+    "exports": [
+      {
+        "name": "techdocsTranslationRef",
+        "kind": "const",
+        "params": [],
+        "returns": "TranslationRef"
+      }
+    ],
+    "import_line": "import { techdocsTranslationRef } from '../../../translation';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 51,
+        "to": 51,
+        "first_line": "redirectNow: 'Redirect now',",
+        "rule": "Add `renamedFromMessage: 'This entity has been renamed from {{entityRef}}.',` to `redirectNotification`."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/techdocs/src/translation.ts",
+      "lines": [45, 58],
+      "reason": "Match translation message style in techdocsTranslationRef."
+    },
+    "depends_on": [],
+    "covers": ["FR-11"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U19",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Resolve former entity names in useExternalRedirect when getEntityByRef misses, redirecting to the target entity's TechDocs URL with sub-path preserved and exposing rename state.",
+    "rules": [
+      "1. Import `DEFAULT_NAMESPACE` from `@backstage/catalog-model` and `useParams` from `'react-router-dom'`.",
+      "2. Read `const params = useParams(); const subPath = params['*'] ?? '';` and maintain a `const renameInfoRef = useRef<{ from: string; to: string; targetEntityRef: CompoundEntityRef } | null>(null);`.",
+      "3. In `useAsync`, when `await catalogApi.getEntityByRef(entityRef)` returns `undefined`, call `const formerEntity = await catalogApi.getEntityByFormerRef?.(entityRef);`.",
+      "4. If `formerEntity` is returned, compute `const targetEntityRef: CompoundEntityRef = { kind: formerEntity.kind.toLocaleLowerCase('en-US'), namespace: (formerEntity.metadata.namespace ?? DEFAULT_NAMESPACE).toLocaleLowerCase('en-US'), name: formerEntity.metadata.name };`, compute the base TechDocs URL via `formerEntity.metadata?.annotations?.[TECHDOCS_EXTERNAL_ANNOTATION] ? buildTechDocsURL(formerEntity, viewTechdocLink) : viewTechdocLink(targetEntityRef)`, append `subPath ? \\`/${subPath.replace(/^\\/+/, '')}\\` : ''` to form `redirectUrl`, store `renameInfoRef.current = { from: entityKey, to: stringifyEntityRef(targetEntityRef), targetEntityRef }`, and return `{ redirectUrl, isFormerRedirect: true, renamedFrom: entityKey, targetEntityRef }`.",
+      "5. In `useEffect`, when `!externalRedirectResult.loading && externalRedirectResult.value?.redirectUrl`, call `navigate(externalRedirectResult.value.redirectUrl, { replace: true });` and mark `checkedEntityRef.current = entityKey` when `isFormerRedirect` is true (or when there is no redirect).",
+      "6. Return `{ loading: externalRedirectResult.loading, shouldShowProgress: (shouldCheckForRedirect && externalRedirectResult.loading) || (!!externalRedirectResult.value?.redirectUrl && !externalRedirectResult.value.isFormerRedirect), renamedFrom: externalRedirectResult.value?.renamedFrom ?? (renameInfoRef.current?.to === entityKey || renameInfoRef.current?.from === entityKey ? renameInfoRef.current.from : undefined), resolvedEntityRef: externalRedirectResult.value?.targetEntityRef ?? (renameInfoRef.current?.from === entityKey ? renameInfoRef.current.targetEntityRef : undefined) }`."
+    ],
+    "exports": [
+      {
+        "name": "useExternalRedirect",
+        "kind": "function",
+        "params": [
+          { "name": "entityRef", "type": "CompoundEntityRef" }
+        ],
+        "returns": "{ loading: boolean; shouldShowProgress: boolean; renamedFrom?: string; resolvedEntityRef?: CompoundEntityRef }"
+      }
+    ],
+    "import_line": "import { useExternalRedirect } from './useExternalRedirect';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 104,
+        "first_line": "import { useEffect, useRef } from 'react';",
+        "last_line": "}",
+        "rule": "Extend `useExternalRedirect` to fall back to `catalogApi.getEntityByFormerRef?.(entityRef)` when `getEntityByRef` returns `undefined`, preserve any `*` sub-path in the redirect URL, navigate with `{ replace: true }`, and return `renamedFrom` and `resolvedEntityRef` alongside `loading` and `shouldShowProgress`."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+      "lines": [1, 105],
+      "reason": "Preserve existing external redirect behavior and hook structure."
+    },
+    "depends_on": ["U10", "U11", "U12"],
+    "covers": ["FR-11", "AC-5", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U20",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Render the rename notice banner and pass the resolved entityRef to TechDocsReaderPageProvider in TechDocsReaderPage.",
+    "rules": [
+      "1. Import `Alert` from `'@material-ui/lab/Alert'`, `useTranslationRef` from `'@backstage/core-plugin-api/alpha'`, and `techdocsTranslationRef` from `'../../../translation'`.",
+      "2. Destructure `{ shouldShowProgress, renamedFrom, resolvedEntityRef } = useExternalRedirect(memoizedEntityRef)` and compute `const effectiveEntityRef = resolvedEntityRef ?? memoizedEntityRef;`.",
+      "3. Pass `entityRef={effectiveEntityRef}` to `TechDocsReaderPageProvider` (and `effectiveEntityRef` to render-prop children), and when `renamedFrom` is truthy render `<Alert severity=\"info\">{t('redirectNotification.renamedFromMessage', { entityRef: renamedFrom })}</Alert>` inside `TechDocsReaderPageProvider` right before the page content."
+    ],
+    "exports": [
+      {
+        "name": "TechDocsReaderPage",
+        "kind": "function",
+        "params": [
+          { "name": "props", "type": "TechDocsReaderPageProps" }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { TechDocsReaderPage } from './TechDocsReaderPage';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 43,
+        "to": 43,
+        "first_line": "import { useExternalRedirect } from './useExternalRedirect';",
+        "rule": "Import `Alert` from `'@material-ui/lab/Alert'`, `useTranslationRef` from `'@backstage/core-plugin-api/alpha'`, and `techdocsTranslationRef` from `'../../../translation'`."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 200,
+        "to": 263,
+        "first_line": "// Check for external TechDocs redirects and handle navigation",
+        "last_line": ");",
+        "rule": "Use `renamedFrom` and `resolvedEntityRef` from `useExternalRedirect(memoizedEntityRef)` to render the info Alert banner when `renamedFrom` is set and pass `effectiveEntityRef` to `TechDocsReaderPageProvider`."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+      "lines": [174, 265],
+      "reason": "Preserve all 4 TechDocsReaderPage configuration modes while adding the rename banner."
+    },
+    "depends_on": ["U18", "U19"],
+    "covers": ["FR-11", "AC-5", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U21",
+    "path": "packages/catalog-model/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate API reports across the workspace after public API surface changes.",
+    "run": "yarn build:api-reports",
+    "depends_on": [
+      "U01",
+      "U02",
+      "U09",
+      "U10",
+      "U11",
+      "U12",
+      "U13",
+      "U14",
+      "U15",
+      "U16",
+      "U17",
+      "U18",
+      "U19",
+      "U20"
+    ],
+    "covers": ["NFR-6", "AC-7"]
+  },
+  {
+    "id": "U22",
+    "path": ".changeset/entity-rename-redirects.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create a changeset with minor version bumps for all five touched public packages describing former entity names and automatic rename redirects.",
+    "rules": [
+      "1. Declare `minor` bumps in YAML frontmatter for `@backstage/catalog-model`, `@backstage/plugin-catalog-backend`, `@backstage/catalog-client`, `@backstage/plugin-catalog`, and `@backstage/plugin-techdocs`.",
+      "2. Write a clear adopter-facing summary explaining how to declare previous entity references with the `backstage.io/former-names` annotation and that the catalog entity page and TechDocs reader page now redirect from former entity references to the current entity and display a rename notice; do not mention internal implementation symbol names."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/catalog-rules-url-canonical-matching.md",
+      "lines": [1, 8],
+      "reason": "Match Backstage changeset markdown frontmatter and adopter-facing prose style."
+    },
+    "depends_on": ["U21"],
+    "covers": ["FR-13", "AC-9"],
+    "checks": ["prettier"]
+  }
+]

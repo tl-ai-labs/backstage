@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_NAMES,
+  DEFAULT_NAMESPACE,
+  Entity,
+} from '@backstage/catalog-model';
 import { performance } from 'node:perf_hooks';
 import { buildEntitySearch, mapToRows, traverse } from './buildEntitySearch';
 
@@ -340,6 +344,35 @@ describe('buildEntitySearch', () => {
       ).toThrow(
         `Entity has duplicate keys that vary only in casing, 'spec.owner', 'spec.lifecycle'`,
       );
+    });
+
+    it('indexes normalised same-kind former refs and skips cross-kind and self-references', () => {
+      const rows = buildEntitySearch('eid', {
+        apiVersion: 'a',
+        kind: 'Component',
+        metadata: {
+          name: 'n',
+          annotations: {
+            [ANNOTATION_FORMER_NAMES]: [
+              'old-name',
+              ' team-a/older ',
+              'component:other/older',
+              'OLD-NAME',
+              'group:old-group',
+              'component:default/n',
+              '',
+            ].join(','),
+          },
+        },
+      });
+      const formerRows = rows.filter(
+        r => r.key === `metadata.annotations.${ANNOTATION_FORMER_NAMES}`,
+      );
+      expect(formerRows.map(r => r.value)).toEqual([
+        'component:default/old-name',
+        'component:team-a/older',
+        'component:other/older',
+      ]);
     });
   });
 });

@@ -446,5 +446,69 @@ describe('<TechDocsReaderPage />', () => {
       expect(rendered.container.querySelector('article')).toBeInTheDocument();
       expect(mockNavigate).not.toHaveBeenCalled();
     });
+
+    it('redirects old TechDocs URL preserving sub-path and renders renamed notice when resolved via getEntityByFormerRef', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      catalogApiMock.getEntityByFormerRef = jest
+        .fn()
+        .mockResolvedValue(mockEntityMetadata);
+
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+          routeEntries: ['/docs/test-namespace/test/old-name/sub/path'],
+        },
+      );
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/docs/test-namespace/test/test-name/sub/path',
+        { replace: true },
+      );
+      expect(
+        await rendered.findByText(
+          'This entity has been renamed from test:test-namespace/old-name.',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it('renders not-found page when entity ref is neither a live entity nor a former name', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      catalogApiMock.getEntityByFormerRef = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      const notFoundError = new Error('Entity not found');
+      notFoundError.name = 'NotFoundError';
+      getEntityMetadata.mockRejectedValue(notFoundError);
+
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <TechDocsReaderPage
+            entityRef={{
+              name: 'unknown-name',
+              namespace: 'test-namespace',
+              kind: 'test',
+            }}
+          />
+        </Wrapper>,
+        {
+          mountedRoutes,
+          components: mockAppComponents,
+        },
+      );
+
+      expect(
+        await rendered.findByText('Custom not found page'),
+      ).toBeInTheDocument();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
   });
 });

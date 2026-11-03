@@ -174,6 +174,16 @@ steps and merging them into the final object which is what is visible from the
 catalog API. As the final entity itself gets updated, the stitcher makes sure
 that the search table gets refreshed accordingly as well.
 
+Stitching also normalizes any same-kind former entity references declared in the
+`backstage.io/former-names` annotation, and indexes them in the search table. This
+allows the catalog to resolve a former name to the renamed entity when a primary
+lookup misses, but only when exactly one entity of the same kind claims the name
+(with a source check only while the catalog still retains a record of the former
+entity). Direct entity lookups never consult these entries, so they are not
+slowed down. See the
+[well-known annotations](well-known-annotations.md#backstageioformer-names)
+documentation for the limits.
+
 :::note
 
 The search table mentioned here is not related to the core Search

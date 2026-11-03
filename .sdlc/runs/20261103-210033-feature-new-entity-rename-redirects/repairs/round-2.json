@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261103-210033-feature-new-entity-rename-redirects",
+    "artifact_path": "plugins/catalog/src/alpha/pages.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/alpha/pages.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Packet tp_tests_U32 ended no_content after 3 attempts (last: 'the answer changes lines outside its sites: new lines after 1288'). Earlier attempt failed `yarn test --watchAll=false plugins/catalog/src/alpha/pages.test.tsx`: '● Entity page › Entity Page Headers › redirects from a former entity URL and displays the renamed-from notice — TypeError: Cannot read properties of undefined (reading 'mockImplementation') at catalogApiMock.mockImplementation [as mock] (packages/frontend-test-utils/src/apis/createApiMock.ts:74:30) at Object.mock (alpha/pages.test.tsx:1049:26)' and the same error for '● ... renders not found when neither getEntityByRef nor getEntityByFormerRef resolves the entity' (pages.test.tsx:1085). catalogApiMock.mock({...}) only accepts the methods catalogApiMock declares (see plugins/catalog-react/src/testUtils/catalogApiMock.ts), and getEntityByFormerRef is not one of them. Add the two new test cases (old URL redirects to the new entity route and shows the renamed-from notice; an unknown ref still shows not found) without passing getEntityByFormerRef to catalogApiMock.mock: for example use catalogApiMock({ entities: [...] }), whose in-memory client resolves former names from the backstage.io/former-names annotation (packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts), or a plain object implementing the needed methods. Change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/alpha/pages.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/alpha/pages.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261103-210033-feature-new-entity-rename-redirects/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261103-210033-feature-new-entity-rename-redirects/briefs/U32.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-react/src/testUtils/catalogApiMock.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "yarn test --watchAll=false '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 300,
+      "max_retries": 2
+    }
+  }
+]

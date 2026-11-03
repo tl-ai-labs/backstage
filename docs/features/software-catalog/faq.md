@@ -68,3 +68,35 @@ Another example is software libraries. It's tempting to catalog every dependency
 And finally the example of APIs. This topic can sometimes be the most contentious. It would be unfortunate to have to create entities for every iteration of your API, and it would clobber search and ultimately be confusing.
 
 Especially for APIs, but also the other kinds, you can still end up wanting to make a new catalog entity when a new major version of that thing is released. At that point, in some cases, the new major version is almost like a completely new component, deployed in isolation from the old one, with completely updated contracts, maybe with different documentation etc. If so then sure, make a `kind: API`, `name: customerinfo2` for example. Then you make the choice that there will be two entities popping up in search results when looking for that string, and maybe that is a good thing in this instance.
+
+## What happens when I rename or move an entity?
+
+An entity is identified by its [entity reference](./references.md), made up of its kind, namespace and name. When you rename an entity, or move it to another namespace, its reference changes. Without any help, existing links to the old Catalog entity page or TechDocs page end up as 404 Not Found pages.
+
+To avoid that, add the [`backstage.io/former-names`](./well-known-annotations.md#backstageioformer-names) annotation to the entity under its new name. The value is a comma-separated list of the entity references that the entity was previously known by.
+
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: new-service
+  annotations:
+    backstage.io/former-names: old-service, legacy/old-service
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+```
+
+Each entry has the form `[<kind>:][<namespace>/]<name>`. A missing kind or namespace defaults to the kind and namespace of the entity that declares the annotation.
+
+When someone opens the Catalog entity page or the TechDocs page for a former name, and no entity currently exists at that reference, they are redirected to the page of the entity that now claims it. Any sub-path, such as a selected tab or a specific documentation page, is preserved, and a notice is shown that names the former entity reference.
+
+There are some limitations to be aware of:
+
+- Former names must have the same kind as the entity that declares them. An entity cannot claim the name of an entity of a different kind.
+- A live entity always wins. If an entity currently exists at a reference, that reference is never redirected, even if another entity lists it as a former name.
+- The same-source check (matching provenance such as location key or origin location) applies only while the catalog still retains a record of the former entity; with the default `catalog.orphanStrategy` (`'delete'`), that record is usually removed soon after a rename, after which any single entity of the same kind can claim the former name.
+- Contested names are not redirected. If more than one entity claims the same former name, the lookup results in not found rather than picking a winner by sort order, which also means a second entity that claims the same former name switches off a genuine redirect. Limits: provenance cannot be verified once the former entity's record is deleted, and a competing claim disables the redirect.
+- Permissions are enforced on the target entity. Users who are not allowed to read it get a not found response, which avoids revealing that it exists or what it is called now.
+- Stored relations and data in other plugins are not rewritten. Entities that still refer to the old name in `spec.owner`, `spec.system` or similar fields should be updated to use the new name.

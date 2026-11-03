@@ -41,6 +41,9 @@ import {
   useTheme,
 } from '@material-ui/core/styles';
 import { useExternalRedirect } from './useExternalRedirect';
+import Alert from '@material-ui/lab/Alert';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { techdocsTranslationRef } from '../../../translation';
 
 /* An explanation for the multiple ways of customizing the TechDocs reader page
 
@@ -197,8 +200,12 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
     [entityRef.kind, entityRef.name, entityRef.namespace],
   );
 
+  const { t } = useTranslationRef(techdocsTranslationRef);
+
   // Check for external TechDocs redirects and handle navigation
-  const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef);
+  const { shouldShowProgress, renamedFrom, resolvedEntityRef } =
+    useExternalRedirect(memoizedEntityRef);
+  const effectiveEntityRef = resolvedEntityRef ?? memoizedEntityRef;
 
   const page: ReactNode = useMemo(() => {
     if (children) {
@@ -229,7 +236,14 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
     return (
       <ThemeProvider theme={readerPageTheme}>
         <CookieAuthRefreshProvider pluginId="techdocs">
-          <TechDocsReaderPageProvider entityRef={memoizedEntityRef}>
+          <TechDocsReaderPageProvider entityRef={effectiveEntityRef}>
+            {renamedFrom && (
+              <Alert severity="info">
+                {t('redirectNotification.renamedFromMessage', {
+                  entityRef: renamedFrom,
+                })}
+              </Alert>
+            )}
             {(page as JSX.Element) || <TechDocsReaderLayout />}
           </TechDocsReaderPageProvider>
         </CookieAuthRefreshProvider>
@@ -241,15 +255,22 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
   return (
     <ThemeProvider theme={readerPageTheme}>
       <CookieAuthRefreshProvider pluginId="techdocs">
-        <TechDocsReaderPageProvider entityRef={memoizedEntityRef}>
+        <TechDocsReaderPageProvider entityRef={effectiveEntityRef}>
           {({ metadata, entityMetadata, onReady }) => (
             <StyledPage
               themeId="documentation"
               className="techdocs-reader-page"
             >
+              {renamedFrom && (
+                <Alert severity="info">
+                  {t('redirectNotification.renamedFromMessage', {
+                    entityRef: renamedFrom,
+                  })}
+                </Alert>
+              )}
               {children instanceof Function
                 ? children({
-                    entityRef: memoizedEntityRef,
+                    entityRef: effectiveEntityRef,
                     techdocsMetadataValue: metadata.value,
                     entityMetadataValue: entityMetadata.value,
                     onReady,

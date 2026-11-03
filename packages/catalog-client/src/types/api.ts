@@ -699,6 +699,20 @@ export interface CatalogApi {
   ): Promise<Entity | undefined>;
 
   /**
+   * Gets a single entity from the catalog by a former entity ref, as declared
+   * in the `backstage.io/former-names` annotation of the entity.
+   *
+   * @param entityRef - A complete former entity ref, either on string or compound form
+   * @param options - Additional options
+   * @returns The matching entity, or undefined if no readable entity uniquely
+   *          matches the former ref, or if a live entity occupies that ref
+   */
+  getEntityByFormerRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<Entity | undefined>;
+
+  /**
    * Removes a single entity from the catalog by entity UID.
    *
    * @param uid - An entity UID

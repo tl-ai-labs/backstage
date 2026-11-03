@@ -15,6 +15,7 @@
  */
 
 import { ComponentProps, ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import Alert from '@material-ui/lab/Alert';
 
@@ -79,6 +80,9 @@ export function EntityLayout(props: EntityLayoutProps) {
   } = props;
   const { kind } = useRouteRefParams(entityRouteRef);
   const { entity, loading, error } = useAsyncEntity();
+  const location = useLocation();
+  const renamedFrom = (location.state as { renamedFrom?: string } | null)
+    ?.renamedFrom;
 
   const visibleRoutes = filterEntityLayoutRoutes(routes, entity);
 
@@ -95,6 +99,12 @@ export function EntityLayout(props: EntityLayoutProps) {
       )}
 
       {loading && <Progress />}
+
+      {entity && renamedFrom && (
+        <Alert severity="info">
+          {t('entityPage.renamedFromMessage', { entityRef: renamedFrom })}
+        </Alert>
+      )}
 
       {entity && (
         <EntityTabs

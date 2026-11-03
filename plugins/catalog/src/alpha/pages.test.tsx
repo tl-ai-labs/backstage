@@ -1021,6 +1021,81 @@ describe('Entity page', () => {
       expect(await screen.findByText('Delayed successor')).toBeInTheDocument();
       expect(filter).toHaveBeenCalledWith(entityMock);
     });
+
+    it('redirects from a former entity URL and displays the renamed-from notice', async () => {
+      const renamedEntity: Entity = {
+        ...entityMock,
+        metadata: {
+          ...entityMock.metadata,
+          annotations: {
+            ...entityMock.metadata.annotations,
+            'backstage.io/former-names': 'old-artist-lookup',
+          },
+        },
+      };
+
+      const tester = createExtensionTester(
+        Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+      ).add(overviewEntityContent);
+
+      await renderInTestApp(tester.reactElement(), {
+        apis: [
+          catalogApiMock({ entities: [renamedEntity] }),
+          [starredEntitiesApiRef, mockStarredEntitiesApi],
+        ],
+        mountPath: '/catalog/:namespace/:kind/:name',
+        initialRouteEntries: ['/catalog/default/component/old-artist-lookup'],
+        config: {
+          app: { title: 'Custom app' },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountedRoutes: {
+          '/catalog': convertLegacyRouteRef(rootRouteRef),
+          '/catalog/:namespace/:kind/:name':
+            convertLegacyRouteRef(entityRouteRef),
+        },
+      });
+
+      expect(
+        await screen.findByText(
+          'This entity has been renamed from component:default/old-artist-lookup.',
+        ),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'artist-lookup' }),
+      ).toBeInTheDocument();
+    });
+
+    it('renders not found when neither getEntityByRef nor getEntityByFormerRef resolves the entity', async () => {
+      const tester = createExtensionTester(
+        Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+      ).add(overviewEntityContent);
+
+      await renderInTestApp(tester.reactElement(), {
+        apis: [
+          catalogApiMock({ entities: [entityMock] }),
+          [starredEntitiesApiRef, mockStarredEntitiesApi],
+        ],
+        mountPath: '/catalog/:namespace/:kind/:name',
+        initialRouteEntries: ['/catalog/default/component/unknown-entity'],
+        config: {
+          app: { title: 'Custom app' },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountedRoutes: {
+          '/catalog': convertLegacyRouteRef(rootRouteRef),
+          '/catalog/:namespace/:kind/:name':
+            convertLegacyRouteRef(entityRouteRef),
+        },
+      });
+
+      expect(
+        await screen.findByText(/There is no component with the requested/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/This entity has been renamed from/i),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe('Entity Page Context Menu', () => {

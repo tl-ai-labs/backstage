@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_NAMES,
+  DEFAULT_NAMESPACE,
+  Entity,
+  parseEntityRef,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { InputError } from '@backstage/errors';
 import { DbSearchRow } from '../../tables';
 import { NULL_SENTINEL } from './util';
@@ -30,6 +36,7 @@ const SPECIAL_KEYS = [
   'metadata.namespace',
   'metadata.uid',
   'metadata.etag',
+  `metadata.annotations.${ANNOTATION_FORMER_NAMES}`,
 ];
 
 // The maximum length allowed for search values. These columns are indexed, and
@@ -209,6 +216,37 @@ export function buildEntitySearch(
       key: `relations.${relation.type}`,
       value: relation.targetRef,
     });
+  }
+
+  // Index normalised same-kind former entity references
+  const formerNames = entity.metadata?.annotations?.[ANNOTATION_FORMER_NAMES];
+  if (typeof formerNames === 'string' && formerNames) {
+    const currentRef = stringifyEntityRef(entity);
+    const entityKind = entity.kind.toLocaleLowerCase('en-US');
+    for (const item of formerNames.split(',')) {
+      const trimmed = item.trim();
+      if (!trimmed) {
+        continue;
+      }
+      try {
+        const parsed = parseEntityRef(trimmed, {
+          defaultKind: entity.kind,
+          defaultNamespace: entity.metadata.namespace || DEFAULT_NAMESPACE,
+        });
+        if (parsed.kind.toLocaleLowerCase('en-US') !== entityKind) {
+          continue;
+        }
+        const normalizedRef = stringifyEntityRef(parsed);
+        if (normalizedRef !== currentRef) {
+          raw.push({
+            key: `metadata.annotations.${ANNOTATION_FORMER_NAMES}`,
+            value: normalizedRef,
+          });
+        }
+      } catch {
+        // ignore invalid refs that bypassed policy validation
+      }
+    }
   }
 
   // This validates that there are no keys that vary only in casing, such

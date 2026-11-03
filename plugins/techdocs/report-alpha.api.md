@@ -35,8 +35,8 @@ const _default: OverridableFrontendPlugin<
     root: RouteRef<undefined>;
     docRoot: RouteRef<{
       name: string;
-      kind: string;
       namespace: string;
+      kind: string;
     }>;
     entityContent: RouteRef<undefined>;
   },
@@ -530,25 +530,25 @@ export const techDocsSearchResultListItemExtension: OverridableExtensionDefiniti
 export const techdocsTranslationRef: TranslationRef<
   'techdocs',
   {
+    readonly 'error.couldNotLoad': 'Could not load available documentation.';
     readonly 'search.placeholder': 'Search {{entityTitle}} docs';
     readonly 'search.noResults': 'No results found';
-    readonly 'error.couldNotLoad': 'Could not load available documentation.';
-    readonly 'nav.title': 'Docs';
-    readonly 'table.columns.type': 'Type';
-    readonly 'table.columns.document': 'Document';
-    readonly 'table.columns.kind': 'Kind';
-    readonly 'table.columns.owner': 'Owner';
-    readonly 'table.body.emptyDataSourceMessage': 'No records to display';
-    readonly 'table.header.actions': 'Actions';
     readonly 'table.title.all': 'All';
-    readonly 'table.toolbar.searchPlaceholder': 'Filter';
+    readonly 'table.header.actions': 'Actions';
     readonly 'table.actions.addToFavorites': 'Add to favorites';
     readonly 'table.actions.removeFromFavorites': 'Remove from favorites';
     readonly 'table.actions.copyDocsUrl': 'Click to copy documentation link to clipboard';
+    readonly 'table.columns.type': 'Type';
+    readonly 'table.columns.kind': 'Kind';
+    readonly 'table.columns.document': 'Document';
+    readonly 'table.columns.owner': 'Owner';
+    readonly 'table.body.emptyDataSourceMessage': 'No records to display';
+    readonly 'table.toolbar.searchPlaceholder': 'Filter';
     readonly 'table.pagination.labelRowsSelect': 'rows';
-    readonly 'table.emptyState.title': 'No documents to show';
     readonly 'table.emptyState.description': 'Create your own document. Check out our Getting Started Information';
+    readonly 'table.emptyState.title': 'No documents to show';
     readonly 'table.emptyState.docsButton': 'DOCS';
+    readonly 'nav.title': 'Docs';
     readonly 'home.supportButton': 'Discover documentation in your ecosystem.';
     readonly 'aboutCard.viewTechdocs': 'View TechDocs';
     readonly 'buildLogs.title': 'Build Details';
@@ -561,6 +561,7 @@ export const techdocsTranslationRef: TranslationRef<
     readonly 'stateIndicator.contentStaleReady.refreshButton': 'Refresh';
     readonly 'stateIndicator.contentStaleError.message': 'Building a newer version of this documentation failed.';
     readonly 'redirectNotification.redirectNow': 'Redirect now';
+    readonly 'redirectNotification.renamedFromMessage': 'This entity has been renamed from {{entityRef}}.';
     readonly 'readerPageHeader.source': 'Source';
     readonly 'readerPageHeader.owner': 'Owner';
     readonly 'readerPageHeader.lifecycle': 'Lifecycle';

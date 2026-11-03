@@ -1,0 +1,87 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Every new .ts or .tsx source file must begin with the 2026 Apache-2.0 Backstage license header comment block.",
+      "Format code with Prettier (@backstage/cli/config/prettier: single quotes, trailing commas, 2-space indentation).",
+      "Use TypeScript strict typing; never use @ts-ignore or @ts-expect-error in production code.",
+      "Normalise entity references with parseEntityRef and stringifyEntityRef from @backstage/catalog-model using en-US lowercase for kind and namespace.",
+      "User-facing strings in @backstage/plugin-catalog and @backstage/plugin-techdocs must be defined in each plugin's translation ref and accessed via useTranslationRef.",
+      "Never hand-edit generated OpenAPI files (src/schema/openapi/generated/**) or API reports (report*.api.md); regenerate them via tooling steps."
+    ],
+    "decisions": [
+      {
+        "topic": "Former-names annotation constant and value format",
+        "choice": "Export ANNOTATION_FORMER_NAMES = 'backstage.io/former-names' from @backstage/catalog-model; value is a comma-separated list of entity refs where each trimmed entry defaults missing kind and namespace to the declaring entity's kind and namespace (or DEFAULT_NAMESPACE), must share the declaring entity's kind (case-insensitive), and is validated in FieldFormatEntityPolicy.",
+        "rejected": [
+          "Allowing cross-kind former-name claims (e.g. a Group or User claiming a retired Component's name)",
+          "YAML array in metadata.annotations (annotations in Backstage entity descriptors are string-to-string maps)",
+          "Separate spec.formerNames field (requires altering base Entity schema across all kinds instead of metadata annotations)"
+        ],
+        "reason": "Requiring same-kind refs in comma-separated string format matches Backstage annotation conventions while preventing cross-kind name hijacking."
+      },
+      {
+        "topic": "Legitimacy of former-name claims, conflict handling, and database query performance",
+        "choice": "(1) Legitimacy: a former-name claim for ref R by live entity E is legitimate only when (a) R has the same kind as E (and is not E's own current ref), (b) no live stitched entity exists at R in final_entities, and (c) whenever a former occupant row exists for R in refresh_state (such as an orphaned or not-yet-purged entity), E's provenance matches it on non-empty refresh_state.location_key, metadata.annotations['backstage.io/managed-by-origin-location'], or metadata.annotations['backstage.io/managed-by-location'] (in that precedence order; a claimant lacking the former occupant's provenance key is rejected). (2) Contested names: when two or more live entities in final_entities claim R, if all claimants share the same non-empty provenance key (location_key, origin-location, or managed-by-location) only if there is a single unique legitimate claimant does it resolve — whenever multiple claimants exist (whether from different sources or the same source), resolution refuses the ambiguous claim and returns { entity: undefined } (HTTP 404) rather than letting a newcomer win by sort order. (3) Database & migrations: no new table or Knex migration is needed because buildEntitySearch indexes legitimate same-kind former refs under key 'metadata.annotations.backstage.io/former-names' in the existing search(key, value) index and DefaultEntitiesCatalog.entityByFormerRef queries final_entities + refresh_state + search (LIMIT 2) only on a lookup miss, keeping primary entity lookups completely untouched.",
+        "rejected": [
+          "Allowing any entity from any source to claim any retired name and breaking multi-claimant ties by sorting on entity_ref ASC (lets a newly registered entity hijack another entity's old links if its ref sorts earlier)",
+          "Adding a new database table and Knex migration for former names",
+          "Modifying primary entity lookup queries (GET /entities/by-name or POST /entities/by-refs) to join former names on every lookup"
+        ],
+        "reason": "Enforcing same-kind + provenance matching against any retained refresh_state row and refusing ambiguous multi-claimant redirects (returning 404 when >1 claimant exists) prevents any newcomer from hijacking a retired or contested name by sort order, while reusing the indexed search(key, value) and refresh_state tables requires no migration and adds zero overhead to live lookups."
+      },
+      {
+        "topic": "Catalog backend route, permission enforcement, and CatalogClient method",
+        "choice": "Expose GET /entities/by-former-name/{kind}/{namespace}/{name} (operationId GetEntityByFormerName) in plugins/catalog-backend/src/schema/openapi.yaml and createRouter.ts, backed by EntitiesCatalog.entityByFormerRef; AuthorizedEntitiesCatalog.entityByFormerRef enforces catalogEntityReadPermission on the unique legitimate target entity and returns { entity: undefined } (HTTP 404) when denied; expose optional getEntityByFormerRef?(entityRef, options) on CatalogApi and implement it on CatalogClient and InMemoryCatalogClient.",
+        "rejected": [
+          "Returning 301/302 or 403 from GET /entities/by-name/:kind/:namespace/:name when a former name matches",
+          "Falling through to a secondary claimant when a claimant is denied by permissions or when claims conflict"
+        ],
+        "reason": "A dedicated endpoint keeps programmatic getEntityByRef calls exact, prevents leaking the existence or new name of an unauthorized rename target (returning 404), and making getEntityByFormerRef optional on the CatalogApi interface preserves backwards compatibility with partial test mocks while providing full support in CatalogClient and InMemoryCatalogClient."
+      },
+      {
+        "topic": "Frontend and TechDocs rename redirect and notice mechanics",
+        "choice": "Both @backstage/plugin-catalog (in useEntityFromUrl) and @backstage/plugin-techdocs (in useExternalRedirect + TechDocsReaderPage) resolve former names on the frontend by calling catalogApi.getEntityByFormerRef?.(entityRef) only when getEntityByRef returns undefined; on a hit, they replace-navigate to the target entity's route while preserving any sub-route/sub-path and display an info Alert banner naming the former entity reference.",
+        "rejected": [
+          "Resolving former names inside techdocs-backend metadata routes without redirecting the browser URL",
+          "Showing the rename banner when navigating directly to the entity's current URL"
+        ],
+        "reason": "Frontend resolution via catalogApi avoids duplicating catalog lookup logic in techdocs-backend, updates the browser URL to the canonical entity or docs route with sub-path preserved, and shows the rename notice only when arriving via a former name."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "yarn test --watchAll=false {path}",
+        "timeout_s": 300
+      },
+      {
+        "id": "docs-lint",
+        "run": "node ./scripts/check-docs-quality {path}",
+        "timeout_s": 60
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint"
+      },
+      {
+        "id": "api-reports",
+        "run": "yarn build:api-reports:only"
+      }
+    ]
+  },
+  "hashes": {}
+}

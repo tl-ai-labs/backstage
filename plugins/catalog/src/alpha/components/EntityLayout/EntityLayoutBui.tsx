@@ -16,7 +16,7 @@
 
 import { ComponentProps, ComponentType, ReactNode, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { Alert, Container } from '@backstage/ui';
 import {
   configApiRef,
@@ -106,6 +106,9 @@ function EntityLayoutContent(props: {
   const { kind } = useRouteRefParams(entityRouteRef);
   const { entity, loading, error } = useAsyncEntity();
   const { t } = useTranslationRef(catalogTranslationRef);
+  const location = useLocation();
+  const renamedFrom = (location.state as { renamedFrom?: string } | null)
+    ?.renamedFrom;
 
   let content: ReactNode;
   if (error) {
@@ -115,7 +118,19 @@ function EntityLayoutContent(props: {
       </Container>
     );
   } else if (entity) {
-    content = <Container>{props.content ?? <NotFoundErrorPage />}</Container>;
+    content = (
+      <Container>
+        {renamedFrom && (
+          <Alert
+            status="info"
+            title={t('entityPage.renamedFromMessage', {
+              entityRef: renamedFrom,
+            })}
+          />
+        )}
+        {props.content ?? <NotFoundErrorPage />}
+      </Container>
+    );
   } else if (!loading) {
     content = (
       <Container>

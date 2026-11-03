@@ -60,3 +60,11 @@ export const ANNOTATION_KUBERNETES_API_SERVER_CA =
  */
 export const ANNOTATION_KUBERNETES_AUTH_PROVIDER =
   'kubernetes.io/auth-provider';
+
+/**
+ * Annotation for declaring the entity references by which an entity was
+ * previously known. The value is a comma-separated list of entity references.
+ *
+ * @public
+ */
+export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names';
