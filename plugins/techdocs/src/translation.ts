@@ -49,6 +49,7 @@ export const techdocsTranslationRef = createTranslationRef({
     },
     redirectNotification: {
       redirectNow: 'Redirect now',
+      renamedFromMessage: 'This entity has been renamed from {{entityRef}}.',
     },
     search: {
       noResults: 'No results found',

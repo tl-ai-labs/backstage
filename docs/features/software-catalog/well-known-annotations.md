@@ -128,6 +128,57 @@ The value of this annotation informs of the path to this component's TechDocs wi
 In conjunction with [backstage.io/techdocs-entity](#backstageiotechdocs-entity) this allows for deep linking into the TechDocs of
 another entity, not just linking to the root of another entity's TechDocs.
 
+### backstage.io/former-names
+
+```yaml
+# Example:
+metadata:
+  name: new-service
+  annotations:
+    backstage.io/former-names: old-service, legacy/old-service
+```
+
+The value of this annotation is a comma-separated list of entity references by
+which the entity was previously known. Each entry is on the format
+`[<kind>:][<namespace>/]<name>`. A missing kind or namespace defaults to the
+kind and namespace of the entity that declares the annotation. Every entry must
+have the same kind as the declaring entity. In the example above, a `Component`
+in the `default` namespace claims the former references
+`component:default/old-service` and `component:legacy/old-service`.
+
+When a user opens the Catalog entity page or the TechDocs reader page for a
+reference that no longer exists, but that is claimed as a former name by exactly
+one entity, the browser is redirected to the page of that entity. Any sub-path
+is preserved, so for example a link to a tab of the old entity or to a page
+within its documentation ends up at the same place for the new entity. A notice
+is shown on the page that names the former entity reference. The notice is not
+shown when navigating directly to the current URL of the entity.
+
+The following limitations apply:
+
+- A live entity at a reference always takes precedence over any former-name
+  claim on that reference.
+- Former-name claims must share the same kind as the declaring entity. An entity
+  cannot claim the former name of an entity of another kind.
+- While the catalog still retains a record for the former entity, for example
+  an orphaned entity that has not yet been removed, the claiming entity must
+  have the same source location or origin provenance as that record, or the
+  claim is rejected. Because the default `catalog.orphanStrategy` (`'delete'`)
+  usually removes the old record soon after a rename, any single entity of the
+  same kind can claim the name once that record is gone.
+- If a former name is claimed by more than one entity, the claim is considered
+  contested and is not redirected, returning not found instead. A second
+  claimant therefore switches off a genuine redirect.
+- Note for adopters: once the old record is deleted, an uncontested former name
+  can be claimed by any single entity of the same kind, and adding a conflicting
+  claim disables an existing redirect.
+- Permissions on the target entity are enforced. Users who are not allowed to
+  read the target entity receive a not-found response, so that the existence and
+  new name of the entity are not revealed.
+- Redirects are resolved when pages are opened. Stored relations and references
+  in other plugins are not rewritten, and the regular lookup of an entity by its
+  reference remains exact.
+
 ### backstage.io/view-url, backstage.io/edit-url
 
 ```yaml

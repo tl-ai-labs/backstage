@@ -788,6 +788,20 @@ metadata:
 TechDocs supports using the [mkdocs-redirects](https://github.com/mkdocs/mkdocs-redirects/tree/master) plugin to create a redirect map for any TechDocs site. This allows broken links from renamed or moved pages in your site to be redirected to their specified replacement.
 TechDocs will notify the user that the page they are trying to access is no longer maintained. Then, they will be redirected. External site redirects are not supported. If an external redirect is provided, the user will instead be redirected to the index page of the documentation site.
 
+The `mkdocs-redirects` plugin only covers pages that move _within_ a documentation site. If an entire catalog entity is renamed, or moved to another namespace, old TechDocs URLs of the form `/docs/:namespace/:kind/:old-name/*` would otherwise stop working. To keep them working, add the [`backstage.io/former-names`](../software-catalog/well-known-annotations.md#backstageioformer-names) annotation to the renamed entity, listing the entity references it was previously known by. When a user opens a TechDocs URL that matches one of those former names and no entity currently exists at that reference, TechDocs redirects them to the TechDocs URL of the new entity, preserving the sub-path within the documentation site, and displays a notice that the entity has been renamed.
+
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: new-service
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/former-names: old-service, legacy/old-service
+```
+
+With this annotation, a link to `/docs/default/component/old-service/getting-started/` redirects to `/docs/default/component/new-service/getting-started/`. See the [well-known annotations](../software-catalog/well-known-annotations.md#backstageioformer-names) documentation for the rules and limitations that apply to former names.
+
 ## Create download links for static assets
 
 You may want to make files available for download by your users such as PDF

@@ -1,0 +1,567 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U30",
+      "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Test useEntityFromUrl former-name fallback, route redirect with sub-route preservation and renamedFrom state, and not-found handling.",
+      "rules": [
+        "1. Begin with the standard 2026 Apache-2.0 Backstage license header.",
+        "2. Render `CatalogEntityPage` inside `renderInTestApp` with `TestApiProvider` providing `catalogApiRef` and `errorApiRef`, mounting `entityRouteRef` at `/catalog/:namespace/:kind/:name` and rendering a child route via `<Routes><Route path=\"/catalog/:namespace/:kind/:name/*\" element={<CatalogEntityPage />}><Route path=\"*\" element={<Probe />} /></Route></Routes>` where `Probe` reads `useAsyncEntity()` and `useLocation()`.",
+        "3. Test that when `getEntityByRef` returns an existing entity, `getEntityByFormerRef` is not called and the route does not redirect.",
+        "4. Test that when `getEntityByRef` returns `undefined` for `/catalog/default/component/old-name/sub-tab` and `getEntityByFormerRef` resolves to `component:custom-ns/new-name`, the hook redirects (`replace: true`) to `/catalog/custom-ns/component/new-name/sub-tab` with `location.state.renamedFrom === 'component:default/old-name'` and provides the resolved entity.",
+        "5. Test that when both `getEntityByRef` and `getEntityByFormerRef` return `undefined`, `entity` remains `undefined` with `loading: false`."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "lines": [
+          1,
+          90
+        ],
+        "reason": "Match TestApiProvider, renderInTestApp, and router setup conventions in @backstage/plugin-catalog."
+      },
+      "uses": [
+        {
+          "path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.tsx",
+          "lines": [
+            1,
+            29
+          ],
+          "reason": "Mount CatalogEntityPage with useEntityFromUrl."
+        }
+      ],
+      "depends_on": [
+        "U10",
+        "U12",
+        "U14",
+        "U21"
+      ],
+      "covers": [
+        "FR-9",
+        "FR-10",
+        "NFR-4",
+        "AC-4",
+        "AC-6",
+        "AC-8"
+      ],
+      "tests": [
+        {
+          "name": "returns live entity directly without calling getEntityByFormerRef",
+          "given": "getEntityByRef resolves to a live entity at /catalog/default/component/my-entity",
+          "expect": "useEntityFromUrl provides the live entity and does not call getEntityByFormerRef"
+        },
+        {
+          "name": "redirects to the current entity route preserving sub-path and sets renamedFrom location state on a former-name hit",
+          "given": "getEntityByRef resolves to undefined for /catalog/default/component/old-name/ci-cd and getEntityByFormerRef resolves to component:custom-ns/new-name",
+          "expect": "the router navigates to /catalog/custom-ns/component/new-name/ci-cd with location.state.renamedFrom set to component:default/old-name"
+        },
+        {
+          "name": "resolves to undefined entity when both getEntityByRef and getEntityByFormerRef miss",
+          "given": "both getEntityByRef and getEntityByFormerRef resolve to undefined for /catalog/default/component/unknown",
+          "expect": "loading finishes with entity undefined so EntityLayout renders Entity not found"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "test"
+      ]
+    },
+    {
+      "id": "U31",
+      "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Test that legacy EntityLayout renders the renamed-from banner when redirected from a former entity name and still renders Entity not found for unknown refs.",
+      "rules": [
+        "1. Add a test inside `describe('EntityLayout', ...)` that navigates to `/catalog/default/mykind/old-entity` where a wrapper or `CatalogEntityPage` redirects to `/catalog/default/mykind/my-entity` with `state: { renamedFrom: 'mykind:default/old-entity' }` (or renders `EntityLayout` at a route entry carrying `state: { renamedFrom: 'mykind:default/old-entity' }`), asserting that `This entity has been renamed from mykind:default/old-entity.` is rendered in the document alongside the entity content."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 318,
+          "to": 318,
+          "first_line": "});",
+          "rule": "Add a test case verifying that `EntityLayout` renders the `This entity has been renamed from mykind:default/old-entity.` info alert when `location.state.renamedFrom` is present after a former-name redirect."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "lines": [
+          66,
+          147
+        ],
+        "reason": "Match existing EntityLayout renderInTestApp test cases."
+      },
+      "depends_on": [
+        "U13",
+        "U14",
+        "U15",
+        "U21"
+      ],
+      "covers": [
+        "FR-9",
+        "AC-4",
+        "AC-6"
+      ],
+      "tests": [
+        {
+          "name": "renders renamed-from notice when navigated from a former entity reference",
+          "given": "a route entry with location state { renamedFrom: 'mykind:default/old-entity' } rendering EntityLayout for my-entity",
+          "expect": "screen displays 'This entity has been renamed from mykind:default/old-entity.' and the entity page content"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "test"
+      ]
+    },
+    {
+      "id": "U32",
+      "path": "plugins/catalog/src/alpha/pages.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Test former-name redirect and rename notice on the alpha catalogEntityPage as well as Entity not found on unknown refs.",
+      "rules": [
+        "1. Inside `describe('Entity page', ...)` in `plugins/catalog/src/alpha/pages.test.tsx`, add test cases verifying: (a) when visiting `/catalog/default/component/old-artist-lookup` where `getEntityByRef` returns `undefined` for `old-artist-lookup` and `entityMock` for `artist-lookup`, and `getEntityByFormerRef` returns `entityMock` for `old-artist-lookup`, the page redirects to `artist-lookup` and renders `This entity has been renamed from component:default/old-artist-lookup.`; and (b) when both `getEntityByRef` and `getEntityByFormerRef` return `undefined`, the page renders the not-found error state."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 1024,
+          "to": 1024,
+          "first_line": "});",
+          "rule": "Add tests for redirecting from a former entity reference and displaying the rename notice banner on the alpha entity page, and rendering not-found when unknown."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "lines": [
+          864,
+          930
+        ],
+        "reason": "Match createExtensionTester and renderInTestApp setup in alpha/pages.test.tsx."
+      },
+      "depends_on": [
+        "U13",
+        "U14",
+        "U16",
+        "U17",
+        "U21"
+      ],
+      "covers": [
+        "FR-10",
+        "AC-4",
+        "AC-6"
+      ],
+      "tests": [
+        {
+          "name": "redirects from a former entity URL and displays the renamed-from notice",
+          "given": "initialRouteEntries ['/catalog/default/component/old-artist-lookup'] where getEntityByRef misses and getEntityByFormerRef resolves to entityMock",
+          "expect": "the alpha entity page redirects to artist-lookup and displays 'This entity has been renamed from component:default/old-artist-lookup.'"
+        },
+        {
+          "name": "renders not found when neither getEntityByRef nor getEntityByFormerRef resolves the entity",
+          "given": "initialRouteEntries ['/catalog/default/component/unknown-entity'] where both getEntityByRef and getEntityByFormerRef return undefined",
+          "expect": "the alpha entity page renders the not-found view without a rename notice"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "test"
+      ]
+    },
+    {
+      "id": "U33",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Test former-name resolution and sub-path preservation in useExternalRedirect.",
+      "rules": [
+        "1. Add `getEntityByFormerRef: jest.fn(),` to `mockCatalogApi` and mock `useParams` in the `'react-router-dom'` mock so tests can supply `params['*']`.",
+        "2. Add test cases verifying that when `getEntityByRef` returns `undefined` and `getEntityByFormerRef` resolves to a renamed entity, `useExternalRedirect` navigates with `{ replace: true }` to the target entity's TechDocs URL with any `*` sub-path preserved and returns `renamedFrom: 'component:default/old-component'` and `resolvedEntityRef`; and when both return `undefined`, it does not navigate and `renamedFrom` is `undefined`."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 26,
+          "to": 39,
+          "first_line": "jest.mock('react-router-dom', () => ({",
+          "last_line": "};",
+          "rule": "Allow mocking `useParams` in `'react-router-dom'` and include `getEntityByFormerRef: jest.fn()` on `mockCatalogApi`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 282,
+          "to": 282,
+          "first_line": "});",
+          "rule": "Add test cases for redirecting to the renamed entity's TechDocs route with sub-path preserved on a former-name hit, and not redirecting when unknown."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+        "lines": [
+          51,
+          134
+        ],
+        "reason": "Match renderHook and waitFor assertions in useExternalRedirect.test.tsx."
+      },
+      "depends_on": [
+        "U10",
+        "U19",
+        "U21"
+      ],
+      "covers": [
+        "FR-11",
+        "AC-5",
+        "AC-6"
+      ],
+      "tests": [
+        {
+          "name": "redirects to renamed entity TechDocs URL preserving sub-path when getEntityByRef misses and getEntityByFormerRef hits",
+          "given": "getEntityByRef resolves to undefined, getEntityByFormerRef resolves to component:default/new-component, and useParams returns { '*': 'sub/path' }",
+          "expect": "mockNavigate is called with '/docs/sub/path' and { replace: true } and result.current.renamedFrom is 'component:default/old-component'"
+        },
+        {
+          "name": "does not redirect when both getEntityByRef and getEntityByFormerRef return undefined",
+          "given": "both getEntityByRef and getEntityByFormerRef resolve to undefined",
+          "expect": "mockNavigate is not called and result.current.renamedFrom is undefined"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "test"
+      ]
+    },
+    {
+      "id": "U34",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Test TechDocsReaderPage former-name redirect with sub-path preserved, rename notice banner, and not-found state for unknown refs.",
+      "rules": [
+        "1. Add test cases inside `describe('external techdocs redirect', ...)` in `TechDocsReaderPage.test.tsx` verifying: (a) when `catalogApiMock.getEntityByRef` resolves to `undefined` for an old entity URL `/docs/test-namespace/test/old-name/sub/path` and `catalogApiMock.getEntityByFormerRef` resolves to `mockEntityMetadata`, `mockNavigate` is called with `/docs/test-namespace/test/test-name/sub/path` and `{ replace: true }`, and the page renders `This entity has been renamed from test:test-namespace/old-name.`; and (b) when both `getEntityByRef` and `getEntityByFormerRef` return `undefined` and `getEntityMetadata` rejects with a NotFoundError, the `Custom not found page` is rendered."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 449,
+          "to": 449,
+          "first_line": "});",
+          "rule": "Add tests verifying that TechDocsReaderPage redirects an old TechDocs URL with a sub-path to the new entity's TechDocs URL with the sub-path preserved and renders the rename notice, and renders the not-found page for unknown refs."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "lines": [
+          315,
+          449
+        ],
+        "reason": "Match existing external redirect and not-found tests in TechDocsReaderPage.test.tsx."
+      },
+      "depends_on": [
+        "U18",
+        "U19",
+        "U20",
+        "U21"
+      ],
+      "covers": [
+        "FR-11",
+        "AC-5",
+        "AC-6"
+      ],
+      "tests": [
+        {
+          "name": "redirects old TechDocs URL preserving sub-path and renders renamed notice when resolved via getEntityByFormerRef",
+          "given": "routeEntry '/docs/test-namespace/test/old-name/sub/path' where getEntityByRef returns undefined and getEntityByFormerRef resolves to mockEntityMetadata",
+          "expect": "mockNavigate is called with '/docs/test-namespace/test/test-name/sub/path' and { replace: true } and the page renders 'This entity has been renamed from test:test-namespace/old-name.'"
+        },
+        {
+          "name": "renders not-found page when entity ref is neither a live entity nor a former name",
+          "given": "getEntityByRef and getEntityByFormerRef both resolve to undefined and getEntityMetadata rejects",
+          "expect": "TechDocsReaderPage renders 'Custom not found page'"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "test"
+      ]
+    },
+    {
+      "id": "U35",
+      "path": "docs/features/software-catalog/well-known-annotations.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document the backstage.io/former-names annotation in well-known-annotations.md.",
+      "rules": [
+        "1. Add a `### backstage.io/former-names` section with a YAML example showing `backstage.io/former-names: old-service, legacy/old-service`.",
+        "2. Explain that the value is a comma-separated list of entity references (`[<kind>:][<namespace>/]<name>`, defaulting missing kind and namespace to the declaring entity's own kind and namespace, and requiring the same kind as the declaring entity) by which the entity was previously known.",
+        "3. Document the redirect behaviour on the Catalog entity page and TechDocs reader page (preserving sub-paths and showing a rename notice) and the limitations (a live entity at a reference always takes precedence over any former-name claim; former-name claims must share the same kind and, when a retained refresh-state record exists for the former name, the same source location/origin provenance; contested names claimed by more than one entity are rejected as not-found so no entity can hijack another's links; permissions on the target entity are enforced so unauthorized users receive not-found; stored relations and other plugins are not rewritten)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 131,
+          "to": 131,
+          "first_line": "### backstage.io/view-url, backstage.io/edit-url",
+          "rule": "Insert the `### backstage.io/former-names` documentation section with YAML example, redirect behavior, and legitimacy/conflict/permission limitations."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/well-known-annotations.md",
+        "lines": [
+          83,
+          135
+        ],
+        "reason": "Match heading, YAML example, and prose style in well-known-annotations.md."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-12",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "docs-lint"
+      ]
+    },
+    {
+      "id": "U36",
+      "path": "docs/features/software-catalog/references.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document former entity references and the backstage.io/former-names annotation in references.md.",
+      "rules": [
+        "1. Add a `## Former Entity References` section at the end of `docs/features/software-catalog/references.md` explaining how renamed or moved entities can declare their previous same-kind references using the `backstage.io/former-names` annotation, how omitted kind and namespace default to the declaring entity's kind and namespace, how Catalog and TechDocs routes redirect from former references on a lookup miss, and that live entities always take precedence, provenance is verified against any retained refresh-state record, contested claims with multiple claimants return not-found, and relations are not automatically rewritten."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 95,
+          "to": 95,
+          "first_line": "transported more easily since it's just a string.",
+          "rule": "Append a `## Former Entity References` section linking to `well-known-annotations.md#backstageioformer-names`."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/references.md",
+        "lines": [
+          24,
+          95
+        ],
+        "reason": "Match tone and markdown structure of references.md."
+      },
+      "depends_on": [
+        "U35"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "docs-lint"
+      ]
+    },
+    {
+      "id": "U37",
+      "path": "docs/features/software-catalog/life-of-an-entity.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document indexing of backstage.io/former-names in the search table during stitching in life-of-an-entity.md.",
+      "rules": [
+        "1. In the `## Stitching` section of `docs/features/software-catalog/life-of-an-entity.md`, note that stitching also normalizes and indexes any same-kind former entity references declared in `metadata.annotations['backstage.io/former-names']` into the search table so that former-name lookups can resolve uniquely claimed, provenance-verified renamed entities on a primary lookup miss without slowing down direct entity lookups."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 175,
+          "to": 175,
+          "first_line": "that the search table gets refreshed accordingly as well.",
+          "rule": "Add a paragraph explaining that the stitcher normalizes and indexes `backstage.io/former-names` annotation entries into the search table for former-name resolution on lookup misses."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/life-of-an-entity.md",
+        "lines": [
+          170,
+          214
+        ],
+        "reason": "Match the Stitching section prose style in life-of-an-entity.md."
+      },
+      "depends_on": [
+        "U35"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "docs-lint"
+      ]
+    },
+    {
+      "id": "U38",
+      "path": "docs/features/software-catalog/faq.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add an FAQ entry on renaming or moving entities using backstage.io/former-names in docs/features/software-catalog/faq.md.",
+      "rules": [
+        "1. Append a `## What happens when I rename or move an entity?` section at the end of `docs/features/software-catalog/faq.md` explaining how to add the `backstage.io/former-names` annotation so existing Catalog entity page and TechDocs links redirect to the new entity reference and display a rename notice, while calling out the limitations (former names must have the same kind, live entities always win over former names, provenance is checked against any retained refresh-state entry, contested claims by multiple entities are rejected as not-found rather than awarded by sort order, target entity read permissions are required, and stored relations are not rewritten)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "Especially for APIs, but also the other kinds, you can still end up wanting to make a new catalog entity when a new major version of that thing is released. At that point, in some cases, the new major version is almost like a completely new component, deployed in isolation from the old one, with completely updated contracts, maybe with different documentation etc. If so then sure, make a `kind: API`, `name: customerinfo2` for example. Then you make the choice that there will be two entities popping up in search results when looking for that string, and maybe that is a good thing in this instance.",
+          "rule": "Append `## What happens when I rename or move an entity?` explaining `backstage.io/former-names`, Catalog and TechDocs redirects, and legitimacy/conflict limitations."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/faq.md",
+        "lines": [
+          46,
+          70
+        ],
+        "reason": "Match FAQ question heading and answer style in docs/features/software-catalog/faq.md."
+      },
+      "depends_on": [
+        "U35"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "docs-lint"
+      ]
+    },
+    {
+      "id": "U39",
+      "path": "docs/features/techdocs/how-to-guides.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document TechDocs redirects for renamed entities using backstage.io/former-names in docs/features/techdocs/how-to-guides.md.",
+      "rules": [
+        "1. Under `## How to resolve broken links from moved or renamed pages in your documentation site`, add a subsection or paragraph explaining that when an entire catalog entity is renamed or moved to another namespace, adding the `backstage.io/former-names` annotation on the entity redirects old TechDocs URLs (`/docs/:namespace/:kind/:old-name/*`) to the new entity's TechDocs URL while preserving the sub-path within the documentation site and displaying a rename notice."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 789,
+          "to": 789,
+          "first_line": "TechDocs will notify the user that the page they are trying to access is no longer maintained. Then, they will be redirected. External site redirects are not supported. If an external redirect is provided, the user will instead be redirected to the index page of the documentation site.",
+          "rule": "Add a paragraph explaining how `backstage.io/former-names` redirects TechDocs URLs across entity renames while preserving the documentation sub-path and displaying a rename notice."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/techdocs/how-to-guides.md",
+        "lines": [
+          786,
+          800
+        ],
+        "reason": "Match the redirect section style in docs/features/techdocs/how-to-guides.md."
+      },
+      "depends_on": [
+        "U35"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "docs-lint"
+      ]
+    },
+    {
+      "id": "U40",
+      "path": "docs/features/techdocs/FAQ.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add an FAQ entry on TechDocs URLs when an entity is renamed using backstage.io/former-names in docs/features/techdocs/FAQ.md.",
+      "rules": [
+        "1. Add a bullet link in the `## Technology` TOC list and a matching `#### What happens when you navigate to a TechDocs URL for a renamed entity?` section right after the `backstage.io/techdocs-entity` question, explaining that if a single legitimate same-kind entity declares the previous reference in `backstage.io/former-names` (and no live entity exists at the old reference, no conflicting claimant contests it, and the user has permission to read the target entity), TechDocs redirects `docs/{namespace}/{kind}/{old-name}/{sub-path}` to the new entity's TechDocs route with the sub-path preserved and shows a rename notice."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 53,
+          "to": 53,
+          "first_line": "If you navigate to a TechDocs URL in the format `docs/{namespace}/{kind}/{name}` for an entity that has the `backstage.io/techdocs-entity` annotation (instead of the `backstage.io/techdocs-ref` annotation), then Backstage will redirect to the TechDocs page of the entity referenced in the value of that annotation.",
+          "rule": "Insert `#### What happens when you navigate to a TechDocs URL for a renamed entity?` explaining the `backstage.io/former-names` redirect, sub-path preservation, rename notice, and live-entity/conflict/permission rules."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/techdocs/FAQ.md",
+        "lines": [
+          40,
+          66
+        ],
+        "reason": "Match the question/answer format in docs/features/techdocs/FAQ.md."
+      },
+      "depends_on": [
+        "U35"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-10"
+      ],
+      "checks": [
+        "prettier",
+        "docs-lint"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx": "bb1ef35e94081752d6ace6bc88ff87bb78beebe4581028a7b7a560f82cdf93b3",
+    "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.tsx": "32b922f01cb29f431a412b03a5cc203ecdf4d276b0e969ecfeb16c5f8ac721b9",
+    "plugins/catalog/src/alpha/pages.test.tsx": "6d445a718716433ee53ae35b022399767ca7196cc7b2174e22af7edb7e2c9419",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx": "5f2227eec2ee7d7263c723bc1a7d43773b186553a951750d810f08b02646da4f",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx": "65e6ceb6441168ab8e28c589e9cfb50a12d70d4463134adf32c8250c53fa7e0d",
+    "docs/features/software-catalog/well-known-annotations.md": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056",
+    "docs/features/software-catalog/references.md": "63bca613bfc4cf9aa6be3c036f7978802a15717d77057918bd03a3df37674ad5",
+    "docs/features/software-catalog/life-of-an-entity.md": "0ce248b2e9e31130a38607f032c8b5f89a6bcabe4c8dc2b3824d65b0aa6128af",
+    "docs/features/software-catalog/faq.md": "3bd0f5a105049aff84aadd0a96f872e63f3baca6f12b3361f6c4cb1508973db5",
+    "docs/features/techdocs/how-to-guides.md": "0d19d25e8fc067048fc14408052e29d41c0c6a6411286c605caa647ece44ce33",
+    "docs/features/techdocs/FAQ.md": "3f0495de5fb9b2fa6def134d75ac5738834757787e62bf4c011393138d925b52"
+  }
+}

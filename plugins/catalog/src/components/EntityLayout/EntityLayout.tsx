@@ -329,6 +329,8 @@ export const EntityLayout = (props: EntityLayoutProps) => {
 
   const selectedInspectTab = searchParams.get('inspect');
   const showInspectTab = typeof selectedInspectTab === 'string';
+  const renamedFrom = (location.state as { renamedFrom?: string } | null)
+    ?.renamedFrom;
 
   return (
     <Page themeId={entity?.spec?.type?.toString() ?? 'home'}>
@@ -374,6 +376,12 @@ export const EntityLayout = (props: EntityLayoutProps) => {
       </Header>
 
       {loading && <Progress />}
+
+      {entity && renamedFrom && (
+        <Alert severity="info">
+          {t('entityPage.renamedFromMessage', { entityRef: renamedFrom })}
+        </Alert>
+      )}
 
       {entity && <RoutedTabs routes={routes} />}
 

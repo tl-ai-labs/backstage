@@ -36,6 +36,7 @@ describe('AuthorizedEntitiesCatalog', () => {
     refresh: jest.fn(),
     listAncestors: jest.fn(),
     queryEntities: jest.fn(),
+    entityByFormerRef: jest.fn(),
   };
   const fakePermissionApi = {
     authorize: jest.fn(),
@@ -680,6 +681,68 @@ describe('AuthorizedEntitiesCatalog', () => {
         facets: ['a'],
         credentials: mockCredentials.none(),
       });
+    });
+  });
+
+  describe('entityByFormerRef', () => {
+    it('returns undefined entity on DENY without calling underlying catalog', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog();
+
+      await expect(
+        catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        }),
+      ).resolves.toEqual({ entity: undefined });
+
+      expect(fakeCatalog.entityByFormerRef).not.toHaveBeenCalled();
+    });
+
+    it('passes permission filter to underlying catalog on CONDITIONAL', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        {
+          result: AuthorizeResult.CONDITIONAL,
+          conditions: { rule: 'IS_ENTITY_KIND', params: { kinds: ['b'] } },
+        },
+      ]);
+      const catalog = createCatalog(isEntityKind);
+
+      await catalog.entityByFormerRef({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(fakeCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+        filter: { kind: 'b' },
+      });
+    });
+
+    it('delegates to underlying catalog on ALLOW', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.ALLOW },
+      ]);
+      const entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: { name: 'new-name' },
+      };
+      fakeCatalog.entityByFormerRef.mockResolvedValue({ entity });
+      const catalog = createCatalog();
+      const request = {
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+      };
+
+      await expect(catalog.entityByFormerRef(request)).resolves.toEqual({
+        entity,
+      });
+
+      expect(fakeCatalog.entityByFormerRef).toHaveBeenCalledWith(request);
     });
   });
 });

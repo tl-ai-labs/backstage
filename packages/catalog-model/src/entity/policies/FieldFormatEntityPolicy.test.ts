@@ -15,6 +15,7 @@
  */
 
 import yaml from 'yaml';
+import { ANNOTATION_FORMER_NAMES } from '../constants';
 import { FieldFormatEntityPolicy } from './FieldFormatEntityPolicy';
 
 describe('FieldFormatEntityPolicy', () => {
@@ -211,5 +212,36 @@ describe('FieldFormatEntityPolicy', () => {
       { url: 'http://foo', icon: 123 },
     ];
     await expect(policy.enforce(data)).rejects.toThrow(/links.1.icon.*"123"/i);
+  });
+
+  it.each([
+    ['old-name'],
+    ['other-ns/old-name'],
+    ['component:other-ns/old-name'],
+    ['Component:the-namespace/old-name'],
+    ['old-a,old-b'],
+    ['old-a, other-ns/old-b , component:default/old-c'],
+  ])('accepts valid same-kind former names %s', async value => {
+    data.metadata.annotations[ANNOTATION_FORMER_NAMES] = value;
+    await expect(policy.enforce(data)).resolves.toBe(data);
+  });
+
+  it.each([
+    [''],
+    ['   '],
+    ['old-a,'],
+    [',old-a'],
+    ['old-a,,old-b'],
+    ['old-a, ,old-b'],
+    ['api:default/old'],
+    ['old-a,group:default/old-b'],
+    ['a#b:default/old'],
+    ['bad#ns/old'],
+    ['component:default/a#b'],
+    ['other-ns/a#b'],
+    ['a#b'],
+  ])('rejects invalid or cross-kind former names %j', async value => {
+    data.metadata.annotations[ANNOTATION_FORMER_NAMES] = value;
+    await expect(policy.enforce(data)).rejects.toThrow(/former-names/i);
   });
 });

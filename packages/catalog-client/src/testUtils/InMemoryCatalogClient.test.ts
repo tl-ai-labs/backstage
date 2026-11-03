@@ -16,7 +16,7 @@
 
 import { CATALOG_FILTER_EXISTS } from '../types';
 import { InMemoryCatalogClient } from './InMemoryCatalogClient';
-import { Entity } from '@backstage/catalog-model';
+import { ANNOTATION_FORMER_NAMES, Entity } from '@backstage/catalog-model';
 import { FilterPredicate } from '@backstage/filter-predicates';
 
 const entity1: Entity = {
@@ -886,6 +886,62 @@ describe('InMemoryCatalogClient', () => {
       const client = new InMemoryCatalogClient({ entities });
       await expect(
         client.getEntityByRef('customkind:missing/missing'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('getEntityByFormerRef', () => {
+    const renamed: Entity = {
+      apiVersion: 'v1',
+      kind: 'CustomKind',
+      metadata: {
+        namespace: 'default',
+        name: 'new-name',
+        uid: 'u-renamed',
+        annotations: {
+          [ANNOTATION_FORMER_NAMES]: 'old-name',
+        },
+      },
+    };
+
+    it('resolves entity by former ref and returns undefined when missing', async () => {
+      const client = new InMemoryCatalogClient({ entities: [renamed] });
+      await expect(
+        client.getEntityByFormerRef('customkind:default/old-name'),
+      ).resolves.toEqual(renamed);
+      await expect(
+        client.getEntityByFormerRef('customkind:default/unknown'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when a live entity occupies the former ref', async () => {
+      const live: Entity = {
+        apiVersion: 'v1',
+        kind: 'CustomKind',
+        metadata: { namespace: 'default', name: 'old-name', uid: 'u-live' },
+      };
+      const client = new InMemoryCatalogClient({ entities: [renamed, live] });
+      await expect(
+        client.getEntityByFormerRef('customkind:default/old-name'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when multiple entities claim the same former name', async () => {
+      const other: Entity = {
+        apiVersion: 'v1',
+        kind: 'CustomKind',
+        metadata: {
+          namespace: 'default',
+          name: 'other-name',
+          uid: 'u-other',
+          annotations: {
+            [ANNOTATION_FORMER_NAMES]: 'old-name',
+          },
+        },
+      };
+      const client = new InMemoryCatalogClient({ entities: [renamed, other] });
+      await expect(
+        client.getEntityByFormerRef('customkind:default/old-name'),
       ).resolves.toBeUndefined();
     });
   });

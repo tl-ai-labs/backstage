@@ -146,6 +146,35 @@ export interface EntityFacetsResponse {
   facets: Record<string, Array<{ value: string; count: number }>>;
 }
 
+/**
+ * The request shape for {@link EntitiesCatalog.entityByFormerRef}.
+ */
+export interface EntityByFormerRefRequest {
+  /**
+   * The entity ref that is expected to be a former name of a live entity.
+   */
+  entityRef: string;
+  /**
+   * Filters to apply in the selection of the entity.
+   */
+  filter?: FilterPredicate;
+  /**
+   * The credentials that authorizes the action.
+   */
+  credentials: BackstageCredentials;
+}
+
+/**
+ * The response shape for {@link EntitiesCatalog.entityByFormerRef}.
+ */
+export interface EntityByFormerRefResponse {
+  /**
+   * The unique legitimate entity that claims the former ref, or undefined if
+   * there is none or the claim is ambiguous.
+   */
+  entity: Entity | undefined;
+}
+
 export interface EntitiesCatalog {
   /**
    * Fetch entities.
@@ -193,6 +222,16 @@ export interface EntitiesCatalog {
    * @param request - Request options
    */
   facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;
+
+  /**
+   * Resolves an entity ref that has been retired, by finding the unique live
+   * entity that legitimately claims it as a former name.
+   *
+   * @param request - Request options
+   */
+  entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntityByFormerRefResponse>;
 }
 
 /**

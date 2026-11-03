@@ -19,7 +19,13 @@ import {
   mockCredentials,
   mockServices,
 } from '@backstage/backend-test-utils';
-import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_NAMES,
+  ANNOTATION_LOCATION,
+  ANNOTATION_ORIGIN_LOCATION,
+  Entity,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { Knex } from 'knex';
 import { randomUUID as uuid } from 'node:crypto';
 import {
@@ -2802,6 +2808,245 @@ describe.each(databases.eachSupportedId())(
             'spec.type': [{ value: 'service', count: 1 }],
           },
         });
+      });
+    });
+
+    describe('entityByFormerRef', () => {
+      function component(
+        name: string,
+        annotations?: Record<string, string>,
+      ): Entity {
+        return {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: { name, ...(annotations && { annotations }) },
+          spec: {},
+        };
+      }
+
+      function createCatalog() {
+        return new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+      }
+
+      async function setLocationKey(id: string, locationKey: string) {
+        await knex('refresh_state')
+          .where({ entity_id: id })
+          .update({ location_key: locationKey });
+      }
+
+      async function addFormerOccupant(entity: Entity, locationKey?: string) {
+        await knex<DbRefreshStateRow>('refresh_state').insert({
+          entity_id: uuid(),
+          entity_ref: stringifyEntityRef(entity),
+          unprocessed_entity: JSON.stringify(entity),
+          errors: '[]',
+          next_update_at: '2031-01-01 23:00:00',
+          last_discovery_at: '2021-04-01 13:37:00',
+          ...(locationKey && { location_key: locationKey }),
+        });
+      }
+
+      it('resolves single and multiple former names with default kind and namespace', async () => {
+        await createDatabase();
+        await addEntity(
+          component('current', {
+            [ANNOTATION_FORMER_NAMES]:
+              'old-short, component:default/old-full ,Component:other/old-ns',
+          }),
+          [],
+        );
+        const catalog = createCatalog();
+
+        for (const ref of [
+          'component:default/old-short',
+          'component:default/old-full',
+          'component:other/old-ns',
+        ]) {
+          const res = await catalog.entityByFormerRef({
+            entityRef: ref,
+            credentials: mockCredentials.none(),
+          });
+          expect(res.entity && stringifyEntityRef(res.entity)).toBe(
+            'component:default/current',
+          );
+        }
+
+        await expect(
+          catalog.entityByFormerRef({
+            entityRef: 'component:default/unknown',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entity: undefined });
+      });
+
+      it('never hijacks a live entity that occupies the former ref', async () => {
+        await createDatabase();
+        await addEntity(component('a'), []);
+        await addEntity(
+          component('b', { [ANNOTATION_FORMER_NAMES]: 'component:default/a' }),
+          [],
+        );
+        const catalog = createCatalog();
+
+        await expect(
+          catalog.entityByFormerRef({
+            entityRef: 'component:default/a',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entity: undefined });
+
+        const batch = await catalog.entitiesBatch({
+          entityRefs: ['component:default/a'],
+          credentials: mockCredentials.none(),
+        });
+        const items = entitiesResponseToObjects(batch.items);
+        expect(items[0] && stringifyEntityRef(items[0])).toBe(
+          'component:default/a',
+        );
+      });
+
+      it('verifies location_key provenance of a retained former occupant', async () => {
+        await createDatabase();
+        await addFormerOccupant(component('legacy'), 'L1');
+        const hijackerId = await addEntity(
+          component('hijacker', {
+            [ANNOTATION_FORMER_NAMES]: 'component:default/legacy',
+          }),
+          [],
+        );
+        await setLocationKey(hijackerId, 'L2');
+        const catalog = createCatalog();
+        const request = {
+          entityRef: 'component:default/legacy',
+          credentials: mockCredentials.none(),
+        };
+
+        await expect(catalog.entityByFormerRef(request)).resolves.toEqual({
+          entity: undefined,
+        });
+
+        await knex('final_entities').where({ entity_id: hijackerId }).delete();
+        await knex('search').where({ entity_id: hijackerId }).delete();
+        await knex('refresh_state').where({ entity_id: hijackerId }).delete();
+
+        const legitId = await addEntity(
+          component('renamed', {
+            [ANNOTATION_FORMER_NAMES]: 'component:default/legacy',
+          }),
+          [],
+        );
+        await setLocationKey(legitId, 'L1');
+
+        const res = await catalog.entityByFormerRef(request);
+        expect(res.entity && stringifyEntityRef(res.entity)).toBe(
+          'component:default/renamed',
+        );
+      });
+
+      it('verifies origin and managed-by location provenance of a retained former occupant', async () => {
+        await createDatabase();
+        await addFormerOccupant(
+          component('legacy', {
+            [ANNOTATION_ORIGIN_LOCATION]: 'url:https://example.com/l1.yaml',
+            [ANNOTATION_LOCATION]: 'url:https://example.com/l1.yaml',
+          }),
+        );
+        await addEntity(
+          component('hijacker', {
+            [ANNOTATION_FORMER_NAMES]: 'component:default/legacy',
+            [ANNOTATION_ORIGIN_LOCATION]: 'url:https://example.com/l2.yaml',
+            [ANNOTATION_LOCATION]: 'url:https://example.com/l2.yaml',
+          }),
+          [],
+        );
+        const catalog = createCatalog();
+        const request = {
+          entityRef: 'component:default/legacy',
+          credentials: mockCredentials.none(),
+        };
+
+        await expect(catalog.entityByFormerRef(request)).resolves.toEqual({
+          entity: undefined,
+        });
+
+        await knex('final_entities')
+          .where({ entity_ref: 'component:default/hijacker' })
+          .delete();
+        await knex('search')
+          .whereIn(
+            'entity_id',
+            knex('refresh_state')
+              .select('entity_id')
+              .where({ entity_ref: 'component:default/hijacker' }),
+          )
+          .delete();
+        await knex('refresh_state')
+          .where({ entity_ref: 'component:default/hijacker' })
+          .delete();
+
+        await addEntity(
+          component('renamed', {
+            [ANNOTATION_FORMER_NAMES]: 'component:default/legacy',
+            [ANNOTATION_ORIGIN_LOCATION]: 'url:https://example.com/l1.yaml',
+            [ANNOTATION_LOCATION]: 'url:https://example.com/l1.yaml',
+          }),
+          [],
+        );
+
+        const res = await catalog.entityByFormerRef(request);
+        expect(res.entity && stringifyEntityRef(res.entity)).toBe(
+          'component:default/renamed',
+        );
+      });
+
+      it('refuses contested former names deterministically', async () => {
+        await createDatabase();
+        const annotations = {
+          [ANNOTATION_FORMER_NAMES]: 'component:default/legacy',
+        };
+        await addEntity(component('zebra', annotations), []);
+        await addEntity(component('alpha', annotations), []);
+        const catalog = createCatalog();
+
+        for (let i = 0; i < 2; i++) {
+          await expect(
+            catalog.entityByFormerRef({
+              entityRef: 'component:default/legacy',
+              credentials: mockCredentials.none(),
+            }),
+          ).resolves.toEqual({ entity: undefined });
+        }
+      });
+
+      it('returns undefined when the target entity does not match the permission filter', async () => {
+        await createDatabase();
+        await addEntity(
+          component('alpha', {
+            [ANNOTATION_FORMER_NAMES]: 'component:default/legacy',
+          }),
+          [],
+        );
+        const catalog = createCatalog();
+
+        await expect(
+          catalog.entityByFormerRef({
+            entityRef: 'component:default/legacy',
+            filter: { 'metadata.name': 'something-else' },
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entity: undefined });
+
+        const allowed = await catalog.entityByFormerRef({
+          entityRef: 'component:default/legacy',
+          filter: { 'metadata.name': 'alpha' },
+          credentials: mockCredentials.none(),
+        });
+        expect(allowed.entity && stringifyEntityRef(allowed.entity)).toBe(
+          'component:default/alpha',
+        );
       });
     });
   },

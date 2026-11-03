@@ -315,6 +315,46 @@ describe('EntityLayout', () => {
     expect(linkParent).toBeInTheDocument();
     expect(linkParent?.tagName).toBe('P');
   });
+
+  it('renders renamed-from notice when navigated from a former entity reference', async () => {
+    const FormerNameRedirect = () => {
+      const navigate = useNavigate();
+      useEffect(() => {
+        navigate('/', {
+          replace: true,
+          state: { renamedFrom: 'mykind:default/old-entity' },
+        });
+      }, [navigate]);
+      return null;
+    };
+
+    await renderInTestApp(
+      <ApiProvider apis={apis}>
+        <FormerNameRedirect />
+        <EntityProvider entity={mockEntity}>
+          <EntityLayout>
+            <EntityLayout.Route path="/" title="tabbed-test-title">
+              <div>tabbed-test-content</div>
+            </EntityLayout.Route>
+          </EntityLayout>
+        </EntityProvider>
+      </ApiProvider>,
+      {
+        mountedRoutes: {
+          '/catalog/:namespace/:kind/:name': entityRouteRef,
+          '/catalog': rootRouteRef,
+        },
+      },
+    );
+
+    expect(
+      await screen.findByText(
+        'This entity has been renamed from mykind:default/old-entity.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('my-entity')).toBeInTheDocument();
+    expect(screen.getByText('tabbed-test-content')).toBeInTheDocument();
+  });
 });
 
 describe('EntityLayout - CleanUpAfterRemoval', () => {

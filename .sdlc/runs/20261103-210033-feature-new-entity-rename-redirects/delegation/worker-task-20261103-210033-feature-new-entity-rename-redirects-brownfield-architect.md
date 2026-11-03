@@ -1,0 +1,9 @@
+Changes asked for this step:
+
+Gate 2 was answered "revise". The person's comments, verbatim:
+
+"Any entity can claim any retired entity's name, regardless of its kind or where it comes from, and when several entities claim the same name the one whose ref sorts first wins. So a newly registered entity can take over another entity's old links and bookmarks, which the brief says must not happen ("without letting one entity hijack another's name, and handle conflicts")."
+
+All five sections (header.json, units-001 to units-004) are currently accepted. Revise the spec so a former-name claim must be proven legitimate, not merely declared, and a contested name is handled without letting a newcomer win by sort order. State in the header's decisions: (1) what proves a claim is legitimate (for example, same kind plus same source location/managed-by origin as the entity that last held the name, or the same entity_id/uid lineage, or same owner); (2) what happens on a contested name (for example, no redirect / not found when more than one legitimate claimant exists, or the earliest-established claim wins and later claimants are ignored); (3) whether a new table or migration is now needed, with the catalog DB performance guidance applied if so (live lookups by ref must stay as fast as today). Edit only the decisions and the units these changes affect (the stitcher/search indexing, DefaultEntitiesCatalog, any migration, the backend tests for conflicts and hijack attempts, and docs that describe the rule); keep every other unit as it is. Recheck each changed section with plan-lint --section, then return. Keep this short: do not re-read files you already read, since the call is cut off after 30 minutes without a reply.
+
+Edit the pieces you handed in and hand each changed one in again.

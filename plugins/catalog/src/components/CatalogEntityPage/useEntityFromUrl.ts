@@ -15,6 +15,10 @@
  */
 
 import {
+  DEFAULT_NAMESPACE,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
+import {
   errorApiRef,
   useApi,
   useRouteRefParams,
@@ -25,12 +29,14 @@ import {
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useAsyncRetry from 'react-use/esm/useAsyncRetry';
 
 export const useEntityFromUrl = (): EntityLoadingStatus => {
   const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
   const errorApi = useApi(errorApiRef);
   const catalogApi = useApi(catalogApiRef);
 
@@ -39,10 +45,54 @@ export const useEntityFromUrl = (): EntityLoadingStatus => {
     error,
     loading,
     retry: refresh,
-  } = useAsyncRetry(
-    () => catalogApi.getEntityByRef({ kind, namespace, name }),
-    [catalogApi, kind, namespace, name],
-  );
+  } = useAsyncRetry(async () => {
+    const existing = await catalogApi.getEntityByRef({ kind, namespace, name });
+    if (existing) {
+      return existing;
+    }
+    if (!name) {
+      return undefined;
+    }
+
+    const formerTarget = await catalogApi.getEntityByFormerRef?.({
+      kind,
+      namespace,
+      name,
+    });
+    if (!formerTarget) {
+      return undefined;
+    }
+
+    const targetKind = formerTarget.kind.toLocaleLowerCase('en-US');
+    const targetNamespace = (
+      formerTarget.metadata.namespace ?? DEFAULT_NAMESPACE
+    ).toLocaleLowerCase('en-US');
+    const targetName = formerTarget.metadata.name;
+    const subPath = params['*'] ?? '';
+    const currentSuffix = `/${namespace}/${kind}/${name}${
+      subPath ? `/${subPath}` : ''
+    }`;
+    const mountPrefix = location.pathname.endsWith(currentSuffix)
+      ? location.pathname.slice(
+          0,
+          location.pathname.length - currentSuffix.length,
+        )
+      : '/catalog';
+    const targetPath = `${mountPrefix}/${targetNamespace}/${targetKind}/${targetName}${
+      subPath ? `/${subPath}` : ''
+    }${location.search}${location.hash}`;
+
+    navigate(targetPath, {
+      replace: true,
+      state: {
+        ...(typeof location.state === 'object' && location.state !== null
+          ? location.state
+          : {}),
+        renamedFrom: stringifyEntityRef({ kind, namespace, name }),
+      },
+    });
+    return formerTarget;
+  }, [catalogApi, kind, namespace, name]);
 
   useEffect(() => {
     if (!name) {

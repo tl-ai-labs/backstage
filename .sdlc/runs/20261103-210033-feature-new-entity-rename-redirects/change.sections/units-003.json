@@ -1,0 +1,385 @@
+[
+  {
+    "id": "U23",
+    "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test FieldFormatEntityPolicy validation of metadata.annotations['backstage.io/former-names'], including same-kind requirement.",
+    "rules": [
+      "1. Import `ANNOTATION_FORMER_NAMES` from `../constants`.",
+      "2. Add test cases verifying that `FieldFormatEntityPolicy` accepts valid single and comma-separated former entity refs of the same kind (short name, namespace/name, and matching kind:namespace/name) and rejects empty annotation strings, empty comma-separated entries, cross-kind entries (e.g. a Component claiming `api:default/old`), and entries with invalid kind, namespace, or name."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 18,
+        "to": 18,
+        "first_line": "import { FieldFormatEntityPolicy } from './FieldFormatEntityPolicy';",
+        "rule": "Import `ANNOTATION_FORMER_NAMES` from `../constants` alongside `FieldFormatEntityPolicy`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 215,
+        "to": 215,
+        "first_line": "});",
+        "rule": "Add test cases for valid same-kind and invalid or cross-kind `ANNOTATION_FORMER_NAMES` values."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts",
+      "lines": [97, 215],
+      "reason": "Match existing FieldFormatEntityPolicy test style."
+    },
+    "depends_on": ["U01", "U02", "U21"],
+    "covers": ["FR-1", "FR-2", "FR-4"],
+    "tests": [
+      {
+        "name": "accepts valid same-kind backstage.io/former-names values",
+        "given": "an entity with metadata.annotations[ANNOTATION_FORMER_NAMES] containing single and comma-separated refs in short, namespace/name, and same-kind kind:namespace/name forms",
+        "expect": "policy.enforce(data) resolves to data"
+      },
+      {
+        "name": "rejects invalid or cross-kind backstage.io/former-names values",
+        "given": "an entity with metadata.annotations[ANNOTATION_FORMER_NAMES] containing an empty string, trailing comma, cross-kind ref, or invalid entity ref component",
+        "expect": "policy.enforce(data) rejects with an error referencing backstage.io/former-names"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U24",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test indexing of backstage.io/former-names in buildEntitySearch, including skipping cross-kind and self-referencing claims.",
+    "rules": [
+      "1. Import `ANNOTATION_FORMER_NAMES` from `@backstage/catalog-model`.",
+      "2. Add test cases under `describe('buildEntitySearch', ...)` verifying that `ANNOTATION_FORMER_NAMES` entries are normalised into `metadata.annotations.backstage.io/former-names` rows using the entity's kind and namespace as defaults, deduplicated when repeated, and skipped when equal to the entity's own current ref or when specifying a different kind."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';",
+        "rule": "Import `ANNOTATION_FORMER_NAMES` alongside `DEFAULT_NAMESPACE` and `Entity`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 344,
+        "to": 344,
+        "first_line": "});",
+        "rule": "Add tests for `ANNOTATION_FORMER_NAMES` normalisation, deduplication, cross-kind skipping, and self-reference skipping in `buildEntitySearch`."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+      "lines": [195, 292],
+      "reason": "Match existing buildEntitySearch test assertions."
+    },
+    "depends_on": ["U01", "U03", "U21"],
+    "covers": ["FR-3", "FR-4", "AC-1", "AC-2"],
+    "tests": [
+      {
+        "name": "indexes normalised same-kind former entity refs from backstage.io/former-names and skips cross-kind and self-references",
+        "given": "an entity declaring short, namespace/name, full same-kind kind:namespace/name, duplicate, cross-kind, and self-referencing entries in ANNOTATION_FORMER_NAMES",
+        "expect": "buildEntitySearch emits one normalised lowercase kind:namespace/name row per distinct same-kind non-self former ref under key metadata.annotations.backstage.io/former-names"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U25",
+    "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test DefaultEntitiesCatalog.entityByFormerRef indexing, live-entity precedence, provenance legitimacy verification against hijack attempts, ambiguous conflict refusal, and permission filter enforcement.",
+    "rules": [
+      "1. Import `ANNOTATION_FORMER_NAMES`, `ANNOTATION_LOCATION`, and `ANNOTATION_ORIGIN_LOCATION` from `@backstage/catalog-model`.",
+      "2. Add `describe('entityByFormerRef', () => { ... })` testing: (a) resolving single and multiple comma-separated former names (including default kind/namespace inheritance); (b) returning undefined when a live entity exists at the requested ref (no hijacking); (c) verifying provenance against any retained `refresh_state` row for the former ref (allowing a claimant with matching `location_key` or `backstage.io/managed-by-origin-location` / `backstage.io/managed-by-location` and rejecting a claimant from a different source location or origin); (d) deterministically returning `{ entity: undefined }` when two or more live entities claim the same former name so a newcomer with a lower-sorting entity ref cannot hijack another entity's old name; and (e) returning `{ entity: undefined }` when a conditional permission filter excludes the target entity."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 22,
+        "to": 22,
+        "first_line": "import { Entity, stringifyEntityRef } from '@backstage/catalog-model';",
+        "rule": "Import `ANNOTATION_FORMER_NAMES`, `ANNOTATION_LOCATION`, and `ANNOTATION_ORIGIN_LOCATION` alongside `Entity` and `stringifyEntityRef`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 2807,
+        "to": 2807,
+        "first_line": "},",
+        "rule": "Add `describe('entityByFormerRef', ...)` covering former-name resolution, live-entity precedence, provenance verification against hijack attempts, deterministic refusal of contested multi-claimant names, and permission filter enforcement."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+      "lines": [2750, 2808],
+      "reason": "Match database setup and addEntity helper usage in DefaultEntitiesCatalog.test.ts."
+    },
+    "depends_on": ["U01", "U03", "U04", "U05", "U21"],
+    "covers": ["FR-3", "FR-4", "FR-5", "FR-6", "FR-7", "AC-1", "AC-2", "AC-3"],
+    "tests": [
+      {
+        "name": "resolves single and multiple former names with default kind and namespace",
+        "given": "an entity in the catalog with ANNOTATION_FORMER_NAMES listing short and full same-kind former refs",
+        "expect": "entityByFormerRef resolves each former ref to the current entity and returns undefined for unknown refs"
+      },
+      {
+        "name": "never hijacks a live entity that occupies the former ref",
+        "given": "entity B claims former name component:default/a while live entity A exists at component:default/a",
+        "expect": "entityByFormerRef for component:default/a returns undefined while entitiesBatch returns live entity A"
+      },
+      {
+        "name": "verifies provenance when a former occupant row exists in refresh_state and rejects cross-source hijack attempts",
+        "given": "a retained refresh_state row for component:default/legacy with location_key or origin location L1, an illegitimate claimant from L2, and a legitimate claimant from L1",
+        "expect": "entityByFormerRef rejects the claimant from L2 and resolves only when claimed by the matching provenance L1"
+      },
+      {
+        "name": "refuses contested former names deterministically when multiple entities claim the same former name",
+        "given": "component:default/zebra claims former name component:default/legacy and newcomer component:default/alpha also claims component:default/legacy",
+        "expect": "entityByFormerRef for component:default/legacy deterministically returns { entity: undefined } rather than letting component:default/alpha win by sort order"
+      },
+      {
+        "name": "returns undefined when the target entity does not match the permission filter",
+        "given": "component:default/alpha claims former name component:default/legacy and a permission filter restricts readable entities to another name or kind",
+        "expect": "entityByFormerRef returns { entity: undefined }"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U26",
+    "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test permission enforcement in AuthorizedEntitiesCatalog.entityByFormerRef.",
+    "rules": [
+      "1. Add `entityByFormerRef: jest.fn(),` to `fakeCatalog`.",
+      "2. Add `describe('entityByFormerRef', ...)` verifying: on `AuthorizeResult.DENY` it returns `{ entity: undefined }` without calling `fakeCatalog.entityByFormerRef`; on `AuthorizeResult.CONDITIONAL` it calls `fakeCatalog.entityByFormerRef` with the transformed permission filter; on `AuthorizeResult.ALLOW` it calls `fakeCatalog.entityByFormerRef` with the original request."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 30,
+        "to": 39,
+        "first_line": "const fakeCatalog = {",
+        "last_line": "};",
+        "rule": "Include `entityByFormerRef: jest.fn(),` on `fakeCatalog`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 685,
+        "to": 685,
+        "first_line": "});",
+        "rule": "Add `describe('entityByFormerRef', ...)` testing DENY, CONDITIONAL, and ALLOW decisions."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+      "lines": [56, 160],
+      "reason": "Match existing AuthorizedEntitiesCatalog unit test structure."
+    },
+    "depends_on": ["U04", "U06", "U21"],
+    "covers": ["FR-7", "NFR-3", "AC-3"],
+    "tests": [
+      {
+        "name": "returns undefined entity on DENY without calling underlying catalog",
+        "given": "authorizeConditional resolves to AuthorizeResult.DENY",
+        "expect": "catalog.entityByFormerRef resolves to { entity: undefined } and fakeCatalog.entityByFormerRef is not called"
+      },
+      {
+        "name": "passes permission filter to underlying catalog on CONDITIONAL",
+        "given": "authorizeConditional resolves to AuthorizeResult.CONDITIONAL with IS_ENTITY_KIND rule",
+        "expect": "fakeCatalog.entityByFormerRef is called with filter: { kind: 'b' }"
+      },
+      {
+        "name": "delegates to underlying catalog on ALLOW",
+        "given": "authorizeConditional resolves to AuthorizeResult.ALLOW",
+        "expect": "fakeCatalog.entityByFormerRef is called with the request and its response is returned"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U27",
+    "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test GET /entities/by-former-name/:kind/:namespace/:name in createRouter.test.ts.",
+    "rules": [
+      "1. Add `entityByFormerRef: jest.fn(),` to the three `entitiesCatalog` mock objects in `createRouter.test.ts`.",
+      "2. Add `describe('GET /entities/by-former-name/:kind/:namespace/:name', ...)` testing that a matching former name returns HTTP 200 with the target entity JSON and a missing or unauthorized former name returns HTTP 404."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 65,
+        "to": 72,
+        "first_line": "entitiesCatalog = {",
+        "last_line": "};",
+        "rule": "Add `entityByFormerRef: jest.fn(),` to `entitiesCatalog`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 555,
+        "to": 555,
+        "first_line": "});",
+        "rule": "Add `describe('GET /entities/by-former-name/:kind/:namespace/:name', ...)` testing 200 and 404 responses."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 1388,
+        "to": 1395,
+        "first_line": "entitiesCatalog = {",
+        "last_line": "};",
+        "rule": "Add `entityByFormerRef: jest.fn(),` to `entitiesCatalog` in the readonly describe block."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 1643,
+        "to": 1650,
+        "first_line": "entitiesCatalog: {",
+        "last_line": "},",
+        "rule": "Add `entityByFormerRef: jest.fn(),` to `entitiesCatalog` in `createTestRouter`."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+      "lines": [515, 555],
+      "reason": "Match GET /entities/by-name/:kind/:namespace/:name router tests."
+    },
+    "depends_on": ["U04", "U08", "U09", "U21"],
+    "covers": ["FR-6", "FR-7", "NFR-3", "AC-1", "AC-3"],
+    "tests": [
+      {
+        "name": "can fetch entity by former name",
+        "given": "entitiesCatalog.entityByFormerRef resolves to { entity }",
+        "expect": "GET /entities/by-former-name/k/ns/old-n responds with 200 and the target entity"
+      },
+      {
+        "name": "responds with a 404 for missing or unauthorized former entity refs",
+        "given": "entitiesCatalog.entityByFormerRef resolves to { entity: undefined }",
+        "expect": "GET /entities/by-former-name/b/d/c responds with 404 and does not leak any target entity info"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U28",
+    "path": "packages/catalog-client/src/CatalogClient.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test CatalogClient.getEntityByFormerRef against the /entities/by-former-name/:kind/:namespace/:name endpoint.",
+    "rules": [
+      "1. Add `describe('getEntityByFormerRef', ...)` right after `describe('getEntityByRef', ...)` testing that `client.getEntityByFormerRef` resolves the target entity on 200 (for both string and compound entity refs) and resolves to `undefined` on 404."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 1170,
+        "to": 1170,
+        "first_line": "});",
+        "rule": "Add `describe('getEntityByFormerRef', ...)` testing string/compound lookups and 404 handling."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-client/src/CatalogClient.test.ts",
+      "lines": [1118, 1170],
+      "reason": "Match getEntityByRef msw test structure in CatalogClient.test.ts."
+    },
+    "depends_on": ["U08", "U10", "U11", "U21"],
+    "covers": ["FR-8"],
+    "tests": [
+      {
+        "name": "finds entity by former ref in string and compound form",
+        "given": "GET /entities/by-former-name/customkind/default/old-name returns 200 with existingEntity",
+        "expect": "client.getEntityByFormerRef resolves to existingEntity for both string and compound refs"
+      },
+      {
+        "name": "returns undefined for 404s on getEntityByFormerRef",
+        "given": "GET /entities/by-former-name/customkind/default/missing returns 404",
+        "expect": "client.getEntityByFormerRef resolves to undefined"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U29",
+    "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Test InMemoryCatalogClient.getEntityByFormerRef resolution, live-entity precedence, and ambiguous conflict rejection.",
+    "rules": [
+      "1. Import `ANNOTATION_FORMER_NAMES` from `@backstage/catalog-model`.",
+      "2. Add `describe('getEntityByFormerRef', ...)` right after `describe('getEntityByRef', ...)` testing: resolving a unique same-kind former entity ref to the current entity, returning `undefined` when a live entity exists at the requested ref, and returning `undefined` when two or more entities claim the same former name."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 19,
+        "to": 19,
+        "first_line": "import { Entity } from '@backstage/catalog-model';",
+        "rule": "Import `ANNOTATION_FORMER_NAMES` alongside `Entity` from `@backstage/catalog-model`."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 891,
+        "to": 891,
+        "first_line": "});",
+        "rule": "Add `describe('getEntityByFormerRef', ...)` testing former-name resolution, live-entity precedence, and ambiguous conflict refusal."
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts",
+      "lines": [877, 892],
+      "reason": "Match getEntityByRef tests in InMemoryCatalogClient.test.ts."
+    },
+    "depends_on": ["U01", "U10", "U12", "U21"],
+    "covers": ["FR-4", "FR-5", "FR-8", "AC-1", "AC-2"],
+    "tests": [
+      {
+        "name": "resolves entity by former ref and returns undefined when missing",
+        "given": "an InMemoryCatalogClient containing an entity with ANNOTATION_FORMER_NAMES",
+        "expect": "getEntityByFormerRef returns the renamed entity for its former ref and undefined for unknown refs"
+      },
+      {
+        "name": "returns undefined when a live entity occupies the former ref or when multiple entities contest the same former name",
+        "given": "entities with competing former-name claims and a live entity matching a former name",
+        "expect": "getEntityByFormerRef returns undefined for the live entity ref and returns undefined when multiple entities claim the same former name"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  }
+]
