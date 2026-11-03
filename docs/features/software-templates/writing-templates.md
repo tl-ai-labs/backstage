@@ -251,6 +251,75 @@ services:
 
 This heading changes presentation only; it does not change submitted values.
 
+### Conditional fields across steps
+
+A parameter step can conditionally display and require fields based on answers given in an earlier step. You can express this with the JSON Schema `dependencies` keyword or with `if`/`then`/`else`. The property that controls the condition must be defined in an earlier step, and the conditional fields are defined in the later step that should show them.
+
+In the following example, the first step asks whether the component needs a database. The second step only shows the `databaseEngine` field, and requires it, when the user answered `true` earlier:
+
+```yaml
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: conditional-across-steps
+  title: Conditional fields across steps
+  description: Show fields in a later step based on an earlier answer
+spec:
+  owner: backstage/techdocs-core
+  type: service
+
+  parameters:
+    - title: Component details
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+        needsDatabase:
+          title: Needs a database
+          type: boolean
+          default: false
+    - title: Infrastructure
+      properties:
+        region:
+          title: Region
+          type: string
+          enum:
+            - eu-west-1
+            - us-east-1
+      # Uses a value from the previous step
+      if:
+        properties:
+          needsDatabase:
+            const: true
+      then:
+        required:
+          - databaseEngine
+        properties:
+          databaseEngine:
+            title: Database engine
+            type: string
+            enum:
+              - postgres
+              - mysql
+
+  steps:
+    - id: log
+      name: Log
+      action: debug:log
+      input:
+        message: ${{ parameters.name }} uses ${{ parameters.databaseEngine }}
+```
+
+When `needsDatabase` is `false`, or has not been answered, the `databaseEngine` field is not displayed, is not required, and does not appear in the review step.
+
+:::note
+
+If the user goes back and changes the answer in the earlier step so that a conditional field is no longer shown, the value previously entered for that field is cleared automatically and is not submitted with the other parameters. Conditions that depend on a field in the same step continue to work as before.
+
+:::
+
 ### Using Secrets
 
 You may want to mark things as secret and make sure that these values are protected and not available through REST endpoints. You can do this by using the built in `ui:field: Secret`.

@@ -170,4 +170,94 @@ describe('findSchemaForKey', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
   });
+
+  it('should resolve keys in if/then/else and cross-step dependencies only when satisfied', () => {
+    const conditionalSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            kind: { type: 'string' },
+          },
+        },
+        schema: {},
+        title: 'Kind',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: { kind: { const: 'service' } },
+          },
+          then: {
+            properties: { port: { type: 'number' } },
+          },
+          else: {
+            properties: { library: { type: 'string' } },
+          },
+        },
+        schema: {},
+        title: 'Conditional',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          dependencies: {
+            kind: {
+              oneOf: [
+                {
+                  properties: {
+                    kind: { const: 'service' },
+                    replicas: { type: 'number' },
+                  },
+                },
+                {
+                  properties: {
+                    kind: { const: 'library' },
+                    license: { type: 'string' },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Dependencies',
+        uiSchema: {},
+      },
+    ];
+
+    const serviceState = { kind: 'service', port: 8080, replicas: 2 };
+    expect(findSchemaForKey('port', conditionalSchemas, serviceState)).toBe(
+      conditionalSchemas[1],
+    );
+    expect(
+      findSchemaForKey('library', conditionalSchemas, serviceState),
+    ).toBeNull();
+    expect(
+      findSchemaForKey('replicas', conditionalSchemas, serviceState),
+    ).toBe(conditionalSchemas[2]);
+    expect(
+      findSchemaForKey('license', conditionalSchemas, serviceState),
+    ).toBeNull();
+
+    const libraryState = { kind: 'library', library: 'lib', license: 'MIT' };
+    expect(findSchemaForKey('library', conditionalSchemas, libraryState)).toBe(
+      conditionalSchemas[1],
+    );
+    expect(
+      findSchemaForKey('port', conditionalSchemas, libraryState),
+    ).toBeNull();
+    expect(findSchemaForKey('license', conditionalSchemas, libraryState)).toBe(
+      conditionalSchemas[2],
+    );
+    expect(
+      findSchemaForKey('replicas', conditionalSchemas, libraryState),
+    ).toBeNull();
+
+    expect(findSchemaForKey('port', conditionalSchemas, {})).toBeNull();
+    expect(findSchemaForKey('replicas', conditionalSchemas, {})).toBeNull();
+  });
 });

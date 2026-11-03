@@ -18,6 +18,7 @@ import { JsonObject, JsonValue } from '@backstage/types';
 import { startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { Draft07 as JSONSchema } from 'json-schema-library';
+import { collectAllSchemaKeys, resolveConditionalSchema } from '../../lib/schema';
 
 export function isJsonObject(value?: JsonValue): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -37,6 +38,8 @@ export function findSchemaForKey(
   schemas: ParsedTemplateSchema[],
   formState: Partial<{ [key: string]: JsonValue }>,
 ): ParsedTemplateSchema | null {
+  const priorStepKeys = new Set<string>();
+
   for (const step of schemas) {
     /*
       To determine if a key is defined in a schema we need to call getSchema
@@ -48,7 +51,12 @@ export function findSchemaForKey(
       we add only the dependencies data to the getSchema call.
     */
 
-    const schema = step.mergedSchema;
+    const schema = resolveConditionalSchema(
+      step.mergedSchema,
+      formState as JsonObject,
+      priorStepKeys,
+    );
+    collectAllSchemaKeys([step]).forEach(k => priorStepKeys.add(k));
 
     // Declare data to be a subset of formState
     const data: typeof formState = {};

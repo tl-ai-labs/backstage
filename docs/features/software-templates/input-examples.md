@@ -340,6 +340,53 @@ parameters:
                 - address
 ```
 
+### Conditional fields across steps
+
+Conditions can also reference a parameter that was answered in an earlier step. In the example below, the first step asks whether the project is a mobile SDK, and the second step shows and requires the `sdkPlatform` and `bundleId` fields only when `isMobileSdk` is `true`.
+
+```yaml
+parameters:
+  - title: Project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+        default: false
+
+  - title: Project details
+    properties:
+      name:
+        title: Name
+        type: string
+    required:
+      - name
+    allOf:
+      - if:
+          properties:
+            isMobileSdk:
+              const: true
+        then:
+          properties:
+            sdkPlatform:
+              title: SDK platform
+              type: string
+              enum:
+                - ios
+                - android
+            bundleId:
+              title: Bundle ID
+              type: string
+          required:
+            - sdkPlatform
+            - bundleId
+```
+
+The condition is evaluated against the answers given in the earlier steps. When `isMobileSdk` is `false` or has not been answered, the `sdkPlatform` and `bundleId` fields are not shown and are not required.
+
+If a user navigates back to an earlier step and changes the answer so that a cross-step conditional field becomes hidden, for example by changing `isMobileSdk` from `true` to `false`, the value of the hidden field is cleared from the form state. It is then omitted from the review step and from the values submitted to the template.
+
+This differs from conditional fields within the same step, which keep their values when they are hidden.
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

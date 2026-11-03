@@ -57,6 +57,11 @@ import {
 import { ErrorListTemplate } from './ErrorListTemplate';
 import * as FieldOverrides from './FieldOverrides';
 import { hasErrors } from './utils';
+import {
+  collectAllSchemaKeys,
+  collectCrossStepHiddenKeys,
+  resolveStepSchema,
+} from '../../lib/schema';
 
 const validator = customizeValidator();
 ajvErrors(validator.ajv);
@@ -162,17 +167,32 @@ export const Stepper = (stepperProps: StepperProps) => {
     );
   }, [props.extensions]);
 
-  const validation = useMemo(() => {
-    return createAsyncValidators(steps[activeStep]?.mergedSchema, validators, {
-      apiHolder,
+  const resolvedSteps = useMemo(() => {
+    const priorStepKeys = new Set<string>();
+    return steps.map(step => {
+      const resolved = resolveStepSchema(step, stepsState, priorStepKeys);
+      collectAllSchemaKeys([step]).forEach(key => priorStepKeys.add(key));
+      return resolved;
     });
-  }, [steps, activeStep, validators, apiHolder]);
+  }, [steps, stepsState]);
+
+  const validation = useMemo(() => {
+    return createAsyncValidators(
+      resolvedSteps[activeStep]?.mergedSchema,
+      validators,
+      {
+        apiHolder,
+      },
+    );
+  }, [resolvedSteps, activeStep, validators, apiHolder]);
 
   const handleBack = useCallback(() => {
     setActiveStep(prevActiveStep => prevActiveStep - 1);
   }, [setActiveStep]);
 
-  const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
+  const currentStep = useTransformSchemaToProps(resolvedSteps[activeStep], {
+    layouts,
+  });
 
   const {
     formContext: propFormContext,
@@ -182,13 +202,25 @@ export const Stepper = (stepperProps: StepperProps) => {
     ...restFormProps
   } = props.formProps ?? {};
 
+  const pruneCrossStepState = useCallback(
+    (rawState: Record<string, JsonValue>) => {
+      const hiddenKeys = collectCrossStepHiddenKeys(steps, rawState);
+      const pruned = { ...rawState };
+      hiddenKeys.forEach(key => {
+        delete pruned[key];
+      });
+      return pruned;
+    },
+    [steps],
+  );
+
   const handleChange = useCallback(
     (e: IChangeEvent) => {
-      setStepsState(current => {
-        return { ...current, ...e.formData };
-      });
+      setStepsState(current =>
+        pruneCrossStepState({ ...current, ...e.formData }),
+      );
     },
-    [setStepsState],
+    [setStepsState, pruneCrossStepState],
   );
 
   const handleNext = useCallback(
@@ -198,12 +230,10 @@ export const Stepper = (stepperProps: StepperProps) => {
       setErrors(undefined);
       setIsValidating(true);
 
-      const returnedValidation = await validation(formData);
+      const nextState = pruneCrossStepState({ ...stepsState, ...formData });
+      const returnedValidation = await validation(nextState);
 
-      setStepsState(current => ({
-        ...current,
-        ...formData,
-      }));
+      setStepsState(current => pruneCrossStepState({ ...current, ...formData }));
 
       setIsValidating(false);
 
@@ -218,7 +248,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         });
       }
     },
-    [validation, analytics],
+    [validation, analytics, pruneCrossStepState, stepsState],
   );
 
   useEffect(() => {

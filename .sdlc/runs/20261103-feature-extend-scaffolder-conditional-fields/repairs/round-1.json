@@ -1,0 +1,141 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261103-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise from the user: ReviewState omits fields hidden by a SAME-step condition from the Review step. Omit only fields hidden by a condition that depends on an earlier step's answer; fields hidden by a same-step condition must display exactly as before this change (NFR-1 / AC-4). Today's change: `const allSchemaKeys = collectAllSchemaKeys(props.schemas)` and `return allSchemaKeys.has(key) ? [] : [[formatKey(key), value]];` omits every declared key for which findSchemaForKey returns null, which includes same-step-hidden fields. Required: in ReviewState compute `const crossStepHiddenKeys = collectCrossStepHiddenKeys(props.schemas, props.formState as JsonObject)` (exported from '../../lib/schema'); for each [key, value] of props.formState: if crossStepHiddenKeys.has(key) return []; otherwise behave exactly as the original code: `const schema = findSchemaForKey(key, props.schemas, props.formState); return schema ? processSchema(key, value, schema, props.formState) : [[formatKey(key), value]];`. Remove the collectAllSchemaKeys import if it becomes unused. Keep processSchema's resolveConditionalSchema call (it leaves same-step conditions untouched). Do not change the license header year or anything else.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261103-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261103-feature-extend-scaffolder-conditional-fields/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261103-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/util.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise from the user: for any key NOT hidden by a cross-step condition, the Review step must behave exactly as before this run (NFR-1 / AC-4), so findSchemaForKey must give the original result for same-step conditions. The original (pre-run) loop body was: `const schema = step.mergedSchema; const data = {}; if (schema.dependencies && isJsonObject(schema.dependencies)) { for (const dep in schema.dependencies) { if (formState.hasOwnProperty(dep)) data[dep] = formState[dep]; } } const res = new JSONSchema(schema).getSchema({ pointer: `#/${key}`, data }); if (!!res) return step;` -- i.e. a same-step-hidden key returns null and ReviewState shows it as [formatKey(key), value]. This run added (a) a `referenced`/`collectProps` block that also copies formState values for properties named in the step's remaining if/allOf/oneOf/anyOf conditions, and (b) a JsonError check `!(isJsonObject(res) && res.type === 'error')`. After resolveConditionalSchema(step.mergedSchema, formState, priorStepKeys) every remaining condition is same-step, so (a) and (b) only change same-step results. Required: keep the resolveConditionalSchema call and the priorStepKeys bookkeeping (cross-step conditions are resolved into the schema), remove the `referenced`/`collectProps` block, and restore the original `if (!!res) { return step; }` test, so the function matches the original exactly for any step that has no cross-step condition. Keep the existing comment block. Do not change anything else.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261103-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261103-feature-extend-scaffolder-conditional-fields/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261103-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+    "instruction": "Fix `.changeset/scaffolder-cross-step-conditional-fields.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise from the user: only fields hidden by a condition that depends on an earlier step's answer are omitted from the review step; fields hidden by a condition in the same step keep today's behaviour (they keep their values and still appear in the review step as before). The sentence `Fields that belong to a condition that is not satisfied are hidden in the form and omitted from the review step.` reads as if it applies to every condition. Reword it so it says this applies to fields whose condition depends on an answer from an earlier step, and add that conditions within a single step behave as before. Keep the frontmatter (`'@backstage/plugin-scaffolder-react': minor`) unchanged, keep the adopter-facing tone, and name no internal functions or code symbols.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/scaffolder-cross-step-conditional-fields.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/scaffolder-cross-step-conditional-fields.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261103-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261103-feature-extend-scaffolder-conditional-fields/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [],
+      "baseline": false,
+      "max_retries": 2
+    }
+  }
+]
