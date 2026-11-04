@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -205,5 +205,67 @@ describe('v1 consumer', () => {
     rerender();
 
     expect(resolve).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('route resolution updates', () => {
+  it('re-resolves the routeFunc when routeResolutionApi notifies subscribers', () => {
+    let resolved = false;
+    const resolve = jest.fn(() => (resolved ? () => '/resolved' : undefined));
+    const unsubscribe = jest.fn();
+    let listener: (() => void) | undefined;
+    const subscribe = jest.fn((l: () => void) => {
+      listener = l;
+      return unsubscribe;
+    });
+
+    const routeRef = createRouteRef();
+
+    const renderedHook = renderHook(() => useRouteRef(routeRef), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider
+          apis={[[routeResolutionApiRef, { resolve, subscribe }]]}
+        >
+          <MemoryRouter initialEntries={['/my-page']} children={children} />
+        </TestApiProvider>
+      ),
+    });
+
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(renderedHook.result.current).toBeUndefined();
+
+    resolved = true;
+    act(() => {
+      listener?.();
+    });
+
+    expect(renderedHook.result.current?.()).toBe('/resolved');
+
+    expect(unsubscribe).not.toHaveBeenCalled();
+    renderedHook.unmount();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-resolves the routeFunc when route resolution updates between initial render and subscription', () => {
+    const resolve = jest
+      .fn<(() => string) | undefined, []>()
+      .mockReturnValueOnce(undefined)
+      .mockReturnValue(() => '/resolved');
+    const subscribe = jest.fn(() => () => {});
+
+    const routeRef = createRouteRef();
+
+    const renderedHook = renderHook(() => useRouteRef(routeRef), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider
+          apis={[[routeResolutionApiRef, { resolve, subscribe }]]}
+        >
+          <MemoryRouter initialEntries={['/my-page']} children={children} />
+        </TestApiProvider>
+      ),
+    });
+
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(renderedHook.result.current?.()).toBe('/resolved');
   });
 });

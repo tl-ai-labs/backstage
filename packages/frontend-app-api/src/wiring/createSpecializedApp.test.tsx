@@ -47,7 +47,13 @@ import {
 } from '@backstage/core-plugin-api';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiProvider, ConfigReader } from '@backstage/core-app-api';
-import { ComponentType, Fragment, useEffect, useState } from 'react';
+import {
+  ComponentType,
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from 'react';
 import appPluginOriginal from '@backstage/plugin-app';
 import { z } from 'zod/v4';
 
@@ -1910,6 +1916,131 @@ describe('createSpecializedApp', () => {
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
+    });
+
+    describe('route refs in app root elements', () => {
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+
+      function makeBannerFeature(state: { renderCount: number }) {
+        const parentRouteRef = createRouteRef();
+        const childRouteRef = createRouteRef();
+
+        function Banner() {
+          state.renderCount += 1;
+          const link = useRouteRef(childRouteRef);
+          return <div>Banner: {link?.() ?? 'none'}</div>;
+        }
+
+        return createFrontendPlugin({
+          pluginId: 'test',
+          extensions: [
+            createExtension({
+              name: 'banner',
+              attachTo: { id: 'app/root', input: 'elements' },
+              inputs: {
+                children: createExtensionInput([
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                ]),
+              },
+              output: [
+                coreExtensionData.reactElement,
+                coreExtensionData.routeRef,
+              ],
+              factory: () => [
+                coreExtensionData.reactElement(<Banner />),
+                coreExtensionData.routeRef(parentRouteRef),
+              ],
+            }),
+            createExtension({
+              name: 'banner-child',
+              attachTo: { id: 'test/banner', input: 'children' },
+              output: [coreExtensionData.routePath, coreExtensionData.routeRef],
+              factory: () => [
+                coreExtensionData.routePath('/child'),
+                coreExtensionData.routeRef(childRouteRef),
+              ],
+            }),
+            createExtension({
+              name: 'parent-route',
+              attachTo: { id: 'app/routes', input: 'routes' },
+              output: [
+                coreExtensionData.reactElement,
+                coreExtensionData.routePath,
+                coreExtensionData.routeRef,
+              ],
+              factory: () => [
+                coreExtensionData.reactElement(<div>Parent</div>),
+                coreExtensionData.routePath('/parent'),
+                coreExtensionData.routeRef(parentRouteRef),
+              ],
+            }),
+          ],
+        });
+      }
+
+      it('should resolve route refs in app root elements after finalization without crashing during bootstrap', () => {
+        const state = { renderCount: 0 };
+        const preparedApp = prepareSpecializedApp({
+          features: [noSignInAppPlugin, makeBannerFeature(state)],
+        });
+
+        renderPreparedBootstrap(preparedApp);
+
+        expect(screen.getByText('Banner: none')).toBeInTheDocument();
+        expect(state.renderCount).toBe(1);
+
+        act(() => {
+          preparedApp.finalize();
+        });
+
+        expect(screen.getByText('Banner: /parent/child')).toBeInTheDocument();
+        expect(state.renderCount).toBe(2);
+      });
+
+      it('should resolve route refs in app root elements when finalization happens between initial render and effect subscription', () => {
+        const state = { renderCount: 0 };
+        const bannerFeature = makeBannerFeature(state);
+        let preparedApp: PreparedSpecializedApp | undefined;
+
+        function Finalizer() {
+          useLayoutEffect(() => {
+            preparedApp!.finalize();
+          }, []);
+          return <div>Finalizer</div>;
+        }
+
+        preparedApp = prepareSpecializedApp({
+          features: [
+            noSignInAppPlugin,
+            bannerFeature,
+            createFrontendPlugin({
+              pluginId: 'finalizer',
+              extensions: [
+                createExtension({
+                  name: 'sibling',
+                  attachTo: { id: 'app/root', input: 'elements' },
+                  output: [coreExtensionData.reactElement],
+                  factory: () => [
+                    coreExtensionData.reactElement(<Finalizer />),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        });
+
+        renderPreparedBootstrap(preparedApp);
+
+        expect(screen.getByText('Banner: /parent/child')).toBeInTheDocument();
+        expect(state.renderCount).toBe(2);
+      });
     });
   });
 });

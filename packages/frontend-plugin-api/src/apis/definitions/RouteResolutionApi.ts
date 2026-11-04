@@ -58,6 +58,15 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+
+  /**
+   * Subscribes to changes in the route resolution state, for example when the
+   * set of resolvable routes is updated after app finalization.
+   *
+   * @param listener - Called whenever the route resolution state changes.
+   * @returns A function that unsubscribes the listener.
+   */
+  subscribe?(listener: () => void): () => void;
 }
 
 /**

@@ -147,18 +147,19 @@ function resolveBasePath(
   // we need to traverse to reach our target except for the very last one. None of these
   // paths are allowed to require any parameters, as the caller would have no way of knowing
   // what parameters those are.
-  const diffPaths = refDiffList.slice(0, -1).map(ref => {
+  const diffPaths = Array<string>();
+  for (const ref of refDiffList.slice(0, -1)) {
     const path = routePaths.get(ref);
     if (path === undefined) {
-      throw new Error(`No path for ${ref}`);
+      return undefined;
     }
     if (path.includes(':')) {
       throw new Error(
         `Cannot route to ${targetRef} with parent ${ref} as it has parameters`,
       );
     }
-    return path;
-  });
+    diffPaths.push(path);
+  }
 
   return `${joinPaths(parentPath, ...diffPaths)}/`;
 }
@@ -224,6 +225,9 @@ export class RouteResolver implements RouteResolutionApi {
       this.routeParents,
       this.routeObjects,
     );
+    if (basePath === undefined) {
+      return undefined;
+    }
 
     const routeFunc: RouteFunc<TParams> = (...[params]) => {
       // We selectively encode some some known-dangerous characters in the
