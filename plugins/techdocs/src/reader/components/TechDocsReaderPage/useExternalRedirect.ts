@@ -37,7 +37,10 @@ import { rootDocsRouteRef } from '../../../routes';
  *
  * @internal
  */
-export function useExternalRedirect(entityRef: CompoundEntityRef): {
+export function useExternalRedirect(
+  entityRef: CompoundEntityRef,
+  options?: { subPath?: string; search?: string; hash?: string },
+): {
   loading: boolean;
   shouldShowProgress: boolean;
 } {
@@ -62,7 +65,31 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
       if (
         catalogEntity?.metadata?.annotations?.[TECHDOCS_EXTERNAL_ANNOTATION]
       ) {
-        return buildTechDocsURL(catalogEntity, viewTechdocLink);
+        return {
+          redirectUrl: buildTechDocsURL(catalogEntity, viewTechdocLink),
+          redirectedFrom: undefined,
+        };
+      }
+
+      if (!catalogEntity) {
+        const formerEntity = await catalogApi.getEntityByFormerRef?.(entityRef);
+        if (formerEntity && stringifyEntityRef(formerEntity) !== entityKey) {
+          const baseUrl = buildTechDocsURL(formerEntity, viewTechdocLink);
+          if (baseUrl) {
+            const cleanSubPath = options?.subPath?.replace(/^\/+/, '');
+            const pathWithSubPath = cleanSubPath
+              ? `${baseUrl.replace(/\/+$/, '')}/${cleanSubPath}`
+              : baseUrl;
+            const search = options?.search ?? '';
+            const hash = options?.hash ?? '';
+            const redirectUrl = `${pathWithSubPath}${search}${hash}`;
+
+            return {
+              redirectUrl,
+              redirectedFrom: entityKey,
+            };
+          }
+        }
       }
     } catch (error) {
       // Ignore errors and allow the current entity's TechDocs to load.
@@ -70,12 +97,31 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
     }
 
     return undefined;
-  }, [entityKey, catalogApi]);
+  }, [
+    entityKey,
+    catalogApi,
+    viewTechdocLink,
+    options?.subPath,
+    options?.search,
+    options?.hash,
+  ]);
 
   useEffect(() => {
     // Navigate to external TechDocs if a redirect URL is available
-    if (!externalRedirectResult.loading && externalRedirectResult.value) {
-      navigate(externalRedirectResult.value, { replace: true });
+    if (
+      !externalRedirectResult.loading &&
+      externalRedirectResult.value?.redirectUrl
+    ) {
+      if (externalRedirectResult.value.redirectedFrom) {
+        navigate(externalRedirectResult.value.redirectUrl, {
+          replace: true,
+          state: {
+            redirectedFrom: externalRedirectResult.value.redirectedFrom,
+          },
+        });
+      } else {
+        navigate(externalRedirectResult.value.redirectUrl, { replace: true });
+      }
     }
 
     // Mark entity as checked once we've determined there's no redirect needed.

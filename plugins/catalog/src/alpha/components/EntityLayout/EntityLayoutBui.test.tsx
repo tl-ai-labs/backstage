@@ -159,4 +159,56 @@ describe('EntityLayoutBui', () => {
     });
     expect(await screen.findByText('Entity Inspector')).toBeInTheDocument();
   });
+
+  it('renders and dismisses the renamed notice banner in EntityLayoutBui when redirected from a former name', async () => {
+    await renderInTestApp(
+      <AsyncEntityProvider entity={componentEntity} loading={false}>
+        <EntityLayoutBui
+          routes={[
+            {
+              path: '/overview',
+              title: 'Overview',
+              children: <div>Overview content</div>,
+            },
+          ]}
+          groupDefinitions={defaultEntityContentGroupDefinitions}
+          defaultContentOrder="title"
+          contextMenuItems={[]}
+        />
+      </AsyncEntityProvider>,
+      {
+        apis: [
+          catalogApiMock({ entities: [componentEntity] }),
+          [starredEntitiesApiRef, new MockStarredEntitiesApi()],
+        ],
+        config: {
+          app: { title: 'Custom app' },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountPath: '/catalog/:namespace/:kind/:name/*',
+        initialRouteEntries: [
+          // initialRouteEntries is typed string[] in frontend-test-utils, though MemoryRouter accepts location objects at runtime
+          {
+            pathname: '/catalog/default/component/artist-lookup/overview',
+            state: { redirectedFrom: 'component:default/old-artist-lookup' },
+          } as unknown as string,
+        ],
+        mountedRoutes: {
+          '/catalog/:namespace/:kind/:name/*': entityRouteRef,
+        },
+      },
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      /renamed from component:default\/old-artist-lookup/i,
+    );
+
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    closeButton.click();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
 });

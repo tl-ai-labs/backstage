@@ -279,4 +279,52 @@ describe('useExternalRedirect', () => {
       expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('redirects to the renamed entity TechDocs URL with subPath, search, hash, and redirectedFrom state on direct miss', async () => {
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    const getEntityByFormerRef = jest.fn().mockResolvedValue({
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: {
+        name: 'new-component',
+        namespace: 'default',
+      },
+    });
+    Object.assign(mockCatalogApi, { getEntityByFormerRef });
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect(
+          {
+            kind: 'Component',
+            name: 'old-component',
+            namespace: 'default',
+          },
+          {
+            subPath: 'getting-started/install',
+            search: '?foo=bar',
+            hash: '#section',
+          },
+        ),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(getEntityByFormerRef).toHaveBeenCalledWith({
+      kind: 'Component',
+      name: 'old-component',
+      namespace: 'default',
+    });
+    expect(result.current.shouldShowProgress).toBe(true);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/docs/getting-started/install?foo=bar#section',
+      {
+        replace: true,
+        state: { redirectedFrom: 'component:default/old-component' },
+      },
+    );
+  });
 });

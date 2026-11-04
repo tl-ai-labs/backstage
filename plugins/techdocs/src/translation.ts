@@ -111,6 +111,8 @@ export const techdocsTranslationRef = createTranslationRef({
     },
     reader: {
       settings: 'Settings',
+      renamedNotice:
+        'This entity has been renamed from {{formerEntityRef}}. Please update any bookmarks or links.',
     },
   },
 });

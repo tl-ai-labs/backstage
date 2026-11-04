@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { CatalogApi } from '@backstage/catalog-client';
 import { Entity } from '@backstage/catalog-model';
 import { catalogApiMock } from './catalogApiMock';
 
@@ -59,5 +60,35 @@ describe('catalogApiMock', () => {
       getEntities: async () => ({ items: [entity1] }),
     });
     await expect(mock2.getEntities()).resolves.toEqual({ items: [entity1] });
+
+    const byFormer = mock.getEntityByFormerRef as jest.MockedFunction<
+      NonNullable<CatalogApi['getEntityByFormerRef']>
+    >;
+    expect(byFormer).toHaveBeenCalledTimes(0);
+    expect(byFormer('customkind:default/old-e1')).toBeUndefined();
+    byFormer.mockResolvedValue(entity1);
+    await expect(byFormer('customkind:default/old-e1')).resolves.toEqual(
+      entity1,
+    );
+
+    const renamedEntity: Entity = {
+      apiVersion: 'v1',
+      kind: 'CustomKind',
+      metadata: {
+        namespace: 'default',
+        name: 'e3',
+        uid: 'u3',
+        annotations: {
+          'backstage.io/former-names': 'old-e3, legacy-e3',
+        },
+      },
+    };
+    const formerNamesFake = catalogApiMock({ entities: [renamedEntity] });
+    await expect(
+      formerNamesFake.getEntityByFormerRef!('customkind:default/old-e3'),
+    ).resolves.toEqual(renamedEntity);
+    await expect(
+      formerNamesFake.getEntityByFormerRef!('customkind:default/non-existent'),
+    ).resolves.toBeUndefined();
   });
 });

@@ -28,6 +28,8 @@ export const catalogTranslationRef = createTranslationRef({
     entityPage: {
       notFoundMessage: 'There is no {{kind}} with the requested {{link}}.',
       notFoundLinkText: 'kind, namespace, and name',
+      renamedNotice:
+        'This entity has been renamed from {{formerEntityRef}}. Please update any bookmarks or links.',
     },
     aboutCard: {
       title: 'About',

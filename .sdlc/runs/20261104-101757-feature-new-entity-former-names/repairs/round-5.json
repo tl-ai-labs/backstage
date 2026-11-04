@@ -1,0 +1,138 @@
+[
+  {
+    "id": "tp_debug_r5_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. blocker (line 220): TechDocsReaderPage holds the dismissed state and reads location.state.redirectedFrom directly, passing the renamedNotice Alert element as children into TechDocsReaderPageProvider. Because TechDocsReaderPageProvider is wrapped in React.memo with a custom comparator ((prevProps, nextProps) => areEntityRefsEqual(prevProps.entityRef, nextProps.entityRef)) that ignores children changes, calling setDismissed(true) re-renders TechDocsReaderPage but TechDocsReaderPageProvider skips re-rendering its children, leaving the Alert in the DOM after clicking close. — fix: Extract a TechDocsRenamedNotice child component in TechDocsReaderPage.tsx that calls useLocation(), useTranslationRef(techdocsTranslationRef), and useState(false) for dismissed internally, and render <TechDocsRenamedNotice /> inside TechDocsReaderPageProvider and StyledPage so state updates re-render TechDocsRenamedNotice directly without being blocked by TechDocsReaderPageProvider's memo comparator.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U24.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 449): Planned unit U37 (TechDocsReaderPage.test.tsx) was left unchanged and has no tests verifying former-name redirection or rendering and dismissing the techdocs-renamed-notice alert banner on TechDocsReaderPage. — fix: Add tests in TechDocsReaderPage.test.tsx verifying that TechDocsReaderPage redirects to the renamed entity's TechDocs route with { replace: true, state: { redirectedFrom } } when getEntityByRef returns undefined and getEntityByFormerRef resolves a renamed entity, and renders and dismisses the techdocs-renamed-notice alert when location.state.redirectedFrom is present.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U37.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn backstage-cli repo test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r5_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 389): In DefaultEntitiesCatalog.entityByFormerRef, request.filter is applied directly to liveQuery before checking whether a live entity exists at targetRef. When a live entity exists at targetRef but does not match request.filter (e.g. a conditional permission filter), liveRows is empty and execution falls through to formerQuery, returning a former-name claimant instead of { entity: undefined } and violating live-entity precedence (U06 Rule 4). — fix: Query final_entities for targetRef without request.filter first; if a live row exists and request.filter is defined, check applyEntityFilterToQuery against liveRows[0].entityId and return { entity: undefined } when the filter does not match.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

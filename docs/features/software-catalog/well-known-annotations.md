@@ -80,6 +80,33 @@ metadata:
     backstage.io/orphan: 'true'
 ```
 
+### backstage.io/former-names
+
+```yaml
+# Example:
+metadata:
+  annotations:
+    backstage.io/former-names: 'old-service-name, component:default/legacy-name'
+```
+
+The value of this annotation is a comma-separated list of entity names or
+references under which the entity was previously known. Each entry can be
+written as a bare entity name or a partial/full reference in the format
+`[<kind>:][<namespace>/]<name>`.
+
+If the kind or namespace is omitted, it defaults to the declaring entity's own
+kind and namespace (or `default`). Claimed former references are restricted to
+the same kind as the declaring entity, and self-references are not permitted.
+
+When a user or link navigates to a URL using a former entity ref, the Catalog
+and TechDocs plugins automatically redirect to the current entity's page and
+display a dismissible notice banner explaining that the entity has been renamed.
+
+If a live entity currently exists with that reference, the live entity always
+takes precedence and no redirect occurs. Furthermore, if two or more live
+entities claim the same former name, the conflict prevents any automatic
+redirection to avoid ambiguous routing.
+
 ### backstage.io/techdocs-ref
 
 ```yaml

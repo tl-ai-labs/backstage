@@ -37,6 +37,7 @@ import {
   type EntityHeaderLayoutProps,
 } from '@backstage/plugin-catalog-react/alpha';
 import { catalogTranslationRef } from '../../translation';
+import { EntityRenamedNotice } from '../../../components/EntityLayout/EntityLayout';
 import { EntityHeaderBui } from '../EntityHeader/EntityHeaderBui';
 import { useEntityTabs } from '../EntityTabs/useEntityTabs';
 import {
@@ -181,6 +182,7 @@ export function EntityLayoutBui(props: {
           contextMenuItems={contextMenuItems}
         />
       )}
+      {entity && <EntityRenamedNotice />}
       <EntityLayoutContent
         content={tabs.content}
         NotFoundComponent={NotFoundComponent}

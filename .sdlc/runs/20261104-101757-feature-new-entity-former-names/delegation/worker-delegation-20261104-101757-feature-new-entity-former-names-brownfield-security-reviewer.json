@@ -1,0 +1,157 @@
+{
+  "schema": "delegation-record/1",
+  "task_id": "20261104-101757-feature-new-entity-former-names-brownfield-security-reviewer",
+  "phase": "security_review",
+  "task_type": "judgment",
+  "module": "judgment",
+  "model_id": "argon",
+  "model_name": "gemini-4-argon",
+  "cable": {
+    "sdk": "google-antigravity",
+    "sdk_version": "0.1.22",
+    "vertex_project": "temp-genmedia-study",
+    "vertex_location": "global",
+    "thinking": "HIGH"
+  },
+  "workdir": "/Users/macbook/Documents/GitHub/backstage",
+  "started_at": "2026-11-04T07:41:01.483Z",
+  "duration_ms": 107499,
+  "success": true,
+  "error": null,
+  "cost_usd": 0.168406,
+  "tokens": {
+    "input": 53228,
+    "input_cached": 133299,
+    "output": 4862,
+    "output_reasoning": 3599
+  },
+  "tool_calls": {
+    "count": 10,
+    "truncated": false,
+    "sample": [
+      {
+        "name": "read_provenance",
+        "args": {},
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": ""
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/catalog-backend/src/service/createRouter.ts"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/catalog-react"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/catalog"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/techdocs"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "packages/catalog-client/src/schema/openapi/generated/apis/Api.client.ts"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/catalog-backend/src/schema/openapi/generated/router.ts"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+          "to_line": "70.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "write_review",
+        "args": {
+          "content": "# Security Review — pass1\n\n## Summary\nThe `backstage.io/former-names` feature change across `@backstage/catalog-model`, `@backstage/plugin-catalog-backend`, `@backstage/catalog-client`, `@backstage/plugin-catalog-react`, `@backstage/plugin-catalog`, `@backstage/plugin-techdocs`, and documentation introduces no security vulnerabilities. Input validation, parameterized database queries, permission predicate enforcement, audit logging, and safe React text rendering are properly implemented across all touched files.\n\n## Findings\n| Severity | Category | Location | Issue | Recommendation |\n|---|---|---|---|---|\n| None | — | — | No security issues found in the touched set. | — |\n\n## Passing checks\n- **PII handling (encryption at rest / masking)**: n/a — not in the touched set.\n- **Audit log ordering (`plugins/catalog-backend/src/service/createRouter.ts`)**: `auditor.createEvent` is invoked before `entitiesCatalog.entityByFormerRef` and records `.success()` / `.fail()` with actor request context and `entityRef` metadata.\n- **Authn & authz (`plugins/catalog-backend/src/service/createRouter.ts`, `AuthorizedEntitiesCatalog.ts`, `DefaultEntitiesCatalog.ts`, `openapi.yaml`)**: `GET /entities/by-former-name/:kind/:namespace/:name` extracts caller credentials via `httpAuth.credentials(req)`, authorizes `catalogEntityReadPermission` via `AuthorizedEntitiesCatalog.entityByFormerRef`, enforces conditional permission filters on both live-entity precedence checks and former-ref lookups, and prevents cross-kind or ambiguous former-name hijacking.\n- **SQL injection & input validation (`FieldFormatEntityPolicy.ts`, `buildEntitySearch.ts`, `DefaultEntitiesCatalog.ts`)**: Former entity refs are validated and normalized via `parseEntityRef`/`stringifyEntityRef` (restricting to same kind and rejecting self-references), and all database lookups use parameterized Knex bindings.\n- **Frontend redirect & XSS safety (`useEntityFromUrl.ts`, `EntityLayout.tsx`, `useExternalRedirect.ts`, `TechDocsRead"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      }
+    ]
+  },
+  "files": {
+    "added": [],
+    "modified": [],
+    "removed": [],
+    "unchanged": 13346,
+    "scanned": 13346,
+    "truncated": false,
+    "unreadable": []
+  },
+  "artifacts": {
+    "brief": "worker-task-20261104-101757-feature-new-entity-former-names-brownfield-security-reviewer.md",
+    "usage": "worker-usage-20261104-101757-feature-new-entity-former-names-brownfield-security-reviewer.json",
+    "system": "worker-system-20261104-101757-feature-new-entity-former-names-brownfield-security-reviewer.md"
+  },
+  "gemini": {
+    "project": "temp-genmedia-study",
+    "location": "global",
+    "tries": [
+      {
+        "location": "global",
+        "ended_by": "answer",
+        "http_codes": [],
+        "s": 104.428,
+        "served_tier": "standard",
+        "input_tokens": 53228,
+        "input_tokens_cached": 133299,
+        "output_tokens": 4862,
+        "cost_usd": 0.168406
+      }
+    ],
+    "ended_by": "answer",
+    "last_status": null,
+    "stall_cuts": 0,
+    "failovers": 0,
+    "cut_calls": 0,
+    "google_wait_ms": 0,
+    "work_ms": 104667,
+    "slept_ms": 0,
+    "sdk_version": "0.1.22",
+    "usage_semantics": "inclusive",
+    "unavailable": null,
+    "endpoint_override": null
+  }
+}

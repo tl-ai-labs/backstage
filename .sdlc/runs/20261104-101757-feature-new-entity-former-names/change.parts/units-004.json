@@ -1,0 +1,226 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U32",
+      "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests InMemoryCatalogClient.getEntityByFormerRef for former-name match, live-entity precedence, and conflict handling.",
+      "rules": [
+        "1. Add describe('getEntityByFormerRef', ...) right after describe('getEntityByRef', ...) testing resolution by former name, live-entity precedence over former-name claimant, and returning undefined when multiple entities claim the same former name."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 891,
+          "to": 891,
+          "first_line": "});",
+          "rule": "Add describe('getEntityByFormerRef', ...) after describe('getEntityByRef', ...)."
+        }
+      ],
+      "depends_on": ["U13", "U15"],
+      "covers": ["FR-3.2", "AC-3"],
+      "tests": [
+        {
+          "name": "resolves entity by former name, respects live-entity precedence, and returns undefined on conflict",
+          "given": "InMemoryCatalogClient populated with entities declaring backstage.io/former-names",
+          "expect": "getEntityByFormerRef returns the unique claimant, prefers a live entity at the requested ref, and returns undefined when two entities claim the same former ref"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U33",
+      "path": "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests getEntityByFormerRef on catalogApiMock and catalogApiMock.mock().",
+      "rules": [
+        "1. Verify that mock.getEntityByFormerRef is a jest.fn() stub on catalogApiMock.mock() and that catalogApiMock({ entities }) resolves an entity by its backstage.io/former-names annotation."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 61,
+          "to": 61,
+          "first_line": "await expect(mock2.getEntities()).resolves.toEqual({ items: [entity1] });",
+          "rule": "Add assertions for mock.getEntityByFormerRef and catalogApiMock({ entities }).getEntityByFormerRef."
+        }
+      ],
+      "depends_on": ["U16"],
+      "covers": ["FR-3.2", "AC-3"],
+      "tests": [
+        {
+          "name": "exposes getEntityByFormerRef on catalogApiMock and catalogApiMock.mock",
+          "given": "catalogApiMock.mock() and catalogApiMock({ entities })",
+          "expect": "mock.getEntityByFormerRef is a jest mock function and catalogApiMock resolves former names via InMemoryCatalogClient"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U34",
+      "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests former-name URL redirection and dismissible EntityRenamedNotice banner in legacy CatalogEntityPage and EntityLayout.",
+      "rules": [
+        "1. Add test cases verifying that navigating to an entity page via a former entity name redirects to the renamed entity's URL, renders the dismissible renamed notice banner naming the former entity ref, and hides the banner when its close button is clicked."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 549,
+          "to": 549,
+          "first_line": "});",
+          "rule": "Add test cases for former-name redirect and dismissible EntityRenamedNotice banner."
+        }
+      ],
+      "depends_on": ["U18", "U19", "U25"],
+      "covers": ["FR-4.1", "FR-4.2", "AC-4"],
+      "tests": [
+        {
+          "name": "renders and dismisses the renamed notice banner when redirected from a former entity name",
+          "given": "an entity page reached via a former entity ref in location.state.redirectedFrom or via useEntityFromUrl fallback",
+          "expect": "renders the renamed notice alert with the former entity ref and removes it when dismissed"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U35",
+      "path": "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests the dismissible EntityRenamedNotice banner in alpha EntityLayoutBui when reached via a former-name redirect.",
+      "rules": [
+        "1. Add a test case verifying that EntityLayoutBui renders the dismissible renamed notice banner when location.state.redirectedFrom is set (or when CatalogEntityPage redirects from a former entity ref) and dismisses it when closed."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 161,
+          "to": 161,
+          "first_line": "});",
+          "rule": "Add a test verifying former-name redirect notice rendering and dismissal in EntityLayoutBui."
+        }
+      ],
+      "depends_on": ["U20", "U21", "U25"],
+      "covers": ["FR-4.1", "FR-4.2", "AC-4"],
+      "tests": [
+        {
+          "name": "renders and dismisses the renamed notice banner in EntityLayoutBui when redirected from a former name",
+          "given": "EntityLayoutBui rendered at a route reached via former-name redirect",
+          "expect": "displays the renamed notice naming the former entity ref and hides it when closed"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U36",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests useExternalRedirect fallback to getEntityByFormerRef on a direct miss, preserving sub-path, query string, and hash.",
+      "rules": [
+        "1. Add test cases verifying that when getEntityByRef resolves to undefined and getEntityByFormerRef resolves to a renamed entity, useExternalRedirect navigates with replace: true, preserves subPath/search/hash, and passes state: { redirectedFrom }."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 281,
+          "to": 281,
+          "first_line": "});",
+          "rule": "Add test cases for former-name redirect in useExternalRedirect."
+        }
+      ],
+      "depends_on": ["U23"],
+      "covers": ["FR-5.1", "AC-5"],
+      "tests": [
+        {
+          "name": "redirects to the renamed entity TechDocs URL with subPath, search, hash, and redirectedFrom state on direct miss",
+          "given": "getEntityByRef returning undefined and getEntityByFormerRef returning the renamed entity",
+          "expect": "mockNavigate is called with the renamed TechDocs URL (including subPath, search, and hash) and { replace: true, state: { redirectedFrom: 'component:default/old-component' } }"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U37",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests TechDocsReaderPage former-name redirection and dismissible renamed notice banner.",
+      "rules": [
+        "1. Add test cases verifying that TechDocsReaderPage redirects to the renamed entity's TechDocs route when getEntityByRef returns undefined and getEntityByFormerRef returns a renamed entity, and renders the dismissible renamed notice alert when location.state.redirectedFrom is set."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 449,
+          "to": 449,
+          "first_line": "});",
+          "rule": "Add test cases for former-name redirect and dismissible renamed notice banner in TechDocsReaderPage."
+        }
+      ],
+      "depends_on": ["U24", "U25"],
+      "covers": ["FR-5.1", "FR-5.2", "AC-5"],
+      "tests": [
+        {
+          "name": "redirects on former entity name and renders a dismissible renamed notice banner",
+          "given": "TechDocsReaderPage visited under a former entity name or rendered with location.state.redirectedFrom",
+          "expect": "navigates to the renamed entity TechDocs route with state.redirectedFrom and renders a dismissible alert naming the former entity ref"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U38",
+      "path": "docs/features/software-catalog/well-known-annotations.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the backstage.io/former-names well-known annotation in docs/features/software-catalog/well-known-annotations.md.",
+      "rules": [
+        "1. Insert a ### backstage.io/former-names section after ### backstage.io/orphan with a YAML example showing metadata.annotations['backstage.io/former-names'].",
+        "2. Document the comma-separated [<kind>:][<namespace>/]<name> value syntax (defaulting to the declaring entity's own kind and namespace, restricted to the same kind), automatic redirection and dismissible notice banner on Catalog entity pages and TechDocs reader pages, live-entity precedence, and conflict behavior (multiple entities claiming the same former name do not redirect)."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 81,
+          "to": 81,
+          "first_line": "```",
+          "rule": "Insert ### backstage.io/former-names documentation section after the backstage.io/orphan YAML example."
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": ["FR-6.1", "FR-6.2", "AC-6"],
+      "checks": ["format"]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts": "69104fe18bb4beb8b58ec35fad76d01960bff9d0bf1d2df29169e5a913901b76",
+    "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts": "a6b208a7de7b02a1e79cd4f77d7f4bb66f8384740a0dcbbdedca176e32f5a517",
+    "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx": "bb1ef35e94081752d6ace6bc88ff87bb78beebe4581028a7b7a560f82cdf93b3",
+    "plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx": "32ae3ef89fa5af0bf8f1c5df8868db1a3240eb9680ad8dac540a414c3de574f8",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx": "5f2227eec2ee7d7263c723bc1a7d43773b186553a951750d810f08b02646da4f",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx": "65e6ceb6441168ab8e28c589e9cfb50a12d70d4463134adf32c8250c53fa7e0d",
+    "docs/features/software-catalog/well-known-annotations.md": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056"
+  }
+}

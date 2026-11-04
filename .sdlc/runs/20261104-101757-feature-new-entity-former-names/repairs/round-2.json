@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts",
+    "instruction": "Fix `plugins/catalog-react/src/testUtils/catalogApiMock.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc (6 errors, all in this file): 65:7 TS2722 Cannot invoke an object which is possibly 'undefined'; 67:5 TS18048 'mock.getEntityByFormerRef' is possibly 'undefined'; 67:31 TS2339 Property 'mockResolvedValue' does not exist on type '(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions | undefined) => Promise<Entity | undefined>'; 69:7, 86:7, 89:7 TS2722 Cannot invoke an object which is possibly 'undefined'. Cause: CatalogApi.getEntityByFormerRef is now an OPTIONAL method (getEntityByFormerRef?), and ApiMock<TApi> maps an optional member to `TApi[Key]` (possibly undefined, not a jest.MockInstance). Do not change any other file. In this test, narrow it before use: e.g. `const byFormer = mock.getEntityByFormerRef as jest.MockedFunction<NonNullable<CatalogApi['getEntityByFormerRef']>>;` (import the CatalogApi type from '@backstage/catalog-client' if not already imported) and call `byFormer(...)`/`byFormer.mockResolvedValue(...)`; for the fake (`formerNamesFake`), call `formerNamesFake.getEntityByFormerRef!(...)`. Keep every existing assertion's intent.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-react/src/testUtils/catalogApiMock.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-react/src/testUtils/catalogApiMock.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U33.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-react/src/testUtils/catalogApiMock.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/types/api.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn backstage-cli repo test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]

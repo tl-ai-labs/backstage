@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
-import { Children, ReactElement, ReactNode, useMemo } from 'react';
-import { useOutlet } from 'react-router-dom';
+import {
+  Children,
+  ReactElement,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { useLocation, useOutlet, useParams } from 'react-router-dom';
 import { Page, Progress } from '@backstage/core-components';
 import { CompoundEntityRef } from '@backstage/catalog-model';
 import {
@@ -41,6 +48,9 @@ import {
   useTheme,
 } from '@material-ui/core/styles';
 import { useExternalRedirect } from './useExternalRedirect';
+import Alert from '@material-ui/lab/Alert';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { techdocsTranslationRef } from '../../../translation';
 
 /* An explanation for the multiple ways of customizing the TechDocs reader page
 
@@ -166,6 +176,32 @@ const StyledPage = styled(Page)({
   overflowY: 'visible',
 });
 
+const TechDocsRenamedNotice = () => {
+  const location = useLocation();
+  const { t } = useTranslationRef(techdocsTranslationRef);
+  const redirectedFrom = (location.state as { redirectedFrom?: string } | null)
+    ?.redirectedFrom;
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(false);
+  }, [redirectedFrom]);
+
+  if (!redirectedFrom || dismissed) {
+    return null;
+  }
+
+  return (
+    <Alert
+      severity="info"
+      onClose={() => setDismissed(true)}
+      data-testid="techdocs-renamed-notice"
+    >
+      {t('reader.renamedNotice', { formerEntityRef: redirectedFrom })}
+    </Alert>
+  );
+};
+
 /**
  * An addon-aware implementation of the TechDocsReaderPage.
  *
@@ -187,6 +223,8 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
   const { children, entityRef = { kind, name, namespace } } = props;
 
   const outlet = useOutlet();
+  const location = useLocation();
+  const { '*': subPath = '' } = useParams();
 
   const memoizedEntityRef = useMemo(
     () => ({
@@ -198,7 +236,11 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
   );
 
   // Check for external TechDocs redirects and handle navigation
-  const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef);
+  const { shouldShowProgress } = useExternalRedirect(memoizedEntityRef, {
+    subPath,
+    search: location.search,
+    hash: location.hash,
+  });
 
   const page: ReactNode = useMemo(() => {
     if (children) {
@@ -230,6 +272,7 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
       <ThemeProvider theme={readerPageTheme}>
         <CookieAuthRefreshProvider pluginId="techdocs">
           <TechDocsReaderPageProvider entityRef={memoizedEntityRef}>
+            <TechDocsRenamedNotice />
             {(page as JSX.Element) || <TechDocsReaderLayout />}
           </TechDocsReaderPageProvider>
         </CookieAuthRefreshProvider>
@@ -247,6 +290,7 @@ export const TechDocsReaderPage = (props: TechDocsReaderPageProps) => {
               themeId="documentation"
               className="techdocs-reader-page"
             >
+              <TechDocsRenamedNotice />
               {children instanceof Function
                 ? children({
                     entityRef: memoizedEntityRef,

@@ -69,6 +69,7 @@ describe('createRouter readonly disabled', () => {
       entityAncestry: jest.fn(),
       facets: jest.fn(),
       queryEntities: jest.fn(),
+      entityByFormerRef: jest.fn(),
     };
     locationService = {
       getLocation: jest.fn(),
@@ -878,6 +879,7 @@ describe('createRouter readonly disabled', () => {
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          entityByFormerRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,
@@ -1376,6 +1378,52 @@ describe('createRouter readonly disabled', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('GET /entities/by-former-name/:kind/:namespace/:name', () => {
+    it('can fetch entity by former name', async () => {
+      const entity: Entity = {
+        apiVersion: 'a',
+        kind: 'component',
+        metadata: {
+          name: 'new-name',
+          namespace: 'default',
+        },
+      };
+      entitiesCatalog.entityByFormerRef.mockResolvedValue({
+        entity,
+      });
+
+      const response = await request(app).get(
+        '/entities/by-former-name/component/default/old-name',
+      );
+
+      expect(entitiesCatalog.entityByFormerRef).toHaveBeenCalledTimes(1);
+      expect(entitiesCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.user(),
+      });
+      expect(response.status).toEqual(200);
+      expect(response.body).toEqual(expect.objectContaining(entity));
+    });
+
+    it('responds with a 404 for missing entities', async () => {
+      entitiesCatalog.entityByFormerRef.mockResolvedValue({
+        entity: undefined,
+      });
+
+      const response = await request(app).get(
+        '/entities/by-former-name/component/default/old-name',
+      );
+
+      expect(entitiesCatalog.entityByFormerRef).toHaveBeenCalledTimes(1);
+      expect(entitiesCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.user(),
+      });
+      expect(response.status).toEqual(404);
+      expect(response.text).toMatch(/former name/);
+    });
+  });
 });
 
 describe('createRouter readonly and raw json enabled', () => {
@@ -1392,6 +1440,7 @@ describe('createRouter readonly and raw json enabled', () => {
       entityAncestry: jest.fn(),
       facets: jest.fn(),
       queryEntities: jest.fn(),
+      entityByFormerRef: jest.fn(),
     };
     locationService = {
       getLocation: jest.fn(),
@@ -1647,6 +1696,7 @@ describe.each(databases.eachSupportedId())(
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
           facets: jest.fn(),
+          entityByFormerRef: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },
         locationService,

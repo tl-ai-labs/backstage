@@ -33,6 +33,7 @@ import {
 } from '@backstage/plugin-catalog-react';
 
 import { catalogTranslationRef } from '../../translation';
+import { EntityRenamedNotice } from '../../../components/EntityLayout/EntityLayout';
 import { EntityHeader } from '../EntityHeader';
 import { EntityTabs } from '../EntityTabs';
 import { EntityContentGroupDefinitions } from '@backstage/plugin-catalog-react/alpha';
@@ -95,6 +96,8 @@ export function EntityLayout(props: EntityLayoutProps) {
       )}
 
       {loading && <Progress />}
+
+      {entity && <EntityRenamedNotice />}
 
       {entity && (
         <EntityTabs

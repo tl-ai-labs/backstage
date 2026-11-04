@@ -1,0 +1,258 @@
+{
+  "section": "units",
+  "source": "units-003.json",
+  "value": [
+    {
+      "id": "U26",
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests ANNOTATION_FORMER_NAMES export and FieldFormatEntityPolicy validation of backstage.io/former-names values.",
+      "rules": [
+        "1. Import ANNOTATION_FORMER_NAMES from '../constants'.",
+        "2. Add tests verifying ANNOTATION_FORMER_NAMES equals 'backstage.io/former-names', valid single/multiple/namespaced/full same-kind former names pass policy.enforce, and empty, malformed, cross-kind, or self-referencing entries are rejected."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { FieldFormatEntityPolicy } from './FieldFormatEntityPolicy';",
+          "rule": "Import { ANNOTATION_FORMER_NAMES } from '../constants';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 214,
+          "to": 214,
+          "first_line": "});",
+          "rule": "Add tests for ANNOTATION_FORMER_NAMES validation (valid comma-separated refs, cross-kind rejection, self-reference rejection, and malformed ref rejection)."
+        }
+      ],
+      "depends_on": ["U01", "U02", "U03"],
+      "covers": ["FR-1.1", "FR-1.2", "AC-1"],
+      "tests": [
+        {
+          "name": "accepts valid backstage.io/former-names annotation entries",
+          "given": "an entity with backstage.io/former-names containing simple name, namespace/name, and same-kind full entity ref",
+          "expect": "policy.enforce resolves to the entity and ANNOTATION_FORMER_NAMES equals 'backstage.io/former-names'"
+        },
+        {
+          "name": "rejects invalid backstage.io/former-names annotation entries",
+          "given": "entities with empty, malformed, cross-kind, or self-referencing backstage.io/former-names values",
+          "expect": "policy.enforce rejects with an error referencing annotations.backstage.io/former-names"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U27",
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests indexing of ANNOTATION_FORMER_NAMES into normalized formerrefs search rows in buildEntitySearch.",
+      "rules": [
+        "1. Add tests verifying that buildEntitySearch emits key: 'formerrefs' rows with normalized lowercase kind:namespace/name values for valid entries in backstage.io/former-names, deduplicates duplicate entries, and ignores cross-kind, self-referencing, or malformed entries."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 343,
+          "to": 343,
+          "first_line": "});",
+          "rule": "Add test cases for buildEntitySearch indexing of backstage.io/former-names."
+        }
+      ],
+      "depends_on": ["U04"],
+      "covers": ["FR-1.2", "FR-2.1", "AC-2"],
+      "tests": [
+        {
+          "name": "indexes normalized former entity refs from backstage.io/former-names",
+          "given": "an entity with backstage.io/former-names containing simple name, namespace/name, full ref, duplicate ref, cross-kind ref, self-ref, and malformed ref",
+          "expect": "buildEntitySearch emits deduplicated 'formerrefs' search rows only for the valid same-kind non-self former refs"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U28",
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests DefaultEntitiesCatalog.entityByFormerRef resolution, live-entity precedence, conflict detection, cleanup on update/delete, and filter predicates.",
+      "rules": [
+        "1. Add a describe('entityByFormerRef', ...) block inside the main test suite testing single-claimant resolution, live-entity precedence over former-name claimant, ambiguous conflict (>=2 claimants) returning undefined, cleanup when an entity updates its annotation or is deleted via removeEntityByUid, and filter predicate enforcement."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 2806,
+          "to": 2806,
+          "first_line": "});",
+          "rule": "Add describe('entityByFormerRef', ...) test suite after describe('facets', ...)."
+        }
+      ],
+      "depends_on": ["U06"],
+      "covers": ["FR-2.1", "FR-2.2", "FR-2.3", "FR-2.4", "FR-2.5", "AC-2"],
+      "tests": [
+        {
+          "name": "resolves an entity by its former name and cleans up on update or deletion",
+          "given": "a stitched entity declaring backstage.io/former-names: 'old-name, legacy/old-name'",
+          "expect": "entityByFormerRef resolves the entity for both former refs and returns undefined after the annotation is removed or the entity is deleted"
+        },
+        {
+          "name": "gives precedence to a live entity over a former-name claimant",
+          "given": "a live entity component:default/old-name and another entity component:default/new-name claiming old-name in backstage.io/former-names",
+          "expect": "entityByFormerRef('component:default/old-name') returns the live entity component:default/old-name"
+        },
+        {
+          "name": "returns undefined when multiple live entities claim the same former ref",
+          "given": "two live entities component:default/new-a and component:default/new-b both claiming old-name in backstage.io/former-names",
+          "expect": "entityByFormerRef('component:default/old-name') returns { entity: undefined }"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U29",
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests AuthorizedEntitiesCatalog.entityByFormerRef for DENY, CONDITIONAL, and ALLOW permission decisions.",
+      "rules": [
+        "1. Add entityByFormerRef: jest.fn() to fakeCatalog.",
+        "2. Add describe('entityByFormerRef', ...) verifying that DENY returns { entity: undefined }, CONDITIONAL passes the transformed permission filter to fakeCatalog.entityByFormerRef, and ALLOW delegates directly."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 38,
+          "to": 38,
+          "first_line": "queryEntities: jest.fn(),",
+          "rule": "Add entityByFormerRef: jest.fn(), to fakeCatalog."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 684,
+          "to": 684,
+          "first_line": "});",
+          "rule": "Add describe('entityByFormerRef', ...) testing DENY, CONDITIONAL, and ALLOW."
+        }
+      ],
+      "depends_on": ["U07"],
+      "covers": ["FR-2.5", "AC-2"],
+      "tests": [
+        {
+          "name": "returns undefined on DENY and applies permission filter on CONDITIONAL for entityByFormerRef",
+          "given": "AuthorizedEntitiesCatalog with DENY, CONDITIONAL, and ALLOW permission decisions",
+          "expect": "entityByFormerRef returns { entity: undefined } on DENY, passes permission filter on CONDITIONAL, and delegates on ALLOW"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U30",
+      "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests GET /entities/by-former-name/:kind/:namespace/:name in createRouter.test.ts.",
+      "rules": [
+        "1. Add entityByFormerRef: jest.fn() to each entitiesCatalog mock in createRouter.test.ts.",
+        "2. Add describe('GET /entities/by-former-name/:kind/:namespace/:name', ...) testing 200 response when entitiesCatalog.entityByFormerRef resolves an entity and 404 when it resolves { entity: undefined }."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 71,
+          "to": 71,
+          "first_line": "queryEntities: jest.fn(),",
+          "rule": "Add entityByFormerRef: jest.fn(), to entitiesCatalog mock."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 1378,
+          "to": 1378,
+          "first_line": "});",
+          "rule": "Add describe('GET /entities/by-former-name/:kind/:namespace/:name', ...) testing 200 and 404 responses."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 1394,
+          "to": 1394,
+          "first_line": "queryEntities: jest.fn(),",
+          "rule": "Add entityByFormerRef: jest.fn(), to second entitiesCatalog mock."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 1649,
+          "to": 1649,
+          "first_line": "facets: jest.fn(),",
+          "rule": "Add entityByFormerRef: jest.fn(), to third entitiesCatalog mock."
+        }
+      ],
+      "depends_on": ["U10"],
+      "covers": ["FR-2.6", "AC-2"],
+      "tests": [
+        {
+          "name": "GET /entities/by-former-name/:kind/:namespace/:name returns 200 on match and 404 on miss",
+          "given": "requests to GET /entities/by-former-name/component/default/old-name",
+          "expect": "returns 200 with the target entity JSON when found and 404 when entityByFormerRef returns { entity: undefined }"
+        }
+      ],
+      "checks": ["format", "test"]
+    },
+    {
+      "id": "U31",
+      "path": "packages/catalog-client/src/CatalogClient.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests CatalogClient.getEntityByFormerRef for string and compound refs and 404 responses.",
+      "rules": [
+        "1. Add describe('getEntityByFormerRef', ...) right after describe('getEntityByRef', ...) testing string and compound entityRef resolution via GET /entities/by-former-name/:kind/:namespace/:name and returning undefined on 404."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 1170,
+          "to": 1170,
+          "first_line": "});",
+          "rule": "Insert describe('getEntityByFormerRef', ...) after describe('getEntityByRef', ...)."
+        }
+      ],
+      "depends_on": ["U12", "U14"],
+      "covers": ["FR-3.1", "AC-3"],
+      "tests": [
+        {
+          "name": "resolves entity by former ref string or compound ref and returns undefined on 404",
+          "given": "mocked GET /entities/by-former-name/customkind/default/old-name (200) and /missing (404) endpoints",
+          "expect": "client.getEntityByFormerRef resolves the target entity on 200 and undefined on 404"
+        }
+      ],
+      "checks": ["format", "test"]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts": "e03c9029c0d4d7551caa21d36a406d975d5c627fce0661f8d8d97540321a260f",
+    "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts": "779b4ba54e14528ecd82c22aec3a47a934e768941050fdd7bee0bf59f7a7f31c",
+    "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts": "ef2981d8199ae7dc0cb974b13a50465c95fe821a629891b537b872d3a17100c4",
+    "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts": "9771c1714e397ccc94b2da5955173481ee078c7f2188288c4dcc215f89e38a32",
+    "plugins/catalog-backend/src/service/createRouter.test.ts": "71071aa78e7aeb3c13d6d8ebf8d307c7fdf488184bbe577e2db3cfdf00365047",
+    "packages/catalog-client/src/CatalogClient.test.ts": "af70588c308639cdb7f5da6603c58579358588f930459771d08cc427a05af291"
+  }
+}
