@@ -1,0 +1,97 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Every new TypeScript/TSX source file must start with the standard Backstage Apache-2.0 license header dated 2026; existing modified files must keep their original copyright year.",
+      "Use Prettier formatting (@backstage/cli/config/prettier: single quotes, trailing commas, 2-space indentation) and pass ESLint (@backstage/eslint-plugin rules including @backstage/no-undeclared-imports and react-hooks/rules-of-hooks).",
+      "All user-facing strings in @backstage/plugin-notifications must be defined in notificationsTranslationRef (plugins/notifications/src/translation.ts) and accessed via useTranslationRef from @backstage/core-plugin-api/alpha.",
+      "Unit tests run in Jest (jsdom) via backstage-cli package test; in plugins/notifications use @testing-library/react screen/findBy* queries and renderInTestApp/TestApiProvider from @backstage/test-utils without data-testid attributes or real network calls; in plugins/home-react only import packages declared in plugins/home-react/package.json (such as react and react-dom/client)."
+    ],
+    "decisions": [
+      {
+        "topic": "AppContext-free CardExtension rendering in @backstage/plugin-home-react",
+        "choice": "In plugins/home-react/src/extensions.tsx, import Progress as DefaultProgress from @backstage/core-components and translationApiRef/useApiHolder from @backstage/frontend-plugin-api, falling back to DefaultProgress when useApp() throws and to default 'Settings' text when translationApiRef is absent from ApiHolder.",
+        "rejected": [
+          "Requiring legacy AppContext via unconditional useApp() call",
+          "Adding @backstage/test-utils to plugins/home-react/package.json (out of allowlist scope)"
+        ],
+        "reason": "Allows CardExtension and HomePageWidgetBlueprint widgets to render in environments and tests without legacy AppContext or full ApiProvider while preserving custom Progress override when AppContext is present."
+      },
+      {
+        "topic": "Unread notifications card component structure and exports",
+        "choice": "Create plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx exporting Content and HomePageUnreadNotificationsProps, re-exported via HomePageUnreadNotifications/index.ts, wired as HomePageUnreadNotifications via createCardExtension in src/plugin.ts (and src/index.ts) and as homePageUnreadNotificationsWidget via HomePageWidgetBlueprint.make({ name: 'unread-notifications', ... }) in src/alpha.tsx.",
+        "rejected": [
+          "Exporting only a raw InfoCard component without createCardExtension or HomePageWidgetBlueprint",
+          "Creating a separate hook file for signal/polling refresh only used by one component"
+        ],
+        "reason": "Follows the exact @backstage/plugin-home-react card extension and alpha widget blueprint conventions used in @backstage/plugin-home while keeping the file set minimal."
+      },
+      {
+        "topic": "Live refresh via signals with polling fallback and cleanup",
+        "choice": "Inside HomePageUnreadNotifications Content, subscribe with useSignal<NotificationSignal>('notifications'); when isSignalsAvailable is true and lastSignal updates, invoke retryRef.current(); when isSignalsAvailable is false and pollingIntervalMs > 0 (default 10000), run setInterval calling retryRef.current() and clearInterval on unmount or dependency change.",
+        "rejected": [
+          "Polling unconditionally even when signals are available",
+          "Putting retry directly in useEffect dependency arrays causing re-subscription loops"
+        ],
+        "reason": "Satisfies real-time signal refresh when signalApiRef is registered, degrades gracefully to timer polling when unavailable, and guarantees subscription and timer cleanup on unmount."
+      },
+      {
+        "topic": "Deep-link URL format and highlight handling on NotificationsPage and NotificationsTable",
+        "choice": "Each card item links to `${notificationsRoute}?id=${encodeURIComponent(notification.id)}`; NotificationsPage and NotificationsTable readsearchParams.get('id') via useSearchParams from react-router-dom (plus optional highlightedId prop on NotificationsTableProps) and highlight the matching row with styles.highlightedRow, aria-current='true', and Table rowStyle.",
+        "rejected": [
+          "Using route path parameters (/notifications/:id) which would break existing rootRouteRef mounting",
+          "Highlighting only in NotificationsPage without support in NotificationsTable"
+        ],
+        "reason": "Preserves the existing /notifications route structure while enabling both NotificationsPage and standalone NotificationsTable renders to visually and semantically highlight the targeted notification."
+      },
+      {
+        "topic": "Translation keys for the unread notifications card",
+        "choice": "Add homePageCard: { title: 'Unread notifications', emptyMessage: 'No unread notifications', markAsRead: 'Mark as read', errors: { markAsReadFailed: 'Failed to mark notification as read' } } to notificationsTranslationRef in plugins/notifications/src/translation.ts.",
+        "rejected": [
+          "Hardcoding English strings in HomePageUnreadNotifications.tsx"
+        ],
+        "reason": "Centralizes all card text, accessible button labels, and error toast messages in notificationsTranslationRef."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "docs-quality",
+        "run": "node ./scripts/check-docs-quality {path}",
+        "timeout_s": 60
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test",
+        "run": "CI=true yarn test plugins/notifications plugins/home-react"
+      },
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint:all"
+      }
+    ]
+  },
+  "hashes": {}
+}

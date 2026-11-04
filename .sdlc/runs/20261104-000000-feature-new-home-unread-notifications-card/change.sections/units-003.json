@@ -1,0 +1,312 @@
+[
+  {
+    "id": "U16",
+    "path": "plugins/home-react/src/extensions.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Verify that CardExtension and createCardExtension render Content, Actions, Settings, ContextProvider, and Renderer without requiring a legacy Backstage AppContext.",
+    "rules": [
+      "1. Import only packages declared in plugins/home-react/package.json: { act } from 'react', { createRoot, type Root } from 'react-dom/client', { createPlugin } from '@backstage/core-plugin-api', and { CardExtension, createCardExtension } from './extensions' (do NOT import @testing-library/react or @backstage/test-utils).",
+      "2. Set up a DOM container (let container: HTMLDivElement; let root: Root;) in beforeEach attached to document.body and unmount/remove it in afterEach.",
+      "3. Test that CardExtension renders its title and Content without a legacy AppContext provider.",
+      "4. Test that CardExtension renders optional Actions and wraps Content with ContextProvider without a legacy AppContext provider.",
+      "5. Test that CardExtension renders a custom Renderer forwarding title, Content, Actions, Settings (when !isCustomizable), and ContextProvider without a legacy AppContext provider.",
+      "6. Test that an extension created with createPlugin({ id: 'test' }).provide(createCardExtension({ name: 'TestCard', title: 'Test Card', components: async () => ({ Content: () => <div>Lazy card body</div> }) })) resolves and renders its title and Content without a legacy AppContext provider."
+    ],
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "reason": "Follows Backstage test file license header and describe/it structure."
+    },
+    "uses": [
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "reason": "Tests CardExtension and createCardExtension."
+      }
+    ],
+    "depends_on": [
+      "U01"
+    ],
+    "covers": [
+      "FR-16",
+      "FR-17",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "AC-7",
+      "AC-8"
+    ],
+    "tests": [
+      {
+        "name": "renders CardExtension Content and title without AppContext",
+        "given": "CardExtension is rendered with title and Content and no legacy AppContext wrapper",
+        "expect": "InfoCard renders the card title and Content text without throwing"
+      },
+      {
+        "name": "renders CardExtension Actions and ContextProvider without AppContext",
+        "given": "CardExtension is rendered with Content, Actions, and ContextProvider and no AppContext wrapper",
+        "expect": "ContextProvider wraps the card and both Content and Actions are rendered"
+      },
+      {
+        "name": "renders custom Renderer with Settings, Actions, and ContextProvider without AppContext",
+        "given": "CardExtension is rendered with a custom Renderer, Content, Actions, Settings, and ContextProvider",
+        "expect": "Renderer receives and renders title, Content, Actions, Settings, and ContextProvider"
+      },
+      {
+        "name": "renders createCardExtension lazy card without AppContext",
+        "given": "A card extension created via createCardExtension is rendered without an AppContext wrapper",
+        "expect": "The lazy component resolves and renders its title and Content"
+      }
+    ],
+    "checks": [
+      "prettier",
+      "eslint",
+      "test"
+    ]
+  },
+  {
+    "id": "U17",
+    "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Test unread notifications home card rendering, mark-as-read, deep-link URL and table highlight handling, signal refresh, polling fallback, unmount cleanup, and legacy/alpha registrations.",
+    "rules": [
+      "1. Import only packages declared in plugins/notifications/package.json: { act, fireEvent, screen, waitFor } from '@testing-library/react', { renderInTestApp, TestApiProvider } from '@backstage/test-utils', { signalApiRef, type SignalApi } from '@backstage/plugin-signals-react', { toastApiRef } from '@backstage/frontend-plugin-api', { Notification, NotificationSignal } from '@backstage/plugin-notifications-common', and local modules (do NOT import @testing-library/user-event or @backstage/frontend-test-utils).",
+      "2. Test that Content calls notificationsApi.getNotifications({ read: false, sort: 'created', sortOrder: 'desc', limit: 5 }) and renders notification titles, descriptions, origins, topics, and links with href='/notifications?id=<id>'.",
+      "3. Test that Content renders 'No unread notifications' when getNotifications returns an empty array and renders ResponseErrorPanel when getNotifications rejects.",
+      "4. Test that clicking the 'Mark as read' button calls notificationsApi.updateNotifications({ ids: [id], read: true }) and removes that notification from the DOM; test that when updateNotifications rejects, toastApi.post is called with { title: 'Failed to mark notification as read', status: 'danger' } and the notification remains.",
+      "5. Test that when signalApiRef is provided, Content subscribes to the 'notifications' channel, re-fetches unread notifications when the subscriber callback receives a NotificationSignal, and calls unsubscribe when the component unmounts.",
+      "6. Test with jest.useFakeTimers() (cleaning up with jest.useRealTimers() in afterEach) that when signalApiRef is not provided, Content polls getNotifications at pollingIntervalMs and clears the interval on unmount so advancing timers after unmount triggers no further getNotifications calls.",
+      "7. Test that NotificationsTable and NotificationsPage rendered at initial route '/notifications?id=notif-1' apply aria-current='true' and the highlightedRow class to the matching notification row and do not apply them to non-matching rows or when rendered at '/notifications' without ?id=.",
+      "8. Test that HomePageUnreadNotifications exported from '../../plugin' renders the 'Unread notifications' card title and unread items, and that the default alpha plugin export from '../../alpha' registers extension 'home-page-widget:notifications/unread-notifications'."
+    ],
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "reason": "Follows Backstage test conventions using @testing-library/react screen and renderInTestApp from @backstage/test-utils."
+    },
+    "uses": [
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "lines": [
+          53,
+          85
+        ],
+        "reason": "Tests ?id=<id> highlight handling in NotificationsTable."
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "lines": [
+          56,
+          100
+        ],
+        "reason": "Tests ?id=<id> highlight handling in NotificationsPage."
+      },
+      {
+        "path": "plugins/notifications/src/plugin.ts",
+        "reason": "Tests legacy HomePageUnreadNotifications card extension export."
+      },
+      {
+        "path": "plugins/notifications/src/alpha.tsx",
+        "reason": "Tests alpha home-page-widget:notifications/unread-notifications registration."
+      }
+    ],
+    "depends_on": [
+      "U06",
+      "U07",
+      "U08",
+      "U11",
+      "U12",
+      "U13"
+    ],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-4",
+      "FR-5",
+      "FR-6",
+      "FR-7",
+      "FR-8",
+      "FR-9",
+      "FR-10",
+      "FR-11",
+      "FR-12",
+      "FR-14",
+      "FR-15",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-4",
+      "NFR-5",
+      "NFR-6",
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-8"
+    ],
+    "tests": [
+      {
+        "name": "renders unread notifications and deep-links to /notifications?id=<id>",
+        "given": "notificationsApi.getNotifications resolves with unread notifications and rootRouteRef is mounted at /notifications",
+        "expect": "getNotifications is called with { read: false, sort: 'created', sortOrder: 'desc', limit: 5 } and each notification title links to /notifications?id=<id>"
+      },
+      {
+        "name": "renders empty state and error state",
+        "given": "getNotifications resolves with [] or rejects with an Error",
+        "expect": "'No unread notifications' is rendered when empty and ResponseErrorPanel is rendered on error"
+      },
+      {
+        "name": "marks a notification as read and removes it from the list, or posts a toast on error",
+        "given": "the user clicks the 'Mark as read' button on an unread notification",
+        "expect": "updateNotifications is called with { ids: [id], read: true } and the item leaves the DOM, or toastApi.post is called on failure"
+      },
+      {
+        "name": "refreshes when a notifications signal arrives and unsubscribes on unmount",
+        "given": "signalApiRef is registered and emits a NotificationSignal on the 'notifications' channel, then unmounts",
+        "expect": "getNotifications is called again to refresh the list and the signal subscription unsubscribe callback is invoked on unmount"
+      },
+      {
+        "name": "falls back to polling when signals are unavailable and clears the interval on unmount",
+        "given": "signalApiRef is not registered and fake timers advance by pollingIntervalMs before and after unmount",
+        "expect": "getNotifications is called on each polling interval while mounted and no further calls occur after unmount"
+      },
+      {
+        "name": "highlights the targeted notification on NotificationsTable and NotificationsPage for ?id=<id>",
+        "given": "NotificationsTable or NotificationsPage is rendered at route '/notifications?id=notif-1'",
+        "expect": "the row for notif-1 has aria-current='true' and class highlightedRow while non-matching rows do not"
+      },
+      {
+        "name": "registers HomePageUnreadNotifications for legacy and alpha frontend systems",
+        "given": "HomePageUnreadNotifications from plugin.ts is rendered and alpha default plugin is inspected",
+        "expect": "HomePageUnreadNotifications renders the card heading and content, and alpha plugin provides 'home-page-widget:notifications/unread-notifications'"
+      }
+    ],
+    "checks": [
+      "prettier",
+      "eslint",
+      "test"
+    ]
+  },
+  {
+    "id": "U18",
+    "path": "plugins/notifications/README.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the unread notifications home-page card in plugins/notifications/README.md for both new and legacy frontend systems.",
+    "rules": [
+      "1. In S1, add a '## Home page card' section documenting the 'home-page-widget:notifications/unread-notifications' widget for the new frontend system and the 'HomePageUnreadNotifications' card extension for the legacy frontend system using clear, standard English prose that passes Vale."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 14,
+        "to": 14,
+        "first_line": "add `@backstage/plugin-signals` package to your installation.",
+        "rule": "Add a '## Home page card' section showing usage in both the new frontend system and the legacy frontend system."
+      }
+    ],
+    "depends_on": [
+      "U12",
+      "U13"
+    ],
+    "covers": [
+      "FR-18",
+      "NFR-2",
+      "AC-9"
+    ],
+    "checks": [
+      "prettier",
+      "docs-quality"
+    ]
+  },
+  {
+    "id": "U19",
+    "path": "docs/notifications/usage.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document how to use the unread notifications home-page card in docs/notifications/usage.md.",
+    "rules": [
+      "1. In S1, add a '### Home Page Card' subsection under '## Notifications Frontend' explaining how to use the unread notifications widget in the new frontend system (via '@backstage/plugin-notifications/alpha') and the 'HomePageUnreadNotifications' card extension in the legacy frontend system (from '@backstage/plugin-notifications')."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 32,
+        "to": 32,
+        "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+        "rule": "Add a '### Home Page Card' subsection documenting new frontend system widget registration and legacy HomePageUnreadNotifications usage."
+      }
+    ],
+    "depends_on": [
+      "U12",
+      "U13"
+    ],
+    "covers": [
+      "FR-18",
+      "NFR-2",
+      "AC-9"
+    ],
+    "checks": [
+      "prettier",
+      "docs-quality"
+    ]
+  },
+  {
+    "id": "U20",
+    "path": ".changeset/unread-notifications-home-card.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a patch changeset for @backstage/plugin-notifications describing the new unread notifications home-page card and deep-link highlighting.",
+    "rules": [
+      "1. Create a changeset with frontmatter \"'@backstage/plugin-notifications': patch\" and a concise summary of the new HomePageUnreadNotifications card, live signal/polling refresh, and /notifications?id=<id> highlight support."
+    ],
+    "style_from": {
+      "path": ".changeset/neat-notification-context.md",
+      "reason": "Follows the repo's changeset markdown format."
+    },
+    "depends_on": [
+      "U12",
+      "U13"
+    ],
+    "covers": [
+      "FR-20",
+      "NFR-2",
+      "AC-9"
+    ],
+    "checks": [
+      "prettier",
+      "docs-quality"
+    ]
+  },
+  {
+    "id": "U21",
+    "path": ".changeset/home-react-card-extension-context.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a patch changeset for @backstage/plugin-home-react describing AppContext-free CardExtension rendering.",
+    "rules": [
+      "1. Create a changeset with frontmatter \"'@backstage/plugin-home-react': patch\" and a concise summary stating that card extensions now fall back to the default Progress component when rendered outside a legacy Backstage app context."
+    ],
+    "style_from": {
+      "path": ".changeset/neat-notification-context.md",
+      "reason": "Follows the repo's changeset markdown format."
+    },
+    "depends_on": [
+      "U01"
+    ],
+    "covers": [
+      "FR-20",
+      "NFR-2",
+      "AC-9"
+    ],
+    "checks": [
+      "prettier",
+      "docs-quality"
+    ]
+  }
+]

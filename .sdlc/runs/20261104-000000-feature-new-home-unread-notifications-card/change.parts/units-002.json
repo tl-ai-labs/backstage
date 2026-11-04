@@ -1,0 +1,424 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U08",
+      "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Render the unread notifications home-page card content with live signal refresh, polling fallback, deep-linking to /notifications?id=<id>, and per-item mark-as-read.",
+      "rules": [
+        "1. Export /** @public */ type HomePageUnreadNotificationsProps = { limit?: number; pollingIntervalMs?: number } and export const Content = (props: HomePageUnreadNotificationsProps) => JSX.Element with defaults limit = 5 and pollingIntervalMs = 10000.",
+        "2. Use useTranslationRef(notificationsTranslationRef) from '@backstage/core-plugin-api/alpha', useApi(notificationsApiRef) and useApiHolder() from '@backstage/core-plugin-api' (resolving const toastApi = apiHolder.get(toastApiRef) with toastApiRef from '@backstage/frontend-plugin-api'), and resolve let notificationsRoute = '/notifications' via try { notificationsRoute = useRouteRef(rootRouteRef)(); } catch {} (with // eslint-disable-next-line react-hooks/rules-of-hooks).",
+        "3. Fetch unread notifications via useNotificationsApi(api => api.getNotifications({ read: false, sort: 'created', sortOrder: 'desc', limit }), [limit]) from '../../hooks', sync value?.notifications into local useState<Notification[]>([]) in a useEffect([value]), and store retry in a ref (retryRef.current = retry) alongside an isMountedRef cleaned up on unmount.",
+        "4. Subscribe to 'notifications' signals with const { lastSignal, isSignalsAvailable } = useSignal<NotificationSignal>('notifications') from '@backstage/plugin-signals-react'; in a useEffect([isSignalsAvailable, lastSignal]), when isSignalsAvailable && lastSignal is truthy, call retryRef.current(); in a useEffect([isSignalsAvailable, pollingIntervalMs]), when !isSignalsAvailable && pollingIntervalMs > 0, start const timer = setInterval(() => { retryRef.current(); }, pollingIntervalMs) and return () => clearInterval(timer).",
+        "5. Render <Progress /> when loading && !value; render <ResponseErrorPanel error={error} /> when error is defined; render <Text variant=\"body-medium\" color=\"secondary\">{t('homePageCard.emptyMessage')}</Text> when notifications.length === 0.",
+        "6. For each notification in notifications, render a row (<Flex key={notification.id} justify=\"between\" align=\"center\" gap=\"3\">) containing <SeverityIcon severity={notification.payload.severity} />, <Link to={`${notificationsRoute}?id=${encodeURIComponent(notification.id)}`}>{notification.payload.title}</Link>, optional <Text variant=\"body-small\" color=\"secondary\">{notification.payload.description}</Text>, optional metadata (notification.origin, notification.payload.topic, and <RelativeTime value={notification.created} /> with // @ts-ignore before import RelativeTime from 'react-relative-time'), and a <ButtonIcon aria-label={t('homePageCard.markAsRead')} icon={<RiCheckboxCircleLine size={16} />} variant=\"secondary\" onPress={() => handleMarkAsRead(notification.id)} /> that awaits notificationsApi.updateNotifications({ ids: [id], read: true }), removes the item from notifications state on success if still mounted, and calls toastApi?.post({ title: t('homePageCard.errors.markAsReadFailed'), status: 'danger' }) on error."
+      ],
+      "exports": [
+        {
+          "name": "HomePageUnreadNotificationsProps",
+          "kind": "type",
+          "params": [],
+          "returns": "{ limit?: number; pollingIntervalMs?: number }"
+        },
+        {
+          "name": "Content",
+          "kind": "const",
+          "params": [
+            {
+              "name": "props",
+              "type": "HomePageUnreadNotificationsProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { Content, type HomePageUnreadNotificationsProps } from './HomePageUnreadNotifications';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "lines": [
+          1,
+          85
+        ],
+        "reason": "Follows Backstage license header, import style, RelativeTime import convention, and @backstage/ui + @backstage/core-components usage."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/translation.ts",
+          "reason": "Uses notificationsTranslationRef homePageCard messages."
+        },
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "reason": "Calls notificationsApiRef.getNotifications and updateNotifications."
+        },
+        {
+          "path": "plugins/notifications/src/hooks/useNotificationsApi.ts",
+          "reason": "Uses useNotificationsApi hook to fetch unread notifications."
+        },
+        {
+          "path": "plugins/notifications/src/routes.ts",
+          "reason": "Uses rootRouteRef to build /notifications?id=<id> deep links."
+        },
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/SeverityIcon.tsx",
+          "reason": "Renders SeverityIcon for each unread notification."
+        }
+      ],
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-9",
+        "FR-10",
+        "FR-11",
+        "FR-12",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/notifications/src/components/HomePageUnreadNotifications/index.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Re-export Content and HomePageUnreadNotificationsProps from HomePageUnreadNotifications.",
+      "rules": [
+        "1. Re-export { Content } from './HomePageUnreadNotifications' and export type { HomePageUnreadNotificationsProps } from './HomePageUnreadNotifications'."
+      ],
+      "exports": [
+        {
+          "name": "Content",
+          "kind": "const",
+          "params": [
+            {
+              "name": "props",
+              "type": "HomePageUnreadNotificationsProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        },
+        {
+          "name": "HomePageUnreadNotificationsProps",
+          "kind": "type",
+          "params": [],
+          "returns": "{ limit?: number; pollingIntervalMs?: number }"
+        }
+      ],
+      "import_line": "import { Content, type HomePageUnreadNotificationsProps } from './components/HomePageUnreadNotifications';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/index.ts",
+        "reason": "Follows the component index.ts barrel pattern."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "FR-14",
+        "FR-15",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/notifications/src/components/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Re-export HomePageUnreadNotificationsProps from components/index.ts.",
+      "rules": [
+        "1. In S1, add export type { HomePageUnreadNotificationsProps } from './HomePageUnreadNotifications'; after NotificationsPageProps."
+      ],
+      "exports": [
+        {
+          "name": "HomePageUnreadNotificationsProps",
+          "kind": "type",
+          "params": [],
+          "returns": "{ limit?: number; pollingIntervalMs?: number }"
+        }
+      ],
+      "import_line": "import type { HomePageUnreadNotificationsProps } from './components';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 19,
+          "to": 19,
+          "first_line": "export type { NotificationsPageProps } from './NotificationsPage';",
+          "rule": "Export type { HomePageUnreadNotificationsProps } from './HomePageUnreadNotifications'."
+        }
+      ],
+      "depends_on": [
+        "U09"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/notifications/src/plugin.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Register and export the HomePageUnreadNotifications card extension via notificationsPlugin.provide(createCardExtension(...)).",
+      "rules": [
+        "1. In S1, import { createCardExtension } from '@backstage/plugin-home-react' and import type { HomePageUnreadNotificationsProps } from './components/HomePageUnreadNotifications'.",
+        "2. In S2, export /** @public */ const HomePageUnreadNotifications = notificationsPlugin.provide(createCardExtension<HomePageUnreadNotificationsProps>({ name: 'HomePageUnreadNotifications', title: 'Unread notifications', description: 'Lists the latest unread notifications for the signed-in user', components: () => import('./components/HomePageUnreadNotifications') }))."
+      ],
+      "exports": [
+        {
+          "name": "HomePageUnreadNotifications",
+          "kind": "const",
+          "params": [
+            {
+              "name": "props",
+              "type": "CardExtensionProps<HomePageUnreadNotificationsProps>"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { HomePageUnreadNotifications } from './plugin';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { NotificationsClient } from './api';",
+          "rule": "Import { createCardExtension } from '@backstage/plugin-home-react' and type { HomePageUnreadNotificationsProps } from './components/HomePageUnreadNotifications'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52,
+          "first_line": ");",
+          "rule": "Export HomePageUnreadNotifications created via notificationsPlugin.provide(createCardExtension<HomePageUnreadNotificationsProps>({ ... }))."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/home-react/src/extensions.tsx",
+          "lines": [
+            80,
+            116
+          ],
+          "reason": "Calls createCardExtension from @backstage/plugin-home-react."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02",
+        "U03",
+        "U09"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/notifications/src/index.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Export HomePageUnreadNotifications from the package root entrypoint.",
+      "rules": [
+        "1. In S1, export HomePageUnreadNotifications alongside notificationsPlugin and NotificationsPage from './plugin'."
+      ],
+      "exports": [
+        {
+          "name": "HomePageUnreadNotifications",
+          "kind": "const",
+          "params": [
+            {
+              "name": "props",
+              "type": "CardExtensionProps<HomePageUnreadNotificationsProps>"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { HomePageUnreadNotifications } from '@backstage/plugin-notifications';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "export { notificationsPlugin, NotificationsPage } from './plugin';",
+          "rule": "Export { notificationsPlugin, NotificationsPage, HomePageUnreadNotifications } from './plugin'."
+        }
+      ],
+      "depends_on": [
+        "U10",
+        "U11"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/notifications/src/alpha.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Register the unread notifications home-page widget using HomePageWidgetBlueprint.make in the new frontend system plugin.",
+      "rules": [
+        "1. In S1, import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha'.",
+        "2. In S2, define const homePageUnreadNotificationsWidget = HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: { name: 'HomePageUnreadNotifications', title: 'Unread notifications', description: 'Lists the latest unread notifications for the signed-in user', components: () => import('./components/HomePageUnreadNotifications').then(m => ({ Content: m.Content })) } }) and include homePageUnreadNotificationsWidget in extensions: [page, api, homePageUnreadNotificationsWidget]."
+      ],
+      "exports": [
+        {
+          "name": "default",
+          "kind": "const",
+          "params": [],
+          "returns": "OverridableFrontendPlugin"
+        }
+      ],
+      "import_line": "import notificationsPlugin from '@backstage/plugin-notifications/alpha';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { NotificationsClient, notificationsApiRef } from './api';",
+          "rule": "Import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 47,
+          "to": 60,
+          "first_line": "});",
+          "last_line": "});",
+          "rule": "Define homePageUnreadNotificationsWidget via HomePageWidgetBlueprint.make and add it to the extensions array of createFrontendPlugin."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx",
+          "reason": "Uses HomePageWidgetBlueprint.make to define the home page widget extension."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02",
+        "U03",
+        "U09"
+      ],
+      "covers": [
+        "FR-15",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/notifications/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerate API reports for @backstage/plugin-notifications after adding HomePageUnreadNotifications and translation keys.",
+      "run": "yarn build:api-reports plugins/home-react plugins/notifications",
+      "depends_on": [
+        "U01",
+        "U04",
+        "U06",
+        "U07",
+        "U12",
+        "U13"
+      ],
+      "covers": [
+        "FR-19",
+        "AC-6",
+        "AC-9"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "plugins/notifications/report-alpha.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Ensure report-alpha.api.md is regenerated and recorded for @backstage/plugin-notifications.",
+      "run": "yarn build:api-reports:only plugins/notifications",
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-19",
+        "AC-6",
+        "AC-9"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx": "e5c70ee41407f8f1a66ff2bf61c697523e094df60b47c4cb6785daec1fda4584",
+    "plugins/notifications/src/translation.ts": "8ac1ee9920c2d73124cfff7826ee11deadcc9eaf1b09f92494f927f4fadf1f4a",
+    "plugins/notifications/src/api/NotificationsApi.ts": "a6e26256a031f43baae212207ee06ad5700c1155a59b43ea1073ce393872ea6b",
+    "plugins/notifications/src/hooks/useNotificationsApi.ts": "f58467546631bb60d841ce8039dac550e95a5aef28fa06ce925c2c56e2cf8b6e",
+    "plugins/notifications/src/routes.ts": "a7fff5b26e700d2c0fcf7050bb837cd6c8c14015a4ebb93a3a84b7648cfe36cb",
+    "plugins/notifications/src/components/NotificationsTable/SeverityIcon.tsx": "f8198b29af93308c33777f7d45e283958050c6772c4c32c61a3d0e08be9e3809",
+    "plugins/notifications/src/components/UserNotificationSettingsCard/index.ts": "b127c3b589383a7136fdbc765e45a90ff1ddfa1d047fb6513b729efdb73053c5",
+    "plugins/notifications/src/components/index.ts": "8c016dfe00e4d70b1c23e525dea396cdca7d1d7758c9c3f627eeb59d5394c4b2",
+    "plugins/notifications/src/plugin.ts": "a93db6193eb555fc4a78699c39c71fe558c09678ecaf4f2425238be3499efaf2",
+    "plugins/home-react/src/extensions.tsx": "1db19509d660bad4dc6e3b5a2186e7a85b6a438bc693e166231452c28fc60ff2",
+    "plugins/notifications/src/index.ts": "61da4b6d395a2896f914914ffd2219d73ec1c6f10cec2672a6032e33c93a4c0d",
+    "plugins/notifications/src/alpha.tsx": "e4a38d69ca6209bf2f1625ca9681591341f07652f87fe29c19eb2d621e2b314c",
+    "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx": "004e033f9cd975b49f3949eb54fd74c8d18cef2fab610c61f2737a244452ea15"
+  }
+}

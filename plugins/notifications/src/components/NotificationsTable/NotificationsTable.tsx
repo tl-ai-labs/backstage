@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 // @ts-ignore
 import RelativeTime from 'react-relative-time';
@@ -62,6 +63,7 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  highlightedId?: string;
 };
 
 /** @public */
@@ -78,10 +80,14 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedId,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const notificationsApi = useApi(notificationsApiRef);
   const toastApi = useApi(toastApiRef);
+  const [searchParams] = useSearchParams();
+  const effectiveHighlightedId =
+    highlightedId ?? searchParams.get('id') ?? undefined;
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   const [selectedNotifications, setSelectedNotifications] = useState(
@@ -197,64 +203,73 @@ export const NotificationsTable = ({
           true /* Keep sorting&filtering on backend due to pagination. */,
         cellStyle: { paddingLeft: 0 },
         render: (notification: Notification) => {
+          const isHighlighted = Boolean(
+            effectiveHighlightedId &&
+              notification.id === effectiveHighlightedId,
+          );
           // Compact content
           return (
-            <Flex gap="4" align="center">
-              <div className={styles.severityItem}>
-                <NotificationIcon notification={notification} />
-              </div>
-              <Flex direction="column" gap="1">
-                <Text variant="body-medium">
-                  {notification.payload.link ? (
-                    <Link
-                      to={notification.payload.link}
-                      onClick={() => {
-                        if (markAsReadOnLinkOpen && !notification.read) {
-                          onSwitchReadStatus([notification.id], true);
-                        }
-                      }}
-                    >
-                      {notification.payload.title}
-                    </Link>
-                  ) : (
-                    notification.payload.title
-                  )}
-                </Text>
-                {notification.payload.description ? (
-                  <NotificationDescription
-                    description={notification.payload.description}
-                  />
-                ) : null}
-
-                <Text variant="body-small" color="secondary">
-                  {!notification.user && (
-                    <RiRssFill size={14} className={styles.broadcastIcon} />
-                  )}
-                  {notification.origin && (
-                    <>
-                      <span className={styles.notificationInfoRow}>
-                        {notification.origin}
-                      </span>
-                      &bull;
-                    </>
-                  )}
-                  {notification.payload.topic && (
-                    <>
-                      <span className={styles.notificationInfoRow}>
-                        {notification.payload.topic}
-                      </span>
-                      &bull;
-                    </>
-                  )}
-                  {notification.created && (
-                    <RelativeTime
-                      value={notification.created}
-                      className={styles.notificationInfoRow}
+            <div
+              className={isHighlighted ? styles.highlightedRow : undefined}
+              aria-current={isHighlighted ? 'true' : undefined}
+            >
+              <Flex gap="4" align="center">
+                <div className={styles.severityItem}>
+                  <NotificationIcon notification={notification} />
+                </div>
+                <Flex direction="column" gap="1">
+                  <Text variant="body-medium">
+                    {notification.payload.link ? (
+                      <Link
+                        to={notification.payload.link}
+                        onClick={() => {
+                          if (markAsReadOnLinkOpen && !notification.read) {
+                            onSwitchReadStatus([notification.id], true);
+                          }
+                        }}
+                      >
+                        {notification.payload.title}
+                      </Link>
+                    ) : (
+                      notification.payload.title
+                    )}
+                  </Text>
+                  {notification.payload.description ? (
+                    <NotificationDescription
+                      description={notification.payload.description}
                     />
-                  )}
-                </Text>
+                  ) : null}
+
+                  <Text variant="body-small" color="secondary">
+                    {!notification.user && (
+                      <RiRssFill size={14} className={styles.broadcastIcon} />
+                    )}
+                    {notification.origin && (
+                      <>
+                        <span className={styles.notificationInfoRow}>
+                          {notification.origin}
+                        </span>
+                        &bull;
+                      </>
+                    )}
+                    {notification.payload.topic && (
+                      <>
+                        <span className={styles.notificationInfoRow}>
+                          {notification.payload.topic}
+                        </span>
+                        &bull;
+                      </>
+                    )}
+                    {notification.created && (
+                      <RelativeTime
+                        value={notification.created}
+                        className={styles.notificationInfoRow}
+                      />
+                    )}
+                  </Text>
+                </Flex>
               </Flex>
-            </Flex>
+            </div>
           );
         },
       },
@@ -290,6 +305,7 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    effectiveHighlightedId,
   ]);
 
   return (
@@ -303,6 +319,10 @@ export const NotificationsTable = ({
           pageSize,
           header: true,
           sorting: false,
+          rowStyle: (rowData: Notification) =>
+            effectiveHighlightedId && rowData.id === effectiveHighlightedId
+              ? { backgroundColor: 'var(--bui-bg-neutral-1)' }
+              : {},
         }}
         title={title}
         onPageChange={onPageChange}

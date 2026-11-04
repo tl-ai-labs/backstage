@@ -24,6 +24,8 @@ import {
 import { rootRouteRef } from './routes';
 import { notificationsApiRef } from './api/NotificationsApi';
 import { NotificationsClient } from './api';
+import { createCardExtension } from '@backstage/plugin-home-react';
+import type { HomePageUnreadNotificationsProps } from './components/HomePageUnreadNotifications';
 
 /** @public */
 export const notificationsPlugin = createPlugin({
@@ -48,5 +50,15 @@ export const NotificationsPage = notificationsPlugin.provide(
     component: () =>
       import('./components/NotificationsPage').then(m => m.NotificationsPage),
     mountPoint: rootRouteRef,
+  }),
+);
+
+/** @public */
+export const HomePageUnreadNotifications = notificationsPlugin.provide(
+  createCardExtension<HomePageUnreadNotificationsProps>({
+    name: 'HomePageUnreadNotifications',
+    title: 'Unread notifications',
+    description: 'Lists the latest unread notifications for the signed-in user',
+    components: () => import('./components/HomePageUnreadNotifications'),
   }),
 );
