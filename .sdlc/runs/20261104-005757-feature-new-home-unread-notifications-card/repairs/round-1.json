@@ -1,0 +1,53 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-005757-feature-new-home-unread-notifications-card",
+    "artifact_path": "plugins/home-react/src/extensions.test.tsx",
+    "instruction": "Fix `plugins/home-react/src/extensions.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Test `extensions › renders a card created with createCardExtension without AppContext` fails: `App context is not available` at useApp (packages/core-plugin-api/src/app/useApp.tsx:171:11) called from Result (packages/core-plugin-api/src/extensions/extensions.tsx:241:27). The wrapper that createReactExtension/createCardExtension builds calls useApp() itself, outside CardExtension, and packages/core-plugin-api is not part of this change. Test the fallback by rendering the exported CardExtension component directly (FR-2 allows 'rendered via CardExtension') without any app context, not a createCardExtension-built extension. Also: an earlier attempt failed `yarn eslint` with `React default imports are deprecated` (no-restricted-syntax) on line 16: do not default-import React; import named hooks/types from 'react' only. Keep the 2026 Apache-2.0 header, screen/findBy* queries, no test IDs.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/home-react/src/extensions.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/home-react/src/extensions.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-005757-feature-new-home-unread-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-005757-feature-new-home-unread-notifications-card/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/home-react/src/extensions.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

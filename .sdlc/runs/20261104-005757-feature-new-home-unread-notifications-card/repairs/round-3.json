@@ -1,0 +1,57 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-005757-feature-new-home-unread-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. End-of-run checks (`CI=true yarn test plugins/notifications plugins/home-react && yarn tsc && yarn lint:all`), three failures in this file:\n1. yarn tsc: `HomePageUnreadNotifications.test.tsx:16:34 - error TS6133: 'waitFor' is declared but its value is never read.` Remove the unused import (and prefer findBy* over waitFor).\n2. Jest `HomePageUnreadNotifications › renders error state when getNotifications rejects`: `Found multiple elements with the text: /boom failure/` (the error panel renders the message more than once, e.g. in an <h6> summary 'Error: boom failure' and again in its details). Use a query that matches one element (e.g. findAllByText(...)[0] / an exact string matching the summary, or findByRole('heading', ...)), keeping screen + findBy*.\n3. Jest `HomePageUnreadNotifications › highlights the matching notification on NotificationsPage when navigated to /notifications?id=<id>`: `expect(isHighlighted(nonMatchingRow)).toBe(false)` received true (line 355). The helper `isHighlighted` is wrong: in jsdom `window.getComputedStyle(row).backgroundColor` is a non-empty string for every row, so it is always truthy; and it also searches for a class containing 'highlighted', which the approved plan forbids (assert only on what the user sees, no class names). Assert only on the row's inline background: the table sets `rowStyle` to `{ backgroundColor: 'var(--bui-bg-neutral-1, rgba(0, 0, 0, 0.04))' }` for the matching row and `{}` for others, so check the matching row's `style.backgroundColor` is non-empty (or `toHaveStyle` with that value) and the non-matching row's is empty. If the row element found via findAllByRole('row') is not the element that carries rowStyle, find the correct row element through role queries. Do not use closest('tr') or class names.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-005757-feature-new-home-unread-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-005757-feature-new-home-unread-notifications-card/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

@@ -1,0 +1,76 @@
+{
+  "conventions": [
+    "Begin every newly created .ts or .tsx file with the Backstage Apache-2.0 license header dated 2026 (Copyright 2026 The Backstage Authors).",
+    "Format code with 2-space indentation, single quotes, trailing commas, and semicolons matching @backstage/cli/config/prettier.",
+    "Use named exports with explicit @public or @alpha TSDoc release tags on all exported symbols re-exported from package entrypoints.",
+    "Import useTranslationRef from @backstage/core-plugin-api/alpha in plugins/notifications components and consume notificationsTranslationRef.",
+    "Never add data-testid or test-only attributes or use *ByTestId queries in components or tests; use accessible roles, labels, and text with screen and findBy* queries.",
+    "In the new home card component, clean up any polling timers (clearInterval) and subscriptions created by the card in React useEffect cleanup functions on unmount; do not modify existing throttle or effect code in NotificationsPage or NotificationsTable.",
+    "Only import packages declared in the respective package.json dependencies, devDependencies, or peerDependencies."
+  ],
+  "decisions": [
+    {
+      "topic": "CardExtension Progress fallback outside AppContext",
+      "choice": "Wrap useApp().getComponents().Progress in a try/catch inside CardExtension and fall back to Progress from @backstage/core-components when useApp() throws",
+      "rejected": [
+        "Requiring callers to wrap CardExtension in TestApp",
+        "Replacing app.getComponents().Progress unconditionally"
+      ],
+      "reason": "Preserves custom app Progress components when inside a Backstage AppContext while allowing CardExtension and createCardExtension cards to render in isolated unit tests without an AppContext."
+    },
+    {
+      "topic": "Unread notifications home card naming and exports",
+      "choice": "Place component in plugins/notifications/src/components/HomePageUnreadNotifications, export Content and HomePageUnreadNotificationsProps from its index.ts, export HomePageUnreadNotifications card extension from plugin.ts and src/index.ts, and export type HomePageUnreadNotificationsProps from src/components/index.ts",
+      "rejected": [
+        "Exporting raw non-extension card component from src/index.ts under the same name",
+        "Hardcoding card without createCardExtension"
+      ],
+      "reason": "Matches Backstage home card extension conventions (createCardExtension in plugin.ts, type export in components/index.ts) and avoids duplicate export collisions in src/index.ts."
+    },
+    {
+      "topic": "New frontend system widget registration",
+      "choice": "Create unreadNotificationsWidget via HomePageWidgetBlueprint.make in plugins/notifications/src/alpha.tsx with name 'unread-notifications' and params.name 'HomePageUnreadNotifications' and include it in createFrontendPlugin extensions",
+      "rejected": [
+        "Creating a separate home plugin module",
+        "Omitting widget from default extensions array"
+      ],
+      "reason": "Follows plugins/search/src/alpha.tsx pattern for contributing a HomePageWidgetBlueprint from a feature plugin."
+    },
+    {
+      "topic": "Live signal refresh and polling fallback in HomePageUnreadNotifications",
+      "choice": "Subscribe via useSignal<NotificationSignal>('notifications'); refresh on new_notification, notification_read, or notification_unread actions; when isSignalsAvailable === false, poll with setInterval (default 10000ms, configurable via pollingIntervalMs prop) and clear interval on unmount",
+      "rejected": [
+        "Polling unconditionally when signals are active",
+        "Ignoring notification_read and notification_unread signal actions"
+      ],
+      "reason": "Satisfies FR-5, FR-6, and NFR-6 by avoiding redundant polling when signals are active and cleaning up intervals on unmount."
+    },
+    {
+      "topic": "Deep-linking and row highlighting for ?id=<id>",
+      "choice": "Link card items to `${notificationsRootRoute()}?id=${encodeURIComponent(notification.id)}` via useRouteRef(rootRouteRef); read searchParams.get('id') in NotificationsPage (and as fallback in NotificationsTable via optional highlightedId prop) and apply visual styling via Table options.rowStyle and a CSS class on the matching row",
+      "rejected": [
+        "Hardcoding /notifications path string",
+        "Adding test-only DOM attributes or mutating backend filter API for highlighting"
+      ],
+      "reason": "Resolves routes through Backstage route refs and makes the highlighted row visually distinguishable through user-visible styling without test-only attributes or backend changes."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "eslint",
+      "run": "yarn eslint {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "jest",
+      "run": "CI=true yarn test {path}",
+      "timeout_s": 120
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "test-tsc-lint",
+      "run": "CI=true yarn test plugins/notifications plugins/home-react && yarn tsc && yarn lint:all"
+    }
+  ]
+}

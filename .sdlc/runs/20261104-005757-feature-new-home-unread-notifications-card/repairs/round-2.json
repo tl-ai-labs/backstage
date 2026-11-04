@@ -1,0 +1,57 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-005757-feature-new-home-unread-notifications-card",
+    "artifact_path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx",
+    "instruction": "Create `plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.test.tsx` so that these problems are solved, following the conventions in the shared brief:\n1. The test file (unit U15) was never written: all 3 attempts failed. Attempt 1 (eslint): `248:12 error Unexpected use of 'getComputedStyle'. Avoid using implicitly global variables.` (no-restricted-globals) -- use `window.getComputedStyle` or `expect(row).toHaveStyle(...)`. Attempt 2 (jest): `HomePageUnreadNotifications › falls back to polling when signals are unavailable and cleans up interval on unmount` failed with `NotImplementedError: No implementation available for apiRef{core.toast}` at useApi from Content (HomePageUnreadNotifications.tsx:68:26); 6 of 8 tests failed, the tail showed only this one. Every render of the card (every test, including the polling one) must provide toastApiRef, notificationsApiRef and the signal API through TestApiProvider/renderInTestApp apis. Attempt 3: the reply was not one JSON object in the {path, content} contract -- answer with exactly one JSON object {path, content}. Keep: 2026 Apache-2.0 header, screen with findBy*/findAllBy* queries, no test IDs or test-only attributes, highlight asserted only on the matching row's visible background found via findByRole('row', ...)/findAllByRole('row').\nReturn JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-005757-feature-new-home-unread-notifications-card/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-005757-feature-new-home-unread-notifications-card/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "reason": "named beside the failure"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

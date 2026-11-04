@@ -1,0 +1,198 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/home-react/src/extensions.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Make CardExtension resilient when rendered outside a Backstage AppContext by falling back to Progress from @backstage/core-components when useApp() throws.",
+      "rules": [
+        "1. Import Progress as DefaultProgress alongside InfoCard from @backstage/core-components.",
+        "2. In CardExtension, initialize let Progress: React.ComponentType = DefaultProgress and wrap const app = useApp(); Progress = app.getComponents().Progress; in a try/catch block so rendering outside an AppContext uses DefaultProgress instead of throwing.",
+        "3. Preserve all existing props, Suspense fallbacks, SettingsModal behavior, and public exports."
+      ],
+      "exports": [
+        {
+          "name": "CardExtension",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "CardExtensionComponentProps<T>"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { CardExtension, createCardExtension } from './extensions';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { InfoCard } from '@backstage/core-components';",
+          "rule": "Import Progress as DefaultProgress alongside InfoCard from @backstage/core-components."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 135,
+          "to": 136,
+          "first_line": "const app = useApp();",
+          "last_line": "const { Progress } = app.getComponents();",
+          "rule": "Obtain Progress from useApp().getComponents().Progress inside a try/catch block and fall back to DefaultProgress when useApp() throws."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-2"
+      ],
+      "checks": [
+        "eslint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/home-react/src/extensions.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "Unit tests verifying CardExtension and createCardExtension render without throwing when no Backstage AppContext is present.",
+      "rules": [
+        "1. Include the 2026 Backstage Apache-2.0 license header at the top of the file.",
+        "2. Import only from packages declared in plugins/home-react/package.json (react, react-dom/client, @backstage/core-plugin-api, and ./extensions) so lint and knip checks pass.",
+        "3. Use createRoot from react-dom/client and act from react to mount components into a DOM container created in beforeEach and cleaned up in afterEach.",
+        "4. Verify CardExtension renders its title and Content without throwing when no AppContext is present, and verify an extension created with createPlugin({ id: 'test' }).provide(createCardExtension(...)) resolves its lazy component and renders without throwing outside an AppContext."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": "plugins/notifications/src/plugin.test.ts",
+        "reason": "Follows Backstage Jest unit test file structure and license header."
+      },
+      "uses": [
+        {
+          "path": "plugins/home-react/src/extensions.tsx",
+          "lines": [
+            85,
+            202
+          ],
+          "reason": "Tests createCardExtension and CardExtension defined in extensions.tsx."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-2",
+        "AC-1",
+        "NFR-1",
+        "NFR-4"
+      ],
+      "tests": [
+        {
+          "name": "renders CardExtension without AppContext",
+          "given": "CardExtension is rendered with a title and Content component outside any Backstage AppContext",
+          "expect": "It falls back to the default Progress component and renders the card title and content without throwing"
+        },
+        {
+          "name": "renders a card created with createCardExtension without AppContext",
+          "given": "A card extension created via plugin.provide(createCardExtension({ title, components })) is rendered outside any Backstage AppContext",
+          "expect": "It resolves the lazy component parts and renders the card title and content without throwing"
+        }
+      ],
+      "checks": [
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/notifications/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Add @backstage/plugin-home-react workspace dependency to @backstage/plugin-notifications.",
+      "rules": [
+        "1. Add \"@backstage/plugin-home-react\": \"workspace:^\" to dependencies in alphabetical order right after \"@backstage/frontend-plugin-api\"."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 57,
+          "to": 57,
+          "first_line": "\"@backstage/frontend-plugin-api\": \"workspace:^\",",
+          "rule": "Insert \"@backstage/plugin-home-react\": \"workspace:^\", in alphabetical order in dependencies."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-13"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Update yarn.lock to link the new @backstage/plugin-home-react workspace dependency for @backstage/plugin-notifications.",
+      "run": "yarn install",
+      "depends_on": [
+        "U03"
+      ],
+      "covers": [
+        "FR-13"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/notifications/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Add homeWidget translation keys and default English messages to notificationsTranslationRef.",
+      "rules": [
+        "1. Add a homeWidget section to notificationsTranslationRef.messages with keys: title ('Unread Notifications'), emptyMessage ('No unread notifications'), markAsRead ('Mark as read'), viewAll ('View all notifications'), and errors: { markAsReadFailed: 'Failed to mark notification as read' }.",
+        "2. Preserve all existing translation keys and structure."
+      ],
+      "exports": [
+        {
+          "name": "notificationsTranslationRef",
+          "kind": "const",
+          "params": [],
+          "returns": "TranslationRef<'plugin.notifications', any>"
+        }
+      ],
+      "import_line": "import { notificationsTranslationRef } from '../../translation';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 115,
+          "to": 120,
+          "first_line": "errors: {",
+          "last_line": "},",
+          "rule": "Keep settings.errors and add homeWidget messages (title, emptyMessage, markAsRead, viewAll, errors.markAsReadFailed) before closing messages."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-12",
+        "NFR-2"
+      ],
+      "checks": [
+        "eslint"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/home-react/src/extensions.tsx": "1db19509d660bad4dc6e3b5a2186e7a85b6a438bc693e166231452c28fc60ff2",
+    "plugins/notifications/src/plugin.test.ts": "9b2af92fcc488f50454ae00ddc5cdfd8a4634f9752c6fcc3184ffbadf51d6903",
+    "plugins/notifications/package.json": "e8133c1f0084eaeea3136ac5b2487465e9488c1e2b5801d4c400b0c4503aef37",
+    "plugins/notifications/src/translation.ts": "8ac1ee9920c2d73124cfff7826ee11deadcc9eaf1b09f92494f927f4fadf1f4a"
+  }
+}

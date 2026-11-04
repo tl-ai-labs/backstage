@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 // @ts-ignore
 import RelativeTime from 'react-relative-time';
@@ -62,6 +63,7 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  highlightedId?: string;
 };
 
 /** @public */
@@ -78,8 +80,12 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedId,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
+  const [searchParams] = useSearchParams();
+  const activeHighlightedId =
+    highlightedId ?? searchParams.get('id') ?? undefined;
   const notificationsApi = useApi(notificationsApiRef);
   const toastApi = useApi(toastApiRef);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -303,6 +309,13 @@ export const NotificationsTable = ({
           pageSize,
           header: true,
           sorting: false,
+          rowStyle: (rowData: Notification) =>
+            rowData.id === activeHighlightedId
+              ? {
+                  backgroundColor:
+                    'var(--bui-bg-neutral-1, rgba(0, 0, 0, 0.04))',
+                }
+              : {},
         }}
         title={title}
         onPageChange={onPageChange}

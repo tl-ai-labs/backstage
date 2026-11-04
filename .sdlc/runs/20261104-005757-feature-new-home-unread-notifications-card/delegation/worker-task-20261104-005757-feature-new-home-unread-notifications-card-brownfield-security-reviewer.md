@@ -1,0 +1,6 @@
+Changes asked for this step:
+
+Re-review after a Gate 3 fix round, so security_review.md reflects the final diff. Fix round 4 changed three files: plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx (prettier formatting of rowStyle; removed the `.highlighted` className on the first cell, so only the row's rowStyle background highlights), plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css (restored to its pre-run content; empty diff now), plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx (prettier only). Re-check those three files' current diff and overwrite security_review.md (findings only, each with its file).
+Results (no need to re-run): jest 925 passed / 2 known pre-existing DatabaseNotificationsStore failures; yarn tsc pass; yarn lint:all pass; prettier --check on every changed file pass; senior re-review approved, 0 findings.
+
+Edit the pieces you handed in and hand each changed one in again.

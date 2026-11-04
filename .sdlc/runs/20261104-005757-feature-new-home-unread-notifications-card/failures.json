@@ -1,0 +1,16 @@
+[
+  {
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "problem": "Gate 3 review (person):\n1. Prettier: `yarn prettier --check` fails on this file (CI runs it). The only difference prettier reports is in the Table options rowStyle (around line 323): the line `              ? { backgroundColor: 'var(--bui-bg-neutral-1, rgba(0, 0, 0, 0.04))' }` must be formatted as\n```\n              ? {\n                  backgroundColor:\n                    'var(--bui-bg-neutral-1, rgba(0, 0, 0, 0.04))',\n                }\n```\n2. The ?id= highlight is applied twice: the row gets its background from rowStyle, and the first content cell's outer <Flex> also gets `className={notification.id === activeHighlightedId ? styles.highlighted : undefined}` (a second box with the same background plus its own padding and radius), so the highlighted row shows a box inside a box and that cell's content shifts. Keep ONLY the rowStyle highlight: restore the compact-data column's outer element to exactly `<Flex gap=\"4\" align=\"center\">` as it was before this run, and remove `activeHighlightedId` from the compactColumns useMemo dependency array (restoring that array to its original entries ending with `markAsReadOnLinkOpen,`). Change nothing else in this file.",
+    "context_paths": ["plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css"]
+  },
+  {
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+    "problem": "Gate 3 review (person): the ?id= highlight is applied twice (row background via the table's rowStyle, plus this file's `.highlighted` rule on the first cell's content: same background with its own padding and border-radius), so the highlighted row shows a box inside a box and the cell content shifts. The row highlight stays in NotificationsTable.tsx's rowStyle only, and the component no longer uses `styles.highlighted`. Remove the `.highlighted` rule this run added, restoring the file to exactly its pre-run content (keep `.notificationInfoRow:not(:first-child)` and every other existing rule unchanged).",
+    "context_paths": ["plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx"]
+  },
+  {
+    "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx",
+    "problem": "Gate 3 review (person): `yarn prettier --check` fails on this file (CI runs it). The only difference prettier reports is around line 154: the line `              <Text variant=\"body-small\">{notification.payload.description}</Text>` must be formatted as\n```\n              <Text variant=\"body-small\">\n                {notification.payload.description}\n              </Text>\n```\nChange nothing else in this file."
+  }
+]
