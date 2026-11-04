@@ -1,0 +1,60 @@
+{
+  "conventions": [
+    "Preserve existing Apache 2.0 license headers and copyright years unchanged on all existing files.",
+    "Edit only TSDoc comments (/** ... */); never modify executable code, imports, exports, type signatures, parameter names, return types, or release tags (@public, @alpha, @deprecated).",
+    "Follow @backstage/catalog-model TSDoc conventions: a summary sentence, optional @remarks block separated by blank lines, release tag (@public) on top-level exports, followed by @param <name> - <description> and @returns <description> on functions/methods, using {@link ...} for symbol references.",
+    "Do not add release tags (@public or @alpha) to interface members or class methods whose enclosing interface or class already carries @public.",
+    "Format modified files with yarn prettier --write; never run eslint --fix or hand-edit report*.api.md files."
+  ],
+  "decisions": [
+    {
+      "topic": "TSDoc block placement on conditions.ts type guards",
+      "choice": "Edit the existing single-tag /** @public */ block in place above each of the 8 exported type guard functions to include the summary, @public tag, @param entity, and @returns",
+      "rejected": [
+        "Adding a second doc comment block above /** @public */",
+        "Removing the @public release tag"
+      ],
+      "reason": "API Extractor reads the single TSDoc comment block immediately preceding each exported declaration and requires the @public release tag to stay intact."
+    },
+    {
+      "topic": "TSDoc on *EntityV1alpha1 interface members",
+      "choice": "Add concise /** ... */ doc comments above apiVersion, kind, and spec on each *EntityV1alpha1 interface matching the style of Entity in src/entity/Entity.ts without adding release tags or nested spec property comments",
+      "rejected": [
+        "Adding @public tags to interface members",
+        "Documenting nested fields inside spec"
+      ],
+      "reason": "Interface members inherit the release tag of their enclosing @public interface, and API Extractor only marks top-level apiVersion, kind, and spec as (undocumented) in report.api.md."
+    },
+    {
+      "topic": "TSDoc on EntityPolicy.enforce implementations and KubernetesValidatorFunctions static methods",
+      "choice": "Add /** ... */ doc comments with summary, @param, and @returns above each enforce method in src/entity/policies/*EntityPolicy.ts and each static method in KubernetesValidatorFunctions.ts accurately describing its runtime behavior",
+      "rejected": [
+        "Copying generic interface documentation without policy-specific or validator-specific details"
+      ],
+      "reason": "Requirements FR-10 through FR-15 and AC-3 require every TSDoc comment to state what the implementation in its source file actually does."
+    },
+    {
+      "topic": "Changeset bump level and scope",
+      "choice": "Create .changeset/catalog-model-tsdoc.md with '@backstage/catalog-model': patch and an adopter-facing summary of the TSDoc additions",
+      "rejected": [
+        "minor bump",
+        "Omitting a changeset"
+      ],
+      "reason": "TSDoc comments ship in published .d.ts files without changing runtime behavior, and Gate 0 froze a patch changeset for @backstage/catalog-model."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "format",
+      "run": "yarn prettier --write {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "api-reports",
+      "run": "yarn build:api-reports && ! grep -q \"(undocumented)\" packages/catalog-model/report.api.md"
+    }
+  ]
+}

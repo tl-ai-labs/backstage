@@ -48,6 +48,12 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * Returns `entity` unchanged if `entity.kind !== "Group"` or `entity.spec.parent` is already set; otherwise, as long as the group's own entity reference (`stringifyEntityRef(entity)`) does not equal the configured default parent reference (preventing a group from becoming its own parent), sets `entity.spec.parent` to the configured default parent entity ref and returns the entity.
+   *
+   * @param entity - The entity to enforce the policy on
+   * @returns Resolves with the entity, with `spec.parent` populated if applicable
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;
