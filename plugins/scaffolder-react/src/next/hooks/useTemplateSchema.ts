@@ -70,7 +70,15 @@ export const useTemplateSchema = (
         },
       } as ParsedTemplateSchema;
 
-      if (step.schema?.properties || !step.schema?.dependencies) {
+      const hasConditionalKeywords = Boolean(
+        step.schema?.dependencies ||
+          step.schema?.if ||
+          step.schema?.allOf ||
+          step.schema?.oneOf ||
+          step.schema?.anyOf,
+      );
+
+      if (step.schema?.properties || !hasConditionalKeywords) {
         strippedSchema.schema.properties = Object.fromEntries(
           Object.entries((step.schema?.properties ?? {}) as JsonObject).filter(
             ([key]) => {

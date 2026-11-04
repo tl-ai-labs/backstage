@@ -1,0 +1,221 @@
+{
+  "schema": "delegation-record/1",
+  "task_id": "20261104-160801-feature-extend-scaffolder-conditional-fields-brownfield-security-reviewer",
+  "phase": "security_review",
+  "task_type": "judgment",
+  "module": "judgment",
+  "model_id": "argon",
+  "model_name": "gemini-4-argon",
+  "cable": {
+    "sdk": "google-antigravity",
+    "sdk_version": "0.1.22",
+    "vertex_project": "temp-genmedia-study",
+    "vertex_location": "global",
+    "thinking": "HIGH"
+  },
+  "workdir": "/Users/macbook/Documents/GitHub/Google-Projects/backstage-2",
+  "started_at": "2026-11-04T14:37:34.381Z",
+  "duration_ms": 174674,
+  "success": true,
+  "error": null,
+  "cost_usd": 0.285255,
+  "tokens": {
+    "input": 84517,
+    "input_cached": 371708,
+    "output": 7905,
+    "output_reasoning": 5140
+  },
+  "tool_calls": {
+    "count": 16,
+    "truncated": false,
+    "sample": [
+      {
+        "name": "read_provenance",
+        "args": {},
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "docs/features/software-templates/input-examples.md"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+          "to_line": "320.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "git_diff",
+        "args": {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "940.0",
+          "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+          "to_line": "1350.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+          "to_line": "130.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "search_files",
+        "args": {
+          "path": "plugins/scaffolder-react/src",
+          "pattern": "useTemplateSecrets|SecretWidget|SecretsContext"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "search_files",
+        "args": {
+          "path": "plugins/scaffolder/src",
+          "pattern": "useTemplateSecrets|SecretInput|onCreate"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/scaffolder-react/src/next/components/SecretWidget/SecretWidget.tsx",
+          "to_line": "100.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/scaffolder/src/components/fields/SecretInput/SecretInput.tsx",
+          "to_line": "100.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/scaffolder-react/src/next/components/Workflow/Workflow.tsx",
+          "to_line": "180.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "70.0",
+          "path": "plugins/scaffolder/src/alpha/components/TemplateWizardPage/TemplateWizardPage.tsx",
+          "to_line": "150.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "from_line": "1.0",
+          "path": "plugins/scaffolder-react/src/next/components/PasswordWidget/PasswordWidget.tsx",
+          "to_line": "60.0"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "write_review",
+        "args": {
+          "content": "# Security Review — pass2\n\n## Summary\nRe-reviewed the final diff across all 14 touched files after the two Gate 3 fix rounds (`plugins/scaffolder-react/src/next/lib/schema.ts`, regression tests in `schema.test.ts`, `ReviewState.test.tsx`, `Stepper.test.tsx`, and the mobile-SDK documentation example in `docs/features/software-templates/input-examples.md`). The schema resolution fixes (preserving field metadata and nested properties during branch merges, restricting discriminator classification to pure `const`/`enum`/`not` constraints, handling partly filled `oneOf`/`anyOf` branches and discriminator-less fallbacks, and keeping same-step chained conditionals intact) introduce no code execution, injection, or credential exposure risks. However, we record one **Low** finding regarding the Review-to-Submit discrepancy where `ReviewState` now hides deactivated conditional fields (including `ui:field: Secret` and `ui:widget: password`) while `Stepper` still submits their stale values via `onCreate` (and `SecretsContext`).\n\n## Findings\n| Severity | Category | Location | Issue | Recommendation |\n|---|---|---|---|---|\n| Low | Data Exposure / Review-to-Submit Integrity | `plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx:291` (`plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx:109`) | **What a user/adopter sees:** If a user fills a conditional field in Step 2, navigates back to Step 1, and unticks the controlling flag, Step 2 and the `ReviewState` table (`ReviewState.tsx:109`) now omit the deactivated field (including hiding the masked `******` row for `ui:field: Secret` and `ui:widget: password`), so the user sees a Review screen indicating the value will not be sent. However, because `Stepper.tsx:291` still calls `onCreate(stepsState)` with the unfiltered state (per Gate 1 Out-of-scope 5), an adopter/template action inspecting the created task still receives the stale parameter in `values` and `secrets`. **Why it matters for secrets:** P"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      }
+    ]
+  },
+  "files": {
+    "added": [],
+    "modified": [],
+    "removed": [],
+    "unchanged": 19342,
+    "scanned": 19342,
+    "truncated": false,
+    "unreadable": []
+  },
+  "artifacts": {
+    "brief": "worker-task-20261104-160801-feature-extend-scaffolder-conditional-fields-brownfield-security-reviewer.md",
+    "usage": "worker-usage-20261104-160801-feature-extend-scaffolder-conditional-fields-brownfield-security-reviewer.json",
+    "system": "worker-system-20261104-160801-feature-extend-scaffolder-conditional-fields-brownfield-security-reviewer.md"
+  },
+  "gemini": {
+    "project": "temp-genmedia-study",
+    "location": "global",
+    "tries": [
+      {
+        "location": "global",
+        "ended_by": "answer",
+        "http_codes": [],
+        "s": 170.815,
+        "served_tier": "standard",
+        "input_tokens": 84517,
+        "input_tokens_cached": 371708,
+        "output_tokens": 7905,
+        "cost_usd": 0.285255
+      }
+    ],
+    "ended_by": "answer",
+    "last_status": null,
+    "stall_cuts": 0,
+    "failovers": 0,
+    "cut_calls": 0,
+    "google_wait_ms": 0,
+    "work_ms": 171140,
+    "slept_ms": 0,
+    "sdk_version": "0.1.22",
+    "usage_semantics": "inclusive",
+    "unavailable": null,
+    "endpoint_override": null
+  }
+}

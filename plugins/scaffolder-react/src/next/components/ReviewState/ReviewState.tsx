@@ -17,7 +17,13 @@ import { StructuredMetadataTable } from '@backstage/core-components';
 import { JsonObject, JsonValue } from '@backstage/types';
 import { Draft07 as JSONSchema } from 'json-schema-library';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
-import { isJsonObject, formatKey, findSchemaForKey } from './util';
+import { resolveStepSchema } from '../../lib/schema';
+import {
+  isJsonObject,
+  formatKey,
+  findSchemaForKey,
+  isKeyDefinedInSchemas,
+} from './util';
 
 /**
  * The props for the {@link ReviewState} component.
@@ -34,7 +40,10 @@ function processSchema(
   schema: ParsedTemplateSchema,
   formState: JsonObject,
 ): [string, JsonValue | undefined][] {
-  const parsedSchema = new JSONSchema(schema.mergedSchema);
+  const resolvedSchema = resolveStepSchema(schema.mergedSchema, formState, {
+    resolveAll: true,
+  });
+  const parsedSchema = new JSONSchema(resolvedSchema);
   const definitionInSchema = parsedSchema.getSchema({
     pointer: `#/${key}`,
     data: formState,
@@ -94,8 +103,11 @@ export const ReviewState = (props: ReviewStateProps) => {
     Object.entries(props.formState)
       .flatMap(([key, value]) => {
         const schema = findSchemaForKey(key, props.schemas, props.formState);
-        return schema
-          ? processSchema(key, value, schema, props.formState)
+        if (schema) {
+          return processSchema(key, value, schema, props.formState);
+        }
+        return isKeyDefinedInSchemas(key, props.schemas)
+          ? []
           : [[formatKey(key), value]];
       })
       .filter(prop => prop.length > 0),

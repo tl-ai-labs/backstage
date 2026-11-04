@@ -538,4 +538,139 @@ describe('createAsyncValidators', () => {
 
     expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();
   });
+
+  it('runs custom field validator in if/then branch only when condition is met', async () => {
+    const schema: JsonObject = {
+      type: 'object',
+      if: {
+        properties: {
+          enableCustom: { const: true },
+        },
+        required: ['enableCustom'],
+      },
+      then: {
+        properties: {
+          customValue: {
+            type: 'string',
+            'ui:field': 'CustomField',
+          },
+        },
+      },
+      else: {
+        properties: {
+          otherValue: {
+            type: 'string',
+            'ui:field': 'OtherField',
+          },
+        },
+      },
+    };
+
+    const validatorsWhenTrue = {
+      CustomField: jest.fn(),
+      OtherField: jest.fn(),
+    };
+
+    const validateWhenTrue = createAsyncValidators(schema, validatorsWhenTrue, {
+      apiHolder: { get: jest.fn() },
+    });
+
+    await validateWhenTrue({
+      enableCustom: true,
+      customValue: 'hello',
+      otherValue: 'stale',
+    });
+
+    expect(validatorsWhenTrue.CustomField).toHaveBeenCalled();
+    expect(validatorsWhenTrue.OtherField).not.toHaveBeenCalled();
+
+    const validatorsWhenFalse = {
+      CustomField: jest.fn(),
+      OtherField: jest.fn(),
+    };
+
+    const validateWhenFalse = createAsyncValidators(
+      schema,
+      validatorsWhenFalse,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenFalse({
+      enableCustom: false,
+      customValue: 'stale',
+      otherValue: 'world',
+    });
+
+    expect(validatorsWhenFalse.CustomField).not.toHaveBeenCalled();
+    expect(validatorsWhenFalse.OtherField).toHaveBeenCalled();
+  });
+
+  it('runs custom field validator in cross-step dependencies only when active', async () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        baseField: {
+          type: 'string',
+        },
+      },
+      dependencies: {
+        previousStepToggle: {
+          oneOf: [
+            {
+              properties: {
+                previousStepToggle: { const: 'enabled' },
+                depCustomField: {
+                  type: 'string',
+                  'ui:field': 'CustomField',
+                },
+              },
+              required: ['previousStepToggle'],
+            },
+            {
+              properties: {
+                previousStepToggle: { const: 'disabled' },
+              },
+              required: ['previousStepToggle'],
+            },
+          ],
+        },
+      },
+    };
+
+    const validatorsWhenEnabled = { CustomField: jest.fn() };
+    const validateWhenEnabled = createAsyncValidators(
+      schema,
+      validatorsWhenEnabled,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenEnabled({
+      previousStepToggle: 'enabled',
+      baseField: 'base',
+      depCustomField: 'checked',
+    });
+
+    expect(validatorsWhenEnabled.CustomField).toHaveBeenCalled();
+
+    const validatorsWhenDisabled = { CustomField: jest.fn() };
+    const validateWhenDisabled = createAsyncValidators(
+      schema,
+      validatorsWhenDisabled,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenDisabled({
+      previousStepToggle: 'disabled',
+      baseField: 'base',
+      depCustomField: 'stale',
+    });
+
+    expect(validatorsWhenDisabled.CustomField).not.toHaveBeenCalled();
+  });
 });

@@ -340,6 +340,56 @@ parameters:
                 - address
 ```
 
+### Conditional fields across steps
+
+You can also conditionally show and require fields in a later step based on a parameter filled in an earlier step using `if`/`then`/`else` or `dependencies`.
+
+In the example below, Step 1 asks `Is this a mobile SDK?` via the `isMobileSdk` boolean parameter, and Step 2 shows SDK-specific fields (`sdkName` and `platform`) only when the answer is Yes. When using `if`/`then` to check a parameter from an earlier step, include `required` in the `if` condition so an unset parameter does not match by default. When using `dependencies` with `oneOf`, include a branch for each possible value of the controlling parameter so validation succeeds when the condition is not met.
+
+```yaml
+parameters:
+  - title: Project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+  - title: SDK details
+    properties:
+      projectName:
+        title: Project name
+        type: string
+    if:
+      properties:
+        isMobileSdk:
+          const: true
+      required:
+        - isMobileSdk
+    then:
+      properties:
+        sdkName:
+          title: SDK package name
+          type: string
+      required:
+        - sdkName
+    dependencies:
+      isMobileSdk:
+        oneOf:
+          - properties:
+              isMobileSdk:
+                const: true
+              platform:
+                title: Target platform
+                type: string
+                enum:
+                  - ios
+                  - android
+            required:
+              - platform
+          - properties:
+              isMobileSdk:
+                const: false
+```
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

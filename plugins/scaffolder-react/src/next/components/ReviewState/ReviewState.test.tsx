@@ -15,7 +15,7 @@
  */
 
 import { ReviewState } from './ReviewState';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('ReviewState', () => {
@@ -612,5 +612,234 @@ describe('ReviewState', () => {
 
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
+  });
+
+  it('should render active cross-step if/then/else fields with schema metadata and omit inactive conditional fields', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            deployTarget: {
+              type: 'string',
+              title: 'Deploy Target',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: {
+              deployTarget: { const: 'kubernetes' },
+            },
+            required: ['deployTarget'],
+          },
+          then: {
+            properties: {
+              clusterName: {
+                type: 'string',
+                title: 'Cluster Name',
+                'ui:backstage': {
+                  review: {
+                    name: 'K8s Cluster',
+                  },
+                },
+              },
+            },
+          },
+          else: {
+            properties: {
+              vmSize: {
+                type: 'string',
+                title: 'VM Size',
+              },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    render(
+      <ReviewState
+        formState={{
+          deployTarget: 'kubernetes',
+          clusterName: 'prod-cluster',
+          vmSize: 'stale-large-vm',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Deploy Target kubernetes' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'K8s Cluster prod-cluster' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: /stale-large-vm/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should omit cross-step dependency fields when the controlling condition in an earlier step is false', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            enableDb: {
+              type: 'boolean',
+              title: 'Enable Database',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          dependencies: {
+            enableDb: {
+              oneOf: [
+                {
+                  properties: {
+                    enableDb: { const: true },
+                    dbName: {
+                      type: 'string',
+                      title: 'Database Name',
+                    },
+                  },
+                  required: ['enableDb'],
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    render(
+      <ReviewState
+        formState={{
+          enableDb: false,
+          dbName: 'stale-db',
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Enable Database ❌' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: /stale-db/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should render enum fields defined inside same-step dependencies allOf if/then', () => {
+    const platform = {
+      title: 'Platform',
+      type: 'string',
+      enum: ['ios', 'android'],
+    };
+
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          properties: {
+            includeName: { type: 'boolean' },
+          },
+          dependencies: {
+            includeName: {
+              allOf: [
+                {
+                  if: {
+                    properties: {
+                      includeName: { const: true },
+                    },
+                  },
+                  then: {
+                    properties: {
+                      lastName: { type: 'string', title: 'Last name' },
+                      platform,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+    ];
+
+    render(
+      <ReviewState
+        formState={{ includeName: true, lastName: 'Doe', platform: 'ios' }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Last name Doe' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'Platform ios' }),
+    ).toBeInTheDocument();
+  });
+
+  it('should render answered option from a root-level oneOf with alternative options', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          oneOf: [
+            {
+              title: 'New repo',
+              properties: {
+                repoName: { type: 'string', title: 'Repository name' },
+              },
+              required: ['repoName'],
+            },
+            {
+              title: 'Existing repo',
+              properties: {
+                existingRepo: { type: 'string', title: 'Existing repository' },
+              },
+              required: ['existingRepo'],
+            },
+          ],
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+    ];
+
+    render(
+      <ReviewState
+        formState={{ existingRepo: 'org/repo' }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Existing repository org/repo' }),
+    ).toBeInTheDocument();
   });
 });

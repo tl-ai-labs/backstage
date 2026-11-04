@@ -1,0 +1,46 @@
+[
+  {
+    "id": "tp_debug_r6_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/schema.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 505): In `resolveDependencyObject` (lines 505-540) and root `anyOf` in `resolveSchemaNode` (lines 692-763), when a `oneOf`/`anyOf` branch has no discriminator properties (`discriminatorKeys.size === 0`), `buildBranchTestSchema` (lines 322-346) adds `anyOf: propKeys.map(key => ({ required: [key] }))`. When the user has not yet filled the dependent field in `formData`, `validator.isValid` returns `false`, and because `resolveDependencyObject` (and root `anyOf`) lacks the `!matched && firstDiscriminatorKeys.size === 0` fallback that root `oneOf` has at lines 744-761, the branch is dropped and its fields are wrongly hidden. Reproducer: `resolveStepSchema({ type: 'object', dependencies: { foo: { oneOf: [{ properties: { artifact: { type: 'string' } } }] } } }, { foo: 'value' }, { previousStepKeys: new Set(['foo']) })` (from `ReviewState/util.test.ts:127`) or `resolveStepSchema({ type: 'object', anyOf: [{ properties: { anyOfField: { type: 'string' } } }] }, {}, { resolveAll: true })` returns `{ type: 'object' }` with `artifact` / `anyOfField` missing. — fix: In `resolveDependencyObject` (for `oneOf` and `anyOf`) and in `resolveSchemaNode` step 4 (for `anyOf` as well as `oneOf`), fall back to merging `firstObjectBranch` when `!matched && firstObjectBranch && firstDiscriminatorKeys?.size === 0` (matching RJSF's `getFirstMatchingOption` fallback to option 0).\n2. major (line 322): In `buildBranchTestSchema` (lines 322-346), when constructing `testSchema` for a non-discriminator `oneOf`/`anyOf` branch via `{ ...branch, anyOf: anyOfReq }`, spreading `...branch` preserves `branch.required` at the top level of `testSchema`. If an option branch has multiple required fields (or an unfilled required field alongside a filled field), `testSchema.required` forces all of `branch.required` to be present in `cleanData`, causing `validator.isValid` to return `false` and fall back to the first `oneOf` branch instead of the active branch. Reproducer: `resolveStepSchema({ type: 'object', oneOf: [{ title: 'New repo', properties: { repoName: { type: 'string' } }, required: ['repoName'] }, { title: 'Existing repo', properties: { existingRepo: { type: 'string' }, branchName: { type: 'string' } }, required: ['existingRepo', 'branchName'] }] }, { existingRepo: 'org/repo' }, { resolveAll: true })` resolves branch 1 (`repoName`) instead of branch 2 (`existingRepo`, `branchName`), hiding `existingRepo` in `ReviewState` and skipping its async validators. — fix: Omit `required` from `branch` (`const { anyOf, required: _req, ...restBranch } = branch;`) when constructing `testSchema` in `buildBranchTestSchema` lines 331-344 so that `anyOf: anyOfReq` matches whenever at least one property of that branch is present in `cleanData`.\n3. major (line 860): In `resolveStepSchema` (lines 860-866), `ownKeys` is initialized only from top-level `clonedSchema.properties`. When `resolveAll` is `false`, same-step conditionals (`allOf`, `if/then/else`, `dependencies`) are kept unresolved for RJSF, so fields introduced inside their branches are never added to `ownKeys`. Any second conditional on the same step that depends on that branch-introduced field `k` evaluates `!ownKeys.has(k)` as `true` in `isCrossStepKeys` / `isCrossStep` (lines 587, 619, 650), misclassifying the same-step conditional as cross-step and dropping it when `k` is not yet set in `formData`. Reproducer: `resolveStepSchema({ type: 'object', properties: { isMobileSdk: { type: 'boolean' } }, allOf: [{ if: { properties: { isMobileSdk: { const: true } }, required: ['isMobileSdk'] }, then: { properties: { platform: { type: 'string', title: 'Platform', enum: ['ios', 'android'] } } } }, { if: { properties: { platform: { const: 'ios' } }, required: ['platform'] }, then: { properties: { bundleId: { type: 'string', title: 'Bundle ID' } } } }] }, {})` drops the second `allOf` item completely. — fix: Seed `ownKeys` in `resolveStepSchema` with all keys from `getSchemaPropertyKeys(clonedSchema)` that are not in `previousStepKeys` (in addition to `Object.keys(clonedSchema.properties)`), so properties defined in same-step conditional branches are recognized as current-step keys.\n4. major (line 383): In `mergeBranchIntoSchema` (lines 383-399) and `resolveDependencyObject` (lines 500-532): (1) `depKey` and `discriminatorKeys` that are in `ownKeys` are not added to `branchExcluded`, and `isDiscriminatorConstraint` (lines 159-164) returns `false` if a discriminator constraint has `type` or `not` (e.g. `{ type: 'string', enum: ['prod'] }` or `{ not: { const: true } }`), so merging a branch when `resolveAll: true` overwrites `target.properties[depKey].enum` while keeping the original `enumNames`, corrupting `ReviewState` enum label lookup; (2) `{ ...(targetProps[k] as JsonObject), ...v }` shallow-overwrites `targetProps[k].properties` and `targetProps[k].required` when a conditional branch adds fields to an existing nested object property. Reproducer: `resolveStepSchema({ type: 'object', properties: { env: { type: 'string', enum: ['dev', 'prod'], enumNames: ['Development', 'Production'] } }, dependencies: { env: { oneOf: [{ properties: { env: { type: 'string', enum: ['dev'] } } }, { properties: { env: { type: 'string', enum: ['prod'] }, approver: { type: 'string' } } }] } } }, { env: 'prod', approver: 'alice' }, { resolveAll: true })` overwrites `properties.env.enum` to `['prod']` (index 0 -> `'Development'`), and `resolveStepSchema({ type: 'object', properties: { nested: { type: 'object', properties: { a: { type: 'string' } } } }, if: { properties: { flag: { const: true } }, required: ['flag'] }, then: { properties: { nested: { properties: { b: { type: 'string' } } } } } }, { flag: true }, { previousStepKeys: new Set(['flag']) })` drops `nested.properties.a`. — fix: Exclude `depKey` and `discriminatorKeys` that already exist in `target.properties` (and have no new field metadata like `title`/`enumNames`/`ui:*`) from overwriting `target.properties` in `resolveDependencyObject` / `resolveSchemaNode`, treat `{ not: ... }` without field metadata as a discriminator constraint in `isDiscriminatorConstraint`, and deep-merge `properties` and deduplicate `required` when both `targetProps[k]` and `v` are object schemas.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

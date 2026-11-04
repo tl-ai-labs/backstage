@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/schema.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. End-of-run check `CI=true yarn test plugins/scaffolder-react plugins/scaffolder` fails one existing test that passed before this run: `Stepper › should merge and overwrite nested formData correctly` (plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx). Error: `TestingLibraryElementError: Unable to find an accessible element with the role \"textbox\" and name \"Foo - 2\"` -- on Step 2 only `Bar - 2` renders. In that test Step 1 defines property `foo` and Step 2 defines its own top-level property `foo` again (title 'Foo - 2') plus `bar`. Cause: in resolveSchemaNode (schema.ts lines 507-515), every key of the step's own `schema.properties` that is in previousStepKeys is deleted (`if (previousStepKeys.has(k)) delete schema.properties[k]`). A property the step declares itself in its top-level `properties` must always stay and count as an own key, even when an earlier step defines the same key: treat it as ownKeys and remove it from the exclusion set for this step (for example, at the start of resolveStepSchema, derive the effective previousStepKeys as options.previousStepKeys minus the keys of the step's own top-level schema.properties, and pass that everywhere). The previousStepKeys exclusion applies only to keys arriving from resolved conditional branches (then/else/dependencies/allOf/oneOf/anyOf) and to condition/discriminator keys, never to the step's own top-level properties. Keep every other behaviour unchanged.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,499 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditional fields', () => {
+    it('shows and requires cross-step dependencies field in Step 2 only when Step 1 condition is met without re-rendering Step 1 field', async () => {
+      const customValidator = jest.fn(
+        (value: string, validation: { addError: (msg: string) => void }) => {
+          if (value === 'bad') {
+            validation.addError('custom validator error');
+          }
+        },
+      );
+
+      const CustomInput = ({
+        formData,
+        onChange,
+        schema,
+        idSchema,
+      }: FieldExtensionComponentProps<string>) => (
+        <div>
+          <label htmlFor={idSchema.$id}>{schema.title}</label>
+          <input
+            id={idSchema.$id}
+            type="text"
+            value={formData ?? ''}
+            onChange={e => onChange(e.target.value)}
+          />
+        </div>
+      );
+
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross-Step Dependencies Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                toggle: {
+                  type: 'boolean',
+                  title: 'Enable Extra',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                alwaysThere: {
+                  type: 'string',
+                  title: 'Always There',
+                },
+              },
+              dependencies: {
+                toggle: {
+                  oneOf: [
+                    {
+                      properties: {
+                        toggle: {
+                          const: true,
+                        },
+                        extraDetails: {
+                          type: 'string',
+                          title: 'Extra Details',
+                          'ui:field': 'CustomInput',
+                        },
+                      },
+                      required: ['extraDetails'],
+                    },
+                    {
+                      properties: {
+                        toggle: {
+                          const: false,
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={manifest}
+            extensions={[
+              {
+                name: 'CustomInput',
+                component: CustomInput,
+                validation: customValidator,
+              },
+            ]}
+            onCreate={jest.fn()}
+          />
+        </SecretsContextProvider>,
+      );
+
+      // Leave toggle unchecked in Step 1 and go to Step 2
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        screen.getByRole('textbox', { name: 'Always There' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Extra Details' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Enable Extra' }),
+      ).not.toBeInTheDocument();
+
+      // Advance to Review without needing extraDetails; custom validator is not invoked
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+      expect(customValidator).not.toHaveBeenCalled();
+
+      // Go back to Step 1 and check toggle
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Enable Extra' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2 renders Extra Details, does not re-render Step 1's Enable Extra checkbox
+      expect(
+        await screen.findByRole('textbox', { name: 'Extra Details' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Enable Extra' }),
+      ).not.toBeInTheDocument();
+
+      // Required validation blocks advancing when Extra Details is empty
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+
+      // Custom validator runs and blocks when invalid value is entered
+      await act(async () => {
+        fireEvent.change(
+          screen.getByRole('textbox', { name: 'Extra Details' }),
+          {
+            target: { value: 'bad' },
+          },
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        await screen.findByText('custom validator error'),
+      ).toBeInTheDocument();
+
+      // Valid input advances to Review
+      await act(async () => {
+        fireEvent.change(
+          screen.getByRole('textbox', { name: 'Extra Details' }),
+          {
+            target: { value: 'good value' },
+          },
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('cell', { name: 'good value' }),
+      ).toBeInTheDocument();
+    });
+
+    it('evaluates cross-step if/then/else according to standard JSON Schema semantics and updates ReviewState after back-navigation', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross-Step If/Then/Else Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                toggle: {
+                  type: 'boolean',
+                  title: 'Toggle Flag',
+                },
+                unrequiredFlag: {
+                  type: 'boolean',
+                  title: 'Unrequired Flag',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              allOf: [
+                {
+                  if: {
+                    properties: {
+                      toggle: { const: true },
+                    },
+                    required: ['toggle'],
+                  },
+                  then: {
+                    properties: {
+                      thenField: {
+                        type: 'string',
+                        title: 'Then Field',
+                      },
+                    },
+                  },
+                  else: {
+                    properties: {
+                      elseField: {
+                        type: 'string',
+                        title: 'Else Field',
+                      },
+                    },
+                  },
+                },
+                {
+                  if: {
+                    properties: {
+                      unrequiredFlag: { const: true },
+                    },
+                  },
+                  then: {
+                    properties: {
+                      vacuousField: {
+                        type: 'string',
+                        title: 'Vacuous Field',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
+        </SecretsContextProvider>,
+      );
+
+      // Without checking toggle (undefined), required: ['toggle'] makes the first if false -> elseField shows.
+      // Without required: ['unrequiredFlag'], missing unrequiredFlag vacuously matches if -> vacuousField shows.
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        await screen.findByRole('textbox', { name: 'Else Field' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Then Field' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('textbox', { name: 'Vacuous Field' }),
+      ).toBeInTheDocument();
+
+      // Navigate back to Step 1 and check toggle
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Toggle Flag' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2 now shows Then Field instead of Else Field
+      expect(
+        await screen.findByRole('textbox', { name: 'Then Field' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Else Field' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(screen.getByRole('textbox', { name: 'Then Field' }), {
+          target: { value: 'Filled Then Value' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        await screen.findByRole('cell', { name: 'Filled Then Value' }),
+      ).toBeInTheDocument();
+
+      // Navigate back to Step 1 and uncheck toggle
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Toggle Flag' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2 switches back to Else Field and omits Then Field
+      expect(
+        await screen.findByRole('textbox', { name: 'Else Field' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Then Field' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(screen.getByRole('textbox', { name: 'Else Field' }), {
+          target: { value: 'Filled Else Value' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      // ReviewState shows active Else Field and omits deactivated Then Field
+      expect(
+        await screen.findByRole('cell', { name: 'Filled Else Value' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'Filled Then Value' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders and requires an enum field from a cross-step dependencies oneOf branch and hides it when unchecked', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Mobile SDK Template',
+        steps: [
+          {
+            title: 'Project type',
+            schema: {
+              type: 'object',
+              properties: {
+                isMobileSdk: {
+                  type: 'boolean',
+                  title: 'Is this a mobile SDK?',
+                },
+              },
+            },
+          },
+          {
+            title: 'SDK details',
+            schema: {
+              type: 'object',
+              properties: {
+                sdkName: {
+                  type: 'string',
+                  title: 'SDK name',
+                },
+              },
+              dependencies: {
+                isMobileSdk: {
+                  oneOf: [
+                    {
+                      properties: {
+                        isMobileSdk: {
+                          const: true,
+                        },
+                        platform: {
+                          type: 'string',
+                          title: 'Platform',
+                          enum: ['ios', 'android'],
+                        },
+                      },
+                      required: ['platform'],
+                    },
+                    {
+                      properties: {
+                        isMobileSdk: {
+                          const: false,
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
+        </SecretsContextProvider>,
+      );
+
+      // Step 1: check 'Is this a mobile SDK?' and click Next
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2 shows the Platform dropdown and no second 'Is this a mobile SDK?' checkbox
+      const platformSelect = await screen.findByRole('button', {
+        name: /Platform/i,
+      });
+      expect(platformSelect).toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      ).not.toBeInTheDocument();
+
+      // Clicking Review with Platform empty stays on Step 2
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Platform/i }),
+      ).toBeInTheDocument();
+
+      // Choose 'ios' and click Review
+      await act(async () => {
+        fireEvent.mouseDown(platformSelect);
+      });
+      const iosOption = await screen.findByRole('option', { name: 'ios' });
+      await act(async () => {
+        fireEvent.click(iosOption);
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      // Review step shows Platform with 'ios'
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('cell', { name: 'Platform' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: 'ios' })).toBeInTheDocument();
+
+      // Click Back twice to Step 1, uncheck the box, click Next
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      // Step 2 no longer shows Platform
+      expect(
+        await screen.findByRole('textbox', { name: 'SDK name' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Platform/i }),
+      ).not.toBeInTheDocument();
+
+      // Click Review: Review step does not show Platform
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        await screen.findByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'Platform' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'ios' }),
+      ).not.toBeInTheDocument();
     });
   });
 });

@@ -18,6 +18,7 @@ import { JsonObject, JsonValue } from '@backstage/types';
 import { startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { Draft07 as JSONSchema } from 'json-schema-library';
+import { getSchemaPropertyKeys, resolveStepSchema } from '../../lib/schema';
 
 export function isJsonObject(value?: JsonValue): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -32,42 +33,51 @@ export function formatKey(key: string): string {
     .join(' > ');
 }
 
+export function isKeyDefinedInSchemas(
+  key: string,
+  schemas: ParsedTemplateSchema[],
+): boolean {
+  const rootKey = key.split('/').filter(Boolean)[0] ?? key;
+  return schemas.some(step =>
+    getSchemaPropertyKeys(step.mergedSchema).has(rootKey),
+  );
+}
+
 export function findSchemaForKey(
   key: string,
   schemas: ParsedTemplateSchema[],
   formState: Partial<{ [key: string]: JsonValue }>,
 ): ParsedTemplateSchema | null {
+  const previousStepKeys = new Set<string>();
+
   for (const step of schemas) {
     /*
-      To determine if a key is defined in a schema we need to call getSchema
-      with an empty form state. Otherwise, it will never return undefined as it
-      will fallback to a default schema based on the form state. 
-
-      An exception to this is when your schema is dynamic i.e. using dependencies 
-      because the form state is required for generating the schema. In this case,
-      we add only the dependencies data to the getSchema call.
+      To determine if a key is defined in a schema we resolve any conditional
+      branches (dependencies, if/then/else, allOf, oneOf, anyOf) against formState
+      and then call getSchema with an empty data object. Passing an empty data
+      object ensures getSchema does not infer a fallback schema from formState
+      for keys that are not in the active schema.
     */
 
-    const schema = step.mergedSchema;
-
-    // Declare data to be a subset of formState
-    const data: typeof formState = {};
-
-    if (schema.dependencies && isJsonObject(schema.dependencies)) {
-      for (const dep in schema.dependencies) {
-        if (formState.hasOwnProperty(dep)) {
-          data[dep] = formState[dep]; // Add each dependency key from formState
-        }
-      }
-    }
-
-    const draft = new JSONSchema(schema);
-    const res = draft.getSchema({
-      pointer: `#/${key}`,
-      data,
+    const resolvedSchema = resolveStepSchema(step.mergedSchema, formState, {
+      previousStepKeys,
+      resolveAll: true,
     });
 
-    if (!!res) {
+    for (const k of getSchemaPropertyKeys(step.mergedSchema)) {
+      previousStepKeys.add(k);
+    }
+
+    const draft = new JSONSchema(resolvedSchema);
+    const res = draft.getSchema({
+      pointer: `#/${key}`,
+      data: {},
+    });
+
+    if (
+      res &&
+      !(isJsonObject(res as JsonValue) && (res as JsonObject).type === 'error')
+    ) {
       return step;
     }
   }

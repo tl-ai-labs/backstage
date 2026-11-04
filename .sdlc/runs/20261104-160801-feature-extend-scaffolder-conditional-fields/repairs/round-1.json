@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. U08 was not applied (no_content after 3 attempts): \"the answer changes lines outside its sites: new lines after 389; change only the planned sites\". The planned site is S1: insert before line 391 (line 391 reads `});`, the outer describe's closing line). Every attempt inserted the new test after line 389, inside the inner describe that closes at line 390 (`  });`). Insert the new test only between line 390 (`  });`) and line 391 (`});`), as a new `it` (or its own `describe`) directly inside the outer describe, and change no other line. The test: a step with root-level if/then or allOf and no top-level properties keeps its conditional structure on step.schema without an empty properties object being added (U02's rule), with no feature flags.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { isJsonObject, formatKey, findSchemaForKey } from './util';
+import {
+  isJsonObject,
+  formatKey,
+  findSchemaForKey,
+  isKeyDefinedInSchemas,
+} from './util';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('isJsonObject', () => {
@@ -169,5 +174,89 @@ describe('findSchemaForKey', () => {
   it('should return the schema for an object key', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
+  });
+
+  it('should return null for a cross-step dependency key when the dependency condition is not met', () => {
+    const result = findSchemaForKey('artifact', schemas, {
+      bar: 'value',
+      artifact: 'stale',
+    });
+    expect(result).toBeNull();
+  });
+
+  it('should return schema for cross-step if/then/else key only when condition is met', () => {
+    const conditionalSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            toggle: { type: 'boolean' },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            alwaysVisible: { type: 'string' },
+          },
+          if: {
+            properties: {
+              toggle: { const: true },
+            },
+            required: ['toggle'],
+          },
+          then: {
+            properties: {
+              conditionalKey: { type: 'string' },
+            },
+          },
+          else: {
+            properties: {
+              fallbackKey: { type: 'string' },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('conditionalKey', conditionalSchemas, {
+        toggle: true,
+        conditionalKey: 'active',
+      }),
+    ).toBe(conditionalSchemas[1]);
+
+    expect(
+      findSchemaForKey('conditionalKey', conditionalSchemas, {
+        toggle: false,
+        conditionalKey: 'stale',
+      }),
+    ).toBeNull();
+
+    expect(
+      findSchemaForKey('conditionalKey', conditionalSchemas, {
+        conditionalKey: 'stale',
+      }),
+    ).toBeNull();
+
+    expect(
+      findSchemaForKey('fallbackKey', conditionalSchemas, {
+        toggle: false,
+        fallbackKey: 'active',
+      }),
+    ).toBe(conditionalSchemas[1]);
+
+    expect(isKeyDefinedInSchemas('conditionalKey', conditionalSchemas)).toBe(
+      true,
+    );
+    expect(isKeyDefinedInSchemas('fallbackKey', conditionalSchemas)).toBe(true);
+    expect(isKeyDefinedInSchemas('unknownKey', conditionalSchemas)).toBe(false);
   });
 });

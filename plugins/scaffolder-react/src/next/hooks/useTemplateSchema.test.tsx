@@ -388,4 +388,95 @@ describe('useTemplateSchema', () => {
       });
     });
   });
+
+  it('preserves root-level if/then and allOf schemas when no top-level properties are defined', () => {
+    const manifest: TemplateParameterSchema = {
+      title: 'Test Template',
+      description: 'Test Template Description',
+      steps: [
+        {
+          title: 'First step',
+          schema: {
+            if: {
+              properties: {
+                flag: { const: true },
+              },
+              required: ['flag'],
+            },
+            then: {
+              properties: {
+                inputA: { type: 'string' },
+              },
+            },
+          },
+        },
+        {
+          title: 'Second step',
+          schema: {
+            allOf: [
+              {
+                if: {
+                  properties: {
+                    flag: { const: false },
+                  },
+                  required: ['flag'],
+                },
+                then: {
+                  properties: {
+                    inputB: { type: 'string' },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useTemplateSchema(manifest), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider
+          apis={[
+            mockApis.featureFlags.mock({ isActive: jest.fn(() => false) }),
+          ]}
+        >
+          {children}
+        </TestApiProvider>
+      ),
+    });
+
+    const [first, second] = result.current.steps;
+
+    expect(first.schema).toEqual({
+      if: {
+        properties: {
+          flag: { const: true },
+        },
+        required: ['flag'],
+      },
+      then: {
+        properties: {
+          inputA: { type: 'string' },
+        },
+      },
+    });
+
+    expect(second.schema).toEqual({
+      allOf: [
+        {
+          if: {
+            properties: {
+              flag: { const: false },
+            },
+            required: ['flag'],
+          },
+          then: {
+            properties: {
+              inputB: { type: 'string' },
+            },
+          },
+        },
+      ],
+    });
+  });
 });
