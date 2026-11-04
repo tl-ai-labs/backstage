@@ -1,0 +1,60 @@
+{
+  "conventions": [
+    "Write TSDoc in /** ... */ blocks starting with a one-sentence summary, followed by an optional @remarks section separated by a blank comment line.",
+    "Format parameter tags as '@param <name> - <description>' with the hyphen required by TSDoc and no trailing period on single-sentence descriptions.",
+    "Place @returns and @throws after @param tags, and place release tags (@public) last when applicable.",
+    "Do not add @public or @alpha tags to interface properties or class methods because they inherit the release tag of their enclosing interface or class.",
+    "Preserve the existing @public tag as the last tag on each top-level exported function in packages/catalog-model/src/entity/conditions.ts.",
+    "Use {@link Symbol} or {@link https://...} for cross-references and wrap TSDoc lines at approximately 80 columns to match Prettier.",
+    "Modify only /** ... */ TSDoc comments in the 15 TypeScript source files; never alter types, signatures, exports, release tags, copyright headers, or runtime code."
+  ],
+  "decisions": [
+    {
+      "topic": "Kind interface member TSDoc scope and kind field wording",
+      "choice": "Document only the 3 top-level members (apiVersion, kind, spec) on each of the 8 V1alpha1 kind interfaces without adding comments to nested spec properties, and state the literal kind value expected by the type and its schema validator without saying it is 'always' that value since is<Kind>Entity compares entity.kind.toUpperCase().",
+      "rejected": [
+        "Adding TSDoc comments to nested properties inside spec",
+        "Stating that kind is always the exact-case literal string"
+      ],
+      "reason": "Only the 3 top-level members are reported as undocumented by API Extractor, and Gate 1 explicitly decided against 'always' because the type guard narrows case-insensitively."
+    },
+    {
+      "topic": "Release tags on documented members, methods, and functions",
+      "choice": "Omit @public on interface properties and class methods while keeping @public as the final tag on the 8 top-level functions in conditions.ts.",
+      "rejected": [
+        "Adding @public to interface properties and class methods"
+      ],
+      "reason": "Interface members and class methods inherit their parent's release tag in API Extractor, matching Entity.ts and CommonValidatorFunctions.ts."
+    },
+    {
+      "topic": "API report regeneration",
+      "choice": "Leave packages/catalog-model/report.api.md and packages/catalog-model/report-alpha.api.md out of typed units so yarn build:api-reports regenerates them.",
+      "rejected": [
+        "Hand-editing report.api.md and report-alpha.api.md as spec units"
+      ],
+      "reason": "API reports are generated build outputs verified and updated by yarn build:api-reports."
+    },
+    {
+      "topic": "Changeset file path and content",
+      "choice": "Create .changeset/catalog-model-tsdoc.md with '@backstage/catalog-model': patch frontmatter and a concise adopter-facing summary that omits internal symbol names.",
+      "rejected": [
+        "Enumerating internal symbol names in the changeset"
+      ],
+      "reason": "Matches the allowlist glob .changeset/*catalog-model-tsdoc*.md and AC-5 requirements for adopter-facing release notes."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "prettier",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "api-reports",
+      "run": "yarn build:api-reports"
+    }
+  ]
+}

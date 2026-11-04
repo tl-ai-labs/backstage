@@ -48,6 +48,24 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * Assigns the configured default parent group to a `Group` entity when none
+   * is set.
+   *
+   * @remarks
+   *
+   * Applies only when `entity.kind === 'Group'` (case-sensitive), returning
+   * non-`Group` entities untouched. If the `Group` entity already has a truthy
+   * `spec.parent`, or if {@link stringifyEntityRef} for the entity matches
+   * the configured default parent (preventing the default parent group from
+   * becoming its own parent), the entity is returned untouched; otherwise
+   * `entity.spec.parent` is mutated in place to the normalized reference of the
+   * configured default parent (`'group:<namespace>/<name>'`) and the entity is
+   * returned.
+   *
+   * @param entity - The entity, as validated/mutated so far in the policy tree
+   * @returns The incoming entity, with `spec.parent` populated if applicable
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;

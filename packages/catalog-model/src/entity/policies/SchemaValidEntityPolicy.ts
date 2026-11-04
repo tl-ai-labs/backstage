@@ -35,6 +35,25 @@ import { EntityPolicy } from './types';
 export class SchemaValidEntityPolicy implements EntityPolicy {
   private validate: ValidateFunction<Entity> | undefined;
 
+  /**
+   * Validates that an entity conforms to the base {@link Entity} and
+   * {@link EntityMeta} JSON schemas.
+   *
+   * @remarks
+   *
+   * Lazily compiles `Entity.schema.json`, `EntityMeta.schema.json`, and
+   * `common.schema.json` with Ajv on first call. This validates the base entity
+   * envelope structure (requiring `apiVersion`, `kind`, and `metadata` with
+   * valid {@link EntityMeta} field types, allowing optional `spec` as any JSON
+   * object, optional `relations`, and optional `status`, and rejecting unknown
+   * root properties) rather than kind-specific `spec` schemas.
+   *
+   * @param entity - The entity to validate
+   * @returns Resolves with the unmodified entity if it conforms to the base
+   *          entity JSON schema
+   * @throws Rejects with an `Error` prefixed with `'Malformed envelope,'` if
+   *         schema validation fails
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (!this.validate) {
       const ajv = new Ajv({ allowUnionTypes: true });

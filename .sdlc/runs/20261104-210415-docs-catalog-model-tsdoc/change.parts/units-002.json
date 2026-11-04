@@ -1,0 +1,467 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U09",
+      "path": "packages/catalog-model/src/entity/conditions.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Expand the TSDoc comments on the 8 entity kind type-guard functions in conditions.ts.",
+      "rules": [
+        "1. Document each of isApiEntity, isComponentEntity, isDomainEntity, isGroupEntity, isLocationEntity, isResourceEntity, isSystemEntity, and isUserEntity as a TypeScript type guard narrowing Entity to the corresponding {@link <Kind>Entity} type.",
+        "2. State accurately that at runtime each function only checks whether entity.kind matches the target kind string case-insensitively (entity.kind.toUpperCase() === '<KIND>' for 'API', 'COMPONENT', 'DOMAIN', 'GROUP', 'LOCATION', 'RESOURCE', 'SYSTEM', and 'USER') and does not check entity.apiVersion or validate entity.metadata or entity.spec against the kind's schema.",
+        "3. Include '@param entity - The entity to check' (or equivalent hyphenated @param tag), '@returns', and preserve '@public' as the final tag on every function without changing any function signature or body."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 29,
+          "to": 76,
+          "first_line": "/**",
+          "last_line": "}",
+          "rule": "Update only the 8 /** ... */ TSDoc blocks above isApiEntity, isComponentEntity, isDomainEntity, isGroupEntity, isLocationEntity, isResourceEntity, isSystemEntity, and isUserEntity while keeping all function declarations and bodies identical."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/ref.ts",
+        "lines": [
+          47,
+          76
+        ],
+        "reason": "Match top-level exported function TSDoc formatting in src/entity/ with summary, @remarks, @param, @returns, and @public."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/conditions.test.ts",
+          "reason": "Verify runtime behaviour of the kind type guards."
+        },
+        {
+          "path": "packages/catalog-model/src/kinds/index.ts",
+          "reason": "Verify the exported <Kind>Entity type aliases referenced with {@link}."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08"
+      ],
+      "covers": [
+        "FR-9",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add TSDoc comments to the 8 static validator methods on KubernetesValidatorFunctions.",
+      "rules": [
+        "1. Document isValidApiVersion: checks that value is a valid apiVersion string on the form <suffix> or <prefix>/<suffix> (via CommonValidatorFunctions.isValidPrefixAndOrSuffix with '/'), where optional <prefix> is a valid RFC 1123 DNS subdomain (CommonValidatorFunctions.isValidDnsSubdomain: 1-253 chars of dot-separated DNS labels, each 1-63 lowercase ASCII alphanumeric chars [a-z0-9] starting and ending with [a-z0-9] and allowing internal hyphens '-') and <suffix> is 1-63 ASCII alphanumeric chars ([a-z0-9A-Z]+, rejecting hyphens, underscores, and dots).",
+        "2. Document isValidKind: checks that value is a valid kind string of 1-63 characters starting with an ASCII letter ([a-zA-Z]) followed by zero or more ASCII alphanumeric characters ([a-z0-9A-Z]*), rejecting leading digits, hyphens, punctuation, empty strings, strings over 63 chars, and non-strings.",
+        "3. Document isValidObjectName: checks that value is a valid object name string of 1-63 characters starting and ending with an ASCII alphanumeric character ([A-Za-z0-9]) with only ASCII alphanumeric characters, hyphens ('-'), underscores ('_'), and dots ('.') in between (/^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$/), accepting uppercase letters and consecutive internal separators.",
+        "4. Document isValidNamespace: checks that value is a valid namespace string by delegating to {@link CommonValidatorFunctions.isValidDnsLabel} (RFC 1123 DNS label: 1-63 lowercase ASCII alphanumeric characters [a-z0-9] and internal hyphens '-', starting and ending with [a-z0-9], rejecting uppercase letters, underscores, and dots).",
+        "5. Document isValidLabelKey: checks that value is a valid label key string on the form <name> or <prefix>/<name> (via CommonValidatorFunctions.isValidPrefixAndOrSuffix with '/'), where optional <prefix> is a valid DNS subdomain (CommonValidatorFunctions.isValidDnsSubdomain, 1-253 chars) and <name> is a valid object name (KubernetesValidatorFunctions.isValidObjectName, 1-63 chars).",
+        "6. Document isValidLabelValue: checks that value is a valid label value string, accepting either an empty string ('') or a valid object name (KubernetesValidatorFunctions.isValidObjectName, 1-63 chars).",
+        "7. Document isValidAnnotationKey: checks that value is a valid annotation key string on the form <name> or <prefix>/<name> (via CommonValidatorFunctions.isValidPrefixAndOrSuffix with '/'), where optional <prefix> is a valid DNS subdomain (CommonValidatorFunctions.isValidDnsSubdomain, 1-253 chars) and <name> is a valid object name (KubernetesValidatorFunctions.isValidObjectName, 1-63 chars), using the same rule as isValidLabelKey.",
+        "8. Document isValidAnnotationValue: checks that value is a valid annotation value, accepting any string (typeof value === 'string') including an empty string '' with no length or character restrictions.",
+        "9. Include '@param value - The value to check' on each method and do not add @public tags to the static methods."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 29,
+          "to": 86,
+          "first_line": "static isValidApiVersion(value: unknown): boolean {",
+          "last_line": "}",
+          "rule": "Add a /** ... */ TSDoc block above each of the 8 static methods without changing any method signature or implementation."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+        "lines": [
+          25,
+          96
+        ],
+        "reason": "Match static validator method TSDoc style ('Checks that the value ...', '@param value - The value to check', and no method-level @public tag)."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+          "reason": "Verify delegated validation rules in isValidPrefixAndOrSuffix, isValidDnsSubdomain, and isValidDnsLabel."
+        },
+        {
+          "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.test.ts",
+          "reason": "Verify accepted and rejected values in unit tests."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-10",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add a TSDoc comment to DefaultNamespaceEntityPolicy.enforce.",
+      "rules": [
+        "1. Document that enforce resolves with the original entity untouched when entity.metadata.namespace is truthy.",
+        "2. Document that otherwise it resolves with a new deep copy (via lodash.merge onto { metadata: { namespace: <default> } }) in which the configured default namespace (DEFAULT_NAMESPACE / 'default' by default) is applied only when metadata.namespace is absent or undefined, while '' and null are kept as they are in the returned copy, and the input entity is never mutated.",
+        "3. Include @param entity - ... and @returns tags, and do not add @public to the method."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 34,
+          "to": 34,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Add a /** ... */ TSDoc block immediately above enforce without changing its signature or body."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          25,
+          35
+        ],
+        "reason": "Match EntityPolicy.enforce TSDoc tag conventions (@param entity - ..., @returns)."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.test.ts",
+          "reason": "Verify behaviour for truthy, undefined, empty string, and null namespace values."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-11",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add a TSDoc comment to FieldFormatEntityPolicy.enforce.",
+      "rules": [
+        "1. Document that enforce validates the format of the entity's envelope fields using the configured Validators instance (defaulting to makeValidator()): required apiVersion (isValidApiVersion), kind (isValidKind), and metadata.name (isValidEntityName); and optional metadata.namespace (isValidNamespace), metadata.labels keys and values (isValidLabelKey, isValidLabelValue), metadata.annotations keys and values (isValidAnnotationKey, isValidAnnotationValue), metadata.tags items (isValidTag), and metadata.links items (requiring url via CommonValidatorFunctions.isValidUrl, and validating optional title and icon via CommonValidatorFunctions.isNonEmptyString).",
+        "2. Note that it does not check metadata.uid, metadata.etag, metadata.title, metadata.description, metadata.links[].type, or spec.",
+        "3. Include '@param entity - The entity to validate', '@returns' (resolves with the unmodified entity if all checked fields are valid), and '@throws' (rejects with an Error if a required field is undefined or null, if a validator throws, or if any checked field fails validation), without adding @public to the method."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 43,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Add a /** ... */ TSDoc block immediately above enforce without changing its signature or body."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          25,
+          35
+        ],
+        "reason": "Match EntityPolicy.enforce TSDoc tag conventions (@param entity - ..., @returns, @throws)."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts",
+          "reason": "Verify validated fields and thrown Error behaviour."
+        }
+      ],
+      "depends_on": [
+        "U10"
+      ],
+      "covers": [
+        "FR-12",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add a TSDoc comment to GroupDefaultParentEntityPolicy.enforce.",
+      "rules": [
+        "1. Document that enforce applies only when entity.kind === 'Group' (case-sensitive), returning non-Group entities untouched.",
+        "2. Document that if the Group entity already has a truthy spec.parent, or if stringifyEntityRef(entity) matches the policy's configured default parentRef (preventing the default parent group from becoming its own parent), it returns the entity untouched; otherwise it mutates entity.spec.parent in place to the normalized default parentRef ('group:<namespace>/<name>') and resolves with the entity.",
+        "3. Include @param entity - ... and @returns tags, and do not add @public to the method."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 51,
+          "to": 51,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Add a /** ... */ TSDoc block immediately above enforce without changing its signature or body."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          25,
+          35
+        ],
+        "reason": "Match EntityPolicy.enforce TSDoc tag conventions (@param entity - ..., @returns)."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.test.ts",
+          "reason": "Verify in-place mutation of group.spec.parent and self-parenting guard."
+        }
+      ],
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-13",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add a TSDoc comment to NoForeignRootFieldsEntityPolicy.enforce.",
+      "rules": [
+        "1. Document that enforce checks every top-level key (Object.keys(entity)) against the policy's allowed root fields (['apiVersion', 'kind', 'metadata', 'spec'] by default unless overridden in the constructor).",
+        "2. Include '@param entity - The entity to validate', '@returns' (resolves with the unmodified entity if all root-level fields are in the known fields list), and '@throws' (rejects with an Error 'Unknown field <field>' if the entity contains any root-level property not in the known fields list), without adding @public to the method."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 34,
+          "to": 34,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Add a /** ... */ TSDoc block immediately above enforce without changing its signature or body."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          25,
+          35
+        ],
+        "reason": "Match EntityPolicy.enforce TSDoc tag conventions (@param entity - ..., @returns, @throws)."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.test.ts",
+          "reason": "Verify root field checking and thrown Error message."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-14",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add a TSDoc comment to SchemaValidEntityPolicy.enforce.",
+      "rules": [
+        "1. Document that enforce validates entity against the base Entity and EntityMeta JSON schemas (Entity.schema.json, EntityMeta.schema.json, and common.schema.json, lazily compiled with Ajv on first call).",
+        "2. Clarify that enforce validates the base entity envelope/structure (requiring apiVersion, kind, and metadata with valid EntityMeta field types, allowing optional spec as any JSON object, optional relations, and optional status, and rejecting unknown root properties) rather than kind-specific spec schemas.",
+        "3. Include '@param entity - The entity to validate', '@returns' (resolves with the unmodified entity if it conforms to the base entity JSON schema), and '@throws' (rejects with an Error prefixed with 'Malformed envelope,' if schema validation fails), without adding @public to the method."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Add a /** ... */ TSDoc block immediately above enforce without changing its signature or body."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          25,
+          35
+        ],
+        "reason": "Match EntityPolicy.enforce TSDoc tag conventions (@param entity - ..., @returns, @throws)."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/Entity.schema.json",
+          "reason": "Verify the base entity envelope schema fields validated by enforce."
+        },
+        {
+          "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.test.ts",
+          "reason": "Verify envelope schema validation and 'Malformed envelope,' error prefix."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-15",
+        "FR-16",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": ".changeset/catalog-model-tsdoc.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create a patch changeset for @backstage/catalog-model describing the TSDoc documentation improvements.",
+      "rules": [
+        "1. Use YAML frontmatter with single-quoted package name and patch bump: \"'@backstage/catalog-model': patch\".",
+        "2. Write a concise, adopter-facing summary of the TSDoc documentation improvements for catalog entity kinds, kind type guards, Kubernetes format validators, and entity policies.",
+        "3. Do not include any internal symbol names (no interface names, class names, method names, or function names)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/techdocs-backend-mkdocs-config-docs.md",
+        "reason": "Follow Backstage patch changeset frontmatter and concise summary format."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-17",
+        "NFR-3",
+        "NFR-5",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-model/src/entity/conditions.ts": "3fb6048e7e32daeb3db4c972b245daed2e5c666fb14d41a7064a6ea901be056f",
+    "packages/catalog-model/src/entity/ref.ts": "38d54bd3c0d0727564473fa004251922d164aa67ce9b58d7b52b6ea7590faffe",
+    "packages/catalog-model/src/entity/conditions.test.ts": "01b01efe739d8d2a91eb069a8496275e6de52bd3f62808ec2dcc3c28e6d959a5",
+    "packages/catalog-model/src/kinds/index.ts": "6597e73aa38e7d46c3a7e6164528297417cf3470fe9c38ac4d8a9fb7f613ac12",
+    "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts": "1a0c829aef66a42c1063fe5f802dfdea9bf1b8ca9d9dc22a3a8b32e3fa3cf654",
+    "packages/catalog-model/src/validation/CommonValidatorFunctions.ts": "61a6f63504370034bfe1f6f88583b39a4d3cbf5f4dd67ba8d2d6aca52a2e3bc5",
+    "packages/catalog-model/src/validation/KubernetesValidatorFunctions.test.ts": "c1563ab8f1ff5cff337af11859dd6a66d4ce11978088de2063f1b1d040e4a640",
+    "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts": "b3daa1342b4cf799262f102a7d97fb85d33391b4f05a4ccda79007db7dd98a4c",
+    "packages/catalog-model/src/entity/policies/types.ts": "8e279bf3af746be63551124b97cc3fc65ba9d21683860a4ea04c0c9183448c39",
+    "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.test.ts": "f1749cc51a239a8dddbb3e098eda958ee504fc9d740def3aa721c368bae9b81e",
+    "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts": "258af7a44aad051c0bf3049e7fda7af5d6d1d24674ef9fc11b041e751528f90c",
+    "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.test.ts": "e03c9029c0d4d7551caa21d36a406d975d5c627fce0661f8d8d97540321a260f",
+    "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts": "9d722aba02fc9187acb424107fa902388ef1f667e8e0995373e8b21ecb0d83bd",
+    "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.test.ts": "aefeb1a85c61ba35ab76749396f65432fa1a79b52deeb85248dd77e11de33d4d",
+    "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts": "2a06236724449a40fc7d36b4a72569141d76a6deda0ae4f279a3879aa01e6a9c",
+    "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.test.ts": "d11dee0f983766cda7131cb485d31d2e8f2b439903d1dbe251a7697ecfe86b43",
+    "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts": "280241fa2f45cc9b76d2ca4e786639be08460d7ba4248774b9e1bcce98a6316c",
+    "packages/catalog-model/src/schema/Entity.schema.json": "b4e741f821e6006b179f0112ae98a8856286f95593e7dc16fb6fdd8aaaba51fc",
+    "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.test.ts": "1bdca27689823fea22bd5e36801bc791a29868244a1d7d0043c0f5f0b8810559",
+    ".changeset/techdocs-backend-mkdocs-config-docs.md": "53e3ea2d61e5d7717b6ed1ccef456ed7ff632db20b83920c8f80d6841ad88adc"
+  }
+}

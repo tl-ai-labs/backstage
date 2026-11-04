@@ -25,8 +25,21 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface GroupEntityV1alpha1 extends Entity {
+  /**
+   * The apiVersion string of the Group entity, either
+   * `'backstage.io/v1alpha1'` or `'backstage.io/v1beta1'`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+
+  /**
+   * The kind of the entity, expected to be `'Group'` by this type and its
+   * validator schema.
+   */
   kind: 'Group';
+
+  /**
+   * The specification data describing the Group entity itself.
+   */
   spec: {
     type: string;
     profile?: {

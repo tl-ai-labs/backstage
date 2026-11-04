@@ -31,6 +31,23 @@ export class DefaultNamespaceEntityPolicy implements EntityPolicy {
     this.namespace = namespace;
   }
 
+  /**
+   * Ensures that the entity has a default namespace when none is set.
+   *
+   * @remarks
+   *
+   * If `entity.metadata.namespace` is truthy, this method resolves with the
+   * original entity untouched. Otherwise, it resolves with a new deep copy in
+   * which the configured default namespace ({@link DEFAULT_NAMESPACE},
+   * `'default'` by default) is applied only when `metadata.namespace` is absent
+   * or `undefined`; falsy values such as `''` and `null` are kept as they are
+   * in the returned copy, and the input entity is never mutated.
+   *
+   * @param entity - The entity, as validated/mutated so far in the policy tree
+   * @returns The incoming entity when `metadata.namespace` is truthy, otherwise
+   *          a new copy in which the default namespace fills an absent or
+   *          undefined namespace
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.metadata.namespace) {
       return entity;
