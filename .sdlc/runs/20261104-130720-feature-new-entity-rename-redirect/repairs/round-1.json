@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc:full: plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx:579:16 - error TS2559: Type '{ children: Element; }' has no properties in common with type 'IntrinsicAttributes'.\n\n579               <CatalogEntityPage>\n                   ~~~~~~~~~~~~~~~~~\n\nCatalogEntityPage takes no props and no children; it renders an <Outlet /> for nested routes. Render the entity layout as a nested <Route> element under the CatalogEntityPage route instead of passing it as children.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U27.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

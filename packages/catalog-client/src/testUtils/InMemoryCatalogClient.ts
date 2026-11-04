@@ -19,6 +19,7 @@ import {
   AddLocationResponse,
   CATALOG_FILTER_EXISTS,
   CatalogApi,
+  CatalogEntityRedirect,
   EntityFilterQuery,
   EntityOrderQuery,
   GetEntitiesByRefsRequest,
@@ -42,6 +43,7 @@ import {
 import {
   CompoundEntityRef,
   Entity,
+  parseEntityPreviousNames,
   parseEntityRef,
   stringifyEntityRef,
 } from '@backstage/catalog-model';
@@ -620,6 +622,24 @@ export class InMemoryCatalogClient implements CatalogApi {
     return this.#createEntityRefMap().get(
       stringifyEntityRef(parseEntityRef(entityRef)),
     );
+  }
+
+  async getEntityRedirectByRef(
+    entityRef: string | CompoundEntityRef,
+  ): Promise<CatalogEntityRedirect | undefined> {
+    const targetRef = stringifyEntityRef(parseEntityRef(entityRef));
+    if (this.#createEntityRefMap().has(targetRef)) {
+      return undefined;
+    }
+
+    const matches = this.#entities.filter(entity =>
+      parseEntityPreviousNames(entity).includes(targetRef),
+    );
+    if (matches.length === 1) {
+      return { entityRef: stringifyEntityRef(matches[0]) };
+    }
+
+    return undefined;
   }
 
   async removeEntityByUid(uid: string): Promise<void> {

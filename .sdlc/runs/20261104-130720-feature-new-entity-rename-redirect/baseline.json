@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "plugin_version": "0.10.1",
+  "built_at": "2026-11-04T07:39:30Z",
+  "run_id": "20261104-130720-feature-new-entity-rename-redirect",
+  "intent_hint": "feature-new",
+
+  "git": {
+    "head": "f20fd9b598285c88401406b3812fe00d7708136c",
+    "head_committed_at": "2026-10-27T16:51:31+01:00",
+    "branch": "BS-NF-12/argon4-agsdk-only",
+    "dirty": false,
+    "remotes": [
+      { "name": "origin", "url": "https://github.com/tl-ai-labs/backstage.git" },
+      { "name": "upstream", "url": "https://github.com/backstage/backstage.git" }
+    ],
+    "tracked_files": 12364
+  },
+  "gitignore_covers_sdlc": false,
+  "sdlc_ignored_via": ".git/info/exclude:7 (.sdlc/)",
+
+  "topology": {
+    "top_level_dirs": [".changeset", ".claude", ".cursor", ".devcontainer", ".github", ".husky", ".lighthouseci", ".patches", ".storybook", ".yarn", "beps", "contrib", "dist-types", "docs", "docs-ui", "microsite", "packages", "plugins", "scripts", "workspaces"],
+    "entry_points": ["packages/app/src/index.tsx", "packages/app/src/App.tsx", "packages/app-legacy/src/index.tsx", "packages/backend/src/index.ts"],
+    "job_relevant_areas": {
+      "plugins/catalog-backend": { "name": "@backstage/plugin-catalog-backend", "version": "4.0.3-next.0", "role": "backend-plugin", "notes": "Express router in src/service/createRouter.ts (by-name route at /entities/by-name/:kind/:namespace/:name), OpenAPI spec src/schema/openapi.yaml with generated router under src/schema/openapi/generated, knex migrations in migrations/ (latest 20261007000000_stitch_failure_count.js), DB row types in src/database/tables.ts, stitching in src/stitching, config schema config.d.ts, API reports report.api.md + report-alpha.api.md" },
+      "plugins/catalog-node": { "name": "@backstage/plugin-catalog-node", "version": "2.2.7-next.0", "role": "node-library" },
+      "packages/catalog-client": { "notes": "CatalogClient.ts; OpenAPI-generated client under src/schema/openapi/generated (generated, do not hand-edit)" },
+      "packages/catalog-model": { "name": "@backstage/catalog-model", "version": "1.10.2", "role": "common-library", "notes": ">=1.0.0: new API = minor bump, breaking = major" },
+      "plugins/catalog-react": { "name": "@backstage/plugin-catalog-react", "version": "4.0.0-next.0", "role": "web-library", "notes": "hooks/useEntity.tsx, components/EntityRefLink, routes.ts (entityRouteRef)" },
+      "plugins/catalog": { "name": "@backstage/plugin-catalog", "version": "2.0.11-next.0", "role": "frontend-plugin", "notes": "components/CatalogEntityPage/useEntityFromUrl.ts loads entity by route params via catalogApi.getEntityByRef; components/EntityNotFound; new-frontend-system wiring under src/alpha (pages.tsx, plugin.tsx)" },
+      "plugins/techdocs": { "name": "@backstage/plugin-techdocs", "version": "1.19.1-next.0", "role": "frontend-plugin", "notes": "reader/components/TechDocsRedirectNotification (existing Snackbar notice used by reader/transformers/handleMetaRedirects.tsx), TechDocsNotFound, TechDocsReaderPage; alpha/ for new frontend system" },
+      "plugins/techdocs-react": { "name": "@backstage/plugin-techdocs-react", "version": "1.4.1-next.0", "role": "web-library" },
+      "plugins/techdocs-backend": { "name": "@backstage/plugin-techdocs-backend", "version": "2.4.1-next.0", "role": "backend-plugin", "notes": "service/router.ts, service/CachedEntityLoader.ts" },
+      "docs/features/software-catalog": { "notes": "life-of-an-entity.md, descriptor-format.md, configuration.md, faq.md, references.md among others" },
+      "docs/features/techdocs": { "notes": "how-to-guides.md, FAQ.md, configuration.md, troubleshooting.md among others" }
+    }
+  },
+
+  "stacks": [
+    {
+      "manifest": "package.json",
+      "stack": "node-typescript",
+      "package_manager": "yarn@4.18.1 (nodeLinker: node-modules)",
+      "node_engines": "22 || 24",
+      "typescript": "~5.7.0",
+      "detected_frameworks": ["backstage", "react", "react-router", "material-ui-v4", "express", "knex", "jest", "testing-library", "msw", "storybook", "playwright", "zod"]
+    }
+  ],
+  "stack_adapter_match": "none (shipped adapters: generic, nest, python); Tier 2b stack profile built",
+
+  "test_command_proposed": "CI=1 yarn test <path>",
+  "test_command_source": "package.json#scripts.test (backstage-cli repo test, yarn.lock present) + .claude/CLAUDE.md -> AGENTS.md 'Development Flow' (always pass a path; never run all tests)",
+  "test_command_per_area": {
+    "plugins/catalog-backend": "CI=1 yarn test plugins/catalog-backend",
+    "plugins/catalog-react": "CI=1 yarn test plugins/catalog-react",
+    "plugins/catalog": "CI=1 yarn test plugins/catalog",
+    "plugins/techdocs": "CI=1 yarn test plugins/techdocs",
+    "packages/catalog-model": "CI=1 yarn test packages/catalog-model"
+  },
+  "other_commands_from_repo_instructions": {
+    "typecheck": "yarn tsc (repo root, no options)",
+    "format": "yarn prettier --write <changed paths>",
+    "lint": "yarn lint --fix",
+    "api_reports": "yarn build:api-reports",
+    "forbidden": ["yarn build", "yarn changesets version", "yarn release", "changeset CLI"]
+  },
+  "install_state": "node_modules present (2130 entries, .yarn-state.yml present)",
+
+  "docs_present": [
+    { "path": "README.md", "kind": "readme" },
+    { "path": "README-fr_FR.md", "kind": "readme-translation" },
+    { "path": "README-ja_JP.md", "kind": "readme-translation" },
+    { "path": "README-ko_kr.md", "kind": "readme-translation" },
+    { "path": "README-zh_Hans.md", "kind": "readme-translation" },
+    { "path": "AGENTS.md", "kind": "agents-instructions" },
+    { "path": ".claude/CLAUDE.md", "kind": "claude-instructions (symlink -> ../AGENTS.md)" },
+    { "path": "CONTRIBUTING.md", "kind": "contributing" },
+    { "path": "STYLE.md", "kind": "style-guide" },
+    { "path": "REVIEWING.md", "kind": "review-and-changeset-guide" },
+    { "path": "SECURITY.md", "kind": "security-policy" },
+    { "path": "docs/architecture-decisions/", "kind": "adr" },
+    { "path": "docs/contribute/doc-style-guide.md", "kind": "doc-style-guide" },
+    { "path": "docs/contribute/project-structure.md", "kind": "project-structure" },
+    { "path": ".github/PULL_REQUEST_TEMPLATE.md", "kind": "pr-template" }
+  ],
+
+  "ai_configs_detected": [
+    { "path": ".claude/", "type": "claude-code-project-dir" },
+    { "path": ".claude/CLAUDE.md", "type": "claude-instructions (symlink -> ../AGENTS.md)" },
+    { "path": ".claude/settings.local.json", "type": "claude-settings-local (gitignored)" },
+    { "path": ".claude/skills/", "type": "claude-skills (backstage-release-notes/SKILL.md, catalog-db-performance.md)" },
+    { "path": ".cursor/rules/", "type": "cursor (backstage-project.mdc -> ../../AGENTS.md, tests/backend-test-utils.mdc, tests/test-utils.mdc)" },
+    { "path": ".github/copilot-instructions.md", "type": "copilot-instructions" },
+    { "path": "AGENTS.md", "type": "agents-instructions" }
+  ],
+
+  "env_keys_by_file": {},
+  "env_keys_all": [],
+  "env_keys_referenced_in_code": ["ACTIONS_ID_TOKEN_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_URL", "APPDATA", "APP_CONFIG", "AWS_ACCESS_KEY_ID", "AWS_CONFIG_FILE", "AWS_CREDENTIAL_EXPIRATION", "AWS_DEFAULT_REGION", "AWS_REGION", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_SHARED_CREDENTIALS_FILE", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID", "BACKSTAGE_APP_NAME", "BACKSTAGE_CLI_BUILD_PARALLEL", "BACKSTAGE_CLI_CHANNEL", "BACKSTAGE_CLI_CONCURRENCY", "BACKSTAGE_CLI_LINKED_WORKSPACE", "BACKSTAGE_E2E_CLI_TEST", "BACKSTAGE_ENV", "BACKSTAGE_INSTANCE_ID", "BACKSTAGE_MANIFEST_FILE", "BACKSTAGE_OLD_TESTS", "BACKSTAGE_TEST_DISABLE_DOCKER", "BACKSTAGE_TEST_DOCKER_REGISTRY", "BACKSTAGE_VERSIONS_BASE_URL", "BUILD_INFO", "CI", "CIRCLECI", "COMMIT_SHA_BEFORE", "CONFLUENCE_TOKEN", "COREPACK_ROOT", "DEBUG", "DEBUG_CLI", "DISCORD_PULL_REQUESTS_WEBHOOK", "DISCORD_WEBHOOK", "DOTENV_KEY", "EXPERIMENTAL_LAZY_COMPILATION", "EXPERIMENTAL_TRIM_NEXT_ENTRY", "FORCE_COLOR", "FOSSA_API_KEY", "FUNCTION_TARGET", "GITHUB_ACTIONS", "GITHUB_BASE_REF", "GITHUB_EVENT_PATH", "GITHUB_OUTPUT", "GITHUB_REF", "GITHUB_TOKEN", "GITHUB_WORKSPACE", "GITLAB_CI", "GIT_SSH", "GIT_SSH_COMMAND", "GOOGLE_RUNTIME", "HOME", "HOSTNAME", "KUBERNETES_CA_FILE_PATH", "KUBERNETES_SERVICE_HOST", "KUBERNETES_SERVICE_PORT", "LEGACY_WEBPACK_BUILD", "LOG_LEVEL", "MYSQL_CONNECTION", "NODE_ENV", "NODE_OPTIONS", "NODE_PATH", "NODE_TLS_REJECT_UNAUTHORIZED", "NO_COLOR", "NPM_ID_TOKEN", "PATH", "PERFORMANCE_TEST", "PERFORMANCE_TRACE", "PLAYWRIGHT_URL", "PORT", "POSTGRES_HOST", "POSTGRES_PASSWORD", "POSTGRES_PORT", "POSTGRES_USER", "RELEASE_VERSION", "SIGSTORE_ID_TOKEN", "STORYBOOK_STORY_SET", "TECHDOCS_TEST_SECRET", "TZ", "USER", "XDG_CONFIG_HOME", "XDG_DATA_HOME"],
+  "env_keys_referenced_in_code_note": "process.env.* names only (git grep, CHANGELOGs and docs/releases excluded; vendored .yarn/releases noise and test placeholders trimmed). No os.environ / os.getenv / System.getenv hits.",
+
+  "monorepo": {
+    "type": "yarn-workspaces",
+    "workspace_globs": ["packages/*", "plugins/*"],
+    "package_counts": { "packages": 74, "plugins": 162 },
+    "extra_workspace_dirs": ["workspaces/ui (separate workspace dir, not in root workspaces globs)"],
+    "packages": [
+      { "name": "@backstage/plugin-catalog-backend", "root": "plugins/catalog-backend", "manifest": "plugins/catalog-backend/package.json", "test": "CI=1 yarn test plugins/catalog-backend" },
+      { "name": "@backstage/plugin-catalog-node", "root": "plugins/catalog-node", "manifest": "plugins/catalog-node/package.json", "test": "CI=1 yarn test plugins/catalog-node" },
+      { "name": "@backstage/plugin-catalog-common", "root": "plugins/catalog-common", "manifest": "plugins/catalog-common/package.json", "test": "CI=1 yarn test plugins/catalog-common" },
+      { "name": "@backstage/catalog-client", "root": "packages/catalog-client", "manifest": "packages/catalog-client/package.json", "test": "CI=1 yarn test packages/catalog-client" },
+      { "name": "@backstage/catalog-model", "root": "packages/catalog-model", "manifest": "packages/catalog-model/package.json", "test": "CI=1 yarn test packages/catalog-model" },
+      { "name": "@backstage/plugin-catalog-react", "root": "plugins/catalog-react", "manifest": "plugins/catalog-react/package.json", "test": "CI=1 yarn test plugins/catalog-react" },
+      { "name": "@backstage/plugin-catalog", "root": "plugins/catalog", "manifest": "plugins/catalog/package.json", "test": "CI=1 yarn test plugins/catalog" },
+      { "name": "@backstage/plugin-techdocs", "root": "plugins/techdocs", "manifest": "plugins/techdocs/package.json", "test": "CI=1 yarn test plugins/techdocs" },
+      { "name": "@backstage/plugin-techdocs-react", "root": "plugins/techdocs-react", "manifest": "plugins/techdocs-react/package.json", "test": "CI=1 yarn test plugins/techdocs-react" },
+      { "name": "@backstage/plugin-techdocs-backend", "root": "plugins/techdocs-backend", "manifest": "plugins/techdocs-backend/package.json", "test": "CI=1 yarn test plugins/techdocs-backend" },
+      { "name": "example-app (private)", "root": "packages/app", "manifest": "packages/app/package.json" },
+      { "name": "example-app-legacy (private)", "root": "packages/app-legacy", "manifest": "packages/app-legacy/package.json" },
+      { "name": "example-backend (private)", "root": "packages/backend", "manifest": "packages/backend/package.json" }
+    ]
+  },
+
+  "submodules": [],
+  "lfs": false,
+  "lfs_patterns": [],
+  "encrypted_secrets_detected": false,
+
+  "infra_hints": {
+    "dockerfile": true,
+    "dockerfile_paths": ["packages/backend/Dockerfile"],
+    "docker_compose": true,
+    "docker_compose_paths": ["docker-compose.deps.yml"],
+    "terraform": false,
+    "github_workflows": true,
+    "github_workflows_count": 49,
+    "gitlab_ci": false,
+    "circleci": false,
+    "jenkins": false,
+    "devcontainer": true,
+    "husky_pre_commit": "yarn lint-staged (eslint --fix, prettier --write, check-docs-quality, generate-catalog-info, sort-package-json, verify-lockfile-duplicates)"
+  },
+
+  "regulated_repo_signals": [
+    { "kind": "security-policy-file", "path": "SECURITY.md" }
+  ],
+  "regulated_repo_warning_required": true,
+  "regulated_repo_note": "Only hit is the OSS vulnerability-disclosure SECURITY.md; no HIPAA/PCI/SOC2/GDPR files or dirs, no security/compliance/privacy/legal CODEOWNERS entries.",
+
+  "off_limits_proposed": [
+    ".env", ".env.*", ".env.local",
+    ".claude/**", ".cursor/**", ".github/copilot-instructions.md", "AGENTS.md",
+    ".git/**", ".sdlc/**",
+    "node_modules/**", "**/node_modules/**", "dist/**", "**/dist/**", "dist-types/**", "build/**", "**/build/**", ".next/**", "target/**", "vendor/**", "third_party/**",
+    ".yarn/releases/**", ".yarn/plugins/**", ".yarn/patches/**", "yarn.lock",
+    "**/src/schema/openapi/generated/**",
+    "docs/reference/**",
+    "docs/releases/**",
+    ".eslintrc.js", "**/.eslintrc.js", "tsconfig.json", ".prettierignore"
+  ],
+  "off_limits_rationale": {
+    "**/src/schema/openapi/generated/**": "generated from openapi.yaml by repo tooling (catalog-backend, catalog-client, others)",
+    "docs/releases/**": "AGENTS.md: never change release notes unless asked",
+    ".eslintrc.js / tsconfig.json / .prettierignore": "AGENTS.md: never update ESLint, Prettier or TypeScript config unless requested",
+    "yarn.lock / .yarn/**": "lockfile and vendored yarn release; no dependency changes expected"
+  },
+  "generated_but_tool_maintained": [
+    "**/report*.api.md (regenerated by yarn build:api-reports; must be updated by the tool, not by hand, when public APIs change)"
+  ],
+
+  "coexistence_notes": [
+    "Cursor rules detected at .cursor/rules/ (backstage-project.mdc symlinks to AGENTS.md) - untouched by default.",
+    "Claude Code project config at .claude/ (CLAUDE.md symlink to AGENTS.md, settings.local.json, skills/) - untouched by default.",
+    "GitHub Copilot instructions at .github/copilot-instructions.md - untouched by default.",
+    "No .mcp.json, no Aider config, no repo-local routing-policy.yaml, no gemini*.yaml/json.",
+    ".gitignore does not cover .sdlc/; it is currently ignored only via .git/info/exclude (local, not shared).",
+    "Husky pre-commit runs lint-staged (eslint --fix, prettier --write, catalog-info generation) on any commit."
+  ]
+}

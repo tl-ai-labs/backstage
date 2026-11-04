@@ -17,6 +17,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useExternalRedirect } from './useExternalRedirect';
 import { TestApiProvider } from '@backstage/test-utils';
+import { alertApiRef } from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import { TECHDOCS_EXTERNAL_ANNOTATION } from '@backstage/plugin-techdocs-common';
 
@@ -26,6 +27,7 @@ const mockViewTechdocLink = jest.fn(() => '/docs');
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: '/docs', search: '', hash: '' }),
 }));
 
 jest.mock('@backstage/core-plugin-api', () => ({
@@ -36,10 +38,21 @@ jest.mock('@backstage/core-plugin-api', () => ({
 describe('useExternalRedirect', () => {
   const mockCatalogApi = {
     getEntityByRef: jest.fn(),
+    getEntityRedirectByRef: jest.fn(),
+  };
+
+  const mockAlertApi = {
+    post: jest.fn(),
+    alert$: jest.fn(),
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestApiProvider apis={[[catalogApiRef, mockCatalogApi]]}>
+    <TestApiProvider
+      apis={[
+        [catalogApiRef, mockCatalogApi],
+        [alertApiRef, mockAlertApi],
+      ]}
+    >
       {children}
     </TestApiProvider>
   );
@@ -278,5 +291,59 @@ describe('useExternalRedirect', () => {
     await waitFor(() => {
       expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('redirects to renamed entity TechDocs URL and posts transient info alert when getEntityByRef returns undefined', async () => {
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    mockCatalogApi.getEntityRedirectByRef.mockResolvedValue({
+      entityRef: 'component:default/new-component',
+    });
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect({
+          kind: 'Component',
+          name: 'old-component',
+          namespace: 'default',
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.shouldShowProgress).toBe(true);
+    expect(mockNavigate).toHaveBeenCalledWith('/docs', {
+      replace: true,
+    });
+    expect(mockAlertApi.post).toHaveBeenCalledWith({
+      message:
+        'Redirected from component:default/old-component to component:default/new-component as the entity was renamed.',
+      severity: 'info',
+      display: 'transient',
+    });
+  });
+
+  it('does not redirect when both getEntityByRef and getEntityRedirectByRef return undefined', async () => {
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    mockCatalogApi.getEntityRedirectByRef.mockResolvedValue(undefined);
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect({
+          kind: 'Component',
+          name: 'unknown-component',
+          namespace: 'default',
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.shouldShowProgress).toBe(false);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

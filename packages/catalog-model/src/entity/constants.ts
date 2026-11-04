@@ -60,3 +60,10 @@ export const ANNOTATION_KUBERNETES_API_SERVER_CA =
  */
 export const ANNOTATION_KUBERNETES_AUTH_PROVIDER =
   'kubernetes.io/auth-provider';
+
+/**
+ * Annotation for specifying previous names or namespaces of an entity.
+ *
+ * @public
+ */
+export const ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names';

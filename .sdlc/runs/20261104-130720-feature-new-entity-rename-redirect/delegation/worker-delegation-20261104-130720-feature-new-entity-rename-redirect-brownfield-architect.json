@@ -1,0 +1,113 @@
+{
+  "schema": "delegation-record/1",
+  "task_id": "20261104-130720-feature-new-entity-rename-redirect-brownfield-architect",
+  "phase": "architecture_design",
+  "task_type": "judgment",
+  "module": "judgment",
+  "model_id": "argon",
+  "model_name": "gemini-4-argon",
+  "cable": {
+    "sdk": "google-antigravity",
+    "sdk_version": "0.1.22",
+    "vertex_project": "temp-genmedia-study",
+    "vertex_location": "global",
+    "thinking": "HIGH"
+  },
+  "workdir": "/Users/macbook/Documents/GitHub/Google-Projects/backstage",
+  "started_at": "2026-11-04T10:06:09.200Z",
+  "duration_ms": 465048,
+  "success": true,
+  "error": null,
+  "cost_usd": 1.09933,
+  "tokens": {
+    "input": 429815,
+    "input_cached": 0,
+    "output": 23970,
+    "output_reasoning": 643
+  },
+  "tool_calls": {
+    "count": 4,
+    "truncated": false,
+    "sample": [
+      {
+        "name": "write_section",
+        "args": {
+          "name": "header.json",
+          "section_json": "{\n  \"conventions\": [\n    \"Add the Backstage Apache 2.0 license header with Copyright 2026 The Backstage Authors on newly created source and migration files only; keep existing copyright headers on edited files unchanged.\",\n    \"Format all TypeScript, JavaScript, YAML, and Markdown files with Prettier (2-space indentation, single quotes, trailing commas, 80-col wrap).\",\n    \"Tag all new symbols exported from @backstage/catalog-model and @backstage/catalog-client with @public JSDoc comments so API Extractor reports succeed without warnings.\",\n    \"In frontend tests, prefer screen and findBy* queries from @testing-library/react over waitFor, and do not introduce any data-testid attributes.\",\n    \"Follow docs/contribute/doc-style-guide.md for documentation edits and use minor semver bumps across all five affected packages (@backstage/catalog-model, @backstage/catalog-client, @backstage/plugin-catalog-backend, @backstage/plugin-catalog, @backstage/plugin-techdocs) in five separate changeset files, each with a message about its own package only.\"\n  ],\n  \"decisions\": [\n    {\n      \"topic\": \"ANNOTATION_PREVIOUS_NAMES constant and parser placement\",\n      \"choice\": \"Export ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names' from packages/catalog-model/src/entity/constants.ts and parseEntityPreviousNames(entity: Entity): string[] from packages/catalog-model/src/entity/ref.ts (re-exported via entity/index.ts and package root).\",\n      \"rejected\": [\n        \"Inline parsing separately inside catalog-backend and catalog-client\"\n      ],\n      \"reason\": \"Sharing the parser in @backstage/catalog-model ensures identical comma-splitting, trimming, defaultKind: entity.kind, defaultNamespace: entity.metadata.namespace || DEFAULT_NAMESPACE, same-kind validation, self-ref filtering, and deduplication across performStitching and InMemoryCatalogClient.\"\n    },\n    {\n      \"topic\": \"Database schema for previous entity names\",\n      \"choice\": \"Create table final_entity_previous_names i"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      },
+      {
+        "name": "write_section",
+        "args": {
+          "name": "units-001.json",
+          "section_json": "[\n  {\n    \"id\": \"U01\",\n    \"path\": \"packages/catalog-model/src/entity/constants.ts\",\n    \"action\": \"edit\",\n    \"phase\": \"codegen\",\n    \"behaviour\": \"Export the ANNOTATION_PREVIOUS_NAMES annotation constant ('backstage.io/previous-names') from @backstage/catalog-model.\",\n    \"rules\": [\n      \"1. Add a @public JSDoc comment and export const ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names'; at the end of packages/catalog-model/src/entity/constants.ts.\"\n    ],\n    \"exports\": [\n      {\n        \"name\": \"ANNOTATION_PREVIOUS_NAMES\",\n        \"kind\": \"const\",\n        \"params\": [],\n        \"returns\": \"string\"\n      }\n    ],\n    \"import_line\": \"import { ANNOTATION_PREVIOUS_NAMES } from '@backstage/catalog-model';\",\n    \"sites\": [\n      {\n        \"id\": \"S1\",\n        \"at\": \"insert_after\",\n        \"from\": 62,\n        \"to\": 62,\n        \"first_line\": \"'kubernetes.io/auth-provider';\",\n        \"rule\": \"Add @public JSDoc and export const ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names';\"\n      }\n    ],\n    \"depends_on\": [],\n    \"covers\": [\"FR-1\", \"AC-1\"],\n    \"checks\": [\"prettier\"]\n  },\n  {\n    \"id\": \"U02\",\n    \"path\": \"packages/catalog-model/src/entity/ref.ts\",\n    \"action\": \"edit\",\n    \"phase\": \"codegen\",\n    \"behaviour\": \"Add parseEntityPreviousNames(entity: Entity): string[] to parse, normalize, validate, filter, and deduplicate backstage.io/previous-names entries.\",\n    \"rules\": [\n      \"1. Import ANNOTATION_PREVIOUS_NAMES alongside DEFAULT_NAMESPACE from './constants' and import { KubernetesValidatorFunctions } from '../validation/KubernetesValidatorFunctions'.\",\n      \"2. Read rawAnnotation = entity.metadata?.annotations?.[ANNOTATION_PREVIOUS_NAMES]; if typeof rawAnnotation !== 'string' or !rawAnnotation.trim() or !entity.kind or !entity.metadata?.name, return [].\",\n      \"3. Compute entityNamespace = entity.metadata.namespace || DEFAULT_NAMESPACE and currentRef = stringifyEntityRef({ kind: entity.kind, namespace: entityNamespace, name: entity.metadata.name })."
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      },
+      {
+        "name": "write_section",
+        "args": {
+          "name": "units-002.json",
+          "section_json": "[\n  {\n    \"id\": \"U20\",\n    \"path\": \"packages/catalog-model/src/entity/ref.test.ts\",\n    \"action\": \"edit\",\n    \"phase\": \"tests\",\n    \"behaviour\": \"Unit tests for parseEntityPreviousNames in packages/catalog-model/src/entity/ref.test.ts.\",\n    \"rules\": [\n      \"1. Import ANNOTATION_PREVIOUS_NAMES from './constants', Entity from './Entity', and parseEntityPreviousNames alongside parseEntityRef from './ref'.\",\n      \"2. Add describe('parseEntityPreviousNames', ...) testing: missing/empty annotation returns []; bare name, namespace/name, and kind:namespace/name entries normalize with entity kind and namespace defaults; whitespace around comma-separated values is trimmed and duplicates are removed; entries with a different kind, invalid Kubernetes name/namespace characters, or equal to the entity's own current ref are ignored.\"\n    ],\n    \"exports\": [],\n    \"import_line\": \"\",\n    \"sites\": [\n      {\n        \"id\": \"S1\",\n        \"at\": \"replace\",\n        \"from\": 17,\n        \"to\": 17,\n        \"first_line\": \"import { parseEntityRef } from './ref';\",\n        \"rule\": \"Import ANNOTATION_PREVIOUS_NAMES from './constants', Entity from './Entity', and parseEntityPreviousNames alongside parseEntityRef from './ref'.\"\n      },\n      {\n        \"id\": \"S2\",\n        \"at\": \"replace\",\n        \"from\": 164,\n        \"to\": 166,\n        \"first_line\": \"});\",\n        \"last_line\": \"});\",\n        \"rule\": \"Add describe('parseEntityPreviousNames', ...) test cases.\"\n      }\n    ],\n    \"depends_on\": [\"U01\", \"U02\", \"U03\"],\n    \"covers\": [\"FR-1\", \"FR-2\", \"NFR-4\", \"NFR-5\", \"AC-1\", \"AC-10\"],\n    \"tests\": [\n      {\n        \"name\": \"parses bare name, namespace/name, and full entity ref entries\",\n        \"given\": \"an entity Component:custom-ns/new-name with backstage.io/previous-names: 'old-name, other-ns/old-ns-name, component:third-ns/full-old'\",\n        \"expect\": \"returns ['component:custom-ns/old-name', 'component:other-ns/old-ns-name', 'component:third-ns/full-old']\"\n      },\n      {\n        \"name\": \"filter"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      },
+      {
+        "name": "write_section",
+        "args": {
+          "name": "units-003.json",
+          "section_json": "[\n  {\n    \"id\": \"U32\",\n    \"path\": \"docs/features/software-catalog/well-known-annotations.md\",\n    \"action\": \"edit\",\n    \"phase\": \"docs\",\n    \"behaviour\": \"Document the backstage.io/previous-names annotation and its redirect and conflict semantics in well-known-annotations.md.\",\n    \"rules\": [\n      \"1. Add a ### backstage.io/previous-names section right after the backstage.io/orphan section.\",\n      \"2. Show a YAML example with backstage.io/previous-names: 'old-name, legacy-namespace/old-name'.\",\n      \"3. Explain that the value is a comma-separated list of former names or entity references (name, namespace/name, or kind:namespace/name) of the same kind, defaulting to the entity's own kind and namespace.\",\n      \"4. Explain that when a user navigates to a Catalog entity page or TechDocs reader page for a missing entity, Backstage checks for a redirect from backstage.io/previous-names and redirects to the renamed entity while displaying an informational alert.\",\n      \"5. Explicitly state that a live entity with that name always takes precedence over a redirect, and that another entity of the same kind claiming the same former name turns that redirect into a 404.\"\n    ],\n    \"exports\": [],\n    \"import_line\": \"\",\n    \"sites\": [\n      {\n        \"id\": \"S1\",\n        \"at\": \"insert_after\",\n        \"from\": 81,\n        \"to\": 81,\n        \"first_line\": \"```\",\n        \"rule\": \"Add ### backstage.io/previous-names section documenting syntax, Catalog/TechDocs redirect behavior, live entity precedence, and that another entity of the same kind claiming the same former name turns that redirect into a 404.\"\n      }\n    ],\n    \"depends_on\": [\"U01\", \"U02\", \"U17\", \"U18\"],\n    \"covers\": [\"FR-15\", \"AC-3\", \"AC-9\"],\n    \"checks\": [\"prettier\"]\n  },\n  {\n    \"id\": \"U33\",\n    \"path\": \"docs/features/software-catalog/api.md\",\n    \"action\": \"edit\",\n    \"phase\": \"docs\",\n    \"behaviour\": \"Document the GET /entities/by-name/{kind}/{namespace}/{name}/redirect endpoint in docs/features/software-catalog"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      }
+    ]
+  },
+  "files": {
+    "added": [],
+    "modified": [],
+    "removed": [],
+    "unchanged": 19201,
+    "scanned": 19201,
+    "truncated": false,
+    "unreadable": []
+  },
+  "artifacts": {
+    "brief": "worker-task-20261104-130720-feature-new-entity-rename-redirect-brownfield-architect.md",
+    "usage": "worker-usage-20261104-130720-feature-new-entity-rename-redirect-brownfield-architect.json",
+    "system": "worker-system-20261104-130720-feature-new-entity-rename-redirect-brownfield-architect.md"
+  },
+  "gemini": {
+    "project": "temp-genmedia-study",
+    "location": "global",
+    "tries": [
+      {
+        "location": "global",
+        "ended_by": "answer",
+        "http_codes": [],
+        "s": 459.012,
+        "served_tier": "standard",
+        "input_tokens": 429815,
+        "input_tokens_cached": 0,
+        "output_tokens": 23970,
+        "cost_usd": 1.09933
+      }
+    ],
+    "ended_by": "answer",
+    "last_status": null,
+    "stall_cuts": 0,
+    "failovers": 0,
+    "cut_calls": 0,
+    "google_wait_ms": 0,
+    "work_ms": 459702,
+    "slept_ms": 0,
+    "sdk_version": "0.1.22",
+    "usage_semantics": "inclusive",
+    "unavailable": null,
+    "endpoint_override": null
+  }
+}

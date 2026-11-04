@@ -1,0 +1,94 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=true yarn test plugins/catalog: ● EntityLayout - inspect dialog › redirects from a previous entity name preserving sub-route and posts an info alert\n\n    expect(received).toHaveBeenCalledWith(...expected)\n    Matcher error: received value must be a mock or spy function\n    Received has type:  function\n    Received has value: [Function post]\n\n      605 |     expect(await screen.findByText('cicd-content')).toBeInTheDocument();\n      606 |     expect(screen.getByText('my-entity')).toBeInTheDocument();\n    > 607 |     expect(alertApi.post).toHaveBeenCalledWith({\n\nThe redirect itself works (cicd-content and my-entity render). The test's `const alertApi = mockApis.alert();` (line 564) is a fake MockAlertApi from @backstage/frontend-test-utils, not a jest mock. Assert through its own API instead, e.g. `expect(alertApi.getAlerts()).toEqual([expect.objectContaining({ message: 'Redirected from mykind:default/old-entity to mykind:default/my-entity as the entity was renamed.', severity: 'info', display: 'transient' })])`, or use `mockApis.alert.mock()` for a jest-mocked post. Change only this test.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U27.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-test-utils/src/apis/AlertApi/MockAlertApi.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": "plugins/catalog/src/alpha/pages.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/alpha/pages.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=true yarn test plugins/catalog: ● Entity page › redirects from a former entity name while preserving sub-route\n\n    expect(received).resolves.toBeInTheDocument()\n    Received promise rejected instead of resolved\n    Rejected to value: [TestingLibraryElementError: Found multiple elements with the text: /artist-lookup/\n    Here are the matching elements:\n    <div class=\"title\" id=\"react-aria-:rhh:\">Redirected from component:default/former-artist-lookup to component:default/artist-lookup as the entity was renamed.</div>\n    <h2 class=\"bui-HeaderTitle bui-HeaderTitle\">artist-lookup</h2>\n\nThe failing query is `screen.findByText(/artist-lookup/)` at line 1319 of the new test; the redirect itself works and the rename toast now also matches. Query the page title exactly instead (e.g. `screen.findByRole('heading', { name: 'artist-lookup' })` or `screen.findByText('artist-lookup')` with an exact string), and optionally assert the toast text separately. Change only this new test; leave the existing tests at lines 888 and 1184 as they are.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/alpha/pages.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/alpha/pages.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U28.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

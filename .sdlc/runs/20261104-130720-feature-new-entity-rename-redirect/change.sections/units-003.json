@@ -1,0 +1,188 @@
+[
+  {
+    "id": "U32",
+    "path": "docs/features/software-catalog/well-known-annotations.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the backstage.io/previous-names annotation and its redirect and conflict semantics in well-known-annotations.md.",
+    "rules": [
+      "1. Add a ### backstage.io/previous-names section right after the backstage.io/orphan section.",
+      "2. Show a YAML example with backstage.io/previous-names: 'old-name, legacy-namespace/old-name'.",
+      "3. Explain that the value is a comma-separated list of former names or entity references (name, namespace/name, or kind:namespace/name) of the same kind, defaulting to the entity's own kind and namespace.",
+      "4. Explain that when a user navigates to a Catalog entity page or TechDocs reader page for a missing entity, Backstage checks for a redirect from backstage.io/previous-names and redirects to the renamed entity while displaying an informational alert.",
+      "5. Explicitly state that a live entity with that name always takes precedence over a redirect, and that another entity of the same kind claiming the same former name turns that redirect into a 404."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 81,
+        "to": 81,
+        "first_line": "```",
+        "rule": "Add ### backstage.io/previous-names section documenting syntax, Catalog/TechDocs redirect behavior, live entity precedence, and that another entity of the same kind claiming the same former name turns that redirect into a 404."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U17", "U18"],
+    "covers": ["FR-15", "AC-3", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U33",
+    "path": "docs/features/software-catalog/api.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the GET /entities/by-name/{kind}/{namespace}/{name}/redirect endpoint in docs/features/software-catalog/api.md.",
+    "rules": [
+      "1. Add a ### `GET /entities/by-name/{kind}/{namespace}/{name}/redirect` section right after ### `GET /entities/by-name/{kind}/{namespace}/{name}/ancestry`.",
+      "2. Document that it resolves the redirect target for a former entity name declared via the backstage.io/previous-names annotation and returns 200 OK with JSON { \"entityRef\": \"component:default/new-name\" }.",
+      "3. Explicitly state that it returns a 404 error when no entity claims that former name, when a live entity currently exists with that reference, when another entity of the same kind claims the same former name (turning that redirect into a 404), or when the caller lacks catalog.entity.read permission for the target entity."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 674,
+        "to": 674,
+        "first_line": "Get an entity's ancestry by entity ref.",
+        "rule": "Add ### `GET /entities/by-name/{kind}/{namespace}/{name}/redirect` endpoint documentation including 200 response shape and 404 conditions."
+      }
+    ],
+    "depends_on": ["U10", "U12"],
+    "covers": ["FR-15", "AC-3", "AC-4", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U34",
+    "path": "docs/features/software-catalog/audit-events.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the by-previous-name queryType under entity-fetch in docs/features/software-catalog/audit-events.md.",
+    "rules": [
+      "1. Under entity-fetch queryType bullets right after `ancestry`, add `- **`by-previous-name`**: Fetching the redirect target for a previously named entity. (GET `/entities/by-name/:kind/:namespace/:name/redirect`)`."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 21,
+        "to": 21,
+        "first_line": "- **`ancestry`**: Fetching the ancestry of an entity. (GET `/entities/by-name/:kind/:namespace/:name/ancestry`)",
+        "rule": "Add bullet for `by-previous-name` under entity-fetch queryType."
+      }
+    ],
+    "depends_on": ["U12"],
+    "covers": ["FR-15", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U35",
+    "path": ".changeset/catalog-model-previous-names.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a minor changeset for @backstage/catalog-model.",
+    "rules": [
+      "1. Include YAML frontmatter with '@backstage/catalog-model': minor.",
+      "2. Describe adding the ANNOTATION_PREVIOUS_NAMES ('backstage.io/previous-names') annotation constant and parseEntityPreviousNames helper for declaring and parsing former entity references."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-catalog-placeholders.md",
+      "lines": [1, 6],
+      "reason": "Match Backstage changeset frontmatter and prose style."
+    },
+    "depends_on": ["U01", "U02", "U03"],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U36",
+    "path": ".changeset/catalog-client-entity-redirect.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a minor changeset for @backstage/catalog-client.",
+    "rules": [
+      "1. Include YAML frontmatter with '@backstage/catalog-client': minor.",
+      "2. Describe adding getEntityRedirectByRef to CatalogApi, CatalogClient, and InMemoryCatalogClient along with the CatalogEntityRedirect type to resolve former entity references."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-catalog-placeholders.md",
+      "lines": [1, 6],
+      "reason": "Match Backstage changeset frontmatter and prose style."
+    },
+    "depends_on": ["U13", "U14", "U15", "U16"],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U37",
+    "path": ".changeset/catalog-backend-entity-redirect.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a minor changeset for @backstage/plugin-catalog-backend.",
+    "rules": [
+      "1. Include YAML frontmatter with '@backstage/plugin-catalog-backend': minor.",
+      "2. Describe adding support for indexing backstage.io/previous-names during stitching and exposing the GET /entities/by-name/:kind/:namespace/:name/redirect endpoint to resolve former entity references."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-catalog-placeholders.md",
+      "lines": [1, 6],
+      "reason": "Match Backstage changeset frontmatter and prose style."
+    },
+    "depends_on": ["U04", "U05", "U06", "U07", "U08", "U09", "U10", "U11", "U12"],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U38",
+    "path": ".changeset/catalog-entity-redirect.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a minor changeset for @backstage/plugin-catalog.",
+    "rules": [
+      "1. Include YAML frontmatter with '@backstage/plugin-catalog': minor.",
+      "2. Describe automatically redirecting requests for renamed entities to their current entity page route (preserving sub-routes, query parameters, and hashes) and displaying an informational alert."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-catalog-placeholders.md",
+      "lines": [1, 6],
+      "reason": "Match Backstage changeset frontmatter and prose style."
+    },
+    "depends_on": ["U17"],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U39",
+    "path": ".changeset/techdocs-entity-redirect.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Add a minor changeset for @backstage/plugin-techdocs.",
+    "rules": [
+      "1. Include YAML frontmatter with '@backstage/plugin-techdocs': minor.",
+      "2. Describe automatically redirecting documentation requests for renamed entities to their current TechDocs route (preserving sub-paths, query parameters, and hashes) and displaying an informational alert."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/calm-catalog-placeholders.md",
+      "lines": [1, 6],
+      "reason": "Match Backstage changeset frontmatter and prose style."
+    },
+    "depends_on": ["U18"],
+    "covers": ["FR-16", "AC-10"],
+    "checks": ["prettier"]
+  }
+]

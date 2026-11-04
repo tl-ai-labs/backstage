@@ -19,6 +19,7 @@ The Catalog backend emits audit events for various operations. Events are groupe
   - **`by-query`**: Fetching multiple entities using a filter query. (GET `/entities/by-query`)
   - **`by-refs`**: Fetching a batch of entities by their entity refs. (POST `/entities/by-refs`)
   - **`ancestry`**: Fetching the ancestry of an entity. (GET `/entities/by-name/:kind/:namespace/:name/ancestry`)
+  - **`by-previous-name`**: Fetching the redirect target for a previously named entity. (GET `/entities/by-name/:kind/:namespace/:name/redirect`)
 
 - **`entity-mutate`**: Modifies entities.
 

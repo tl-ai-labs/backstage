@@ -22,6 +22,19 @@
 - `final_entities_entity_ref_uniq` (`entity_ref`) unique
 - `final_entities_pkey` (`entity_id`) unique primary
 
+## Table `final_entity_previous_names`
+
+| Column                | Type                | Nullable | Max Length | Default |
+| --------------------- | ------------------- | -------- | ---------- | ------- |
+| `entity_id`           | `character varying` | false    | 255        | -       |
+| `previous_entity_ref` | `character varying` | false    | 255        | -       |
+
+### Indices
+
+- `final_entity_previous_names_entity_id_idx` (`entity_id`)
+- `final_entity_previous_names_entity_id_ref_uniq` (`entity_id`, `previous_entity_ref`) unique
+- `final_entity_previous_names_previous_entity_ref_idx` (`previous_entity_ref`)
+
 ## Table `location_update_log`
 
 | Column        | Type                       | Nullable | Max Length | Default                                           |

@@ -27,6 +27,7 @@ import {
   AddLocationResponse,
   CATALOG_FILTER_EXISTS,
   CatalogApi,
+  CatalogEntityRedirect,
   CatalogRequestOptions,
   EntityFilterQuery,
   GetEntitiesByRefsRequest,
@@ -473,6 +474,24 @@ export class CatalogClient implements CatalogApi {
       await this.apiClient.getEntityByName(
         {
           path: parseEntityRef(entityRef),
+        },
+        options,
+      ),
+    );
+  }
+
+  /**
+   * {@inheritdoc CatalogApi.getEntityRedirectByRef}
+   */
+  async getEntityRedirectByRef(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<CatalogEntityRedirect | undefined> {
+    const { kind, namespace, name } = parseEntityRef(entityRef);
+    return this.requestOptional(
+      await this.apiClient.getEntityRedirectByName(
+        {
+          path: { kind, namespace, name },
         },
         options,
       ),

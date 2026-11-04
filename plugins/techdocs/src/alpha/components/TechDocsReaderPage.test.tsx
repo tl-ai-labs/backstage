@@ -69,7 +69,10 @@ const entity = {
   metadata: {
     name: 'test-name',
     namespace: 'test-namespace',
-    annotations: { 'backstage.io/techdocs-ref': 'dir:.' },
+    annotations: {
+      'backstage.io/techdocs-ref': 'dir:.',
+      'backstage.io/previous-names': 'old-test-name',
+    },
   },
   spec: { owner: 'test' },
 };
@@ -171,6 +174,23 @@ describe('<TechDocsReaderPage />', () => {
     expect(
       await screen.findByTestId('techdocs-native-shadowroot'),
     ).toBeInTheDocument();
+  });
+
+  it('redirects from a previous entity name to the renamed entity docs', async () => {
+    await renderPage({
+      routePath: '/docs/:namespace/:kind/:name/*',
+      routeEntry: '/docs/test-namespace/Component/old-test-name',
+      element: (
+        <TechDocsReaderPage
+          addonOptions={addonOptions}
+          withSearch={false}
+          withHeader={false}
+          withFeedbackLink={false}
+        />
+      ),
+    });
+
+    expect(await screen.findByText('ADDON_RENDERED')).toBeInTheDocument();
   });
 });
 

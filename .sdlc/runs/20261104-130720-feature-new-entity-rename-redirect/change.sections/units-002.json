@@ -1,0 +1,538 @@
+[
+  {
+    "id": "U20",
+    "path": "packages/catalog-model/src/entity/ref.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Unit tests for parseEntityPreviousNames in packages/catalog-model/src/entity/ref.test.ts.",
+    "rules": [
+      "1. Import ANNOTATION_PREVIOUS_NAMES from './constants', Entity from './Entity', and parseEntityPreviousNames alongside parseEntityRef from './ref'.",
+      "2. Add describe('parseEntityPreviousNames', ...) testing: missing/empty annotation returns []; bare name, namespace/name, and kind:namespace/name entries normalize with entity kind and namespace defaults; whitespace around comma-separated values is trimmed and duplicates are removed; entries with a different kind, invalid Kubernetes name/namespace characters, or equal to the entity's own current ref are ignored."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { parseEntityRef } from './ref';",
+        "rule": "Import ANNOTATION_PREVIOUS_NAMES from './constants', Entity from './Entity', and parseEntityPreviousNames alongside parseEntityRef from './ref'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 164,
+        "to": 166,
+        "first_line": "});",
+        "last_line": "});",
+        "rule": "Add describe('parseEntityPreviousNames', ...) test cases."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03"],
+    "covers": ["FR-1", "FR-2", "NFR-4", "NFR-5", "AC-1", "AC-10"],
+    "tests": [
+      {
+        "name": "parses bare name, namespace/name, and full entity ref entries",
+        "given": "an entity Component:custom-ns/new-name with backstage.io/previous-names: 'old-name, other-ns/old-ns-name, component:third-ns/full-old'",
+        "expect": "returns ['component:custom-ns/old-name', 'component:other-ns/old-ns-name', 'component:third-ns/full-old']"
+      },
+      {
+        "name": "filters out different kind, invalid syntax, self-ref, and duplicate entries",
+        "given": "an entity with backstage.io/previous-names containing a different kind ('api:default/foo'), invalid characters ('bad name!'), its own current name, and duplicate entries",
+        "expect": "returns only valid same-kind deduplicated previous entity refs excluding the current entity ref"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U21",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Database integration tests for syncing and cascading final_entity_previous_names in performStitching.test.ts.",
+    "rules": [
+      "1. Import DbFinalEntityPreviousNamesRow from '../../tables'.",
+      "2. Add a test inside it.each(databases.eachSupportedId()) verifying that stitching an entity with backstage.io/previous-names populates final_entity_previous_names, updating the annotation replaces the rows, removing the annotation deletes the rows, and deleting the entity from final_entities cascades deletion of its final_entity_previous_names rows."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 20,
+        "to": 26,
+        "first_line": "import {",
+        "last_line": "} from '../../tables';",
+        "rule": "Import DbFinalEntityPreviousNamesRow from '../../tables'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 1032,
+        "to": 1034,
+        "first_line": "});",
+        "last_line": ");",
+        "rule": "Add test verifying final_entity_previous_names sync on stitch, update, removal, and ON DELETE CASCADE when final_entities row is deleted."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03", "U04", "U05", "U06"],
+    "covers": ["FR-3", "FR-4", "NFR-2", "NFR-3", "NFR-5", "AC-2", "AC-10"],
+    "tests": [
+      {
+        "name": "synchronizes final_entity_previous_names during stitching and cascades on delete",
+        "given": "an entity with backstage.io/previous-names stitched, updated with new previous names, updated without annotation, and deleted from final_entities",
+        "expect": "final_entity_previous_names rows match normalized previous names after each stitch and are removed on annotation removal or final_entities deletion"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U22",
+    "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Integration tests for DefaultEntitiesCatalog.entityRedirect covering single match, live entity precedence, ambiguity, and permission filters.",
+    "rules": [
+      "1. Add describe('entityRedirect', ...) inside the test suite in DefaultEntitiesCatalog.test.ts.",
+      "2. Test that a single stitched entity claiming a previous name via backstage.io/previous-names resolves { entityRef } for bare name, namespace/name, and kind:namespace/name.",
+      "3. Test that if a live stitched entity exists at the requested ref, entityRedirect returns undefined.",
+      "4. Test that if two stitched entities of the same kind claim the same previous name, entityRedirect returns undefined (unless a permission filter narrows the match to a single authorized entity).",
+      "5. Test that if the claimant entity does not match the request.filter FilterPredicate, entityRedirect returns undefined."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 2805,
+        "to": 2808,
+        "first_line": "});",
+        "last_line": ");",
+        "rule": "Add describe('entityRedirect', ...) test suite covering single match, live entity precedence, multiple claimants ambiguity, and permission filter enforcement."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08"],
+    "covers": ["FR-5", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "NFR-5", "AC-2", "AC-3", "AC-4", "AC-5", "AC-10"],
+    "tests": [
+      {
+        "name": "resolves redirect when exactly one stitched entity claims the previous name",
+        "given": "a stitched entity component:default/new-service with backstage.io/previous-names: 'old-service, legacy/old-service'",
+        "expect": "entityRedirect returns { entityRef: 'component:default/new-service' } for both component:default/old-service and component:legacy/old-service"
+      },
+      {
+        "name": "returns undefined when a live entity exists at the requested ref or multiple entities claim the same previous name",
+        "given": "either a live entity at component:default/old-service or two stitched components both claiming old-service",
+        "expect": "entityRedirect returns undefined"
+      },
+      {
+        "name": "applies request.filter permission predicate to redirect target",
+        "given": "a stitched entity claiming old-service and a FilterPredicate that excludes or includes that entity",
+        "expect": "entityRedirect returns undefined when excluded by filter and { entityRef } when included"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U23",
+    "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Unit tests for AuthorizedEntitiesCatalog.entityRedirect authorization decisions.",
+    "rules": [
+      "1. Add entityRedirect: jest.fn() to fakeCatalog.",
+      "2. Add describe('entityRedirect', ...) testing AuthorizeResult.DENY (returns undefined without calling fakeCatalog.entityRedirect), AuthorizeResult.CONDITIONAL (passes FilterPredicate to fakeCatalog.entityRedirect), and AuthorizeResult.ALLOW (forwards request to fakeCatalog.entityRedirect)."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 37,
+        "to": 39,
+        "first_line": "listAncestors: jest.fn(),",
+        "last_line": "};",
+        "rule": "Add entityRedirect: jest.fn() to fakeCatalog."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 683,
+        "to": 685,
+        "first_line": "});",
+        "last_line": "});",
+        "rule": "Add describe('entityRedirect', ...) tests for DENY, CONDITIONAL, and ALLOW."
+      }
+    ],
+    "depends_on": ["U07", "U08", "U09"],
+    "covers": ["FR-6", "NFR-5", "AC-4", "AC-10"],
+    "tests": [
+      {
+        "name": "returns undefined on DENY and forwards filter on CONDITIONAL and ALLOW",
+        "given": "permissionApi.authorizeConditional returning [{ result: DENY | CONDITIONAL | ALLOW }] for catalogEntityReadPermission",
+        "expect": "entityRedirect returns undefined on DENY and calls underlying entityRedirect with the expected FilterPredicate on CONDITIONAL and ALLOW"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U24",
+    "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Router tests for GET /entities/by-name/:kind/:namespace/:name/redirect.",
+    "rules": [
+      "1. Add entityRedirect: jest.fn() to the three entitiesCatalog mock objects in createRouter.test.ts.",
+      "2. Add describe('GET /entities/by-name/:kind/:namespace/:name/redirect', ...) testing 200 OK with { entityRef: 'component:default/new-name' } when entitiesCatalog.entityRedirect resolves, and 404 when entitiesCatalog.entityRedirect resolves to undefined."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 70,
+        "to": 72,
+        "first_line": "facets: jest.fn(),",
+        "last_line": "};",
+        "rule": "Add entityRedirect: jest.fn() to first entitiesCatalog mock."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 555,
+        "to": 555,
+        "first_line": "});",
+        "rule": "Add describe('GET /entities/by-name/:kind/:namespace/:name/redirect', ...) testing 200 and 404 responses."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 1393,
+        "to": 1395,
+        "first_line": "facets: jest.fn(),",
+        "last_line": "};",
+        "rule": "Add entityRedirect: jest.fn() to second entitiesCatalog mock."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 1649,
+        "to": 1650,
+        "first_line": "facets: jest.fn(),",
+        "last_line": "},",
+        "rule": "Add entityRedirect: jest.fn() to third entitiesCatalog mock."
+      }
+    ],
+    "depends_on": ["U07", "U08", "U09", "U10", "U11", "U12"],
+    "covers": ["FR-7", "NFR-5", "AC-2", "AC-3", "AC-4", "AC-10"],
+    "tests": [
+      {
+        "name": "returns 200 with entityRef when redirect exists and 404 when undefined",
+        "given": "GET /entities/by-name/component/default/old-name/redirect with entitiesCatalog.entityRedirect returning { entityRef } or undefined",
+        "expect": "responds with 200 { entityRef: 'component:default/new-name' } or 404 NotFoundError"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U25",
+    "path": "packages/catalog-client/src/CatalogClient.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Unit tests for CatalogClient.getEntityRedirectByRef.",
+    "rules": [
+      "1. Add describe('getEntityRedirectByRef', ...) right after describe('getEntityByRef', ...) testing 200 response returning { entityRef } and 404 response returning undefined."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 1168,
+        "to": 1170,
+        "first_line": ").resolves.toBeUndefined();",
+        "last_line": "});",
+        "rule": "Add describe('getEntityRedirectByRef', ...) testing 200 { entityRef } and 404 undefined."
+      }
+    ],
+    "depends_on": ["U11", "U13", "U14", "U15"],
+    "covers": ["FR-8", "NFR-5", "AC-6", "AC-10"],
+    "tests": [
+      {
+        "name": "fetches entity redirect by ref or returns undefined on 404",
+        "given": "GET /entities/by-name/component/default/old-name/redirect returning 200 { entityRef: 'component:default/new-name' } or 404",
+        "expect": "getEntityRedirectByRef resolves to { entityRef: 'component:default/new-name' } on 200 and undefined on 404"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U26",
+    "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Unit tests for InMemoryCatalogClient.getEntityRedirectByRef.",
+    "rules": [
+      "1. Add describe('getEntityRedirectByRef', ...) right after describe('getEntityByRef', ...) testing single match via backstage.io/previous-names, live entity precedence returning undefined, multiple claimants returning undefined, and unknown ref returning undefined."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 889,
+        "to": 891,
+        "first_line": ").resolves.toBeUndefined();",
+        "last_line": "});",
+        "rule": "Add describe('getEntityRedirectByRef', ...) test cases."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03", "U13", "U14", "U16"],
+    "covers": ["FR-9", "NFR-5", "AC-3", "AC-6", "AC-10"],
+    "tests": [
+      {
+        "name": "resolves single claimant and returns undefined for live entity, multiple claimants, or unknown ref",
+        "given": "InMemoryCatalogClient populated with entities bearing backstage.io/previous-names",
+        "expect": "getEntityRedirectByRef returns { entityRef } only when no live entity has that ref and exactly one entity of the same kind claims it"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U27",
+    "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Component tests for CatalogEntityPage rename redirect and transient info alert in the legacy frontend system.",
+    "rules": [
+      "1. Import CatalogEntityPage from '../CatalogEntityPage/CatalogEntityPage'.",
+      "2. Add a test in EntityLayout.test.tsx rendering CatalogEntityPage with EntityLayout and sub-route '/ci-cd' inside Routes at '/catalog/:namespace/:kind/:name/*', with catalogApiMock({ entities: [renamedEntity] }) where renamedEntity has metadata.annotations['backstage.io/previous-names'] = 'old-entity', starting at '/catalog/default/mykind/old-entity/ci-cd'.",
+      "3. Assert using screen.findByText that the target entity's '/ci-cd' route content renders and alertApi.post was called with message 'Redirected from mykind:default/old-entity to mykind:default/my-entity as the entity was renamed.', severity: 'info', display: 'transient'."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 46,
+        "to": 48,
+        "first_line": "import { EntityLayout } from './EntityLayout';",
+        "last_line": "import { Route, Routes, useNavigate } from 'react-router-dom';",
+        "rule": "Import CatalogEntityPage from '../CatalogEntityPage/CatalogEntityPage'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 548,
+        "to": 550,
+        "first_line": "expect(analyticsRenderCount).toBe(analyticsRendersBefore);",
+        "last_line": "});",
+        "rule": "Add test verifying CatalogEntityPage redirects from a previous entity name while preserving sub-route and posting a transient info alert."
+      }
+    ],
+    "depends_on": ["U16", "U17"],
+    "covers": ["FR-10", "FR-11", "NFR-4", "NFR-5", "AC-7", "AC-10"],
+    "tests": [
+      {
+        "name": "redirects from a previous entity name preserving sub-route and posts an info alert",
+        "given": "a user navigating to /catalog/default/mykind/old-entity/ci-cd when my-entity has backstage.io/previous-names: 'old-entity'",
+        "expect": "navigates to /catalog/default/mykind/my-entity/ci-cd, renders the sub-route content, and posts a transient info alert"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U28",
+    "path": "plugins/catalog/src/alpha/pages.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "New frontend system test for catalogEntityPage redirecting from a previous entity name.",
+    "rules": [
+      "1. Add 'backstage.io/previous-names': 'former-artist-lookup' to entityMock.metadata.annotations.",
+      "2. Add a test at the end of describe('Entity page') rendering catalogEntityPage at initialEntries: ['/catalog/default/component/former-artist-lookup/techdocs'] and asserting with screen.findByText that 'Mock TechDocs content' and 'artist-lookup' are rendered."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 112,
+        "to": 114,
+        "first_line": "'backstage.io/linguist':",
+        "last_line": "},",
+        "rule": "Add 'backstage.io/previous-names': 'former-artist-lookup' to entityMock.metadata.annotations."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 1286,
+        "to": 1289,
+        "first_line": "},",
+        "last_line": "});",
+        "rule": "Add test verifying catalogEntityPage redirects from /catalog/default/component/former-artist-lookup/techdocs to the renamed entity's techdocs tab."
+      }
+    ],
+    "depends_on": ["U16", "U17"],
+    "covers": ["FR-10", "FR-11", "NFR-5", "AC-7", "AC-10"],
+    "tests": [
+      {
+        "name": "redirects from a former entity name in the new frontend system while preserving sub-route",
+        "given": "navigation to /catalog/default/component/former-artist-lookup/techdocs when artist-lookup has backstage.io/previous-names: 'former-artist-lookup'",
+        "expect": "redirects to artist-lookup and renders 'Mock TechDocs content'"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U29",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Unit tests for useExternalRedirect entity rename redirect resolution and alert notification.",
+    "rules": [
+      "1. Import alertApiRef from '@backstage/core-plugin-api'.",
+      "2. In jest.mock('react-router-dom', ...), also mock useLocation: () => ({ pathname: '/docs', search: '', hash: '' }) so useLocation() works in renderHook tests without a Router wrapper.",
+      "3. Add getEntityRedirectByRef: jest.fn() to mockCatalogApi and provide a mockAlertApi = { post: jest.fn(), alert$: jest.fn() } in TestApiProvider.",
+      "4. Add tests verifying that when getEntityByRef resolves to undefined and getEntityRedirectByRef resolves to { entityRef: 'component:default/renamed-component' }, useExternalRedirect calls navigate with the target TechDocs URL and posts a transient info alert via alertApiRef; and when getEntityRedirectByRef resolves to undefined, no navigation occurs."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 19,
+        "to": 29,
+        "first_line": "import { TestApiProvider } from '@backstage/test-utils';",
+        "last_line": "}));",
+        "rule": "Import alertApiRef from '@backstage/core-plugin-api' and mock useLocation in jest.mock('react-router-dom', ...)."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 37,
+        "to": 45,
+        "first_line": "const mockCatalogApi = {",
+        "last_line": ");",
+        "rule": "Add getEntityRedirectByRef: jest.fn() to mockCatalogApi and register alertApiRef in TestApiProvider."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 278,
+        "to": 282,
+        "first_line": "await waitFor(() => {",
+        "last_line": "});",
+        "rule": "Add tests for entity rename redirect via getEntityRedirectByRef and alert notification."
+      }
+    ],
+    "depends_on": ["U18"],
+    "covers": ["FR-12", "FR-13", "NFR-4", "NFR-5", "AC-8", "AC-10"],
+    "tests": [
+      {
+        "name": "redirects to renamed entity TechDocs URL and posts transient info alert when getEntityByRef returns undefined",
+        "given": "getEntityByRef returning undefined and getEntityRedirectByRef returning { entityRef: 'component:default/new-component' }",
+        "expect": "navigates with replace: true to the target TechDocs URL and posts a transient info alert"
+      },
+      {
+        "name": "does not redirect when both getEntityByRef and getEntityRedirectByRef return undefined",
+        "given": "getEntityByRef returning undefined and getEntityRedirectByRef returning undefined",
+        "expect": "does not call navigate"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U30",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Component test for legacy TechDocsReaderPage redirecting to the renamed entity's documentation route when getEntityByRef returns undefined.",
+    "rules": [
+      "1. Attach getEntityRedirectByRef: jest.fn() to catalogApiMock on line 100 via Object.assign(catalogApiMockFactory.mock(), { getEntityRedirectByRef: jest.fn() }).",
+      "2. Add a test inside describe('external TechDocs redirect', ...) verifying that when catalogApiMock.getEntityByRef resolves to undefined and catalogApiMock.getEntityRedirectByRef resolves to { entityRef: 'component:renamed-namespace/renamed-docs' }, rendering <TechDocsReaderPage /> navigates with { replace: true } to '/docs/renamed-namespace/component/renamed-docs'."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 100,
+        "to": 100,
+        "first_line": "const catalogApiMock = catalogApiMockFactory.mock();",
+        "rule": "Define catalogApiMock with getEntityRedirectByRef: jest.fn()."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 447,
+        "to": 450,
+        "first_line": "expect(mockNavigate).not.toHaveBeenCalled();",
+        "last_line": "});",
+        "rule": "Add test verifying legacy TechDocsReaderPage redirects to renamed entity docs URL when getEntityByRef returns undefined and getEntityRedirectByRef returns a target entityRef."
+      }
+    ],
+    "depends_on": ["U18"],
+    "covers": ["FR-12", "FR-13", "NFR-5", "AC-8", "AC-10"],
+    "tests": [
+      {
+        "name": "navigates to renamed entity docs URL when entity is not found and getEntityRedirectByRef returns a target",
+        "given": "catalogApiMock.getEntityByRef resolving to undefined and catalogApiMock.getEntityRedirectByRef resolving to { entityRef: 'component:renamed-namespace/renamed-docs' }",
+        "expect": "calls mockNavigate with ('/docs/renamed-namespace/component/renamed-docs', { replace: true })"
+      }
+    ],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U31",
+    "path": "plugins/techdocs/src/alpha/components/TechDocsReaderPage.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Component test for alpha TechDocsReaderPage redirecting from a previous entity name to the renamed entity's documentation.",
+    "rules": [
+      "1. Add 'backstage.io/previous-names': 'old-test-name' to entity.metadata.annotations.",
+      "2. Add a test inside describe('<TechDocsReaderPage />') rendering TechDocsReaderPage at routeEntry: '/docs/test-namespace/Component/old-test-name' and asserting via screen.findByText('ADDON_RENDERED') that it redirects to the renamed entity's documentation and renders."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 72,
+        "to": 72,
+        "first_line": "annotations: { 'backstage.io/techdocs-ref': 'dir:.' },",
+        "rule": "Add 'backstage.io/previous-names': 'old-test-name' to entity.metadata.annotations."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 174,
+        "to": 175,
+        "first_line": "});",
+        "last_line": "});",
+        "rule": "Add test verifying alpha TechDocsReaderPage redirects from '/docs/test-namespace/Component/old-test-name' to the renamed entity's docs."
+      }
+    ],
+    "depends_on": ["U16", "U18"],
+    "covers": ["FR-12", "FR-13", "NFR-5", "AC-8", "AC-10"],
+    "tests": [
+      {
+        "name": "redirects from a previous entity name to the renamed entity docs",
+        "given": "navigation to /docs/test-namespace/Component/old-test-name when test-name has backstage.io/previous-names: 'old-test-name'",
+        "expect": "redirects to /docs/test-namespace/Component/test-name and renders the documentation and addon"
+      }
+    ],
+    "checks": ["prettier"]
+  }
+]

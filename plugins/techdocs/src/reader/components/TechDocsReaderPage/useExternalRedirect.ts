@@ -15,12 +15,18 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useAsync from 'react-use/esm/useAsync';
-import { useApi, useRouteRef } from '@backstage/core-plugin-api';
+import {
+  alertApiRef,
+  useApi,
+  useApiHolder,
+  useRouteRef,
+} from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import {
   CompoundEntityRef,
+  parseEntityRef,
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { buildTechDocsURL } from '@backstage/plugin-techdocs-react';
@@ -41,8 +47,11 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
   loading: boolean;
   shouldShowProgress: boolean;
 } {
+  const apiHolder = useApiHolder();
   const catalogApi = useApi(catalogApiRef);
   const navigate = useNavigate();
+  const params = useParams();
+  const location = useLocation();
   const viewTechdocLink = useRouteRef(rootDocsRouteRef);
 
   // Create a stable string key for the entity to use as a dependency.
@@ -63,6 +72,42 @@ export function useExternalRedirect(entityRef: CompoundEntityRef): {
         catalogEntity?.metadata?.annotations?.[TECHDOCS_EXTERNAL_ANNOTATION]
       ) {
         return buildTechDocsURL(catalogEntity, viewTechdocLink);
+      }
+
+      if (!catalogEntity) {
+        const redirect = await catalogApi.getEntityRedirectByRef?.(entityRef);
+        if (redirect?.entityRef) {
+          const targetRef = parseEntityRef(redirect.entityRef);
+          const targetRefStr = stringifyEntityRef(targetRef);
+          if (targetRefStr !== entityKey) {
+            const targetBase = viewTechdocLink({
+              kind: targetRef.kind,
+              namespace: targetRef.namespace,
+              name: targetRef.name,
+            });
+            const currentBase = viewTechdocLink({
+              kind: entityRef.kind,
+              namespace: entityRef.namespace,
+              name: entityRef.name,
+            });
+            const wildcard = params['*'];
+            let suffix = '';
+            if (wildcard) {
+              suffix = `/${wildcard.replace(/^\/+/, '')}`;
+            } else if (
+              currentBase &&
+              location.pathname.startsWith(currentBase)
+            ) {
+              suffix = location.pathname.slice(currentBase.length);
+            }
+            apiHolder.get(alertApiRef)?.post({
+              message: `Redirected from ${entityKey} to ${targetRefStr} as the entity was renamed.`,
+              severity: 'info',
+              display: 'transient',
+            });
+            return `${targetBase}${suffix}${location.search}${location.hash}`;
+          }
+        }
       }
     } catch (error) {
       // Ignore errors and allow the current entity's TechDocs to load.

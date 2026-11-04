@@ -1169,6 +1169,53 @@ describe('CatalogClient', () => {
     });
   });
 
+  describe('getEntityRedirectByRef', () => {
+    beforeEach(() => {
+      server.use(
+        http.get(
+          `${mockBaseUrl}/entities/by-name/component/default/old-name/redirect`,
+          () => {
+            return HttpResponse.json({
+              entityRef: 'component:default/new-name',
+            });
+          },
+        ),
+        http.get(
+          `${mockBaseUrl}/entities/by-name/component/default/missing/redirect`,
+          () => {
+            return new HttpResponse(null, { status: 404 });
+          },
+        ),
+      );
+    });
+
+    it('finds redirect by string and compound ref', async () => {
+      await expect(
+        client.getEntityRedirectByRef('component:default/old-name'),
+      ).resolves.toEqual({ entityRef: 'component:default/new-name' });
+      await expect(
+        client.getEntityRedirectByRef({
+          kind: 'Component',
+          namespace: 'default',
+          name: 'old-name',
+        }),
+      ).resolves.toEqual({ entityRef: 'component:default/new-name' });
+    });
+
+    it('returns undefined for 404s', async () => {
+      await expect(
+        client.getEntityRedirectByRef('component:default/missing'),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.getEntityRedirectByRef({
+          kind: 'Component',
+          namespace: 'default',
+          name: 'missing',
+        }),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('getLocations', () => {
     const defaultResponse = [
       {

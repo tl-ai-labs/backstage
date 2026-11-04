@@ -21,6 +21,7 @@ export type { EntityEnvelope } from './EntityEnvelope';
 export * from './policies';
 export {
   getCompoundEntityRef,
+  parseEntityPreviousNames,
   parseEntityRef,
   stringifyEntityRef,
 } from './ref';

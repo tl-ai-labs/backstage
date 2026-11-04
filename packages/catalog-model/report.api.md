@@ -27,6 +27,9 @@ export const ANNOTATION_ORIGIN_LOCATION =
   'backstage.io/managed-by-origin-location';
 
 // @public
+export const ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names';
+
+// @public
 export const ANNOTATION_SOURCE_LOCATION = 'backstage.io/source-location';
 
 // @public
@@ -338,6 +341,9 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
   // (undocumented)
   enforce(entity: Entity): Promise<Entity>;
 }
+
+// @public
+export function parseEntityPreviousNames(entity: Entity): string[];
 
 // @public
 export function parseEntityRef(

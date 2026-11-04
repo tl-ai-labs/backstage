@@ -2804,6 +2804,246 @@ describe.each(databases.eachSupportedId())(
         });
       });
     });
+
+    describe('entityRedirect', () => {
+      async function addEntityWithPreviousNames(entity: Entity) {
+        const id = uuid();
+        const entityRef = stringifyEntityRef(entity);
+        const entityJson = JSON.stringify(entity);
+
+        await knex<DbRefreshStateRow>('refresh_state').insert({
+          entity_id: id,
+          entity_ref: entityRef,
+          unprocessed_entity: entityJson,
+          errors: '[]',
+          next_update_at: '2031-01-01 23:00:00',
+          last_discovery_at: '2021-04-01 13:37:00',
+        });
+
+        await knex<DbFinalEntitiesRow>('final_entities').insert({
+          entity_id: id,
+          entity_ref: entityRef,
+          final_entity: entityJson,
+          hash: 'h',
+        });
+
+        const search = buildEntitySearch(id, entity);
+        await knex<DbSearchRow>('search').insert(search);
+
+        const rawAnnotation =
+          entity.metadata?.annotations?.['backstage.io/previous-names'];
+        if (rawAnnotation) {
+          const defaultNamespace = entity.metadata?.namespace || 'default';
+          const defaultKind = entity.kind.toLocaleLowerCase('en-US');
+          const refs = rawAnnotation
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(entry => {
+              if (entry.includes(':')) {
+                return entry.toLocaleLowerCase('en-US');
+              }
+              if (entry.includes('/')) {
+                return `${defaultKind}:${entry.toLocaleLowerCase('en-US')}`;
+              }
+              return `${defaultKind}:${defaultNamespace}/${entry.toLocaleLowerCase(
+                'en-US',
+              )}`;
+            });
+          for (const previous_entity_ref of refs) {
+            await knex('final_entity_previous_names').insert({
+              entity_id: id,
+              previous_entity_ref,
+            });
+          }
+        }
+
+        return id;
+      }
+
+      it('resolves redirect when exactly one stitched entity claims the previous name', async () => {
+        await createDatabase();
+
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-service',
+            annotations: {
+              'backstage.io/previous-names':
+                'old-service, legacy/old-service, component:custom/old-service',
+            },
+          },
+          spec: {},
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/old-service',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entityRef: 'component:default/new-service' });
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:legacy/old-service',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entityRef: 'component:default/new-service' });
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'Component:Custom/Old-Service',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entityRef: 'component:default/new-service' });
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/unknown-service',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('returns undefined when a live entity exists at the requested ref or multiple entities claim the same previous name', async () => {
+        await createDatabase();
+
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'old-service',
+          },
+          spec: {},
+        });
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-service',
+            annotations: {
+              'backstage.io/previous-names': 'old-service, shared-old-name',
+            },
+          },
+          spec: { owner: 'team-a' },
+        });
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'another-service',
+            annotations: {
+              'backstage.io/previous-names': 'shared-old-name',
+            },
+          },
+          spec: { owner: 'team-b' },
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        // Live entity takes precedence
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/old-service',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+
+        // Ambiguous multiple claimants return undefined
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/shared-old-name',
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('returns undefined when two entities claim the same previous name even if request.filter matches only one', async () => {
+        await createDatabase();
+
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-service-a',
+            annotations: {
+              'backstage.io/previous-names': 'shared-old-name',
+            },
+          },
+          spec: { owner: 'team-a' },
+        });
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-service-b',
+            annotations: {
+              'backstage.io/previous-names': 'shared-old-name',
+            },
+          },
+          spec: { owner: 'team-b' },
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/shared-old-name',
+            filter: { 'metadata.name': 'new-service-a' },
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('applies request.filter permission predicate to redirect target', async () => {
+        await createDatabase();
+
+        await addEntityWithPreviousNames({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-service',
+            annotations: {
+              'backstage.io/previous-names': 'old-service',
+            },
+          },
+          spec: { owner: 'team-a' },
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/old-service',
+            filter: { 'spec.owner': 'team-b' },
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toBeUndefined();
+
+        await expect(
+          catalog.entityRedirect({
+            entityRef: 'component:default/old-service',
+            filter: { 'spec.owner': 'team-a' },
+            credentials: mockCredentials.none(),
+          }),
+        ).resolves.toEqual({ entityRef: 'component:default/new-service' });
+      });
+    });
   },
 );
 

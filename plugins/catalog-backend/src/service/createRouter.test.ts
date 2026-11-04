@@ -67,6 +67,7 @@ describe('createRouter readonly disabled', () => {
       entitiesBatch: jest.fn(),
       removeEntityByUid: jest.fn(),
       entityAncestry: jest.fn(),
+      entityRedirect: jest.fn(),
       facets: jest.fn(),
       queryEntities: jest.fn(),
     };
@@ -551,6 +552,44 @@ describe('createRouter readonly disabled', () => {
       });
       expect(response.status).toEqual(404);
       expect(response.text).toMatch(/name/);
+    });
+  });
+
+  describe('GET /entities/by-name/:kind/:namespace/:name/redirect', () => {
+    it('returns 200 with entityRef when redirect exists', async () => {
+      entitiesCatalog.entityRedirect = jest.fn().mockResolvedValue({
+        entityRef: 'component:default/new-name',
+      });
+
+      const response = await request(app).get(
+        '/entities/by-name/component/default/old-name/redirect',
+      );
+
+      expect(entitiesCatalog.entityRedirect).toHaveBeenCalledTimes(1);
+      expect(entitiesCatalog.entityRedirect).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.user(),
+      });
+      expect(response.status).toEqual(200);
+      expect(response.body).toEqual({
+        entityRef: 'component:default/new-name',
+      });
+    });
+
+    it('responds with a 404 when no redirect exists', async () => {
+      entitiesCatalog.entityRedirect = jest.fn().mockResolvedValue(undefined);
+
+      const response = await request(app).get(
+        '/entities/by-name/component/default/old-name/redirect',
+      );
+
+      expect(entitiesCatalog.entityRedirect).toHaveBeenCalledTimes(1);
+      expect(entitiesCatalog.entityRedirect).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.user(),
+      });
+      expect(response.status).toEqual(404);
+      expect(response.text).toMatch(/No entity redirect found/);
     });
   });
 
@@ -1390,6 +1429,7 @@ describe('createRouter readonly and raw json enabled', () => {
       entitiesBatch: jest.fn(),
       removeEntityByUid: jest.fn(),
       entityAncestry: jest.fn(),
+      entityRedirect: jest.fn(),
       facets: jest.fn(),
       queryEntities: jest.fn(),
     };
@@ -1646,6 +1686,7 @@ describe.each(databases.eachSupportedId())(
           queryEntities: jest.fn(),
           removeEntityByUid: jest.fn(),
           entityAncestry: jest.fn(),
+          entityRedirect: jest.fn(),
           facets: jest.fn(),
         },
         locationAnalyzer: { analyzeLocation: jest.fn() },

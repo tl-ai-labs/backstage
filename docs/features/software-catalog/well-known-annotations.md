@@ -80,6 +80,30 @@ metadata:
     backstage.io/orphan: 'true'
 ```
 
+### backstage.io/previous-names
+
+```yaml
+# Example:
+metadata:
+  annotations:
+    backstage.io/previous-names: 'old-name, legacy-namespace/old-name'
+```
+
+The value of this annotation is a comma-separated list of former names or entity
+references (`name`, `namespace/name`, or `kind:namespace/name`) of the same
+kind, defaulting to the entity's own kind and namespace. Entries that reference
+a different kind or match the entity's current reference are ignored.
+
+When a user navigates to a Catalog entity page or TechDocs reader page for an
+entity that no longer exists, Backstage checks whether a single entity declares
+that reference in `backstage.io/previous-names`. If found, Backstage redirects
+to the renamed entity (preserving any sub-path, query string, and hash) and
+displays an informational alert.
+
+A live entity with that name always takes precedence over a redirect. In
+addition, if another entity of the same kind claims the same former name, the
+redirect is treated as ambiguous and turns into a `404 Not Found`.
+
 ### backstage.io/techdocs-ref
 
 ```yaml

@@ -29,7 +29,7 @@ import {
   stringifyEntityRef,
 } from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
-import { InputError, serializeError } from '@backstage/errors';
+import { InputError, NotFoundError, serializeError } from '@backstage/errors';
 import { LocationAnalyzer } from '@backstage/plugin-catalog-node';
 import express from 'express';
 import yn from 'yn';
@@ -491,6 +491,42 @@ export async function createRouter(
             error: err,
           });
           throw err;
+        }
+      },
+    )
+    .get(
+      '/entities/by-name/:kind/:namespace/:name/redirect',
+      async (req, res) => {
+        const entityRef = stringifyEntityRef(req.params);
+
+        const auditorEvent = await auditor?.createEvent({
+          eventId: 'entity-fetch',
+          request: req,
+          meta: {
+            queryType: 'by-previous-name',
+            entityRef,
+          },
+        });
+
+        try {
+          const credentials = await httpAuth.credentials(req);
+          const response = await entitiesCatalog.entityRedirect?.({
+            entityRef,
+            credentials,
+          });
+
+          if (!response) {
+            throw new NotFoundError(
+              `No entity redirect found for ${entityRef}`,
+            );
+          }
+
+          await auditorEvent?.success();
+
+          res.status(200).json(response);
+        } catch (error) {
+          await auditorEvent?.fail({ error });
+          throw error;
         }
       },
     )

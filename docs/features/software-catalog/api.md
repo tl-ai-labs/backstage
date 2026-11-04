@@ -673,6 +673,28 @@ error if there was no entity with that reference triplet.
 
 Get an entity's ancestry by entity ref.
 
+### `GET /entities/by-name/{kind}/{namespace}/{name}/redirect`
+
+Resolves the redirect target for a former entity name declared via the
+`backstage.io/previous-names` annotation.
+
+If a single authorized entity claims the requested reference as a previous name,
+the endpoint returns `200 OK` with JSON on the following form:
+
+```json
+{
+  "entityRef": "component:default/new-name"
+}
+```
+
+The endpoint returns a 404 error when:
+
+- No entity claims that former name
+- A live entity currently exists with that reference
+- Another entity of the same kind claims the same former name, turning that
+  redirect into a 404
+- The caller lacks `catalog.entity.read` permission for the target entity
+
 ### `POST /entities/by-refs`
 
 Gets a batch of entities by their entity refs. This is useful in contexts where

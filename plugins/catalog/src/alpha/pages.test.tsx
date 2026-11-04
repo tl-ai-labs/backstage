@@ -111,6 +111,7 @@ describe('Entity page', () => {
         'backstage.io/source-template': 'template:default/springboot-template',
         'backstage.io/linguist':
           'https://github.com/backstage/backstage/tree/master/plugins/playlist',
+        'backstage.io/previous-names': 'former-artist-lookup',
       },
       name: 'artist-lookup',
       description: 'Artist Lookup',
@@ -1285,5 +1286,37 @@ describe('Entity page', () => {
         expect(screen.queryByText('Should Not Render')).not.toBeInTheDocument();
       },
     );
+  });
+
+  it('redirects from a former entity name while preserving sub-route', async () => {
+    const tester = createExtensionTester(
+      Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+    ).add(techdocsEntityContent);
+
+    await renderInTestApp(tester.reactElement(), {
+      apis: [mockCatalogApi, [starredEntitiesApiRef, mockStarredEntitiesApi]],
+      mountPath: '/catalog/:namespace/:kind/:name',
+      initialRouteEntries: [
+        '/catalog/default/component/former-artist-lookup/techdocs',
+      ],
+      config: {
+        app: {
+          title: 'Custom app',
+        },
+        backend: { baseUrl: 'http://localhost:7000' },
+      },
+      mountedRoutes: {
+        '/catalog': convertLegacyRouteRef(rootRouteRef),
+        '/catalog/:namespace/:kind/:name':
+          convertLegacyRouteRef(entityRouteRef),
+      },
+    });
+
+    await expect(
+      screen.findByText('Mock TechDocs content'),
+    ).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByText('artist-lookup'),
+    ).resolves.toBeInTheDocument();
   });
 });

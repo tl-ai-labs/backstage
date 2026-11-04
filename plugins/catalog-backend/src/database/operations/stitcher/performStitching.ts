@@ -20,13 +20,18 @@ import {
   ANNOTATION_VIEW_URL,
   Entity,
   EntityRelation,
+  parseEntityPreviousNames,
 } from '@backstage/catalog-model';
 import { AlphaEntity, EntityStatusItem } from '@backstage/catalog-model/alpha';
 import { SerializedError } from '@backstage/errors';
 import { Knex } from 'knex';
 import { createHash } from 'node:crypto';
 import stableStringify from 'fast-json-stable-stringify';
-import { DbFinalEntitiesRow, DbStitchQueueRow } from '../../tables';
+import {
+  DbFinalEntitiesRow,
+  DbFinalEntityPreviousNamesRow,
+  DbStitchQueueRow,
+} from '../../tables';
 import { buildEntitySearch } from './buildEntitySearch';
 import { markDeferredStitchCompleted } from './markDeferredStitchCompleted';
 import { markDeferredStitchFailed } from './markDeferredStitchFailed';
@@ -204,6 +209,7 @@ export async function performStitching(options: {
     // the final_entities write, even though we may end up not needing
     // to write the search index.
     const searchEntries = buildEntitySearch(entityId, entity);
+    const previousEntityRefs = parseEntityPreviousNames(entity);
 
     // Guard against concurrent stitchers: if our stitch_ticket no longer
     // matches stitch_queue, another worker has newer data and we should
@@ -305,6 +311,20 @@ export async function performStitching(options: {
           }
 
           await syncSearchRows(tx, entityId, searchEntries);
+
+          await tx<DbFinalEntityPreviousNamesRow>('final_entity_previous_names')
+            .where({ entity_id: entityId })
+            .delete();
+          if (previousEntityRefs.length > 0) {
+            await tx<DbFinalEntityPreviousNamesRow>(
+              'final_entity_previous_names',
+            ).insert(
+              previousEntityRefs.map(previous_entity_ref => ({
+                entity_id: entityId,
+                previous_entity_ref,
+              })),
+            );
+          }
 
           return 'changed' as const;
         }),

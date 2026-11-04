@@ -19,6 +19,7 @@ export type {
   AddLocationRequest,
   AddLocationResponse,
   CatalogApi,
+  CatalogEntityRedirect,
   CatalogRequestOptions,
   EntityFieldsQuery,
   EntityFilterQuery,

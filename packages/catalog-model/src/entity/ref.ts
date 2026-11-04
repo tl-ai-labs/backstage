@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE } from './constants';
+import { ANNOTATION_PREVIOUS_NAMES, DEFAULT_NAMESPACE } from './constants';
 import { CompoundEntityRef } from '../types';
 import { Entity } from './Entity';
+import { KubernetesValidatorFunctions } from '../validation/KubernetesValidatorFunctions';
 
 function parseRefString(ref: string): {
   kind?: string;
@@ -155,4 +156,67 @@ export function stringifyEntityRef(
   }
 
   return `${kind.toLowerCase()}:${namespace.toLowerCase()}/${name.toLowerCase()}`;
+}
+
+/**
+ * Extracts and normalizes previous entity references from the
+ * `backstage.io/previous-names` annotation on an entity.
+ *
+ * @public
+ * @param entity - The entity to extract previous names from
+ * @returns Normalized entity references of valid previous names
+ */
+export function parseEntityPreviousNames(entity: Entity): string[] {
+  const rawAnnotation =
+    entity.metadata?.annotations?.[ANNOTATION_PREVIOUS_NAMES];
+  if (
+    typeof rawAnnotation !== 'string' ||
+    !rawAnnotation.trim() ||
+    !entity.kind ||
+    !entity.metadata?.name
+  ) {
+    return [];
+  }
+
+  const entityNamespace = entity.metadata.namespace || DEFAULT_NAMESPACE;
+  const currentRef = stringifyEntityRef({
+    kind: entity.kind,
+    namespace: entityNamespace,
+    name: entity.metadata.name,
+  });
+
+  const result = new Set<string>();
+  for (const rawEntry of rawAnnotation.split(',')) {
+    const entry = rawEntry.trim();
+    if (!entry) {
+      continue;
+    }
+
+    let parsed: CompoundEntityRef;
+    try {
+      parsed = parseEntityRef(entry, {
+        defaultKind: entity.kind,
+        defaultNamespace: entityNamespace,
+      });
+    } catch {
+      continue;
+    }
+
+    if (
+      parsed.kind.toLocaleLowerCase('en-US') !==
+        entity.kind.toLocaleLowerCase('en-US') ||
+      !KubernetesValidatorFunctions.isValidKind(parsed.kind) ||
+      !KubernetesValidatorFunctions.isValidNamespace(parsed.namespace) ||
+      !KubernetesValidatorFunctions.isValidObjectName(parsed.name)
+    ) {
+      continue;
+    }
+
+    const normalized = stringifyEntityRef(parsed);
+    if (normalized !== currentRef) {
+      result.add(normalized);
+    }
+  }
+
+  return Array.from(result);
 }
