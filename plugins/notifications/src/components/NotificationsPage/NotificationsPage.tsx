@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 import {
   Content,
@@ -81,6 +82,8 @@ function NotificationsPageContent(
   } = props;
 
   const [refresh, setRefresh] = useState(false);
+  const [searchParams] = useSearchParams();
+  const highlightedId = searchParams.get('id') ?? undefined;
   const { lastSignal } = useSignal('notifications');
   const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(true);
   const [saved, setSaved] = useState<boolean | undefined>(undefined);
@@ -122,7 +125,25 @@ function NotificationsPageContent(
       }
 
       return Promise.all([
-        api.getNotifications(options),
+        api.getNotifications(options).then(async result => {
+          if (
+            highlightedId &&
+            !result.notifications.some(n => n.id === highlightedId) &&
+            typeof api.getNotification === 'function'
+          ) {
+            const highlighted = await api
+              .getNotification(highlightedId)
+              .catch(() => undefined);
+            if (highlighted) {
+              return {
+                ...result,
+                notifications: [highlighted, ...result.notifications],
+                totalCount: (result.totalCount ?? 0) + 1,
+              };
+            }
+          }
+          return result;
+        }),
         api.getStatus(),
         api.getTopics(options),
       ]);
@@ -137,6 +158,7 @@ function NotificationsPageContent(
       saved,
       severity,
       topic,
+      highlightedId,
     ],
   );
 
@@ -222,6 +244,7 @@ function NotificationsPageContent(
             page={pageNumber}
             pageSize={pageSize}
             totalCount={totalCount}
+            highlightedId={highlightedId}
           />
         </Grid.Item>
       </Grid.Root>

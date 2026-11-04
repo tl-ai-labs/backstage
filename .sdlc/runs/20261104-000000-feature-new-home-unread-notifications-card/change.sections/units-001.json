@@ -1,0 +1,369 @@
+[
+  {
+    "id": "U01",
+    "path": "plugins/home-react/src/extensions.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Allow CardExtension to render without requiring a legacy Backstage AppContext or TranslationApi in ApiHolder.",
+    "rules": [
+      "1. In S1, import Progress as DefaultProgress alongside InfoCard from '@backstage/core-components' and import translationApiRef and useApiHolder alongside useTranslationRef from '@backstage/frontend-plugin-api'.",
+      "2. In S2 inside CardExtension, initialize let Progress = DefaultProgress and inside a try block call useApp().getComponents().Progress (with // eslint-disable-next-line react-hooks/rules-of-hooks) so missing AppContext falls back to DefaultProgress without throwing.",
+      "3. In S2 inside CardExtension, check const hasTranslationApi = Boolean(useApiHolder().get(translationApiRef)) and when true call useTranslationRef(homeReactTranslationRef) (with // eslint-disable-next-line react-hooks/rules-of-hooks), otherwise fall back to { t: () => 'Settings' as const }."
+    ],
+    "exports": [
+      {
+        "name": "createCardExtension",
+        "kind": "function",
+        "params": [
+          {
+            "name": "options",
+            "type": "{ title?: string; components: () => Promise<ComponentParts>; name?: string; description?: string; layout?: CardLayout; settings?: CardSettings }"
+          }
+        ],
+        "returns": "Extension<(props: CardExtensionProps<T>) => JSX.Element>"
+      },
+      {
+        "name": "CardExtension",
+        "kind": "function",
+        "params": [
+          {
+            "name": "props",
+            "type": "CardExtensionComponentProps<T>"
+          }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { CardExtension, createCardExtension } from './extensions';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 20,
+        "to": 25,
+        "first_line": "import { InfoCard } from '@backstage/core-components';",
+        "last_line": "import { homeReactTranslationRef } from './translation';",
+        "rule": "Import DefaultProgress from @backstage/core-components and translationApiRef, useApiHolder from @backstage/frontend-plugin-api."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 135,
+        "to": 138,
+        "first_line": "const app = useApp();",
+        "last_line": "const { t } = useTranslationRef(homeReactTranslationRef);",
+        "rule": "Resolve Progress with a try/catch around useApp().getComponents().Progress falling back to DefaultProgress, and resolve t via useTranslationRef only when translationApiRef is present in useApiHolder()."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-16",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "AC-7"
+    ],
+    "checks": [
+      "prettier",
+      "eslint"
+    ]
+  },
+  {
+    "id": "U02",
+    "path": "plugins/notifications/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Declare @backstage/plugin-home-react as a workspace dependency of @backstage/plugin-notifications.",
+    "rules": [
+      "1. In S1, insert '\"@backstage/plugin-home-react\": \"workspace:^\",' in alphabetical order under dependencies right after '@backstage/frontend-plugin-api'."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 57,
+        "to": 57,
+        "first_line": "\"@backstage/frontend-plugin-api\": \"workspace:^\",",
+        "rule": "Add '\"@backstage/plugin-home-react\": \"workspace:^\",' to dependencies."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-13",
+      "NFR-2"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U03",
+    "path": "yarn.lock",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Update yarn.lock to record the @backstage/plugin-home-react workspace dependency on @backstage/plugin-notifications.",
+    "run": "yarn install --mode update-lockfile",
+    "depends_on": [
+      "U02"
+    ],
+    "covers": [
+      "FR-13"
+    ]
+  },
+  {
+    "id": "U04",
+    "path": "plugins/notifications/src/translation.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add localized messages for the unread notifications home-page card to notificationsTranslationRef.",
+    "rules": [
+      "1. In S1, add homePageCard: { title: 'Unread notifications', emptyMessage: 'No unread notifications', markAsRead: 'Mark as read', errors: { markAsReadFailed: 'Failed to mark notification as read' } } after the settings section in notificationsTranslationRef.messages."
+    ],
+    "exports": [
+      {
+        "name": "notificationsTranslationRef",
+        "kind": "const",
+        "params": [],
+        "returns": "TranslationRef"
+      }
+    ],
+    "import_line": "import { notificationsTranslationRef } from './translation';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 119,
+        "to": 119,
+        "first_line": "},",
+        "rule": "Insert the homePageCard messages object with title, emptyMessage, markAsRead, and errors.markAsReadFailed."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-5",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "NFR-6"
+    ],
+    "checks": [
+      "prettier",
+      "eslint"
+    ]
+  },
+  {
+    "id": "U05",
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add CSS highlight styling for a deep-linked notification row in NotificationsTable.",
+    "rules": [
+      "1. In S1 inside @layer components, add .highlightedRow { background-color: var(--bui-bg-neutral-1); border-left: 3px solid var(--bui-border-interactive); padding-left: var(--bui-space-2); }."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 35,
+        "to": 35,
+        "first_line": "}",
+        "rule": "Add the .highlightedRow CSS class inside @layer components."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-7",
+      "FR-8",
+      "NFR-2",
+      "NFR-3",
+      "AC-3"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U06",
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Read the id query parameter (or highlightedId prop) in NotificationsTable and highlight the matching notification row.",
+    "rules": [
+      "1. In S1, import { useSearchParams } from 'react-router-dom'.",
+      "2. In S2, add optional highlightedId?: string to NotificationsTableProps and destructure highlightedId in NotificationsTable props, resolving const [searchParams] = useSearchParams() and const effectiveHighlightedId = highlightedId ?? searchParams.get('id') ?? undefined.",
+      "3. In S3 inside compactColumns compact-data render, compute const isHighlighted = Boolean(effectiveHighlightedId && notification.id === effectiveHighlightedId) and wrap or apply className={isHighlighted ? styles.highlightedRow : undefined} and aria-current={isHighlighted ? 'true' : undefined} on a container div around the row Flex, including effectiveHighlightedId in the compactColumns useMemo dependency array.",
+      "4. In S4 inside Table options, add rowStyle: (rowData: Notification) => (effectiveHighlightedId && rowData.id === effectiveHighlightedId ? { backgroundColor: 'var(--bui-bg-neutral-1)' } : {})."
+    ],
+    "exports": [
+      {
+        "name": "NotificationsTable",
+        "kind": "const",
+        "params": [
+          {
+            "name": "props",
+            "type": "NotificationsTableProps"
+          }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { NotificationsTable } from '../NotificationsTable';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 16,
+        "to": 16,
+        "first_line": "import { useCallback, useEffect, useMemo, useState } from 'react';",
+        "rule": "Import { useSearchParams } from 'react-router-dom'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 64,
+        "to": 85,
+        "first_line": "pageSize: number;",
+        "last_line": "const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);",
+        "rule": "Add highlightedId?: string to NotificationsTableProps, destructure highlightedId in NotificationsTable, and compute effectiveHighlightedId from highlightedId ?? searchParams.get('id') ?? undefined."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 199,
+        "to": 293,
+        "first_line": "render: (notification: Notification) => {",
+        "last_line": "]);",
+        "rule": "Wrap the compact-data Flex in a div with className={isHighlighted ? styles.highlightedRow : undefined} and aria-current={isHighlighted ? 'true' : undefined} when notification.id === effectiveHighlightedId, and include effectiveHighlightedId in the useMemo dependencies."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 299,
+        "to": 306,
+        "first_line": "options={{",
+        "last_line": "}}",
+        "rule": "Add rowStyle to Table options highlighting the row where rowData.id === effectiveHighlightedId."
+      }
+    ],
+    "uses": [
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+        "reason": "Uses styles.highlightedRow for the highlighted notification row."
+      }
+    ],
+    "depends_on": [
+      "U05"
+    ],
+    "covers": [
+      "FR-7",
+      "FR-8",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "AC-3"
+    ],
+    "checks": [
+      "prettier",
+      "eslint"
+    ]
+  },
+  {
+    "id": "U07",
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Inspect the URL ?id= query parameter in NotificationsPage, ensure the targeted notification is loaded if missing from the current page, and pass highlightedId to NotificationsTable.",
+    "rules": [
+      "1. In S1, import { useSearchParams } from 'react-router-dom'.",
+      "2. In S2, read const [searchParams] = useSearchParams() and const highlightedId = searchParams.get('id') ?? undefined.",
+      "3. In S3, when highlightedId is defined and not already present in the getNotifications response list and typeof api.getNotification === 'function', fetch api.getNotification(highlightedId).catch(() => undefined) and prepend the returned notification to the list, including highlightedId in the useNotificationsApi dependency array.",
+      "4. In S4, pass highlightedId={highlightedId} to NotificationsTable."
+    ],
+    "exports": [
+      {
+        "name": "NotificationsPage",
+        "kind": "const",
+        "params": [
+          {
+            "name": "props",
+            "type": "NotificationsPageProps"
+          }
+        ],
+        "returns": "JSX.Element"
+      },
+      {
+        "name": "NfsNotificationsPage",
+        "kind": "const",
+        "params": [
+          {
+            "name": "props",
+            "type": "NotificationsPageProps"
+          }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "import_line": "import { NotificationsPage, NfsNotificationsPage } from './components/NotificationsPage';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { useEffect, useMemo, useState } from 'react';",
+        "rule": "Import { useSearchParams } from 'react-router-dom'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 83,
+        "to": 83,
+        "first_line": "const [refresh, setRefresh] = useState(false);",
+        "rule": "Read searchParams with useSearchParams() and extract const highlightedId = searchParams.get('id') ?? undefined."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 124,
+        "to": 141,
+        "first_line": "return Promise.all([",
+        "last_line": ");",
+        "rule": "If highlightedId is set and not found in the getNotifications result and typeof api.getNotification === 'function', fetch api.getNotification(highlightedId).catch(() => undefined) and prepend it to notifications; add highlightedId to the dependency array."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 223,
+        "to": 225,
+        "first_line": "pageSize={pageSize}",
+        "last_line": "/>",
+        "rule": "Pass highlightedId={highlightedId} to NotificationsTable."
+      }
+    ],
+    "uses": [
+      {
+        "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+        "lines": [
+          53,
+          85
+        ],
+        "reason": "Passes highlightedId prop to NotificationsTable."
+      }
+    ],
+    "depends_on": [
+      "U06"
+    ],
+    "covers": [
+      "FR-7",
+      "FR-8",
+      "NFR-1",
+      "NFR-2",
+      "NFR-3",
+      "AC-3"
+    ],
+    "checks": [
+      "prettier",
+      "eslint"
+    ]
+  }
+]

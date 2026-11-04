@@ -31,6 +31,36 @@ The `NotificationsSidebarItem` component can be used as an active left-side menu
 
 You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.
 
+### Home Page Card
+
+The notifications plugin provides an unread notifications card for the Backstage home page, which displays the user's latest unread notifications, supports marking items as read directly from the card, and provides deep links to the full notification details.
+
+#### New Frontend System
+
+In the new frontend system, the unread notifications widget is available as an extension of `@backstage/plugin-notifications/alpha` and can be placed on your home page layout:
+
+```tsx
+import notificationsPlugin from '@backstage/plugin-notifications/alpha';
+
+// The 'unread-notifications' widget is registered by default with the plugin
+```
+
+You can customize its placement or settings via your app configuration or template layout.
+
+#### Legacy Frontend System
+
+In the legacy frontend system, import the `HomePageUnreadNotifications` card extension from `@backstage/plugin-notifications` and include it on your custom home page:
+
+```tsx
+import { HomePageUnreadNotifications } from '@backstage/plugin-notifications';
+
+export const HomePage = () => (
+  <CustomHomepageGrid>
+    <HomePageUnreadNotifications limit={5} />
+  </CustomHomepageGrid>
+);
+```
+
 ## Usage
 
 New notifications can be sent either by a backend plugin or by an external service through the REST API.

@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
-import { useState, Suspense } from 'react';
+import {
+  useState,
+  Suspense,
+  type ComponentType,
+  type PropsWithChildren,
+} from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import SettingsIcon from '@material-ui/icons/Settings';
-import { InfoCard } from '@backstage/core-components';
+import {
+  InfoCard,
+  Progress as DefaultProgress,
+} from '@backstage/core-components';
 import { SettingsModal } from './components';
 import { createReactExtension, useApp } from '@backstage/core-plugin-api';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import { useTranslationRef } from '@backstage/frontend-plugin-api';
+import {
+  translationApiRef,
+  useApiHolder,
+  useTranslationRef,
+} from '@backstage/frontend-plugin-api';
 import { homeReactTranslationRef } from './translation';
 
 /**
@@ -132,10 +144,20 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
     title,
     ...childProps
   } = props;
-  const app = useApp();
-  const { Progress } = app.getComponents();
+  let Progress: ComponentType<PropsWithChildren<{}>> = DefaultProgress;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    Progress = useApp().getComponents().Progress;
+  } catch {
+    // AppContext is optional when rendering standalone cards or widgets
+  }
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { t } = useTranslationRef(homeReactTranslationRef);
+  const hasTranslationApi = Boolean(useApiHolder().get(translationApiRef));
+  /* eslint-disable react-hooks/rules-of-hooks */
+  const { t } = hasTranslationApi
+    ? useTranslationRef(homeReactTranslationRef)
+    : { t: () => 'Settings' as const };
+  /* eslint-enable react-hooks/rules-of-hooks */
 
   if (Renderer) {
     return (
