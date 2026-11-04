@@ -1,0 +1,80 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Format all code, JSON, and Markdown with Prettier (@backstage/cli/config/prettier: 2-space indent, single quotes in TS/JS, trailing commas).",
+      "Preserve existing Apache 2.0 license headers and copyright years on edited source files; do not add license headers to changesets, docs, or package.json/hbs manifests.",
+      "Follow STYLE.md: named imports from 'react' (useSyncExternalStore, useId) and 'react-dom/client' (createRoot); do not import from 'use-sync-external-store/shim' or import useId from 'react-aria'.",
+      "All in-scope workspace package.json manifests must set peerDependencies for '@types/react', 'react', and 'react-dom' to '^18.0.0' while preserving peerDependenciesMeta['@types/react'].optional = true.",
+      "Do not modify any ESLint, Prettier, or TypeScript configuration files (tsconfig.json, .eslintrc*, etc.).",
+      "Generated artifacts (yarn.lock, packages/test-utils/report.api.md, packages/cli-module-build/knip-report.md) are updated exclusively via tooling units, never hand-edited."
+    ],
+    "decisions": [
+      {
+        "topic": "React peer dependency range standardization",
+        "choice": "Update react, react-dom, and @types/react peerDependencies to '^18.0.0' in all 56 workspace manifests and 4 cli-module-new templates, and set '^18.0.0' as the sole expected range in packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+        "rejected": [
+          "Retaining '^17.0.0 || ^18.0.0' in private packages or templates",
+          "Adding React 19 peer dependency ranges"
+        ],
+        "reason": "Backstage now requires React 18 across all workspace packages and newly generated plugins, while React 19 support is out of scope."
+      },
+      {
+        "topic": "Synchronous createRoot rendering in dev-utils, frontend-dev-utils, and techdocs",
+        "choice": "Import createRoot statically from 'react-dom/client' and call createRoot(...).render(...) directly, removing ReactDOMPromise, process.env.HAS_REACT_DOM_CLIENT branching, and ReactDOM.render fallbacks",
+        "rejected": [
+          "Dynamic import('react-dom/client')",
+          "Retaining process.env.HAS_REACT_DOM_CLIENT in bundler or Jest configs"
+        ],
+        "reason": "React 18 always provides react-dom/client, eliminating the need for conditional module resolution, bundler/Jest defines, and legacy ReactDOM.render fallbacks."
+      },
+      {
+        "topic": "Native React 18 hooks for external store subscriptions and component IDs",
+        "choice": "Import useSyncExternalStore from 'react' in useRouteRef.tsx and useBreakpoint.ts (removing use-sync-external-store dependencies from frontend-plugin-api, ui, and plugins/app) and import useId from 'react' in Popover, Tooltip, Table, and TablePagination",
+        "rejected": [
+          "Keeping use-sync-external-store/shim",
+          "Keeping react-aria useId in @backstage/ui"
+        ],
+        "reason": "React 18 natively provides useSyncExternalStore and useId with identical subscription and unique per-instance ID semantics."
+      },
+      {
+        "topic": "Changeset structure and bump levels",
+        "choice": "Create six .changeset/*react-18*.md files covering all 59 affected published packages (excluding private packages): require-react-18.md (53 peer-range packages: 16 major and 37 minor), repo-tools-react-18.md (@backstage/repo-tools minor), cli-module-new-react-18.md (@backstage/cli-module-new patch), test-utils-react-18.md (@backstage/test-utils major), cli-react-18.md (@backstage/cli-module-build and @backstage/cli-module-test-jest minor), and ui-react-18.md (@backstage/ui patch in .changeset/README.md format)",
+        "rejected": [
+          "Single changeset file combining incompatible message formats",
+          "Listing private packages app-example-plugin or @internal/plugin-todo-list"
+        ],
+        "reason": "Satisfies REVIEWING.md bump rules, .changeset/README.md formatting for @backstage/ui, and separate adopter-facing explanations for repo-tools peer-deps check, cli-module-new templates, HAS_REACT_DOM_CLIENT, and LegacyRootOption removals."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "study-check",
+        "run": "yarn tsc && yarn lint:all && yarn lint:peer-deps && CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+      },
+      {
+        "id": "affected-tests",
+        "run": "CI=true yarn test packages/frontend-plugin-api packages/dev-utils packages/frontend-dev-utils packages/ui packages/cli-module-build packages/repo-tools plugins/techdocs"
+      },
+      {
+        "id": "lockfile-check",
+        "run": "yarn install --immutable"
+      }
+    ]
+  },
+  "hashes": {}
+}

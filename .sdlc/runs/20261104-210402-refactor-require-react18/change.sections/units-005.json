@@ -1,0 +1,153 @@
+[
+  {
+    "id": "U66",
+    "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove hasReactDomClient import and process.env.HAS_REACT_DOM_CLIENT defines from both webpack and rspack DefinePlugin configurations.",
+    "rules": [
+      "1. Delete the import of hasReactDomClient from './hasReactDomClient'.",
+      "2. Delete 'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(hasReactDomClient()) and its comment from both webpack.DefinePlugin and bundler.DefinePlugin."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 37,
+        "to": 37,
+        "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+        "rule": "Remove hasReactDomClient import."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 272,
+        "to": 276,
+        "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+        "last_line": "),",
+        "rule": "Remove 'process.env.HAS_REACT_DOM_CLIENT' entry and comment from webpack.DefinePlugin."
+      },
+      {
+        "id": "S3",
+        "at": "delete",
+        "from": 281,
+        "to": 285,
+        "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+        "last_line": "),",
+        "rule": "Remove 'process.env.HAS_REACT_DOM_CLIENT' entry and comment from bundler.DefinePlugin."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/cli-module-build/src/lib/bundler/config.test.ts",
+        "lines": [1, 82],
+        "reason": "Existing bundler config test suite that must continue passing."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-12", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U67",
+    "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove hasReactDomClient import and the !hasReactDomClient() React 17 deprecation warning from startFrontend.",
+    "rules": [
+      "1. Delete the import of hasReactDomClient from '../../../lib/bundler/hasReactDomClient'.",
+      "2. Delete the if (!hasReactDomClient()) { console.warn(...); } block."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 26,
+        "to": 26,
+        "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+        "rule": "Remove hasReactDomClient import."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 45,
+        "to": 49,
+        "first_line": "if (!hasReactDomClient()) {",
+        "last_line": "}",
+        "rule": "Remove the !hasReactDomClient() deprecation warning block."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-14", "NFR-1", "NFR-2", "AC-3", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U68",
+    "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Update checkReactVersion() to warn on React 16 or 17 and instruct the user to upgrade to React 18.",
+    "rules": [
+      "1. Check if reactPkg.version.startsWith('16.') || reactPkg.version.startsWith('17.').",
+      "2. Log the chalk.yellow warning banner stating that the detected React version is deprecated for use in Backstage and instructing the user to upgrade to React 18 by updating their packages/app dependencies."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 276,
+        "to": 287,
+        "first_line": "if (reactPkg.version.startsWith('16.')) {",
+        "last_line": "}",
+        "rule": "Check for React 16 or 17 and instruct the user to upgrade to React 18 (never recommending React 17)."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-14", "NFR-1", "NFR-2", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U69",
+    "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Delete packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts after all imports of it are removed.",
+    "run": "rm -f packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "depends_on": ["U66", "U67"],
+    "covers": ["FR-12", "AC-3"]
+  },
+  {
+    "id": "U70",
+    "path": "packages/cli-module-build/knip-report.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate packages/cli-module-build/knip-report.md after cli-module-build edits and hasReactDomClient.ts deletion.",
+    "run": "yarn build:knip-reports packages/cli-module-build && yarn build:knip-reports packages/cli-module-build --ci",
+    "depends_on": ["U58", "U66", "U67", "U68", "U69"],
+    "covers": ["FR-15", "AC-6"]
+  },
+  {
+    "id": "U71",
+    "path": "packages/cli-module-test-jest/config/jest.js",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove the react-dom/client resolution and process.env.HAS_REACT_DOM_CLIENT assignment from Jest config.",
+    "rules": [
+      "1. Delete the try/catch block that resolves 'react-dom/client' and sets process.env.HAS_REACT_DOM_CLIENT = true."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 52,
+        "to": 59,
+        "first_line": "try {",
+        "last_line": "}",
+        "rule": "Delete the try/catch block setting process.env.HAS_REACT_DOM_CLIENT = true."
+      }
+    ],
+    "depends_on": ["U58", "U62", "U63", "U64", "U65"],
+    "covers": ["FR-13", "NFR-1", "NFR-2", "AC-3"],
+    "checks": ["prettier"]
+  }
+]

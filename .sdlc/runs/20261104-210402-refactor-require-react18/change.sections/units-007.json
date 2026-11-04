@@ -1,0 +1,224 @@
+[
+  {
+    "id": "U83",
+    "path": "docs/tutorials/react18-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Update the React 18 migration tutorial to state that React 18 is now required, update plugin peerDependency examples to '^18.0.0', remove advice keeping plugins on React 17, and document the removal of LegacyRootOption/legacyRoot.",
+    "rules": [
+      "1. Replace the info banner and opening paragraph to state that Backstage core libraries and plugins now require React 18 and support for React 16 and React 17 has been removed.",
+      "2. Update the plugin package.json devDependencies and peerDependencies code blocks to replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom'.",
+      "3. Remove the info callout under Migrating Tests that suggests adding react and react-dom v17 devDependencies to individual plugins.",
+      "4. Add a bullet under Test Updates noting that LegacyRootOption and the legacyRoot option on renderInTestApp and renderWithEffects in @backstage/test-utils have been removed."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 7,
+        "to": 13,
+        "first_line": ":::info",
+        "last_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+        "rule": "State that Backstage core libraries and plugins now require React 18 and support for React 16 and React 17 has been removed."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 80,
+        "to": 106,
+        "first_line": "// highlight-remove-start",
+        "last_line": "// highlight-add-end",
+        "rule": "Update both the devDependencies and peerDependencies blocks so the added lines use '^18.0.0' for '@types/react', 'react', and 'react-dom'."
+      },
+      {
+        "id": "S3",
+        "at": "delete",
+        "from": 131,
+        "to": 133,
+        "first_line": ":::info",
+        "last_line": ":::",
+        "rule": "Delete the info block suggesting keeping individual plugins on React 17."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 164,
+        "to": 164,
+        "first_line": "- Rendered components often don't immediately update on user input, it's more common to need to use `waitFor` or other utilities to wait for the expected state to be reached.",
+        "rule": "Keep this bullet and add a bullet stating that LegacyRootOption and the legacyRoot option on renderInTestApp and renderWithEffects in @backstage/test-utils have been removed."
+      }
+    ],
+    "depends_on": ["U76", "U77"],
+    "covers": ["FR-20", "NFR-3", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U84",
+    "path": "docs/tutorials/jsx-transform-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Reconcile React 17 references in the JSX transform migration guide without changing compiler or tsconfig configuration.",
+    "rules": [
+      "1. Update the bullets under 'What this means for you' so they do not imply React 17 is still supported by Backstage (referring to React 18 and when 19 becomes available), while keeping the historical note that the transform was introduced with React 17.",
+      "2. Replace 'In the future, this setting will change to `preserve` once React 17 is fully deprecated.' with 'In the future, this setting will change to `preserve`.'."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 11,
+        "to": 12,
+        "first_line": "- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (17, 18, or when 19 becomes available for Backstage).",
+        "last_line": "- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended even on React 17 or 18, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.",
+        "rule": "Update the two bullets so they refer to React 18 (or when 19 becomes available) as the supported Backstage React version."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 61,
+        "to": 61,
+        "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+        "rule": "Replace with 'In the future, this setting will change to `preserve`.'."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-21", "NFR-3", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U85",
+    "path": ".changeset/require-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create changeset for the 53 peer-dependency packages announcing the React 18 requirement.",
+    "rules": [
+      "1. In YAML frontmatter, list the 16 >=1.0.0 packages as 'major': '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/integration-react', '@backstage/version-bridge', '@backstage/plugin-catalog', '@backstage/plugin-catalog-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-react', '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib', '@backstage/plugin-techdocs-react'.",
+      "2. In YAML frontmatter, list the 37 0.x peer-range packages as 'minor': '@backstage/core-compat-api', '@backstage/core-components', '@backstage/frontend-app-api', '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/module-federation-common', '@backstage/theme', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-api-docs', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-app', '@backstage/plugin-auth-react', '@backstage/plugin-auth', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import', '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools-react', '@backstage/plugin-devtools', '@backstage/plugin-home-react', '@backstage/plugin-home', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-kubernetes', '@backstage/plugin-mui-to-bui', '@backstage/plugin-notifications', '@backstage/plugin-org-react', '@backstage/plugin-org', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-signals-react', '@backstage/plugin-signals', '@backstage/plugin-user-settings'.",
+      "3. Do not include private packages (app-example-plugin or @internal/plugin-todo-list) or internal symbol names.",
+      "4. Write a concise adopter-facing summary stating that React 18 is now required and React 17 support has been removed."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/brave-subjects-canonical.md",
+      "lines": [1, 6],
+      "reason": "Standard Backstage changeset frontmatter and body formatting."
+    },
+    "depends_on": [
+      "U01", "U03", "U04", "U05", "U06", "U07", "U08", "U09", "U10", "U11",
+      "U12", "U13", "U14", "U15", "U17", "U18", "U20", "U21", "U22", "U23",
+      "U24", "U25", "U26", "U27", "U28", "U29", "U30", "U31", "U32", "U33",
+      "U34", "U36", "U37", "U38", "U39", "U40", "U41", "U42", "U43", "U44",
+      "U45", "U46", "U47", "U48", "U49", "U50", "U51", "U52", "U53", "U54",
+      "U55", "U56", "U57"
+    ],
+    "covers": ["FR-22", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U86",
+    "path": ".changeset/test-utils-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create changeset for @backstage/test-utils (major) documenting the React 18 requirement and removal of LegacyRootOption and legacyRoot.",
+    "rules": [
+      "1. In YAML frontmatter, list only '@backstage/test-utils': major.",
+      "2. State in plain adopter-facing language that React 18 is now required (React 17 support has been removed) and that LegacyRootOption and the legacyRoot option on renderInTestApp and renderWithEffects have been removed."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/brave-subjects-canonical.md",
+      "lines": [1, 6],
+      "reason": "Standard Backstage changeset frontmatter and body formatting."
+    },
+    "depends_on": ["U16", "U76", "U77", "U78"],
+    "covers": ["FR-22", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U87",
+    "path": ".changeset/cli-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create separate changeset for @backstage/cli-module-build and @backstage/cli-module-test-jest (minor) stating plainly that process.env.HAS_REACT_DOM_CLIENT is no longer defined.",
+    "rules": [
+      "1. In YAML frontmatter, list '@backstage/cli-module-build': minor and '@backstage/cli-module-test-jest': minor.",
+      "2. State plainly in adopter-facing language that process.env.HAS_REACT_DOM_CLIENT is no longer defined during builds or tests because React 18 is now required, without mentioning internal symbol names such as hasReactDomClient."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/brave-subjects-canonical.md",
+      "lines": [1, 6],
+      "reason": "Standard Backstage changeset frontmatter and body formatting."
+    },
+    "depends_on": ["U66", "U67", "U68", "U69", "U70", "U71"],
+    "covers": ["FR-22", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U88",
+    "path": ".changeset/ui-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create separate changeset for @backstage/ui (patch) following the .changeset/README.md Backstage UI format.",
+    "rules": [
+      "1. In YAML frontmatter, list only '@backstage/ui': patch.",
+      "2. Describe migrating internal hooks to React 18's built-in useId and useSyncExternalStore without using markdown headings (## or ###) or internal symbol names.",
+      "3. End the file with the exact line: **Affected components:** Popover, Tooltip, Table, TablePagination"
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/README.md",
+      "lines": [12, 45],
+      "reason": "Backstage UI changeset format specification."
+    },
+    "depends_on": ["U19", "U61", "U72", "U73", "U74", "U75"],
+    "covers": ["FR-22", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U89",
+    "path": ".changeset/repo-tools-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create separate changeset for @backstage/repo-tools (minor) stating that the peer-deps check now expects ^18.0.0 and rejects React 17 ranges.",
+    "rules": [
+      "1. In YAML frontmatter, list only '@backstage/repo-tools': minor.",
+      "2. State in plain adopter-facing language that the peer-deps check now expects '^18.0.0' for react, react-dom, and @types/react and rejects React 17 ranges, without mentioning internal symbol names."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/brave-subjects-canonical.md",
+      "lines": [1, 6],
+      "reason": "Standard Backstage changeset frontmatter and body formatting."
+    },
+    "depends_on": ["U59"],
+    "covers": ["FR-22", "AC-9"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U90",
+    "path": ".changeset/cli-module-new-react-18.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create separate changeset for @backstage/cli-module-new (patch) stating that new plugins are created with React 18 peer ranges.",
+    "rules": [
+      "1. In YAML frontmatter, list only '@backstage/cli-module-new': patch.",
+      "2. State in plain adopter-facing language that new plugins are created with React 18 ('^18.0.0') peer dependency ranges."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/brave-subjects-canonical.md",
+      "lines": [1, 6],
+      "reason": "Standard Backstage changeset frontmatter and body formatting."
+    },
+    "depends_on": ["U79", "U80", "U81", "U82"],
+    "covers": ["FR-22", "AC-9"],
+    "checks": ["prettier"]
+  }
+]
