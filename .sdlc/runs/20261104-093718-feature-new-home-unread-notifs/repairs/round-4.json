@@ -1,0 +1,186 @@
+[
+  {
+    "id": "tp_debug_r4_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-093718-feature-new-home-unread-notifs",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. blocker (line 148): UnreadNotificationsCard wraps its body in <InfoCard title={title} className={className}>, and when used as the Content component of HomePageWidgetBlueprint (which renders CardExtension's own <InfoCard>), it renders a nested InfoCard inside an InfoCard with duplicate 'Unread notifications' headers. — fix: Extract and export `UnreadNotificationsCardContent(props: Pick<UnreadNotificationsCardProps, 'limit' | 'pollingIntervalMs'> = {}): JSX.Element` that renders the loading, error, empty, and unread list content without an outer `InfoCard`, and have `UnreadNotificationsCard` render `<InfoCard title={title} className={className}><UnreadNotificationsCardContent limit={limit} pollingIntervalMs={pollingIntervalMs} /></InfoCard>`.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r4_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-093718-feature-new-home-unread-notifs",
+    "artifact_path": "plugins/notifications/src/alpha.tsx",
+    "instruction": "Fix `plugins/notifications/src/alpha.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. blocker (line 58): `unreadNotificationsCard` passes `Content: m.UnreadNotificationsCard` to `HomePageWidgetBlueprint.make`, causing `CardExtension` in `@backstage/plugin-home-react` (lines 176-188) to wrap `UnreadNotificationsCard`'s `InfoCard` inside a second `InfoCard`. — fix: Update `components` in `unreadNotificationsCard` to `() => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent }))` so `CardExtension` renders the single outer `InfoCard` around the card content.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/alpha.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/alpha.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/alpha.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r4_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-093718-feature-new-home-unread-notifs",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. major (line 485): The extension test `'renders the unread-notifications HomePageWidgetBlueprint extension from alpha plugin'` only checks that the notification item text is in the document and does not verify that `'Unread notifications'` is rendered as a single card header rather than nested duplicate `InfoCard` headers. — fix: In `'renders the unread-notifications HomePageWidgetBlueprint extension from alpha plugin'`, assert `expect(screen.getAllByText('Unread notifications')).toHaveLength(1)` after awaiting the notification row.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r4_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-093718-feature-new-home-unread-notifs",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/index.ts",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/index.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior review fix (same round): UnreadNotificationsCard.tsx gains an exported `UnreadNotificationsCardContent` component (the card body without its own InfoCard), and plugins/notifications/src/alpha.tsx will load it with `import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent }))`, which resolves through this barrel. Re-export `UnreadNotificationsCardContent` from './UnreadNotificationsCard' alongside the existing UnreadNotificationsCard and UnreadNotificationsCardProps re-exports; change nothing else.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/index.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/index.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/alpha.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/index.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

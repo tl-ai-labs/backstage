@@ -1,0 +1,343 @@
+[
+  {
+    "id": "U01",
+    "path": "plugins/notifications/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add @backstage/plugin-home-react to plugins/notifications dependencies and @backstage/frontend-test-utils to devDependencies.",
+    "rules": [
+      "1. Insert \"@backstage/plugin-home-react\": \"workspace:^\", in dependencies in alphabetical order right after \"@backstage/frontend-plugin-api\": \"workspace:^\",.",
+      "2. Insert \"@backstage/frontend-test-utils\": \"workspace:^\", in devDependencies in alphabetical order right after \"@backstage/dev-utils\": \"workspace:^\",."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 57,
+        "to": 57,
+        "first_line": "\"@backstage/frontend-plugin-api\": \"workspace:^\",",
+        "rule": "Add \"@backstage/plugin-home-react\": \"workspace:^\", immediately after @backstage/frontend-plugin-api."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 71,
+        "to": 71,
+        "first_line": "\"@backstage/dev-utils\": \"workspace:^\",",
+        "rule": "Add \"@backstage/frontend-test-utils\": \"workspace:^\", immediately after @backstage/dev-utils in devDependencies."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-5",
+      "AC-8"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U02",
+    "path": "plugins/home-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add test devDependencies to plugins/home-react/package.json so unit tests for CardExtension can run with @backstage/frontend-test-utils and @testing-library/react.",
+    "rules": [
+      "1. Insert \"@backstage/frontend-test-utils\": \"workspace:^\", \"@testing-library/dom\": \"^10.0.0\", \"@testing-library/jest-dom\": \"^6.0.0\", and \"@testing-library/react\": \"^16.0.0\" in devDependencies after \"@backstage/cli\": \"workspace:^\",."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 67,
+        "to": 67,
+        "first_line": "\"@backstage/cli\": \"workspace:^\",",
+        "rule": "Add @backstage/frontend-test-utils, @testing-library/dom, @testing-library/jest-dom, and @testing-library/react to devDependencies."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-7",
+      "AC-7"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U03",
+    "path": "yarn.lock",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Update yarn.lock after adding package dependencies in plugins/notifications and plugins/home-react.",
+    "run": "yarn install",
+    "depends_on": [
+      "U01",
+      "U02"
+    ],
+    "covers": [
+      "FR-5",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "U04",
+    "path": "plugins/home-react/src/extensions.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Use Progress from @backstage/core-components directly in CardExtension instead of calling useApp().getComponents() so card extensions render without a Backstage AppContext.",
+    "rules": [
+      "1. Import Progress alongside InfoCard from '@backstage/core-components'.",
+      "2. Remove useApp from the '@backstage/core-plugin-api' import in plugins/home-react/src/extensions.tsx.",
+      "3. Remove const app = useApp(); and const { Progress } = app.getComponents(); inside CardExtension so <Suspense fallback={<Progress />}> uses the imported Progress component directly."
+    ],
+    "exports": [
+      {
+        "name": "CardExtension",
+        "kind": "function",
+        "params": [
+          {
+            "name": "props",
+            "type": "CardExtensionProps<T>"
+          }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 20,
+        "to": 22,
+        "first_line": "import { InfoCard } from '@backstage/core-components';",
+        "last_line": "import { createReactExtension, useApp } from '@backstage/core-plugin-api';",
+        "rule": "Import InfoCard and Progress from '@backstage/core-components' and remove useApp from the '@backstage/core-plugin-api' import."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 135,
+        "to": 136,
+        "first_line": "const app = useApp();",
+        "last_line": "const { Progress } = app.getComponents();",
+        "rule": "Delete the useApp() and app.getComponents() lines so CardExtension uses the imported Progress directly."
+      }
+    ],
+    "depends_on": [
+      "U03"
+    ],
+    "covers": [
+      "FR-7",
+      "AC-7",
+      "NFR-7"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U05",
+    "path": "plugins/notifications/src/translation.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add translation messages for UnreadNotificationsCard to notificationsTranslationRef.",
+    "rules": [
+      "1. Add an unreadNotificationsCard section under notificationsTranslationRef messages with title: 'Unread notifications', emptyMessage: 'No records to display', viewAll: 'View all notifications', markAsRead: 'Mark as read', and errorMarkAsRead: 'Failed to mark notification as read'."
+    ],
+    "exports": [
+      {
+        "name": "notificationsTranslationRef",
+        "kind": "const",
+        "params": [],
+        "returns": "TranslationRef"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 119,
+        "to": 119,
+        "first_line": "},",
+        "rule": "Insert unreadNotificationsCard translation messages after the settings object."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-2"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U06",
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add a highlightedRow CSS class using Backstage UI CSS variables to visually distinguish a deep-linked notification row.",
+    "rules": [
+      "1. Add a .highlightedRow class after .notificationInfoRow:not(:first-child) using active BUI CSS custom properties (background-color: var(--bui-bg-neutral-2); border-radius: var(--bui-radius-2); padding: var(--bui-space-1) var(--bui-space-2);) and no deprecated BUI tokens."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 35,
+        "to": 35,
+        "first_line": "}",
+        "rule": "Add .highlightedRow rule at the end of NotificationsTable.module.css."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-6",
+      "AC-6",
+      "NFR-4"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U07",
+    "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Accept an optional highlightedId prop on NotificationsTable and apply the highlightedRow class to the matching notification row.",
+    "rules": [
+      "1. Add optional highlightedId?: string to NotificationsTableProps.",
+      "2. Destructure highlightedId in NotificationsTable and include highlightedId in the compactColumns useMemo dependency array.",
+      "3. On the outer <Flex gap=\"4\" align=\"center\"> inside compactColumns.render, set className={notification.id === highlightedId ? styles.highlightedRow : undefined}."
+    ],
+    "exports": [
+      {
+        "name": "NotificationsTableProps",
+        "kind": "type",
+        "params": [],
+        "returns": "object"
+      },
+      {
+        "name": "NotificationsTable",
+        "kind": "function",
+        "params": [
+          {
+            "name": "props",
+            "type": "NotificationsTableProps"
+          }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 61,
+        "to": 61,
+        "first_line": "notifications?: Notification[];",
+        "rule": "Add highlightedId?: string; to NotificationsTableProps."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 72,
+        "to": 72,
+        "first_line": "notifications = [],",
+        "rule": "Destructure highlightedId from NotificationsTableProps."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 202,
+        "to": 202,
+        "first_line": "<Flex gap=\"4\" align=\"center\">",
+        "rule": "Pass className={notification.id === highlightedId ? styles.highlightedRow : undefined} on the row Flex wrapper."
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 292,
+        "to": 292,
+        "first_line": "markAsReadOnLinkOpen,",
+        "rule": "Add highlightedId to the compactColumns useMemo dependency array."
+      }
+    ],
+    "depends_on": [
+      "U06"
+    ],
+    "covers": [
+      "FR-6",
+      "AC-6",
+      "NFR-4"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U08",
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Read the ?id= query parameter via useSearchParams in NotificationsPage and forward it as highlightedId to NotificationsTable.",
+    "rules": [
+      "1. Import useSearchParams from 'react-router-dom'.",
+      "2. Call const [searchParams] = useSearchParams(); and const highlightedId = searchParams.get('id') ?? undefined; inside NotificationsPage.",
+      "3. Pass highlightedId={highlightedId} to <NotificationsTable /> without altering existing filter defaults or triggering an extra getNotification call."
+    ],
+    "exports": [
+      {
+        "name": "NotificationsPage",
+        "kind": "function",
+        "params": [
+          {
+            "name": "props",
+            "type": "NotificationsPageProps"
+          }
+        ],
+        "returns": "JSX.Element"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { useEffect, useMemo, useState } from 'react';",
+        "rule": "Import { useSearchParams } from 'react-router-dom'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 83,
+        "to": 83,
+        "first_line": "const [refresh, setRefresh] = useState(false);",
+        "rule": "Read searchParams with useSearchParams() and derive highlightedId = searchParams.get('id') ?? undefined."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 217,
+        "to": 217,
+        "first_line": "notifications={notifications}",
+        "rule": "Pass highlightedId={highlightedId} to NotificationsTable."
+      }
+    ],
+    "depends_on": [
+      "U07"
+    ],
+    "covers": [
+      "FR-6",
+      "AC-6"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  }
+]
