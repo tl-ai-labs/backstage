@@ -1,0 +1,248 @@
+[
+  {
+    "id": "U10",
+    "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Add TSDoc comment above DefaultNamespaceEntityPolicy.prototype.enforce describing its namespace defaulting behavior.",
+    "rules": [
+      "1. Insert a TSDoc /** ... */ comment block immediately above enforce(entity: Entity): Promise<Entity> without adding a release tag.",
+      "2. Do not modify any executable code, imports, signatures, or copyright headers."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert TSDoc comment block above enforce stating: 'Checks whether `entity.metadata.namespace` is already set; if so, returns `entity` unchanged, and otherwise returns a new merged entity with `metadata.namespace` populated with the policy\\'s configured default namespace (`DEFAULT_NAMESPACE`, `\"default\"`, unless overridden in the constructor).', followed by '@param entity - The entity to enforce the policy on' and '@returns Resolves with the original entity if `metadata.namespace` is already set, or a new merged entity with the default namespace populated'."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Match @backstage/catalog-model TSDoc @param and @returns style"
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-10", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-3", "AC-4", "AC-5"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U11",
+    "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Add TSDoc comment above FieldFormatEntityPolicy.prototype.enforce describing the envelope fields validated and error behavior.",
+    "rules": [
+      "1. Insert a TSDoc /** ... */ comment block immediately above enforce(entity: Entity): Promise<Entity> without adding a release tag.",
+      "2. Do not modify any executable code, imports, signatures, or copyright headers."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 43,
+        "to": 43,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert TSDoc comment block above enforce stating: 'Validates the format of `apiVersion`, `kind`, `metadata.name`, and (when present) `metadata.namespace`, `metadata.labels` (keys and values), `metadata.annotations` (keys and values), `metadata.tags`, and `metadata.links` (`url` required, `title` and `icon` optional non-empty strings) using the configured {@link Validators} and {@link CommonValidatorFunctions}, throwing an `Error` if a required field is missing (`undefined` or `null`) or any field fails format validation.', followed by '@param entity - The entity to validate' and '@returns Resolves with the unmodified entity when all fields are valid, or rejects with an `Error` if a required field is missing or fails format validation'."
+      }
+    ],
+    "style_from": {
+      "unit": "U10",
+      "reason": "Match EntityPolicy.enforce TSDoc comment structure"
+    },
+    "depends_on": ["U10"],
+    "covers": ["FR-11", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-3", "AC-4", "AC-5"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U12",
+    "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Add TSDoc comment above GroupDefaultParentEntityPolicy.prototype.enforce describing how default parent references are assigned to Group entities.",
+    "rules": [
+      "1. Insert a TSDoc /** ... */ comment block immediately above enforce(entity: Entity): Promise<Entity> without adding a release tag.",
+      "2. Do not modify any executable code, imports, signatures, or copyright headers."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 51,
+        "to": 51,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert TSDoc comment block above enforce stating: 'Returns `entity` unchanged if `entity.kind !== \"Group\"` or `entity.spec.parent` is already set; otherwise, as long as the group\\'s own entity reference (`stringifyEntityRef(entity)`) does not equal the configured default parent reference (preventing a group from becoming its own parent), sets `entity.spec.parent` to the configured default parent entity ref and returns the entity.', followed by '@param entity - The entity to enforce the policy on' and '@returns Resolves with the entity, with `spec.parent` populated if applicable'."
+      }
+    ],
+    "style_from": {
+      "unit": "U10",
+      "reason": "Match EntityPolicy.enforce TSDoc comment structure"
+    },
+    "depends_on": ["U10"],
+    "covers": ["FR-12", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-3", "AC-4", "AC-5"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Add TSDoc comment above NoForeignRootFieldsEntityPolicy.prototype.enforce describing root-level field validation.",
+    "rules": [
+      "1. Insert a TSDoc /** ... */ comment block immediately above enforce(entity: Entity): Promise<Entity> without adding a release tag.",
+      "2. Do not modify any executable code, imports, signatures, or copyright headers."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 34,
+        "to": 34,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert TSDoc comment block above enforce stating: 'Checks every top-level key of `entity` (`Object.keys(entity)`) against the configured list of known root fields (defaulting to `[\"apiVersion\", \"kind\", \"metadata\", \"spec\"]`), throwing an `Error` (`Unknown field <field>`) if any unrecognized root field is present.', followed by '@param entity - The entity to validate' and '@returns Resolves with the unmodified entity when all root fields are known, or rejects with an `Error` if an unrecognized root field is present'."
+      }
+    ],
+    "style_from": {
+      "unit": "U10",
+      "reason": "Match EntityPolicy.enforce TSDoc comment structure"
+    },
+    "depends_on": ["U10"],
+    "covers": ["FR-13", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-3", "AC-4", "AC-5"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Add TSDoc comment above SchemaValidEntityPolicy.prototype.enforce describing Ajv JSON schema validation of the core Entity envelope.",
+    "rules": [
+      "1. Insert a TSDoc /** ... */ comment block immediately above enforce(entity: Entity): Promise<Entity> without adding a release tag.",
+      "2. Do not modify any executable code, imports, signatures, or copyright headers."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 38,
+        "to": 38,
+        "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+        "rule": "Insert TSDoc comment block above enforce stating: 'Validates `entity` against the core `Entity` JSON schema (`Entity.schema.json`, `EntityMeta.schema.json`, and `common.schema.json` compiled via Ajv), resolving with `entity` unchanged if valid or throwing an `Error` (`Malformed envelope, ...`) if schema validation fails.', followed by '@param entity - The entity to validate' and '@returns Resolves with the unmodified entity when schema validation succeeds, or rejects with an `Error` if validation fails'."
+      }
+    ],
+    "style_from": {
+      "unit": "U10",
+      "reason": "Match EntityPolicy.enforce TSDoc comment structure"
+    },
+    "depends_on": ["U10"],
+    "covers": ["FR-14", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-3", "AC-4", "AC-5"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U15",
+    "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Add TSDoc comments above all 8 static validator methods on KubernetesValidatorFunctions.",
+    "rules": [
+      "1. Insert a TSDoc /** ... */ comment block immediately above each of the 8 static methods on KubernetesValidatorFunctions without adding release tags.",
+      "2. Include a summary sentence accurately describing the validation rule, '@param value - The value to check', and '@returns `true` if ...' on each method.",
+      "3. Do not modify any executable code, imports, signatures, release tags, or copyright headers."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_before",
+        "from": 29,
+        "to": 29,
+        "first_line": "static isValidApiVersion(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidApiVersion stating: 'Checks that the value is a valid API version string of the form `<suffix>` or `<prefix>/<suffix>`, where the optional `<prefix>` is a valid DNS subdomain ({@link CommonValidatorFunctions.isValidDnsSubdomain}) and `<suffix>` is 1–63 ASCII alphanumeric characters (`/^[a-z0-9A-Z]+$/`).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid API version string'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 38,
+        "to": 38,
+        "first_line": "static isValidKind(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidKind stating: 'Checks that the value is a valid kind string of 1–63 characters starting with an ASCII letter (`a-zA-Z`) followed by ASCII alphanumeric characters (`/^[a-zA-Z][a-z0-9A-Z]*$/`).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid kind string'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_before",
+        "from": 47,
+        "to": 47,
+        "first_line": "static isValidObjectName(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidObjectName stating: 'Checks that the value is a valid object name string of 1–63 characters starting and ending with an ASCII alphanumeric character (`A-Za-z0-9`) and containing only ASCII alphanumeric characters, `-`, `_`, or `.` in between (`/^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$/`).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid object name string'."
+      },
+      {
+        "id": "S4",
+        "at": "insert_before",
+        "from": 56,
+        "to": 56,
+        "first_line": "static isValidNamespace(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidNamespace stating: 'Checks that the value is a valid RFC 1123 DNS label namespace by delegating to {@link CommonValidatorFunctions.isValidDnsLabel} (1–63 lowercase alphanumeric characters `[a-z0-9]` separated by `-`).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid namespace string'."
+      },
+      {
+        "id": "S5",
+        "at": "insert_before",
+        "from": 60,
+        "to": 60,
+        "first_line": "static isValidLabelKey(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidLabelKey stating: 'Checks that the value is a valid label key string of the form `<suffix>` or `<prefix>/<suffix>`, where the optional `<prefix>` is a valid DNS subdomain ({@link CommonValidatorFunctions.isValidDnsSubdomain}) and `<suffix>` is a valid object name ({@link KubernetesValidatorFunctions.isValidObjectName}).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid label key string'."
+      },
+      {
+        "id": "S6",
+        "at": "insert_before",
+        "from": 69,
+        "to": 69,
+        "first_line": "static isValidLabelValue(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidLabelValue stating: 'Checks that the value is a valid label value: either an empty string (`\"\"`) or a valid object name ({@link KubernetesValidatorFunctions.isValidObjectName}).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid label value string'."
+      },
+      {
+        "id": "S7",
+        "at": "insert_before",
+        "from": 75,
+        "to": 75,
+        "first_line": "static isValidAnnotationKey(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidAnnotationKey stating: 'Checks that the value is a valid annotation key string of the form `<suffix>` or `<prefix>/<suffix>`, where the optional `<prefix>` is a valid DNS subdomain ({@link CommonValidatorFunctions.isValidDnsSubdomain}) and `<suffix>` is a valid object name ({@link KubernetesValidatorFunctions.isValidObjectName}).', followed by '@param value - The value to check' and '@returns `true` if the value is a valid annotation key string'."
+      },
+      {
+        "id": "S8",
+        "at": "insert_before",
+        "from": 84,
+        "to": 84,
+        "first_line": "static isValidAnnotationValue(value: unknown): boolean {",
+        "rule": "Insert TSDoc comment block above isValidAnnotationValue stating: 'Checks that the value is a valid annotation value, which may be any string (`typeof value === \"string\"`).', followed by '@param value - The value to check' and '@returns `true` if the value is a string'."
+      }
+    ],
+    "style_from": {
+      "unit": "U01",
+      "reason": "Match @backstage/catalog-model TSDoc @param and @returns style"
+    },
+    "depends_on": ["U01"],
+    "covers": ["FR-15", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-3", "AC-4", "AC-5"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U16",
+    "path": ".changeset/catalog-model-tsdoc.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Create an adopter-facing patch changeset for @backstage/catalog-model summarizing the added TSDoc documentation.",
+    "rules": [
+      "1. Write YAML frontmatter delimited by --- lines containing only '@backstage/catalog-model': patch.",
+      "2. Follow the frontmatter with a blank line and a concise adopter-facing description stating: 'Added TSDoc documentation for entity kind interfaces, entity kind type guards, entity policies, and `KubernetesValidatorFunctions` in `@backstage/catalog-model`.'",
+      "3. Reference no internal or non-public symbols."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "unit": "U01",
+      "reason": "Public API terminology of @backstage/catalog-model"
+    },
+    "depends_on": ["U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08", "U09", "U10", "U11", "U12", "U13", "U14", "U15"],
+    "covers": ["FR-16", "NFR-4", "NFR-5", "NFR-6", "AC-1", "AC-2", "AC-5"],
+    "checks": ["format"]
+  }
+]

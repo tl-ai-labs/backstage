@@ -35,6 +35,12 @@ import { EntityPolicy } from './types';
 export class SchemaValidEntityPolicy implements EntityPolicy {
   private validate: ValidateFunction<Entity> | undefined;
 
+  /**
+   * Validates `entity` against the core `Entity` JSON schema (`Entity.schema.json`, `EntityMeta.schema.json`, and `common.schema.json` compiled via Ajv), resolving with `entity` unchanged if valid or throwing an `Error` (`Malformed envelope, ...`) if schema validation fails.
+   *
+   * @param entity - The entity to validate
+   * @returns Resolves with the unmodified entity when schema validation succeeds, or rejects with an `Error` if validation fails
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (!this.validate) {
       const ajv = new Ajv({ allowUnionTypes: true });
