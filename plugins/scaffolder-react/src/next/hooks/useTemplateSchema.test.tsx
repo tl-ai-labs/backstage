@@ -387,5 +387,93 @@ describe('useTemplateSchema', () => {
         dependencies: secondStepDependencies,
       });
     });
+
+    it('should preserve cross-step if/then/else and filter feature-flagged conditional properties', () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Test Template',
+        description: 'Test Template Description',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                enableExtra: {
+                  type: 'boolean',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              if: {
+                properties: {
+                  enableExtra: { const: true },
+                },
+              },
+              then: {
+                required: ['visibleExtra', 'flaggedExtra'],
+                properties: {
+                  visibleExtra: {
+                    type: 'string',
+                  },
+                  flaggedExtra: {
+                    type: 'string',
+                    'ui:backstage': {
+                      featureFlag: 'my-feature-flag',
+                    },
+                  },
+                },
+              },
+              else: {
+                properties: {
+                  fallbackField: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const { result } = renderHook(() => useTemplateSchema(manifest), {
+        wrapper: ({ children }: PropsWithChildren<{}>) => (
+          <TestApiProvider
+            apis={[
+              mockApis.featureFlags.mock({ isActive: jest.fn(() => false) }),
+            ]}
+          >
+            {children}
+          </TestApiProvider>
+        ),
+      });
+
+      const [, second] = result.current.steps;
+
+      expect(second.schema).toEqual({
+        if: {
+          properties: {
+            enableExtra: { const: true },
+          },
+        },
+        then: {
+          required: ['visibleExtra'],
+          properties: {
+            visibleExtra: {
+              type: 'string',
+            },
+          },
+        },
+        else: {
+          properties: {
+            fallbackField: {
+              type: 'string',
+            },
+          },
+        },
+      });
+    });
   });
 });

@@ -15,7 +15,7 @@
  */
 import { featureFlagsApiRef, useApi } from '@backstage/core-plugin-api';
 import { TemplatePresentationV1beta3 } from '@backstage/plugin-scaffolder-common';
-import { JsonObject } from '@backstage/types';
+import { JsonObject, JsonValue } from '@backstage/types';
 import { UiSchema } from '@rjsf/utils';
 import { TemplateParameterSchema } from '@backstage/plugin-scaffolder-react';
 import { extractSchemaFromStep } from '../lib';
@@ -63,25 +63,100 @@ export const useTemplateSchema = (
       // Title is rendered at the top of the page, so let's ignore this from jsonschemaform
       const { title, ...stepSchema } = step.schema;
 
+      const filterSchemaByFeatureFlags = (
+        schemaNode: JsonObject,
+      ): JsonObject => {
+        const filtered = { ...schemaNode };
+
+        if (filtered.properties && typeof filtered.properties === 'object') {
+          const removedKeys = new Set<string>();
+          const filteredProperties = Object.fromEntries(
+            Object.entries(filtered.properties as JsonObject).filter(
+              ([key]) => {
+                const stepFeatureFlag =
+                  step.uiSchema[key]?.['ui:backstage']?.featureFlag;
+                const enabled = stepFeatureFlag
+                  ? featureFlags.isActive(stepFeatureFlag)
+                  : true;
+                if (!enabled) {
+                  removedKeys.add(key);
+                }
+                return enabled;
+              },
+            ),
+          );
+          filtered.properties = filteredProperties;
+
+          if (Array.isArray(filtered.required) && removedKeys.size > 0) {
+            filtered.required = filtered.required.filter(
+              reqKey => typeof reqKey !== 'string' || !removedKeys.has(reqKey),
+            );
+          }
+        }
+
+        if (
+          filtered.dependencies &&
+          typeof filtered.dependencies === 'object'
+        ) {
+          filtered.dependencies = Object.fromEntries(
+            Object.entries(filtered.dependencies as JsonObject).map(
+              ([depKey, depValue]) => {
+                if (
+                  depValue &&
+                  typeof depValue === 'object' &&
+                  !Array.isArray(depValue)
+                ) {
+                  return [
+                    depKey,
+                    filterSchemaByFeatureFlags(depValue as JsonObject),
+                  ];
+                }
+                return [depKey, depValue];
+              },
+            ),
+          );
+        }
+
+        if (filtered.then && typeof filtered.then === 'object') {
+          filtered.then = filterSchemaByFeatureFlags(
+            filtered.then as JsonObject,
+          );
+        }
+
+        if (filtered.else && typeof filtered.else === 'object') {
+          filtered.else = filterSchemaByFeatureFlags(
+            filtered.else as JsonObject,
+          );
+        }
+
+        ['allOf', 'oneOf', 'anyOf'].forEach(keyword => {
+          if (Array.isArray(filtered[keyword])) {
+            filtered[keyword] = (filtered[keyword] as JsonValue[]).map(item =>
+              item && typeof item === 'object' && !Array.isArray(item)
+                ? filterSchemaByFeatureFlags(item as JsonObject)
+                : item,
+            );
+          }
+        });
+
+        return filtered;
+      };
+
       const strippedSchema = {
         ...step,
-        schema: {
-          ...stepSchema,
-        },
+        schema: filterSchemaByFeatureFlags(stepSchema),
       } as ParsedTemplateSchema;
 
-      if (step.schema?.properties || !step.schema?.dependencies) {
-        strippedSchema.schema.properties = Object.fromEntries(
-          Object.entries((step.schema?.properties ?? {}) as JsonObject).filter(
-            ([key]) => {
-              const stepFeatureFlag =
-                step.uiSchema[key]?.['ui:backstage']?.featureFlag;
-              return stepFeatureFlag
-                ? featureFlags.isActive(stepFeatureFlag)
-                : true;
-            },
-          ),
-        );
+      const hasConditionals = Boolean(
+        step.schema?.dependencies ||
+          step.schema?.if ||
+          step.schema?.allOf ||
+          step.schema?.oneOf ||
+          step.schema?.anyOf,
+      );
+
+      if (!step.schema?.properties && !hasConditionals) {
+        strippedSchema.schema.properties = {};
       }
 
       return strippedSchema;

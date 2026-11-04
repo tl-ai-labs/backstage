@@ -56,7 +56,7 @@ import {
 } from './createAsyncValidators';
 import { ErrorListTemplate } from './ErrorListTemplate';
 import * as FieldOverrides from './FieldOverrides';
-import { hasErrors } from './utils';
+import { hasErrors, pruneInactiveStepsState, resolveStepSchema } from './utils';
 
 const validator = customizeValidator();
 ajvErrors(validator.ajv);
@@ -174,6 +174,17 @@ export const Stepper = (stepperProps: StepperProps) => {
 
   const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
 
+  const currentStepSchema = useMemo(() => {
+    if (!currentStep?.schema) {
+      return currentStep?.schema;
+    }
+    return resolveStepSchema(currentStep.schema, steps, activeStep, stepsState);
+  }, [currentStep?.schema, steps, activeStep, stepsState]);
+
+  const activeStepsState = useMemo(() => {
+    return pruneInactiveStepsState(steps, stepsState);
+  }, [steps, stepsState]);
+
   const {
     formContext: propFormContext,
     uiSchema: propUiSchema,
@@ -198,12 +209,14 @@ export const Stepper = (stepperProps: StepperProps) => {
       setErrors(undefined);
       setIsValidating(true);
 
-      const returnedValidation = await validation(formData);
-
-      setStepsState(current => ({
-        ...current,
+      const nextState = pruneInactiveStepsState(steps, {
+        ...stepsState,
         ...formData,
-      }));
+      });
+
+      const returnedValidation = await validation(nextState);
+
+      setStepsState(nextState);
 
       setIsValidating(false);
 
@@ -218,7 +231,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         });
       }
     },
-    [validation, analytics],
+    [steps, stepsState, validation, analytics],
   );
 
   useEffect(() => {
@@ -251,11 +264,11 @@ export const Stepper = (stepperProps: StepperProps) => {
     setIsCreating(true);
     analytics.captureEvent('click', `${createLabel}`);
     try {
-      await onCreate(stepsState);
+      await onCreate(activeStepsState);
     } finally {
       setIsCreating(false);
     }
-  }, [analytics, createLabel, onCreate, stepsState]);
+  }, [analytics, createLabel, onCreate, activeStepsState]);
 
   return (
     <>
@@ -295,7 +308,7 @@ export const Stepper = (stepperProps: StepperProps) => {
             extraErrors={errors as unknown as ErrorSchema}
             formData={stepsState}
             formContext={{ ...propFormContext, formData: stepsState }}
-            schema={currentStep.schema}
+            schema={currentStepSchema}
             uiSchema={mergedUiSchema}
             onSubmit={handleNext}
             fields={fields}
@@ -328,7 +341,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         ReviewStepComponent ? (
           <ReviewStepComponent
             disableButtons={isValidating}
-            formData={stepsState}
+            formData={activeStepsState}
             handleBack={handleBack}
             handleReset={() => {}}
             steps={steps}
@@ -336,7 +349,10 @@ export const Stepper = (stepperProps: StepperProps) => {
           />
         ) : (
           <>
-            <ReviewStateComponent formState={stepsState} schemas={steps} />
+            <ReviewStateComponent
+              formState={activeStepsState}
+              schemas={steps}
+            />
             <div className={styles.footer}>
               <Button
                 variant="tertiary"

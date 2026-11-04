@@ -27,7 +27,7 @@ import {
   CustomFieldValidator,
   FieldExtensionUiSchema,
 } from '@backstage/plugin-scaffolder-react';
-import { isObject } from './utils';
+import { isObject, resolveConditionalSchema } from './utils';
 
 /** @alpha */
 export type FormValidation = {
@@ -55,7 +55,8 @@ export const createAsyncValidators = (
     pathPrefix: string = '#',
     current: JsonObject = formData,
   ): Promise<FormValidation> {
-    const parsedSchema = new JSONSchema(rootSchema);
+    const resolvedSchema = resolveConditionalSchema(rootSchema, formData);
+    const parsedSchema = new JSONSchema(resolvedSchema);
     const formValidation: FormValidation = {};
 
     const validateForm = async (
@@ -83,6 +84,14 @@ export const createAsyncValidators = (
     };
 
     for (const [key, value] of Object.entries(current)) {
+      if (
+        pathPrefix === '#' &&
+        isObject(resolvedSchema.properties) &&
+        !(key in resolvedSchema.properties)
+      ) {
+        continue;
+      }
+
       const pointer = `${pathPrefix}/${key}`;
       const definitionInSchema = parsedSchema.getSchema({
         pointer,

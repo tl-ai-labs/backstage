@@ -340,6 +340,45 @@ parameters:
                 - address
 ```
 
+### Conditional fields across steps
+
+Conditional schemas can also reference parameters captured in earlier steps of the wizard. When a step defines `dependencies` or `if`/`then`/`else` rules that check fields from preceding steps, the wizard evaluates those conditions against the accumulated form data without re-rendering the earlier fields in the current step.
+
+In the example below, the first step asks whether to generate a mobile SDK using `isMobileSdk`. The second step uses `dependencies` on `isMobileSdk` to conditionally display and require `sdkPlatform`.
+
+```yaml
+parameters:
+  - title: Project configuration
+    properties:
+      isMobileSdk:
+        title: Target mobile platforms?
+        type: boolean
+        default: false
+  - title: Platform options
+    dependencies:
+      isMobileSdk:
+        allOf:
+          - if:
+              properties:
+                isMobileSdk:
+                  const: true
+            then:
+              properties:
+                sdkPlatform:
+                  title: Mobile SDK Platform
+                  type: string
+                  enum:
+                    - android
+                    - ios
+                    - cross-platform
+                  enumNames:
+                    - 'Android'
+                    - 'iOS'
+                    - 'Cross-Platform (React Native / Flutter)'
+              required:
+                - sdkPlatform
+```
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

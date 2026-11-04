@@ -538,4 +538,103 @@ describe('createAsyncValidators', () => {
 
     expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();
   });
+
+  it('should validate custom field inside cross-step conditional branch only when condition is satisfied', async () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        step2Field: {
+          type: 'string',
+        },
+      },
+      dependencies: {
+        enableValidation: {
+          oneOf: [
+            {
+              properties: {
+                enableValidation: { enum: [false] },
+              },
+            },
+            {
+              properties: {
+                enableValidation: { enum: [true] },
+                conditionalCustomField: {
+                  type: 'string',
+                  'ui:field': 'CustomField',
+                },
+              },
+            },
+          ],
+        },
+      },
+      if: {
+        properties: {
+          useIfBranch: { const: true },
+        },
+      },
+      then: {
+        properties: {
+          ifCustomField: {
+            type: 'string',
+            'ui:field': 'CustomField',
+          },
+        },
+      },
+    };
+
+    const validatorsWhenActive = { CustomField: jest.fn() };
+    const validateWhenActive = createAsyncValidators(
+      schema,
+      validatorsWhenActive,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenActive({
+      enableValidation: true,
+      useIfBranch: true,
+      step2Field: 'value',
+      conditionalCustomField: 'custom1',
+      ifCustomField: 'custom2',
+    });
+
+    expect(validatorsWhenActive.CustomField).toHaveBeenCalledTimes(2);
+
+    const validatorsWhenInactive = { CustomField: jest.fn() };
+    const validateWhenInactive = createAsyncValidators(
+      schema,
+      validatorsWhenInactive,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenInactive({
+      enableValidation: false,
+      useIfBranch: false,
+      step2Field: 'value',
+      conditionalCustomField: 'custom1',
+      ifCustomField: 'custom2',
+    });
+
+    expect(validatorsWhenInactive.CustomField).not.toHaveBeenCalled();
+
+    const validatorsWhenUndefined = { CustomField: jest.fn() };
+    const validateWhenUndefined = createAsyncValidators(
+      schema,
+      validatorsWhenUndefined,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenUndefined({
+      step2Field: 'value',
+      conditionalCustomField: 'custom1',
+      ifCustomField: 'custom2',
+    });
+
+    expect(validatorsWhenUndefined.CustomField).not.toHaveBeenCalled();
+  });
 });

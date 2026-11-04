@@ -1,0 +1,40 @@
+[
+  {
+    "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+    "problem": "Two failures introduced by this run (the baseline was clean).\n1) yarn tsc: plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts:130:13 - error TS2322: Type 'unknown[]' is not assignable to type 'JsonValue | undefined'. (the allOf/oneOf/anyOf map assigns unknown[] to filtered[keyword]; type the items as JsonValue / JsonObject).\n2) CI=true yarn test plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx: useTemplateSchema > FeatureFlags > should deal with dependencies and oneOf options: expect(second.schema).toEqual({ dependencies: secondStepDependencies }) fails; inside a oneOf branch of dependencies, expected required: [\"inputB\"] but received required: []. Cause: filterSchemaByFeatureFlags filters `required` down to keys present in the same node's `properties`, which wrongly drops required keys whose property is declared elsewhere (in the parent schema or another branch). Only remove a required key when that key itself was removed by a feature-flag filter; never change a schema that has no feature-flagged properties.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "problem": "yarn tsc: plugins/scaffolder-react/src/next/components/ReviewState/util.ts:77:31 - error TS2345: Argument of type 'JsonSchema | JsonError' is not assignable to parameter of type 'JsonValue | undefined'. Line 77: `if (res && !(isJsonObject(res) && res.type === 'error'))` — check the draft.getSchema result without passing it to isJsonObject (e.g. test res.type !== 'error' on the object directly, or use the json-schema-library isJsonError helper the file can import)."
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+    "problem": "yarn tsc errors: (a) plugins/scaffolder-react/src/next/components/Stepper/utils.ts:22:8 - error TS6133: 'ResolveSchemaOptions' is declared but its value is never read (remove the unused import, or use it). (b) plugins/scaffolder-react/src/next/components/Stepper/utils.ts:168:26 - error TS2345: Argument of type 'JsonValue | undefined' is not assignable to parameter of type 'JsonValue' (guard the undefined value before passing it)."
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+    "problem": "yarn tsc: plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts:19:3 - error TS6133: 'resolveConditionalSchema' is declared but its value is never read. Remove it from the import (or add a test that uses it).",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/Stepper/utils.ts"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "problem": "Unit U13 did not apply (verify_failed after 3 attempts; the file is back to its pre-run state). Add the planned cross-step conditional ReviewState tests (keep the existing assertion at the site after the `// handles options for property in dependencies in third schema` case). Last attempt failed: CI=true yarn test plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\n  ● ReviewState › should display active cross-step conditional fields and omit inactive ones\n    expect(received).toBeInTheDocument()\n    received value must be an HTMLElement or an SVGElement.\n    Received has value: null\n      709 |     expect(\n      710 |       queryByRole('row', { name: 'Enable Monitoring Yes' }),\n    > 711 |     ).toBeInTheDocument();\n      712 |     expect(\n      713 |       queryByRole('row', { name: 'Deployment Target kubernetes' }),\n      714 |     ).toBeInTheDocument();\nTests:       1 failed, 12 passed, 13 total\nThe row name for a boolean value is not `Enable Monitoring Yes`: assert the value as ReviewState actually renders it (see ReviewState.tsx, which passes the raw value to the metadata table), and prefer screen queries.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "plugins/scaffolder-react/src/next/components/ReviewState/util.ts"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "problem": "Unit U14 did not apply (verify_failed after 3 attempts; the file is back to its pre-run state). Add the planned describe('cross-step conditional fields') block (visibility, conditional required validation, back-navigation cleanup) after the existing onCreate assertion, and import screen from @testing-library/react. Last attempt failed: CI=true yarn test plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\n      1069 |         screen.getByRole('button', { name: 'Review' }),\n      1070 |       ).toBeInTheDocument();\n    > 1071 |       expect(screen.getByText(/required property/i)).toBeInTheDocument();\n      1072 |     });\n      1073 |\n      1074 |     it('should remove step 2 conditional field from Review and onCreate after going back to step 1 and unsetting the flag', async () => {\nTests:       1 failed, 1 skipped, 20 passed, 22 total\nThe required-validation test asserts screen.getByText(/required property/i) right after clicking Review; RJSF errors render asynchronously and their text depends on the Stepper error list (showErrorList=\"top\") — use await screen.findBy* and match the error the form really shows, and assert the Review step did not open.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "plugins/scaffolder-react/src/next/components/Stepper/utils.ts"
+    ]
+  }
+]

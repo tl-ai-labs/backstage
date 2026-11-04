@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,201 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditional fields', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/');
+    });
+
+    const createCrossStepManifest = (): TemplateParameterSchema => ({
+      title: 'Cross-Step Conditional Form',
+      steps: [
+        {
+          title: 'Step 1',
+          schema: {
+            type: 'object',
+            properties: {
+              isMobileSdk: {
+                type: 'boolean',
+                title: 'Is this a mobile SDK?',
+              },
+            },
+          },
+        },
+        {
+          title: 'Step 2',
+          schema: {
+            type: 'object',
+            properties: {},
+            if: {
+              properties: {
+                isMobileSdk: { const: true },
+              },
+            },
+            then: {
+              properties: {
+                sdkPlatform: {
+                  type: 'string',
+                  title: 'SDK Platform',
+                },
+              },
+              required: ['sdkPlatform'],
+            },
+          },
+        },
+      ],
+    });
+
+    it('should show step 2 conditional field only when step 1 flag is set', async () => {
+      const manifest = createCrossStepManifest();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        screen.queryByRole('textbox', { name: /SDK Platform/i }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        screen.getByRole('textbox', { name: /SDK Platform/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should enforce required validation on step 2 conditional field only when step 1 flag is set', async () => {
+      const manifest = createCrossStepManifest();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
+        </SecretsContextProvider>,
+      );
+
+      // With step 1 flag unset, advancing to Review succeeds without filling SDK Platform
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+
+      // Go back to step 1 and set the flag
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      const sdkInput = screen.getByRole('textbox', { name: /SDK Platform/i });
+      expect(sdkInput).toBeRequired();
+
+      // Submitting step 2 without filling required SDK Platform stays on step 2
+      await act(async () => {
+        fireEvent.submit(sdkInput.closest('form')!);
+      });
+
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Review' }),
+      ).toBeInTheDocument();
+    });
+
+    it('should remove step 2 conditional field from Review and onCreate after going back to step 1 and unsetting the flag', async () => {
+      const manifest = createCrossStepManifest();
+      const onCreate = jest.fn();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={onCreate} />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.change(
+          screen.getByRole('textbox', { name: /SDK Platform/i }),
+          {
+            target: { value: 'iOS' },
+          },
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(screen.getByRole('cell', { name: 'iOS' })).toBeInTheDocument();
+
+      // Navigate back to step 1 and unset the flag
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.queryByRole('cell', { name: 'iOS' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({
+        isMobileSdk: false,
+      });
     });
   });
 });

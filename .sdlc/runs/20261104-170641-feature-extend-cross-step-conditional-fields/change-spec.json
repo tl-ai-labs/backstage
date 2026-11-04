@@ -1,0 +1,1416 @@
+{
+  "header": {
+    "conventions": [
+      "Format with Prettier using @backstage/cli/config/prettier (single quotes, trailing commas, 2-space indentation, 80-col print width).",
+      "Retain existing Apache-2.0 copyright headers and years on edited files; do not alter license comments.",
+      "Import types and values using Backstage package and relative import conventions matching the surrounding module.",
+      "In React Testing Library tests, prefer screen queries and findBy* for async assertions, and never introduce data-testid attributes.",
+      "Documentation in docs/ must use U.S. English, meaningful parameter names (not foo/bar/baz), bold for UI labels, and yaml code fences."
+    ],
+    "decisions": [
+      {
+        "topic": "Cross-step conditional schema evaluation strategy",
+        "choice": "Resolve conditional JSON Schema constructs (dependencies, if/then/else, allOf, and conditional oneOf/anyOf) against accumulated stepsState in Stepper/utils.ts and reuse across Stepper, createAsyncValidators, ReviewState, and findSchemaForKey.",
+        "rejected": [
+          "Injecting earlier step properties into currentStep.schema.properties for RJSF to evaluate",
+          "Relying on raw JSONSchema Draft07 getSchema with unmodified formData"
+        ],
+        "reason": "Injecting earlier step properties into currentStep.schema.properties causes RJSF to re-render earlier steps' inputs in the active step, while raw JSONSchema Draft07 treats unset undefined properties as satisfying if: { properties: { flag: { const: true } } } when required is omitted."
+      },
+      {
+        "topic": "Unset boolean and optional property semantics in cross-step conditions",
+        "choice": "When evaluating condition predicates, populate schema default values for undefined fields, treat unset boolean properties (undefined) as false for boolean const/not comparisons, and require positive property conditions (such as const or enum without not) to match a defined value.",
+        "rejected": [
+          "Mutating stepsState to replace undefined with false on step submission"
+        ],
+        "reason": "Existing Stepper behavior and tests require untouched optional fields to remain present with undefined values in stepsState while preventing if: { properties: { flag: { const: true } } } from evaluating to true when flag is undefined."
+      },
+      {
+        "topic": "Pruning stale conditional values on back-navigation",
+        "choice": "Compare all property keys defined across template steps (including conditional branches) against the active resolved property keys for the current stepsState, and omit keys that belong only to inactive conditional branches when advancing steps, rendering ReviewState, or calling onCreate.",
+        "rejected": [
+          "Enabling RJSF omitExtraData and liveOmit on the per-step Form"
+        ],
+        "reason": "RJSF omitExtraData only sees the active step's schema and would strip values collected in earlier steps from the shared stepsState."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "lint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "format",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 180
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test-suite",
+        "run": "CI=true yarn test plugins/scaffolder-react plugins/scaffolder"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Extracts uiSchema properties from step schemas and resolves conditional JSON Schema branches (dependencies, if/then/else, allOf, oneOf, anyOf) against accumulated formData.",
+      "rules": [
+        "1. In extractUiSchema, when items is an object, reuse uiSchema.items if it is already an object instead of overwriting it, then recurse into items.",
+        "2. Export type ResolveSchemaOptions = { earlierStepKeys?: Set<string>; booleanKeys?: Set<string> }.",
+        "3. Export function isConditionOnlyProperty(propKey: string, propSchema: JsonObject, options?: { depKey?: string; baseProperties?: JsonObject; earlierStepKeys?: Set<string> }): boolean that returns true when options?.depKey === propKey, or 'not' in propSchema, or 'const' in propSchema, or (!('type' in propSchema) && !('title' in propSchema) && !('ui:field' in propSchema) && !('ui:widget' in propSchema) && !('properties' in propSchema) && !('items' in propSchema)), or (Boolean(options?.earlierStepKeys?.has(propKey)) && !(options?.baseProperties && propKey in options.baseProperties) && 'enum' in propSchema && !('title' in propSchema)), and false otherwise.",
+        "4. Define helper hasDependencyValue(val: JsonValue | undefined): boolean returning val !== undefined && val !== null && val !== false && val !== '' && (!Array.isArray(val) || val.length > 0).",
+        "5. Define helper matchesPropertyCondition(propKey: string, propCond: JsonObject, data: JsonObject, booleanKeys: Set<string>): boolean that evaluates val = data[propKey] with isBooleanProp = booleanKeys.has(propKey) and effectiveVal = val === undefined && isBooleanProp ? false : val: handle propCond.not by negation (returning true if only 'not'/'type' keys exist and inner condition is false), propCond.allOf/anyOf/oneOf recursively, propCond.const via lodash isEqual(effectiveVal, propCond.const), propCond.enum via effectiveVal !== undefined && propCond.enum.some(item => isEqual(effectiveVal, item)), nested propCond.properties/required via isObject(effectiveVal) && matchesCondition(propCond, effectiveVal, booleanKeys), and any remaining JSON Schema keywords by returning val !== undefined && new JSONSchema({ type: 'object', properties: { [propKey]: propCond }, required: [propKey] }).validate({ [propKey]: effectiveVal }).length === 0.",
+        "6. Define helper matchesCondition(cond: JsonObject, data: JsonObject, booleanKeys: Set<string>): boolean that checks cond.not, cond.allOf, cond.anyOf, cond.oneOf, cond.required (every required key not in cond.properties must satisfy hasDependencyValue(data[reqKey])), and cond.properties (every object entry must satisfy matchesPropertyCondition).",
+        "7. Export function resolveConditionalSchema(schema: JsonObject, formData: JsonObject, options?: ResolveSchemaOptions): JsonObject that clones schema, populates effectiveData with defined values from formData plus default values from schema.properties when formData[k] === undefined, tracks booleanKeys for type === 'boolean' properties, and resolves allOf, if/then/else, dependencies (array required list when hasDependencyValue, or object dependency with oneOf/anyOf/allOf/if/properties), and conditional top-level oneOf/anyOf (where at least one branch has if or a property matching isConditionOnlyProperty).",
+        "8. When merging an active branch in resolveConditionalSchema, recursively resolve the branch first, merge non-condition properties (where !isConditionOnlyProperty) into resolvedProperties (updating effectiveData with branch property defaults when undefined and booleanKeys for boolean properties), add branch required keys to resolvedRequired only when reqKey !== depKey and (reqKey in resolvedProperties || !options?.earlierStepKeys?.has(reqKey)), delete resolved allOf/if/then/else/dependencies and conditional oneOf/anyOf keys, and recursively resolve nested object properties in resolvedProperties while leaving array items untouched.",
+        "9. Export function collectAllSchemaPropertyKeys(schema: JsonObject, earlierStepKeys?: Set<string>, depKey?: string): Set<string> that collects all non-condition property keys (where !isConditionOnlyProperty) across schema.properties, schema.then, schema.else, schema.allOf, schema.oneOf, schema.anyOf, and schema.dependencies."
+      ],
+      "exports": [
+        {
+          "name": "extractSchemaFromStep",
+          "kind": "function",
+          "params": [
+            {
+              "name": "inputStep",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "{ uiSchema: UiSchema; schema: JsonObject }"
+        },
+        {
+          "name": "createFieldValidation",
+          "kind": "function",
+          "params": [],
+          "returns": "FieldValidation"
+        },
+        {
+          "name": "isConditionOnlyProperty",
+          "kind": "function",
+          "params": [
+            {
+              "name": "propKey",
+              "type": "string"
+            },
+            {
+              "name": "propSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "options?",
+              "type": "{ depKey?: string; baseProperties?: JsonObject; earlierStepKeys?: Set<string> }"
+            }
+          ],
+          "returns": "boolean"
+        },
+        {
+          "name": "resolveConditionalSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formData",
+              "type": "JsonObject"
+            },
+            {
+              "name": "options?",
+              "type": "ResolveSchemaOptions"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "collectAllSchemaPropertyKeys",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "earlierStepKeys?",
+              "type": "Set<string>"
+            },
+            {
+              "name": "depKey?",
+              "type": "string"
+            }
+          ],
+          "returns": "Set<string>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 18,
+          "first_line": "import { JsonObject } from '@backstage/types';",
+          "last_line": "import { FieldValidation, UiSchema } from '@rjsf/utils';",
+          "rule": "Import JsonObject and JsonValue from @backstage/types, Draft07 as JSONSchema from json-schema-library, isEqual from lodash, stringify and parse from flatted, and FieldValidation and UiSchema from @rjsf/utils."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 71,
+          "to": 75,
+          "first_line": "if (isObject(items)) {",
+          "last_line": "}",
+          "rule": "Preserve existing uiSchema.items object if already present before calling extractUiSchema(items, uiSchema.items as JsonObject)."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 140,
+          "to": 149,
+          "first_line": "export const createFieldValidation = (): FieldValidation => {",
+          "last_line": "};",
+          "rule": "Keep createFieldValidation and add ResolveSchemaOptions, isConditionOnlyProperty, resolveConditionalSchema, and collectAllSchemaPropertyKeys."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          1,
+          150
+        ],
+        "reason": "Existing schema extraction implementation and style"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Preserves conditional schema keywords on each step while filtering feature-flagged properties across top-level and conditional branches.",
+      "rules": [
+        "1. Define a recursive helper filterSchemaByFeatureFlags(schemaNode: JsonObject, uiSchema: UiSchema, isActive: (flag: string) => boolean): JsonObject that filters schemaNode.properties entries by checking uiSchema[key]?.['ui:backstage']?.featureFlag, removes filtered-out property keys from schemaNode.required if Array.isArray(schemaNode.required), and recursively filters object nodes in dependencies, then, else, allOf, oneOf, and anyOf.",
+        "2. When step.schema has no properties and no conditional keywords (dependencies, if, allOf, oneOf, anyOf), set strippedSchema.schema.properties = {} so empty object steps keep properties: {}, while steps with only dependencies or conditional blocks preserve their structure."
+      ],
+      "exports": [
+        {
+          "name": "useTemplateSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "manifest",
+              "type": "TemplateParameterSchema"
+            }
+          ],
+          "returns": "{ steps: ParsedTemplateSchema[]; presentation?: TemplatePresentationV1beta3 }"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 88,
+          "first_line": ".map(step => {",
+          "last_line": "});",
+          "rule": "Filter feature-flagged properties in top-level properties and recursively inside dependencies, then, else, allOf, oneOf, and anyOf while preserving conditional keywords and step structure."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [
+          1,
+          95
+        ],
+        "reason": "Existing hook structure and feature flag filtering pattern"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            135
+          ],
+          "reason": "Uses extractSchemaFromStep output shape"
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-2",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Provides step schema resolution across steps and prunes inactive conditional field values from stepsState.",
+      "rules": [
+        "1. Re-export resolveConditionalSchema and collectAllSchemaPropertyKeys from '../../lib/schema'.",
+        "2. Export function resolveStepSchema(stepSchema: JsonObject, steps: ParsedTemplateSchema[], activeStep: number, formData: JsonObject): JsonObject that collects earlierStepKeys from steps.slice(0, activeStep) using collectAllSchemaPropertyKeys, collects booleanKeys (properties with type === 'boolean') and default values for undefined formData keys from steps.slice(0, activeStep + 1), and returns resolveConditionalSchema(stepSchema, effectiveFormData, { earlierStepKeys, booleanKeys }).",
+        "3. Export function pruneInactiveStepsState(steps: ParsedTemplateSchema[], state: Record<string, JsonValue>): Record<string, JsonValue> that collects allDefinedKeys (via collectAllSchemaPropertyKeys on each step.mergedSchema) and activeDefinedKeys (keys in resolveConditionalSchema(step.mergedSchema, state, { earlierStepKeys, booleanKeys }).properties for each step), omits any top-level key k from state where allDefinedKeys.has(k) && !activeDefinedKeys.has(k), and recursively prunes inactive conditional sub-keys inside nested object values."
+      ],
+      "exports": [
+        {
+          "name": "hasErrors",
+          "kind": "function",
+          "params": [
+            {
+              "name": "errors?",
+              "type": "FormValidation"
+            }
+          ],
+          "returns": "boolean"
+        },
+        {
+          "name": "isObject",
+          "kind": "function",
+          "params": [
+            {
+              "name": "value",
+              "type": "JsonValue | undefined"
+            }
+          ],
+          "returns": "value is JsonObject"
+        },
+        {
+          "name": "resolveConditionalSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formData",
+              "type": "JsonObject"
+            },
+            {
+              "name": "options?",
+              "type": "ResolveSchemaOptions"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "collectAllSchemaPropertyKeys",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "earlierStepKeys?",
+              "type": "Set<string>"
+            },
+            {
+              "name": "depKey?",
+              "type": "string"
+            }
+          ],
+          "returns": "Set<string>"
+        },
+        {
+          "name": "resolveStepSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "steps",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "activeStep",
+              "type": "number"
+            },
+            {
+              "name": "formData",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "pruneInactiveStepsState",
+          "kind": "function",
+          "params": [
+            {
+              "name": "steps",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "state",
+              "type": "Record<string, JsonValue>"
+            }
+          ],
+          "returns": "Record<string, JsonValue>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 18,
+          "first_line": "import type { JsonObject, JsonValue } from '@backstage/types';",
+          "last_line": "import { FormValidation } from './createAsyncValidators';",
+          "rule": "Import JsonObject and JsonValue from @backstage/types, FieldValidation from @rjsf/utils, type ParsedTemplateSchema from ../../hooks/useTemplateSchema, collectAllSchemaPropertyKeys, resolveConditionalSchema, and type ResolveSchemaOptions from ../../lib/schema, and type FormValidation from ./createAsyncValidators."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 48,
+          "first_line": "export function isObject(value: JsonValue | undefined): value is JsonObject {",
+          "last_line": "}",
+          "rule": "Keep isObject, re-export resolveConditionalSchema and collectAllSchemaPropertyKeys, and implement resolveStepSchema and pruneInactiveStepsState."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "lines": [
+          1,
+          49
+        ],
+        "reason": "Existing Stepper utility module style"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            150
+          ],
+          "reason": "Imports resolveConditionalSchema and collectAllSchemaPropertyKeys"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+          "lines": [
+            27,
+            33
+          ],
+          "reason": "Imports ParsedTemplateSchema interface"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-7",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves conditional branches in rootSchema against accumulated formData before running custom field validators.",
+      "rules": [
+        "1. Import resolveConditionalSchema alongside isObject from './utils'.",
+        "2. In validate, resolve const resolvedSchema = resolveConditionalSchema(rootSchema, formData) and pass resolvedSchema to new JSONSchema(resolvedSchema).",
+        "3. In the loop over Object.entries(current), when pathPrefix === '#' and isObject(resolvedSchema.properties) and !(key in resolvedSchema.properties), continue so keys from earlier steps or inactive conditional branches are not validated against synthesized fallback schemas."
+      ],
+      "exports": [
+        {
+          "name": "createAsyncValidators",
+          "kind": "function",
+          "params": [
+            {
+              "name": "rootSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "validators",
+              "type": "Record<string, undefined | CustomFieldValidator<unknown, unknown>>"
+            },
+            {
+              "name": "context",
+              "type": "{ apiHolder: ApiHolder }"
+            }
+          ],
+          "returns": "(formData: JsonObject) => Promise<FormValidation>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "import { isObject } from './utils';",
+          "rule": "Import isObject and resolveConditionalSchema from './utils'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 58,
+          "to": 58,
+          "first_line": "const parsedSchema = new JSONSchema(rootSchema);",
+          "rule": "Resolve rootSchema against formData via resolveConditionalSchema(rootSchema, formData) before constructing JSONSchema."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 85,
+          "to": 94,
+          "first_line": "for (const [key, value] of Object.entries(current)) {",
+          "last_line": "}",
+          "rule": "Skip top-level keys not present in resolvedSchema.properties when resolvedSchema.properties is an object, before looking up definitionInSchema."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "lines": [
+          1,
+          180
+        ],
+        "reason": "Existing async validator implementation"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+          "lines": [
+            1,
+            49
+          ],
+          "reason": "Uses isObject and resolveConditionalSchema from ./utils"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U03"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves cross-step and same-step conditional schemas across dependencies, if/then/else, allOf, oneOf, and anyOf when locating the step schema for a key.",
+      "rules": [
+        "1. Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'.",
+        "2. In findSchemaForKey, collect booleanKeys (properties with type === 'boolean') across all schemas and maintain earlierStepKeys = new Set<string>() as steps are traversed.",
+        "3. For each step, compute resolvedSchema = resolveConditionalSchema(step.mergedSchema, (formState ?? {}) as JsonObject, { earlierStepKeys, booleanKeys }), add collectAllSchemaPropertyKeys(step.mergedSchema, earlierStepKeys) to earlierStepKeys, and query new JSONSchema(resolvedSchema).getSchema({ pointer: `#/${key}` }) without passing data so json-schema-library only matches keys defined in the active resolved schema and never synthesizes fallback schemas from formState.",
+        "4. Return step when res is defined and !(isJsonObject(res) && res.type === 'error'); return null if no step matches."
+      ],
+      "exports": [
+        {
+          "name": "findSchemaForKey",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "ParsedTemplateSchema | null"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 20,
+          "first_line": "import { JsonObject, JsonValue } from '@backstage/types';",
+          "last_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Add import of collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 35,
+          "to": 76,
+          "first_line": "export function findSchemaForKey(",
+          "last_line": "}",
+          "rule": "Resolve each step's mergedSchema with resolveConditionalSchema against formState and check draft.getSchema({ pointer: `#/${key}` }) without data."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "lines": [
+          1,
+          76
+        ],
+        "reason": "Existing ReviewState utility module"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            150
+          ],
+          "reason": "Uses resolveConditionalSchema and collectAllSchemaPropertyKeys"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+          "lines": [
+            27,
+            33
+          ],
+          "reason": "Uses ParsedTemplateSchema type"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02"
+      ],
+      "covers": [
+        "FR-8",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves conditional schemas when formatting review rows and omits inactive conditional template fields from the ReviewState table.",
+      "rules": [
+        "1. Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'.",
+        "2. In processSchema, resolve schema.mergedSchema via resolveConditionalSchema(schema.mergedSchema, formState) before constructing new JSONSchema(...) so review options (title, ui:backstage.review, enumNames, password/Secret masking) are found for fields inside conditional branches.",
+        "3. In ReviewState, collect allKnownKeys across props.schemas using collectAllSchemaPropertyKeys on each step.mergedSchema; when findSchemaForKey returns null for a key that is in allKnownKeys, return [] to omit the inactive conditional field, while still returning [[formatKey(key), value]] when key is not in allKnownKeys (e.g. when schemas is empty)."
+      ],
+      "exports": [
+        {
+          "name": "ReviewState",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "ReviewStateProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 20,
+          "first_line": "import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';",
+          "last_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 37,
+          "to": 41,
+          "first_line": "const parsedSchema = new JSONSchema(schema.mergedSchema);",
+          "last_line": "});",
+          "rule": "Pass resolveConditionalSchema(schema.mergedSchema, formState) to new JSONSchema."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 92,
+          "to": 102,
+          "first_line": "export const ReviewState = (props: ReviewStateProps) => {",
+          "last_line": ");",
+          "rule": "Filter out keys that belong to allKnownKeys of props.schemas but are not active in findSchemaForKey, while keeping unknown keys when schemas is empty or does not define them."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "lines": [
+          1,
+          110
+        ],
+        "reason": "Existing ReviewState component"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+          "lines": [
+            22,
+            76
+          ],
+          "reason": "Uses isJsonObject, formatKey, and findSchemaForKey"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            150
+          ],
+          "reason": "Uses resolveConditionalSchema and collectAllSchemaPropertyKeys"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02",
+        "U05"
+      ],
+      "covers": [
+        "FR-9",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Evaluates active step conditional schemas against stepsState without re-rendering earlier-step fields, and prunes inactive conditional values on step progression, review, and creation.",
+      "rules": [
+        "1. Import hasErrors, pruneInactiveStepsState, and resolveStepSchema from './utils'.",
+        "2. Compute currentStepSchema via useMemo calling resolveStepSchema(currentStep.schema, steps, activeStep, stepsState) when currentStep?.schema is present, and pass schema={currentStepSchema} to <Form>.",
+        "3. Compute activeStepsState via useMemo calling pruneInactiveStepsState(steps, stepsState).",
+        "4. In handleNext, compute const nextState = pruneInactiveStepsState(steps, { ...stepsState, ...formData }), pass nextState to await validation(nextState), and call setStepsState(nextState).",
+        "5. Pass activeStepsState to onCreate(activeStepsState) in handleCreate, formData={activeStepsState} on <ReviewStepComponent>, and formState={activeStepsState} on <ReviewStateComponent>."
+      ],
+      "exports": [
+        {
+          "name": "Stepper",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepperProps",
+              "type": "StepperProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "import { hasErrors } from './utils';",
+          "rule": "Import hasErrors, pruneInactiveStepsState, and resolveStepSchema from './utils'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 175,
+          "to": 175,
+          "first_line": "const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });",
+          "rule": "Keep currentStep and memoize currentStepSchema (via resolveStepSchema) and activeStepsState (via pruneInactiveStepsState)."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 194,
+          "to": 222,
+          "first_line": "const handleNext = useCallback(",
+          "last_line": ");",
+          "rule": "Compute nextState = pruneInactiveStepsState(steps, { ...stepsState, ...formData }), validate nextState, and setStepsState(nextState)."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 250,
+          "to": 258,
+          "first_line": "const handleCreate = useCallback(async () => {",
+          "last_line": "}, [analytics, createLabel, onCreate, stepsState]);",
+          "rule": "Callawait onCreate(activeStepsState) with activeStepsState in the dependency array."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 298,
+          "to": 298,
+          "first_line": "schema={currentStep.schema}",
+          "rule": "Pass schema={currentStepSchema} to Form."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 329,
+          "to": 339,
+          "first_line": "<ReviewStepComponent",
+          "last_line": "<ReviewStateComponent formState={stepsState} schemas={steps} />",
+          "rule": "Pass formData={activeStepsState} to ReviewStepComponent and formState={activeStepsState} to ReviewStateComponent."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "lines": [
+          114,
+          362
+        ],
+        "reason": "Existing Stepper component implementation"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+          "lines": [
+            1,
+            49
+          ],
+          "reason": "Uses hasErrors, resolveStepSchema, and pruneInactiveStepsState"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+          "lines": [
+            43,
+            55
+          ],
+          "reason": "Uses createAsyncValidators"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+          "lines": [
+            26,
+            30
+          ],
+          "reason": "Uses ReviewState and ReviewStateProps"
+        }
+      ],
+      "depends_on": [
+        "U02",
+        "U03",
+        "U04",
+        "U06"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-7",
+        "FR-10",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Verifies extractSchemaFromStep extracts ui:* options from cross-step conditional dependencies and if/then/else schemas.",
+      "rules": [
+        "1. Add a test under describe('extractSchemaFromStep') verifying that when a step schema defines dependencies with allOf/if/then/else referencing a property from an earlier step (not in the step's own properties) and includes ui:field, ui:options, and ui:widget inside the conditional branches, extractSchemaFromStep extracts those ui:* keys into uiSchema and removes them from schema."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 596,
+          "to": 601,
+          "first_line": "expect(extractSchemaFromStep(inputSchema)).toEqual({",
+          "last_line": "});",
+          "rule": "Keep the existing assertion and add a test for cross-step conditional uiSchema extraction."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "lines": [
+          520,
+          602
+        ],
+        "reason": "Existing extractSchemaFromStep conditional schema test style"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            135
+          ],
+          "reason": "Tests extractSchemaFromStep"
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-1",
+        "AC-4",
+        "NFR-1",
+        "NFR-2"
+      ],
+      "tests": [
+        {
+          "name": "transforms cross-step conditional dependencies and if/then/else schema",
+          "given": "A step schema with dependencies and if/then/else referencing an earlier step property and containing ui:widget and ui:field on conditional properties",
+          "expect": "extractSchemaFromStep extracts the ui:* properties into uiSchema and strips them from the returned schema"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Verifies useTemplateSchema preserves conditional keywords on conditional-only steps and filters feature-flagged properties inside conditional branches.",
+      "rules": [
+        "1. Add a test under describe('FeatureFlags') verifying that a step with cross-step if/then/else and dependencies retains its conditional structure and filters out properties inside conditional branches whose ui:backstage.featureFlag is inactive."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 386,
+          "to": 391,
+          "first_line": "expect(second.schema).toEqual({",
+          "last_line": "});",
+          "rule": "Keep existing assertion and add a test case for cross-step conditional steps with feature-flagged conditional properties."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "lines": [
+          280,
+          391
+        ],
+        "reason": "Existing useTemplateSchema hook test patterns"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+          "lines": [
+            41,
+            94
+          ],
+          "reason": "Tests useTemplateSchema"
+        }
+      ],
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "FR-2",
+        "AC-4",
+        "NFR-1",
+        "NFR-2"
+      ],
+      "tests": [
+        {
+          "name": "should preserve cross-step if/then/else and filter feature-flagged conditional properties",
+          "given": "A two-step manifest where step 2 defines conditional properties inside if/then/else with one property guarded by an inactive ui:backstage.featureFlag",
+          "expect": "useTemplateSchema preserves if/then/else on step 2 and removes the disabled feature-flagged property and its required entry"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Tests resolveConditionalSchema, resolveStepSchema, and pruneInactiveStepsState across cross-step dependencies and if/then/else schemas.",
+      "rules": [
+        "1. Import hasErrors, resolveConditionalSchema, resolveStepSchema, and pruneInactiveStepsState from './utils', and type ParsedTemplateSchema from '../../hooks/useTemplateSchema'.",
+        "2. Add describe('resolveStepSchema') testing cross-step dependencies (oneOf and allOf/if/then) and top-level if/then/else when the earlier step boolean/enum value is undefined, false, or true, verifying that active conditional properties and required constraints are merged while earlier-step condition properties are not added to the active step's properties.",
+        "3. Add describe('pruneInactiveStepsState') testing that conditional properties from inactive branches are omitted from state when an earlier step's answer changes to false or undefined, while active properties and undefined unconditional properties are retained."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "import { hasErrors } from './utils';",
+          "rule": "Import hasErrors, pruneInactiveStepsState, resolveConditionalSchema, and resolveStepSchema from './utils' and type ParsedTemplateSchema from '../../hooks/useTemplateSchema'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 90,
+          "to": 92,
+          "first_line": "expect(hasErrors(errors)).toBe(true);",
+          "last_line": "});",
+          "rule": "Keep existing assertion and add describe blocks for resolveStepSchema and pruneInactiveStepsState."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+        "lines": [
+          1,
+          92
+        ],
+        "reason": "Existing Stepper utils unit test file"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+          "lines": [
+            1,
+            49
+          ],
+          "reason": "Tests resolveStepSchema, resolveConditionalSchema, and pruneInactiveStepsState"
+        }
+      ],
+      "depends_on": [
+        "U02",
+        "U03"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-7",
+        "AC-4",
+        "NFR-1",
+        "NFR-2"
+      ],
+      "tests": [
+        {
+          "name": "resolveStepSchema evaluates cross-step dependencies and if/then/else without duplicating earlier-step properties",
+          "given": "A 2-step schema where step 1 defines isMobileSdk and step 2 defines sdkPlatform conditionally via dependencies or if/then",
+          "expect": "sdkPlatform and required: ['sdkPlatform'] are included only when isMobileSdk is true, not when undefined or false, and isMobileSdk is never added to step 2 properties"
+        },
+        {
+          "name": "pruneInactiveStepsState removes values of conditional fields whose cross-step condition is no longer satisfied",
+          "given": "A 2-step schema and state containing a value for step 2's conditional sdkPlatform while step 1's isMobileSdk is false",
+          "expect": "pruneInactiveStepsState omits sdkPlatform from the returned state while keeping isMobileSdk and unconditional fields"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Verifies createAsyncValidators runs custom field validators on cross-step conditional fields when active and skips them when inactive.",
+      "rules": [
+        "1. Add a test under describe('createAsyncValidators') where a step schema defines a custom ui:field inside a cross-step conditional branch (dependencies and if/then referencing a flag from an earlier step not in the step's base properties), asserting that the custom validator is called when the flag is true in formData and not called when the flag is false or undefined."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 539,
+          "to": 541,
+          "first_line": "expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();",
+          "last_line": "});",
+          "rule": "Keep existing assertion and add a test for cross-step conditional custom field validation."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+        "lines": [
+          465,
+          541
+        ],
+        "reason": "Existing createAsyncValidators conditional test style"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+          "lines": [
+            43,
+            179
+          ],
+          "reason": "Tests createAsyncValidators"
+        }
+      ],
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-6",
+        "AC-4",
+        "NFR-1",
+        "NFR-2"
+      ],
+      "tests": [
+        {
+          "name": "should validate custom field inside cross-step conditional branch only when condition is satisfied",
+          "given": "A step schema with a custom ui:field inside if/then and dependencies referencing an earlier step flag",
+          "expect": "The custom validator runs when the flag in formData is true and is skipped when the flag is false or undefined"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Verifies findSchemaForKey resolves cross-step dependencies, if/then/else, and allOf conditions and returns null for inactive conditional keys.",
+      "rules": [
+        "1. Add tests under describe('findSchemaForKey') verifying that findSchemaForKey returns null for a conditional dependency or if/then/else key when the cross-step condition in formState is not satisfied (false or undefined, even if a stale value for the key exists in formState), and returns the matching step schema when the cross-step if/then/else or allOf condition is satisfied."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 169,
+          "to": 173,
+          "first_line": "it('should return the schema for an object key', () => {",
+          "last_line": "});",
+          "rule": "Keep existing test and add tests for cross-step if/then/else and inactive conditional keys."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "lines": [
+          83,
+          173
+        ],
+        "reason": "Existing findSchemaForKey unit tests"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+          "lines": [
+            35,
+            76
+          ],
+          "reason": "Tests findSchemaForKey"
+        }
+      ],
+      "depends_on": [
+        "U02",
+        "U05"
+      ],
+      "covers": [
+        "FR-8",
+        "AC-4",
+        "NFR-1",
+        "NFR-2"
+      ],
+      "tests": [
+        {
+          "name": "should return the schema for a key in cross-step if/then/else when active and null when inactive",
+          "given": "Multi-step schemas where step 2 defines a property inside if/then referencing a step 1 property",
+          "expect": "findSchemaForKey returns step 2 when the step 1 condition in formState is met and null when unmet or undefined"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Verifies ReviewState formats active cross-step conditional fields and omits inactive conditional fields.",
+      "rules": [
+        "1. Add tests under describe('ReviewState') verifying that cross-step conditional fields defined via if/then/else or dependencies are rendered with their review metadata (such as title or ui:backstage.review.name) when the earlier step's condition is met, and omitted from the rendered table when the earlier step's condition is not met."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 613,
+          "to": 616,
+          "first_line": "// handles options for property in dependencies in third schema",
+          "last_line": "});",
+          "rule": "Keep existing assertion and add tests for active and inactive cross-step conditional fields in ReviewState."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "lines": [
+          512,
+          616
+        ],
+        "reason": "Existing ReviewState multi-schema test style"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+          "lines": [
+            92,
+            110
+          ],
+          "reason": "Tests ReviewState component"
+        }
+      ],
+      "depends_on": [
+        "U02",
+        "U06"
+      ],
+      "covers": [
+        "FR-9",
+        "AC-4",
+        "NFR-1",
+        "NFR-2"
+      ],
+      "tests": [
+        {
+          "name": "should display active cross-step conditional fields and omit inactive ones",
+          "given": "Multi-step schemas where step 2 has cross-step if/then and dependencies referencing step 1",
+          "expect": "ReviewState renders the conditional field row with its configured review title when active and omits the row when inactive"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Verifies end-to-end cross-step conditional field visibility, conditional required validation, and back-navigation cleanup in Stepper.",
+      "rules": [
+        "1. Import screen alongside act, fireEvent, and waitFor from '@testing-library/react'.",
+        "2. Add a describe('cross-step conditional fields') block in Stepper.test.tsx with React Testing Library tests using screen queries and no data-testid attributes.",
+        "3. Test 1 (AC-1, FR-3, FR-4): Render a 2-step manifest where step 1 has boolean isMobileSdk ('Is this a mobile SDK?') and step 2 has conditional sdkPlatform ('SDK Platform') via dependencies / if-then; verify that advancing to step 2 with isMobileSdk unchecked hides 'SDK Platform', and going back to step 1, checking 'Is this a mobile SDK?', and advancing to step 2 shows 'SDK Platform' without rendering 'Is this a mobile SDK?' in step 2.",
+        "4. Test 2 (AC-2, FR-5): Verify that when 'Is this a mobile SDK?' is checked in step 1, clicking 'Review' in step 2 without filling the required 'SDK Platform' field shows a validation error and stays on step 2, whereas when 'Is this a mobile SDK?' is unchecked in step 1, clicking 'Review' in step 2 advances to the Review step without 'SDK Platform'.",
+        "5. Test 3 (AC-3, FR-7): Verify that after checking 'Is this a mobile SDK?' in step 1, filling 'SDK Platform' (e.g. 'iOS') in step 2, advancing to Review (where 'iOS' is visible), clicking 'Back' to return to step 1, unchecking 'Is this a mobile SDK?', advancing through step 2 to Review, and clicking 'Create', 'iOS' is removed from the Review table and onCreate is called with { isMobileSdk: false } without sdkPlatform."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19,
+          "first_line": "import { act, fireEvent, waitFor } from '@testing-library/react';",
+          "rule": "Import act, fireEvent, screen, and waitFor from '@testing-library/react'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 917,
+          "to": 924,
+          "first_line": "expect(onCreate).toHaveBeenCalledWith(",
+          "last_line": "});",
+          "rule": "Keep existing assertion and add describe('cross-step conditional fields') covering visibility, required validation, and back-navigation cleanup."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "lines": [
+          170,
+          330
+        ],
+        "reason": "Existing Stepper multi-step and conditional test patterns"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+          "lines": [
+            92,
+            120
+          ],
+          "reason": "Tests Stepper component"
+        }
+      ],
+      "depends_on": [
+        "U07"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-7",
+        "FR-10",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "should show step 2 conditional field only when step 1 flag is set",
+          "given": "A 2-step manifest where step 2 conditionally shows SDK Platform when step 1's Is this a mobile SDK? boolean is true",
+          "expect": "SDK Platform is absent in step 2 when the step 1 checkbox is unchecked, and present in step 2 without duplicating the step 1 checkbox when checked"
+        },
+        {
+          "name": "should enforce required validation on step 2 conditional field only when step 1 flag is set",
+          "given": "A 2-step manifest where SDK Platform in step 2 is conditionally required when step 1's Is this a mobile SDK? is true",
+          "expect": "Submitting step 2 without SDK Platform fails validation when the step 1 flag is true, and succeeds advancing to Review when the step 1 flag is unset"
+        },
+        {
+          "name": "should remove step 2 conditional field from Review and onCreate after going back to step 1 and unsetting the flag",
+          "given": "A user sets the step 1 flag, fills SDK Platform in step 2, reaches Review, navigates back to step 1, unsets the flag, advances to Review, and clicks Create",
+          "expect": "SDK Platform and its value are removed from the Review step and omitted from the onCreate payload"
+        }
+      ],
+      "checks": [
+        "lint",
+        "format",
+        "test"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "docs/features/software-templates/input-examples.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents cross-step conditional fields with a worked multi-step YAML example under 'Use parameters as conditional for fields'.",
+      "rules": [
+        "1. Under '## Use parameters as conditional for fields' (after the '### Multiple conditional fields with custom ordering' code block), add a '### Conditional fields across steps' subsection explaining that `dependencies` and `if`/`then`/`else` conditions in a step can reference parameters defined in earlier steps of the wizard.",
+        "2. Include a valid multi-step `yaml` example where step 1 collects `isMobileSdk` (boolean) and step 2 uses `dependencies` with `if`/`then` on `isMobileSdk` to conditionally display and require `sdkPlatform`, using meaningful variable names and U.S. English."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 339,
+          "to": 341,
+          "first_line": "required:",
+          "last_line": "```",
+          "rule": "Keep the end of the existing yaml block and append the '### Conditional fields across steps' subsection and worked multi-step yaml example."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-templates/input-examples.md",
+        "lines": [
+          262,
+          342
+        ],
+        "reason": "Existing conditional field documentation and YAML examples"
+      },
+      "depends_on": [
+        "U07"
+      ],
+      "covers": [
+        "FR-11",
+        "AC-6",
+        "NFR-4"
+      ],
+      "checks": [
+        "format"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Adds a minor changeset for @backstage/plugin-scaffolder-react describing support for cross-step conditional fields.",
+      "rules": [
+        "1. Start with YAML frontmatter fencing `---`, `'@backstage/plugin-scaffolder-react': minor`, `---`.",
+        "2. Follow with a concise release note stating that Scaffolder form wizard steps now support cross-step conditional fields (`dependencies`, `if`/`then`/`else`, `allOf`, `oneOf`, and `anyOf`) based on answers from earlier steps, including conditional `required` validation, `ReviewState` resolution, and pruning of inactive conditional values on back-navigation."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": "docs/features/software-templates/input-examples.md",
+        "lines": [
+          1,
+          10
+        ],
+        "reason": "Markdown file with YAML frontmatter"
+      },
+      "depends_on": [
+        "U07"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-7",
+        "NFR-5"
+      ],
+      "checks": [
+        "format"
+      ]
+    }
+  ]
+}

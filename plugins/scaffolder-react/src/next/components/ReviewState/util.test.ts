@@ -170,4 +170,211 @@ describe('findSchemaForKey', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
   });
+
+  describe('cross-step conditions', () => {
+    const crossStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            enableFeature: {
+              type: 'boolean',
+            },
+            environment: {
+              type: 'string',
+              enum: ['production', 'development'],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: {
+              enableFeature: {
+                const: true,
+              },
+            },
+          },
+          then: {
+            properties: {
+              featureConfig: {
+                type: 'string',
+              },
+            },
+          },
+          else: {
+            properties: {
+              fallbackReason: {
+                type: 'string',
+              },
+            },
+          },
+          allOf: [
+            {
+              if: {
+                properties: {
+                  environment: {
+                    const: 'production',
+                  },
+                },
+              },
+              then: {
+                properties: {
+                  prodCluster: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    it('should return the schema for a key in cross-step if/then/else when active and null when inactive', () => {
+      // Condition met: enableFeature === true
+      expect(
+        findSchemaForKey('featureConfig', crossStepSchemas, {
+          enableFeature: true,
+          featureConfig: 'active-value',
+        }),
+      ).toBe(crossStepSchemas[1]);
+
+      // Else branch is inactive when condition is met
+      expect(
+        findSchemaForKey('fallbackReason', crossStepSchemas, {
+          enableFeature: true,
+          fallbackReason: 'stale-value',
+        }),
+      ).toBeNull();
+
+      // Condition not met: enableFeature === false
+      expect(
+        findSchemaForKey('featureConfig', crossStepSchemas, {
+          enableFeature: false,
+          featureConfig: 'stale-value',
+        }),
+      ).toBeNull();
+
+      // Else branch is active when condition is false
+      expect(
+        findSchemaForKey('fallbackReason', crossStepSchemas, {
+          enableFeature: false,
+          fallbackReason: 'active-value',
+        }),
+      ).toBe(crossStepSchemas[1]);
+
+      // Condition undefined (treated as false for boolean const)
+      expect(
+        findSchemaForKey('featureConfig', crossStepSchemas, {
+          featureConfig: 'stale-value',
+        }),
+      ).toBeNull();
+
+      expect(
+        findSchemaForKey('fallbackReason', crossStepSchemas, {
+          fallbackReason: 'active-value',
+        }),
+      ).toBe(crossStepSchemas[1]);
+    });
+
+    it('should return the schema for cross-step allOf conditions when satisfied and null when unsatisfied', () => {
+      expect(
+        findSchemaForKey('prodCluster', crossStepSchemas, {
+          environment: 'production',
+          prodCluster: 'prod-1',
+        }),
+      ).toBe(crossStepSchemas[1]);
+
+      expect(
+        findSchemaForKey('prodCluster', crossStepSchemas, {
+          environment: 'development',
+          prodCluster: 'stale-prod',
+        }),
+      ).toBeNull();
+
+      expect(
+        findSchemaForKey('prodCluster', crossStepSchemas, {
+          prodCluster: 'stale-prod',
+        }),
+      ).toBeNull();
+    });
+
+    it('should return null for conditional dependency key when condition in formState is not satisfied even with stale value', () => {
+      const depSchemas: ParsedTemplateSchema[] = [
+        {
+          mergedSchema: {
+            type: 'object',
+            properties: {
+              useDatabase: {
+                type: 'boolean',
+              },
+            },
+          },
+          schema: {},
+          title: 'Step 1',
+          uiSchema: {},
+        },
+        {
+          mergedSchema: {
+            type: 'object',
+            dependencies: {
+              useDatabase: {
+                oneOf: [
+                  {
+                    properties: {
+                      useDatabase: {
+                        enum: [false],
+                      },
+                    },
+                  },
+                  {
+                    properties: {
+                      useDatabase: {
+                        enum: [true],
+                      },
+                      dbHost: {
+                        type: 'string',
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          schema: {},
+          title: 'Step 2',
+          uiSchema: {},
+        },
+      ];
+
+      expect(
+        findSchemaForKey('dbHost', depSchemas, {
+          useDatabase: true,
+          dbHost: 'db.example.com',
+        }),
+      ).toBe(depSchemas[1]);
+
+      expect(
+        findSchemaForKey('dbHost', depSchemas, {
+          useDatabase: false,
+          dbHost: 'stale.example.com',
+        }),
+      ).toBeNull();
+
+      expect(
+        findSchemaForKey('dbHost', depSchemas, {
+          dbHost: 'stale.example.com',
+        }),
+      ).toBeNull();
+    });
+  });
 });
