@@ -47,6 +47,11 @@ import {
 import { scaffolderReactTranslationRef } from '../../../translation';
 import { useFormDataFromQuery, useTemplateSchema } from '../../hooks';
 import { useTransformSchemaToProps } from '../../hooks/useTransformSchemaToProps';
+import {
+  extractSchemaFromStep,
+  getSchemaPropertyKeys,
+  resolveStepSchema,
+} from '../../lib/schema';
 import { Form } from '../Form';
 import { PasswordWidget } from '../PasswordWidget/PasswordWidget';
 import { ReviewState, type ReviewStateProps } from '../ReviewState';
@@ -162,17 +167,49 @@ export const Stepper = (stepperProps: StepperProps) => {
     );
   }, [props.extensions]);
 
+  const activeStepSchema = useMemo(() => {
+    const step = steps[activeStep];
+    if (!step) {
+      return step;
+    }
+
+    const previousStepKeys = new Set<string>();
+    for (let i = 0; i < activeStep; i++) {
+      for (const key of getSchemaPropertyKeys(steps[i].mergedSchema)) {
+        previousStepKeys.add(key);
+      }
+    }
+
+    const resolvedMergedSchema = resolveStepSchema(
+      step.mergedSchema,
+      stepsState,
+      { previousStepKeys },
+    );
+    const resolvedSchema = resolveStepSchema(step.schema, stepsState, {
+      previousStepKeys,
+    });
+    const { uiSchema: resolvedUiSchema } =
+      extractSchemaFromStep(resolvedMergedSchema);
+
+    return {
+      ...step,
+      mergedSchema: resolvedMergedSchema,
+      schema: resolvedSchema,
+      uiSchema: { ...step.uiSchema, ...resolvedUiSchema },
+    };
+  }, [steps, activeStep, stepsState]);
+
   const validation = useMemo(() => {
-    return createAsyncValidators(steps[activeStep]?.mergedSchema, validators, {
+    return createAsyncValidators(activeStepSchema?.mergedSchema, validators, {
       apiHolder,
     });
-  }, [steps, activeStep, validators, apiHolder]);
+  }, [activeStepSchema, validators, apiHolder]);
 
   const handleBack = useCallback(() => {
     setActiveStep(prevActiveStep => prevActiveStep - 1);
   }, [setActiveStep]);
 
-  const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
+  const currentStep = useTransformSchemaToProps(activeStepSchema, { layouts });
 
   const {
     formContext: propFormContext,

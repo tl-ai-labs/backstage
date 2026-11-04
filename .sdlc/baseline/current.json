@@ -1,0 +1,576 @@
+{
+  "schema_version": 1,
+  "plugin_version": "0.10.1",
+  "built_at": "2026-11-04T10:40:10Z",
+  "run_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+  "git": {
+    "head": "f20fd9b598285c88401406b3812fe00d7708136c",
+    "branch": "BS-FE-08/argon4-agsdk-only",
+    "dirty": false,
+    "remotes": [
+      {
+        "name": "origin",
+        "url": "https://github.com/tl-ai-labs/backstage.git"
+      },
+      {
+        "name": "upstream",
+        "url": "https://github.com/backstage/backstage.git"
+      }
+    ],
+    "is_worktree": true,
+    "git_common_dir": "/Users/macbook/Documents/GitHub/Google-Projects/backstage/.git",
+    "tracked_files": 12364
+  },
+  "gitignore_covers_sdlc": false,
+  "sdlc_ignored_via_info_exclude": true,
+  "topology": {
+    "top_level_dirs": [
+      ".changeset",
+      ".claude",
+      ".cursor",
+      ".devcontainer",
+      ".github",
+      ".husky",
+      ".lighthouseci",
+      ".patches",
+      ".storybook",
+      ".yarn",
+      "beps",
+      "contrib",
+      "docs",
+      "docs-ui",
+      "microsite",
+      "packages",
+      "plugins",
+      "scripts",
+      "workspaces"
+    ],
+    "entry_points": [
+      "packages/app/src/index.tsx",
+      "packages/app-legacy/src/index.tsx",
+      "packages/backend/src/index.ts"
+    ],
+    "notes": "packages/* has 74 package dirs, plugins/* has 161 package dirs (depth-2 listing summarized, not enumerated)."
+  },
+  "stacks": [
+    {
+      "manifest": "package.json",
+      "stack": "node-typescript",
+      "detected_frameworks": [
+        "backstage",
+        "react",
+        "express",
+        "jest",
+        "yarn-workspaces"
+      ],
+      "notes": "Root manifest has no framework deps itself; frameworks come from workspace packages. Yarn 4.18.1, Node 22 || 24. Scaffolder frontend uses React 17/18, @material-ui/core v4, @backstage/ui, @rjsf/core 5.24.13, zod; scaffolder-backend uses express + knex + zod."
+    },
+    {
+      "manifest": "workspaces/ui/package.json",
+      "stack": "node-typescript",
+      "detected_frameworks": [
+        "backstage",
+        "yarn-workspaces"
+      ],
+      "notes": "Separate, isolated Yarn workspace with its own yarn.lock; README marks it work in progress and not in use."
+    }
+  ],
+  "test_command_proposed": "yarn test",
+  "test_command_source": "package.json#scripts.test (NODE_OPTIONS=--experimental-vm-modules backstage-cli repo test); .claude/CLAUDE.md (AGENTS.md) convention is `CI=1 yarn test <path>` from repo root, always with a path",
+  "test_command_notes": "Gate 0 must confirm. Repo convention: run `CI=1 yarn test <path>` from repo root; never run the whole suite. Type check: `yarn tsc` from root with no options. Do not run `yarn build`, `yarn changesets version` or `yarn release`.",
+  "docs_present": [
+    {
+      "path": "README.md",
+      "kind": "readme"
+    },
+    {
+      "path": "README-fr_FR.md",
+      "kind": "readme-localized"
+    },
+    {
+      "path": "README-ja_JP.md",
+      "kind": "readme-localized"
+    },
+    {
+      "path": "README-ko_kr.md",
+      "kind": "readme-localized"
+    },
+    {
+      "path": "README-zh_Hans.md",
+      "kind": "readme-localized"
+    },
+    {
+      "path": "AGENTS.md",
+      "kind": "agent-instructions"
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "kind": "claude-instructions (symlink -> ../AGENTS.md)"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "kind": "contributing"
+    },
+    {
+      "path": "STYLE.md",
+      "kind": "style-guide"
+    },
+    {
+      "path": "REVIEWING.md",
+      "kind": "review-and-changeset-guide"
+    },
+    {
+      "path": "SECURITY.md",
+      "kind": "security-policy"
+    },
+    {
+      "path": "docs/architecture-decisions/",
+      "kind": "adr"
+    },
+    {
+      "path": "beps/",
+      "kind": "design-proposals"
+    },
+    {
+      "path": "docs/contribute/doc-style-guide.md",
+      "kind": "doc-style-guide"
+    },
+    {
+      "path": "docs/contribute/project-structure.md",
+      "kind": "project-structure"
+    },
+    {
+      "path": "plugins/scaffolder/README.md",
+      "kind": "package-readme"
+    },
+    {
+      "path": "plugins/scaffolder-react/README.md",
+      "kind": "package-readme"
+    }
+  ],
+  "ai_configs_detected": [
+    {
+      "path": ".claude/",
+      "type": "claude-code-project-dir"
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "type": "claude-instructions (symlink to AGENTS.md)"
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "type": "claude-code-settings-local (presence only, not read)"
+    },
+    {
+      "path": ".claude/skills/",
+      "type": "claude-code-skills"
+    },
+    {
+      "path": "AGENTS.md",
+      "type": "agent-instructions (target of .claude/CLAUDE.md symlink)"
+    },
+    {
+      "path": ".cursor/rules/",
+      "type": "cursor-rules"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "type": "copilot-instructions"
+    }
+  ],
+  "ai_configs_absent": [
+    ".claude/settings.json",
+    "CLAUDE.md (root)",
+    "CLAUDE.local.md",
+    ".mcp.json",
+    ".cursorrules",
+    ".aider*",
+    ".continue/",
+    ".roo/",
+    "routing-policy.yaml",
+    "gemini*.yaml|json"
+  ],
+  "env_keys_by_file": {},
+  "env_keys_all": [],
+  "env_files_note": "No .env, .env.* or .env.local files exist outside node_modules/dist (.env, .env.test and .envrc are gitignored).",
+  "env_keys_referenced_in_code": [
+    "ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+    "ACTIONS_ID_TOKEN_REQUEST_URL",
+    "APPDATA",
+    "APP_CONFIG",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_CONFIG_FILE",
+    "AWS_CREDENTIAL_EXPIRATION",
+    "AWS_DEFAULT_REGION",
+    "AWS_REGION",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+    "AWS_SHARED_CREDENTIALS_FILE",
+    "AZURE_CLIENT_ID",
+    "AZURE_CLIENT_SECRET",
+    "AZURE_TENANT_ID",
+    "BACKSTAGE_APP_NAME",
+    "BACKSTAGE_CLI_BUILD_PARALLEL",
+    "BACKSTAGE_CLI_CHANNEL",
+    "BACKSTAGE_CLI_CONCURRENCY",
+    "BACKSTAGE_CLI_LINKED_WORKSPACE",
+    "BACKSTAGE_E2E_CLI_TEST",
+    "BACKSTAGE_ENV",
+    "BACKSTAGE_INSTANCE_ID",
+    "BACKSTAGE_MANIFEST_FILE",
+    "BACKSTAGE_OLD_TESTS",
+    "BACKSTAGE_TEST_DISABLE_DOCKER",
+    "BACKSTAGE_TEST_DOCKER_REGISTRY",
+    "BACKSTAGE_VERSIONS_BASE_URL",
+    "BUILD_INFO",
+    "C",
+    "CI",
+    "COMMIT_SHA_BEFORE",
+    "CONFLUENCE_TOKEN",
+    "COREPACK_ROOT",
+    "CUSTOM_VAR",
+    "DEBUG",
+    "DEBUG_CLI",
+    "DISCORD_PULL_REQUESTS_WEBHOOK",
+    "DISCORD_WEBHOOK",
+    "DOTENV_KEY",
+    "EXPERIMENTAL_LAZY_COMPILATION",
+    "EXPERIMENTAL_TRIM_NEXT_ENTRY",
+    "FILES",
+    "FORCE_COLOR",
+    "FOSSA_API_KEY",
+    "FUNCTION_TARGET",
+    "GITHUB_ACTIONS",
+    "GITHUB_BASE_REF",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_OUTPUT",
+    "GITHUB_REF",
+    "GITHUB_TOKEN",
+    "GITHUB_WORKSPACE",
+    "GITLAB_CI",
+    "GIT_SSH",
+    "GIT_SSH_COMMAND",
+    "GOLDEN_PATH",
+    "GOOGLE_RUNTIME",
+    "HAS_REACT_DOM_CLIENT",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "HOSTNAME",
+    "ISSUE_NUMBER",
+    "KONSOLE_VERSION",
+    "KUBERNETES_CA_FILE_PATH",
+    "KUBERNETES_SERVICE_HOST",
+    "KUBERNETES_SERVICE_PORT",
+    "LEGACY_WEBPACK_BUILD",
+    "LOCALAPPDATA",
+    "LOG_LEVEL",
+    "MYSQL_CONNECTION",
+    "MY_SECRET",
+    "NM_DEBUG_LEVEL",
+    "NODE_DEBUG",
+    "NODE_ENV",
+    "NODE_OPTIONS",
+    "NODE_PATH",
+    "NO_COLOR",
+    "NPM_ID_TOKEN",
+    "OSTYPE",
+    "PATCH_BRANCH",
+    "PATCH_RELEASE_BRANCH",
+    "PATH",
+    "PATHEXT",
+    "PERFORMANCE_TEST",
+    "PERFORMANCE_TRACE",
+    "PLAYWRIGHT_URL",
+    "PNP_ALWAYS_WARN_ON_FALLBACK",
+    "PNP_DEBUG_LEVEL",
+    "PORT",
+    "POSTGRES_HOST",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_PORT",
+    "POSTGRES_USER",
+    "PR_BODY",
+    "PR_EXISTS",
+    "PR_NUMBER",
+    "PSM",
+    "Q",
+    "READABLE_STREAM",
+    "RELEASE_VERSION",
+    "REPORT",
+    "RUNNER_TEMP",
+    "SIGSTORE_ID_TOKEN",
+    "STORYBOOK_STORY_SET",
+    "SUBSTITUTE_ME",
+    "TECHDOCS_TEST_SECRET",
+    "TERM_PROGRAM",
+    "TESTING_TAR_FAKE_PLATFORM",
+    "TZ",
+    "USER",
+    "WATCH_REPORT_DEPENDENCIES",
+    "WEBSITE_AUTH_DEFAULT_PROVIDER",
+    "WEBSITE_AUTH_ENABLED",
+    "WEBSITE_AUTH_TOKEN_STORE",
+    "WEBSITE_SKU",
+    "WT_SESSION",
+    "XDG_CONFIG_HOME",
+    "XDG_DATA_HOME",
+    "YARN_CACHE_CHECKPOINT_OVERRIDE",
+    "YARN_CACHE_VERSION_OVERRIDE",
+    "YARN_CPU_OVERRIDE",
+    "YARN_ENABLE_IMMUTABLE_INSTALLS",
+    "YARN_IGNORE_NODE",
+    "YARN_IGNORE_PATH",
+    "YARN_INJECT_NPM_2FA_TOKEN",
+    "YARN_IS_TEST_ENV",
+    "YARN_LIBC_OVERRIDE",
+    "YARN_LOCKFILE_VERSION_OVERRIDE",
+    "YARN_OS_OVERRIDE",
+    "YARN_PLUGINS",
+    "YARN_ZIP_DATA_EPILOGUE",
+    "__FAKE_FS_O_FILENAME__",
+    "__MINIMATCH_TESTING_PLATFORM__"
+  ],
+  "env_keys_referenced_in_scaffolder_packages": [
+    "LOG_LEVEL",
+    "NODE_ENV"
+  ],
+  "monorepo": {
+    "type": "yarn-workspaces",
+    "workspace_globs": [
+      "packages/*",
+      "plugins/*"
+    ],
+    "package_count": 235,
+    "package_count_by_glob": {
+      "packages/*": 74,
+      "plugins/*": 161
+    },
+    "nested_isolated_workspaces": [
+      "workspaces/ui"
+    ],
+    "per_package_test_command": "CI=1 yarn test <package-or-file-path> (from repo root)",
+    "packages_listed_scope": "scaffolder-related only (plugins/scaffolder*, packages/*scaffolder*)",
+    "packages": [
+      {
+        "name": "@backstage/plugin-scaffolder",
+        "root": "plugins/scaffolder",
+        "manifest": "plugins/scaffolder/package.json",
+        "role": "frontend-plugin"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-react",
+        "root": "plugins/scaffolder-react",
+        "manifest": "plugins/scaffolder-react/package.json",
+        "role": "web-library"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-common",
+        "root": "plugins/scaffolder-common",
+        "manifest": "plugins/scaffolder-common/package.json",
+        "role": "common-library"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-node",
+        "root": "plugins/scaffolder-node",
+        "manifest": "plugins/scaffolder-node/package.json",
+        "role": "node-library"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-node-test-utils",
+        "root": "plugins/scaffolder-node-test-utils",
+        "manifest": "plugins/scaffolder-node-test-utils/package.json",
+        "role": "node-library"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend",
+        "root": "plugins/scaffolder-backend",
+        "manifest": "plugins/scaffolder-backend/package.json",
+        "role": "backend-plugin"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-azure",
+        "root": "plugins/scaffolder-backend-module-azure",
+        "manifest": "plugins/scaffolder-backend-module-azure/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-bitbucket-cloud",
+        "root": "plugins/scaffolder-backend-module-bitbucket-cloud",
+        "manifest": "plugins/scaffolder-backend-module-bitbucket-cloud/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-bitbucket-server",
+        "root": "plugins/scaffolder-backend-module-bitbucket-server",
+        "manifest": "plugins/scaffolder-backend-module-bitbucket-server/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-confluence-to-markdown",
+        "root": "plugins/scaffolder-backend-module-confluence-to-markdown",
+        "manifest": "plugins/scaffolder-backend-module-confluence-to-markdown/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-cookiecutter",
+        "root": "plugins/scaffolder-backend-module-cookiecutter",
+        "manifest": "plugins/scaffolder-backend-module-cookiecutter/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gcp",
+        "root": "plugins/scaffolder-backend-module-gcp",
+        "manifest": "plugins/scaffolder-backend-module-gcp/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gerrit",
+        "root": "plugins/scaffolder-backend-module-gerrit",
+        "manifest": "plugins/scaffolder-backend-module-gerrit/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gitea",
+        "root": "plugins/scaffolder-backend-module-gitea",
+        "manifest": "plugins/scaffolder-backend-module-gitea/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-github",
+        "root": "plugins/scaffolder-backend-module-github",
+        "manifest": "plugins/scaffolder-backend-module-github/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-gitlab",
+        "root": "plugins/scaffolder-backend-module-gitlab",
+        "manifest": "plugins/scaffolder-backend-module-gitlab/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-notifications",
+        "root": "plugins/scaffolder-backend-module-notifications",
+        "manifest": "plugins/scaffolder-backend-module-notifications/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-rails",
+        "root": "plugins/scaffolder-backend-module-rails",
+        "manifest": "plugins/scaffolder-backend-module-rails/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-sentry",
+        "root": "plugins/scaffolder-backend-module-sentry",
+        "manifest": "plugins/scaffolder-backend-module-sentry/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-workspace-database",
+        "root": "plugins/scaffolder-backend-module-workspace-database",
+        "manifest": "plugins/scaffolder-backend-module-workspace-database/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/plugin-scaffolder-backend-module-yeoman",
+        "root": "plugins/scaffolder-backend-module-yeoman",
+        "manifest": "plugins/scaffolder-backend-module-yeoman/package.json",
+        "role": "backend-plugin-module"
+      },
+      {
+        "name": "@backstage/cli-module-scaffolder",
+        "root": "packages/cli-module-scaffolder",
+        "manifest": "packages/cli-module-scaffolder/package.json",
+        "role": "cli-module"
+      },
+      {
+        "name": "@internal/scaffolder",
+        "root": "packages/scaffolder-internal",
+        "manifest": "packages/scaffolder-internal/package.json",
+        "role": "web-library (private)"
+      }
+    ]
+  },
+  "submodules": [],
+  "lfs": false,
+  "lfs_patterns": [],
+  "infra_hints": {
+    "dockerfile": false,
+    "dockerfile_paths": [
+      "packages/backend/Dockerfile"
+    ],
+    "docker_compose": true,
+    "docker_compose_paths": [
+      "docker-compose.deps.yml"
+    ],
+    "terraform": false,
+    "terraform_paths": [
+      "contrib/terraform"
+    ],
+    "github_workflows": true,
+    "github_workflows_count": 49,
+    "gitlab_ci": false,
+    "circleci": false,
+    "jenkinsfile": false,
+    "devcontainer": true,
+    "husky_pre_commit": "yarn lint-staged"
+  },
+  "regulated_repo_signals": [
+    {
+      "kind": "SECURITY.md",
+      "path": "SECURITY.md"
+    }
+  ],
+  "regulated_repo_warning_required": true,
+  "regulated_repo_signals_note": "Only hit is the standard open-source vulnerability-disclosure SECURITY.md; no HIPAA/PCI/SOC2/compliance paths and no security/compliance/privacy/legal teams in .github/CODEOWNERS. Likely a false positive, but Gate 0 surfaces it per policy.",
+  "off_limits_proposed": [
+    ".claude/**",
+    "AGENTS.md",
+    ".cursor/**",
+    ".github/copilot-instructions.md",
+    ".env",
+    ".env.*",
+    ".env.local",
+    ".envrc",
+    "node_modules/**",
+    "dist/**",
+    "dist-types/**",
+    "dist-storybook/**",
+    "build/**",
+    "coverage/**",
+    ".yarn/**",
+    "**/report*.api.md",
+    "**/knip-report.md",
+    ".sdlc/**",
+    ".git/**"
+  ],
+  "off_limits_rationale": {
+    ".claude/**, AGENTS.md, .cursor/**, .github/copilot-instructions.md": "AI/agent config (AGENTS.md is the target of the .claude/CLAUDE.md symlink)",
+    ".env*": "env files (none present today)",
+    "node_modules, dist*, build, coverage, .yarn": "build output, dependencies and vendored Yarn releases/plugins",
+    "**/report*.api.md, **/knip-report.md": "generated by API Extractor / knip; regenerate with `yarn build:api-reports` rather than hand-editing (316 and 221 tracked files)",
+    ".sdlc/**, .git/**": "tooling state"
+  },
+  "off_limits_suggested_from_project_instructions": [
+    "docs/releases/** (AGENTS.md: never change release notes unless asked)",
+    "ESLint, Prettier and TypeScript config files (.eslintrc.js, .prettierignore, tsconfig.json, etc.) (AGENTS.md: never update unless asked)"
+  ],
+  "coexistence_notes": [
+    "Cursor rules detected at .cursor/rules/ (backstage-project.mdc, tests/*.mdc) - untouched by default.",
+    "GitHub Copilot instructions at .github/copilot-instructions.md - untouched by default.",
+    ".claude/ holds settings.local.json, skills/ and CLAUDE.md (a symlink to AGENTS.md) - untouched by default; AGENTS.md is off-limits too.",
+    ".gitignore does not cover .sdlc/, but .sdlc/ is ignored via the shared .git/info/exclude (verified with git check-ignore), so git add -A will not pick it up in this checkout.",
+    "Husky pre-commit hook runs `yarn lint-staged` on commits.",
+    "No .mcp.json, Aider config or repo-local routing-policy.yaml found."
+  ],
+  "tier2b": {
+    "ran": true,
+    "trigger": "primary stack is TypeScript/React/Backstage; no matching pre-authored adapter (shipped: generic.md, nest.md, python.md)",
+    "profile_path": ".sdlc/baseline/stack-profile.md",
+    "focus": "scaffolder frontend packages (intent_hint feature-extend, scaffolder conditional fields)"
+  },
+  "scan_notes": [
+    "Whole scan completed well within timebox; tracked files 12364 (below the 100k sampling threshold).",
+    "zsh globbing: patterns with no matches were re-run with nullglob."
+  ]
+}

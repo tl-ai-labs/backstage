@@ -1,0 +1,158 @@
+[
+  {
+    "id": "tp_debug_r4_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/schema.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3: add regression tests for defects 1 and 4 in resolveStepSchema (now fixed in schema.ts), inside the existing resolveStepSchema tests. Each must assert the correct behaviour below and must not be weakened to match other output. Let platform = { title: 'Platform', type: 'string', enum: ['ios', 'android'] }. Defect 1, a cross-step dependencies oneOf branch that adds an enum field: step schema `{ properties: { sdkName: { type: 'string' } }, dependencies: { isMobileSdk: { oneOf: [ { properties: { isMobileSdk: { const: true }, platform }, required: ['platform'] }, { properties: { isMobileSdk: { const: false } } } ] } } }`. `resolveStepSchema(schema, { isMobileSdk: true }, { previousStepKeys: new Set(['isMobileSdk']) })` has properties exactly sdkName and platform (platform deep-equal to the definition above), required ['platform'], and no isMobileSdk property; with `{ isMobileSdk: false }` it has only sdkName and no required. Defect 4, a root allOf with two same-step if/then items whose then holds an enum field: `{ properties: { flag: { type: 'boolean' }, mode: { type: 'string' } }, allOf: [ { if: { properties: { flag: { const: true } }, required: ['flag'] }, then: { properties: { platform } } }, { if: { properties: { mode: { const: 'x' } }, required: ['mode'] }, then: { properties: { region: { title: 'Region', type: 'string', enum: ['eu', 'us'] } } } } ] }` with data `{ flag: true, mode: 'x' }` and no options keeps both conditionals: the result still holds both if/then items (assert both the flag condition and the mode condition with their then branches are present), and with `{ resolveAll: true }` the properties are flag, mode, platform and region. Match the file's existing describe/it style; prefer one thorough test per defect with several assertions.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r4_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3: add regression tests for defects 2 and 3, where ReviewState hid an answered field (now fixed in lib/schema.ts). Render ReviewState with `schemas` built like the file's existing tests (title, schema, mergedSchema, uiSchema) and assert with `screen` (findBy*/getBy* queries, no waitFor, no test IDs) that the field's row and value are shown. Must assert the correct behaviour and not be weakened. Let platform = { title: 'Platform', type: 'string', enum: ['ios', 'android'] }. Defect 2, the documented same-step pattern with an enum field in then: one step with mergedSchema `{ properties: { includeName: { type: 'boolean' } }, dependencies: { includeName: { allOf: [ { if: { properties: { includeName: { const: true } } }, then: { properties: { lastName: { type: 'string', title: 'Last name' }, platform } } } ] } } }` and formState `{ includeName: true, lastName: 'Doe', platform: 'ios' }`: the Review shows Platform with 'ios' and Last name with 'Doe'. Defect 3, a root-level oneOf with alternative options: mergedSchema `{ type: 'object', oneOf: [ { title: 'New repo', properties: { repoName: { type: 'string', title: 'Repository name' } }, required: ['repoName'] }, { title: 'Existing repo', properties: { existingRepo: { type: 'string', title: 'Existing repository' } }, required: ['existingRepo'] } ] }` and formState `{ existingRepo: 'org/repo' }`: the Review shows Existing repository with 'org/repo'. Match the file's existing style.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r4_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3: add one Stepper regression test for defect 1 (a cross-step dependencies oneOf branch that adds an enum field never showed it; now fixed in lib/schema.ts), built on the brief's mobile-SDK scenario. Manifest: Step 1 'Project type' with `isMobileSdk: { type: 'boolean', title: 'Is this a mobile SDK?' }`; Step 2 'SDK details' with `properties: { sdkName: { type: 'string', title: 'SDK name' } }` and `dependencies: { isMobileSdk: { oneOf: [ { properties: { isMobileSdk: { const: true }, platform: { type: 'string', title: 'Platform', enum: ['ios', 'android'] } }, required: ['platform'] }, { properties: { isMobileSdk: { const: false } } } ] } }`. Flow: check 'Is this a mobile SDK?', click Next; Step 2 shows the Platform dropdown (and no second 'Is this a mobile SDK?' checkbox); clicking Review with Platform empty stays on Step 2 with a required error; choose 'ios', click Review; the Review step shows Platform with 'ios'. Then click Back twice to Step 1, uncheck the box, click Next: Step 2 no longer shows Platform; click Review: the Review step does not show Platform. Use `screen` and findBy* queries (no waitFor in new code, no test IDs); follow the file's existing act/fireEvent and MUI select interaction patterns. Assert the correct behaviour and do not weaken it.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

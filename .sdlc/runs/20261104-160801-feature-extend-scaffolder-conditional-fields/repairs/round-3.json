@@ -1,0 +1,94 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/schema.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 defects 1-4 in resolveStepSchema (reproduced by calling resolveStepSchema / findSchemaForKey + isKeyDefinedInSchemas directly). Let platform = { title: 'Platform', type: 'string', enum: ['ios', 'android'] }. Common root: a branch property that is a real field (it has type, title, items, properties, ui:field, ui:widget or any keyword besides const/enum) is treated as a condition/discriminator key just because it has enum or const. Fix: only a pure constraint (an object whose only keywords are const and/or enum) is ever a discriminator or condition key; a real field never is, whatever enum/const it has. Defects: (1) buildBranchTestSchema (line ~292) counts `platform` as a discriminator via `!ownKeys.has(k) && ('const' in v || 'enum' in v)`, puts it in the test schema's required, and discriminatorKeys excludes it from the merge. Step 2 `{ properties: { sdkName: { type: 'string' } }, dependencies: { toggle: { oneOf: [ { properties: { toggle: { const: true }, platform }, required: ['platform'] }, { properties: { toggle: { const: false } } } ] } } }` with `resolveStepSchema(schema, { toggle: true }, { previousStepKeys: new Set(['toggle']) })` returns properties [sdkName] only; expected sdkName and platform, with required ['platform']. (2) getBranchConditionKeys (line ~222) recurses into then/else and counts `platform` as a condition key. Condition keys come only from `if` (its properties and required) and from pure-constraint discriminator properties of oneOf/anyOf branches, never from then/else contents. Repro: `{ properties: { includeName: { type: 'boolean' } }, dependencies: { includeName: { allOf: [ { if: { properties: { includeName: { const: true } } }, then: { properties: { lastName: { type: 'string' }, platform } } } ] } } }` with `{ includeName: true, lastName: 'Doe', platform: 'ios' }` and resolveAll: true returns [includeName, lastName]; expected platform too. (3) Root-level oneOf without discriminators: `{ type: 'object', oneOf: [ { title: 'New repo', properties: { repoName: { type: 'string' } }, required: ['repoName'] }, { title: 'Existing repo', properties: { existingRepo: { type: 'string' } }, required: ['existingRepo'] } ] }` with `{ existingRepo: 'org/repo' }` and resolveAll: true returns [repoName]; expected [existingRepo]. With no discriminators every test schema is `{ type: 'object' }`, so the first branch always matches. Match a branch the way rjsf's own option matching does (node_modules/@rjsf/utils/lib/schema/getMatchingOption.js lines 43-56): test the branch augmented with `anyOf: Object.keys(branch.properties).map(key => ({ required: [key] }))` (wrapped in allOf when the branch already has anyOf), so it matches only when the data holds at least one of its properties and validates; if no branch matches, use the first branch as today. (4) mergeBranchIntoSchema (line ~348) lifts if/then onto the target only when target[keyword] === undefined, so with resolveAll: false `{ properties: { flag: { type: 'boolean' }, mode: { type: 'string' } }, allOf: [ { if: { properties: { flag: { const: true } }, required: ['flag'] }, then: { properties: { platform } } }, { if: { properties: { mode: { const: 'x' } }, required: ['mode'] }, then: { properties: { region: { title: 'Region', type: 'string', enum: ['eu', 'us'] } } } } ] }` and `{ flag: true, mode: 'x' }` keeps only the flag item; the mode/region item is dropped. Never drop a conditional: when the target already holds that keyword, keep the item (for example append it to target.allOf). Keep same-step conditionals unresolved when resolveAll is false (both allOf items are same-step here), keep standard JSON Schema semantics (dependencies apply whenever the key is present, only undefined skips), keep a step's own top-level properties, and change nothing else.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "docs/features/software-templates/input-examples.md",
+    "instruction": "Fix `docs/features/software-templates/input-examples.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3: rewrite the YAML example (and its lead-in text where it names fields) in the '### Conditional fields across steps' subsection around the brief's scenario. Step 1 (title 'Project type') asks 'Is this a mobile SDK?' as a boolean parameter named isMobileSdk. Step 2 (title 'SDK details') shows SDK-specific fields only when the answer is Yes, including a platform dropdown (a string enum such as ios/android). Use meaningful names (docs/contribute/doc-style-guide.md line 71: meaningful variable names, not foo/bar), not toggle, alwaysVisible or conditionalIfField. Keep both forms the approved spec requires: an `if` that lists isMobileSdk under `required` (with const: true), whose `then` adds and requires one SDK field (for example sdkName); and `dependencies` keyed on isMobileSdk with a `oneOf` that has a `const: true` branch adding and requiring the platform dropdown and a `const: false` branch with no extra fields. Keep the subsection's heading and position, American English, active voice, present tense; change nothing outside this subsection.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-templates/input-examples.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-templates/input-examples.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "model": "gemini-4-argon",
+  "thinking": "HIGH",
+  "sdk": "google-antigravity",
+  "sdk_version": "0.1.22",
+  "vertex_project": "temp-genmedia-study",
+  "vertex_location": "global",
+  "tool_call_count": 1,
+  "tool_calls_truncated": false,
+  "tool_calls": [
+    {
+      "name": "write_requirements",
+      "args": {
+        "content": "# Requirements \u2014 Scaffolder Cross-Step Conditional Fields\n\n## In scope\n\n1. **Cross-step conditional field rendering in `Stepper` (`@backstage/plugin-scaffolder-react`)**: Support JSON Schema conditional constructs (`dependencies`, `if`/`then`/`else`, `allOf`, `oneOf`, `anyOf`) in a wizard step (`plugins/scaffolder-react/src/next/components/Stepper/**`, `plugins/scaffolder-react/src/next/hooks/**`, `plugins/scaffolder-react/src/next/lib/**`) that depend on parameter values answered in an earlier step of `Stepper`, so that conditional fields in a later step are shown or hidden based on earlier steps' answers in `stepsState`.\n2. **Per-step conditional validation in `Stepper` (`@backstage/plugin-scaffolder-react`)**: Enforce JSON Schema `required` and field validation rules on cross-step conditional fields only when the condition on the earlier step's answer is satisfied, without breaking per-step validation (`createAsyncValidators` and RJSF `validator`) or existing same-step conditional validation.\n3. **Back-navigation Review step filtering (`@backstage/plugin-scaffolder-react`)**: Ensure that navigating back (`handleBack` or step label click in `Stepper`) and changing an earlier step's answer updates what the form and Review step show and validate (`ReviewState` and `findSchemaForKey` in `plugins/scaffolder-react/src/next/components/ReviewState/**`) so fields whose cross-step or same-step conditions are no longer met are excluded from the Review step (`ReviewState`).\n4. **Template wizard and template editor form preview compatibility (`@backstage/plugin-scaffolder`)**: Ensure `TemplateWizardPage` (`plugins/scaffolder/src/alpha/components/TemplateWizardPage/**`), `TemplateEditorForm` (`plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateEditorForm*`), and `TemplateFormPreviewer` (`plugins/scaffolder/src/alpha/components/TemplateEditorPage/TemplateFormPreviewer*`) work seamlessly with cross-step conditional schemas.\n5. **Unit and integration tests (`@back"
+      },
+      "canonical_path": null,
+      "args_clipped": true
+    }
+  ],
+  "text": "`requirements.md` has been updated with the Gate 1 revisions:\n\n1. **Standard JSON Schema condition evaluation (FR-2, FR-8, AC-1)**:\n   - Rewrote **FR-2** so conditions evaluate by standard JSON Schema semantics matching the backend check in `plugins/scaffolder-backend/src/service/router.ts`, with no special-case handling for an unset flag.\n   - Updated **AC-1** and **FR-8**'s doc example requirement to use a standard JSON Schema condition that cannot match when the flag is unset (an `if` listing the flag under `required`, e.g., `if: { properties: { flag: { const: true } }, required: ['flag'] }`, or `dependencies` keyed on the flag).\n2. **Scoped to form display, validation, and Review step only (In-scope item 3, Out of scope item 5, FR-5, FR-6, PII inventory, Role matrix)**:\n   - Limited **In-scope item 3**, **FR-5**, and **FR-6** to what the form and Review step (`ReviewState`) show and validate, removing all requirements that change the `onCreate` submission payload.\n   - Updated the **PII inventory** and **Role matrix** rows to state that the data passed to `onCreate` stays as it is today, and added **Out of scope item 5** explicitly stating that the values submitted when the task is created are unchanged.",
+  "usage": {
+    "prompt_token_count": 256126,
+    "cached_content_token_count": 0,
+    "candidates_token_count": 4230,
+    "thoughts_token_count": 561,
+    "total_token_count": 260917,
+    "service_tier": "standard"
+  },
+  "tries": [
+    {
+      "location": "global",
+      "ended_by": "answer",
+      "http_codes": [],
+      "s": 74.676,
+      "start_s": 0.186,
+      "end_s": 74.862,
+      "started_at": "2026-11-04T12:14:39.657Z",
+      "usage": {
+        "prompt_token_count": 256126,
+        "cached_content_token_count": 0,
+        "candidates_token_count": 4230,
+        "thoughts_token_count": 561,
+        "total_token_count": 260917,
+        "service_tier": "standard"
+      },
+      "served_tier": "standard"
+    }
+  ],
+  "stall_cuts": 0,
+  "failovers": 0,
+  "cut_calls": 0,
+  "google_wait_s": 0.0,
+  "work_s": 74.882,
+  "served_tier": "standard",
+  "slept_s": 0.0
+}

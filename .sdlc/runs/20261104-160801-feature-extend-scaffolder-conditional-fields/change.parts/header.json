@@ -1,0 +1,73 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "New source files must start with the Backstage Apache 2.0 license header with copyright year 2026; existing files keep their existing copyright year unchanged.",
+      "Follow Prettier formatting (2-space indentation, single quotes, trailing commas) and TypeScript strict null/type checks without using any unless already present in the surrounding signature.",
+      "Do not add any new package dependencies; use only packages already declared in plugins/scaffolder-react/package.json (@rjsf/utils, @rjsf/validator-ajv8, json-schema-library, lodash, flatted, @backstage/types).",
+      "Do not alter public or alpha exported signatures re-exported from package entrypoints so API report files (report.api.md, report-alpha.api.md) remain unchanged.",
+      "Write tests using React Testing Library with screen and findBy* queries instead of waitFor where possible, and never add data-testid attributes to implementation components.",
+      "Changeset files in .changeset/ must use plain, adopter-facing language with no internal function, hook, or type symbol names.",
+      "Documentation in docs/ follows docs/contribute/doc-style-guide.md (American English, active voice, sentence-case headings, runnable YAML examples)."
+    ],
+    "decisions": [
+      {
+        "topic": "Cross-step conditional schema resolution helper placement and signature",
+        "choice": "Add internal helpers resolveStepSchema and getSchemaPropertyKeys in plugins/scaffolder-react/src/next/lib/schema.ts (not re-exported from plugins/scaffolder-react/src/next/lib/index.ts).",
+        "rejected": [
+          "Exporting new helpers from plugins/scaffolder-react/src/next/lib/index.ts or package root",
+          "Duplicating conditional evaluation logic separately in Stepper, createAsyncValidators, and ReviewState"
+        ],
+        "reason": "Keeping the helpers internal to src/next/lib/schema.ts shares one standard JSON Schema resolution implementation across Stepper, createAsyncValidators, useTemplateSchema, and ReviewState without changing public or alpha API reports."
+      },
+      {
+        "topic": "Standard JSON Schema evaluation and undefined formState values",
+        "choice": "Strip keys whose value in formState/stepsState is undefined before evaluating JSON Schema conditions (if/then/else, dependencies, allOf, oneOf, anyOf) using @rjsf/validator-ajv8 isValid, while keeping stepsState itself untouched for onCreate.",
+        "rejected": [
+          "Treating missing boolean flags as false when evaluating if: { properties: { flag: { const: true } } } without required: ['flag']",
+          "Mutating stepsState to delete undefined or inactive properties before calling onCreate"
+        ],
+        "reason": "Standard JSON Schema (and backend jsonschema validation) requires required: ['flag'] in if conditions or dependencies keyed on flag so an absent property does not vacuously match, and Out of Scope 5 requires keeping the data passed to onCreate unchanged."
+      },
+      {
+        "topic": "Preventing earlier-step controlling fields from re-rendering in later steps",
+        "choice": "When resolving cross-step conditional branches into a step schema, exclude property definitions for keys defined in earlier steps (previousStepKeys), cross-step dependency controlling keys, if-condition keys not in the current step's own properties, and pure discriminator constraint schemas (having const/enum without type or UI metadata) while keeping same-step conditionals intact for RJSF.",
+        "rejected": [
+          "Injecting earlier step property definitions into the current step's schema.properties so RJSF processDependencies can run on them",
+          "Flattening same-step conditionals statically before passing schema to RJSF Form"
+        ],
+        "reason": "Injecting earlier step properties into a later step's schema.properties causes RJSF ObjectField to render the earlier step's input again on the later step, whereas resolving cross-step branches and stripping earlier-step discriminator keys renders only the current step's active fields while preserving live same-step reactivity."
+      },
+      {
+        "topic": "Filtering inactive conditional fields in ReviewState while preserving unschematized keys",
+        "choice": "Resolve each step's mergedSchema against the full formState in findSchemaForKey and processSchema, and when findSchemaForKey returns null for a key in formState, omit the key in ReviewState if isKeyDefinedInSchemas reports it is defined in any step schema, otherwise render the formatted key/value fallback.",
+        "rejected": [
+          "Rendering all keys present in formState regardless of whether their schema condition is met",
+          "Dropping all keys where findSchemaForKey returns null even when schemas is empty or the key is not defined in any schema"
+        ],
+        "reason": "Conditional fields from inactive branches (including stale answers left in stepsState after navigating back and changing an earlier answer) are defined in step schemas and must be hidden when inactive, whereas existing callers/tests pass unschematized keys or empty schemas arrays and expect the fallback row."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test-typecheck-lint",
+        "run": "CI=true yarn test plugins/scaffolder-react plugins/scaffolder && yarn tsc && yarn lint:all"
+      }
+    ]
+  },
+  "hashes": {}
+}

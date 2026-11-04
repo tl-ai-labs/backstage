@@ -1,0 +1,54 @@
+[
+  {
+    "id": "tp_debug_r7_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/lib/schema.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior re-review findings in resolveStepSchema (now fixed in schema.ts) need regression tests. Add them inside the existing resolveStepSchema tests, one thorough test per finding with several assertions, matching the file's style. Assert the correct behaviour below and do not weaken it. (F1) A oneOf/anyOf branch without discriminators falls back to the first branch when no branch matches: `resolveStepSchema({ type: 'object', dependencies: { projectType: { oneOf: [{ properties: { artifact: { type: 'string' } } }] } } }, { projectType: 'library' }, { previousStepKeys: new Set(['projectType']) })` has property artifact; `resolveStepSchema({ type: 'object', anyOf: [{ properties: { anyOfField: { type: 'string' } } }] }, {}, { resolveAll: true })` has property anyOfField. (F2) A partly filled option still matches its own branch: `resolveStepSchema({ type: 'object', oneOf: [{ title: 'New repo', properties: { repoName: { type: 'string' } }, required: ['repoName'] }, { title: 'Existing repo', properties: { existingRepo: { type: 'string' }, branchName: { type: 'string' } }, required: ['existingRepo', 'branchName'] }] }, { existingRepo: 'org/repo' }, { resolveAll: true })` has properties existingRepo and branchName and not repoName. (F3) A same-step conditional on a field introduced by another same-step branch is kept: `resolveStepSchema({ type: 'object', properties: { isMobileSdk: { type: 'boolean' } }, allOf: [{ if: { properties: { isMobileSdk: { const: true } }, required: ['isMobileSdk'] }, then: { properties: { platform: { type: 'string', title: 'Platform', enum: ['ios', 'android'] } } } }, { if: { properties: { platform: { const: 'ios' } }, required: ['platform'] }, then: { properties: { bundleId: { type: 'string', title: 'Bundle ID' } } } }] }, {})` keeps both allOf items (allOf has length 2); with `{ isMobileSdk: true, platform: 'ios' }` and `{ resolveAll: true }` the properties include platform and bundleId. (F4) Merging keeps existing definitions: `resolveStepSchema({ type: 'object', properties: { env: { type: 'string', enum: ['dev', 'prod'], enumNames: ['Development', 'Production'] } }, dependencies: { env: { oneOf: [{ properties: { env: { type: 'string', enum: ['dev'] } } }, { properties: { env: { type: 'string', enum: ['prod'] }, approver: { type: 'string' } } }] } } }, { env: 'prod', approver: 'alice' }, { resolveAll: true })` keeps properties.env.enum equal to ['dev', 'prod'] with its enumNames and adds approver; `resolveStepSchema({ type: 'object', properties: { nested: { type: 'object', properties: { a: { type: 'string' } } } }, if: { properties: { flag: { const: true } }, required: ['flag'] }, then: { properties: { nested: { properties: { b: { type: 'string' } } } } } }, { flag: true }, { previousStepKeys: new Set(['flag']) })` gives nested.properties with both a and b.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "tp_debug_r5_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-160801-feature-extend-scaffolder-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. `CI=true yarn test plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` fails: `Stepper › cross-step conditional fields › renders and requires an enum field from a cross-step dependencies oneOf branch and hides it when unchecked` -- `Unable to find an element with the text: /must have required property 'platform'/i` at line 1355. The DOM at that point shows the run is correctly still on Step 2 (SDK name and Platform rendered, no Create button): the Platform select carries the HTML `required` attribute, so the browser's native constraint validation blocks the submit before rjsf validates and no rjsf error text renders. Change only that assertion block (lines ~1347-1356): assert the required check the way the file's other new required test does (around line 1074): after clicking Review with Platform empty, `screen.queryByRole('button', { name: 'Create' })` is null and the Platform field is still shown. Remove the findByText for the rjsf error message. Keep every other step and assertion of the test, and change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-160801-feature-extend-scaffolder-conditional-fields/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]
