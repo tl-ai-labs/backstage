@@ -1,0 +1,85 @@
+{
+  "schema": "delegation-record/1",
+  "task_id": "20261104-refactor-react18-only-requirements",
+  "phase": "requirements_analysis",
+  "task_type": "judgment",
+  "module": "judgment",
+  "model_id": "argon",
+  "model_name": "gemini-4-argon",
+  "cable": {
+    "sdk": "google-antigravity",
+    "sdk_version": "0.1.22",
+    "vertex_project": "temp-genmedia-study",
+    "vertex_location": "global",
+    "thinking": "HIGH"
+  },
+  "workdir": "/Users/apple/Documents/GitHub/bs-cells/BS-RF-10",
+  "started_at": "2026-11-04T07:42:12.447Z",
+  "duration_ms": 173138,
+  "success": true,
+  "error": null,
+  "cost_usd": 0.428375,
+  "tokens": {
+    "input": 140969,
+    "input_cached": 122272,
+    "output": 13421,
+    "output_reasoning": 3348
+  },
+  "tool_calls": {
+    "count": 1,
+    "truncated": false,
+    "sample": [
+      {
+        "name": "write_requirements",
+        "args": {
+          "content": "# Requirements — Require React 18, Drop React 17 Support (`20261104-refactor-react18-only`)\n\n## Overview (Refactor Delta & Behaviour Invariants)\n\nThis brownfield refactor narrows Backstage's supported React peer dependency range across workspace packages and CLI templates to `^18.0.0`, removes React 16/17 compatibility shims (`HAS_REACT_DOM_CLIENT`, `ReactDOM.render` fallbacks, `use-sync-external-store/shim`, React 16/17 CLI warnings, and `legacyRoot` in `@backstage/test-utils`), and updates documentation, API/knip reports, and changesets accordingly.\n\n### Preserved Behaviour Invariants under React 18\n1. **Dev Apps (`@backstage/dev-utils` & `@backstage/frontend-dev-utils`)**:\n   - `DevAppBuilder.build()` and `DevAppBuilder.render()` in `packages/dev-utils/src/devApp/render.tsx` continue to construct the legacy-frontend dev app (with `BuiCss`, `AlertDisplay`, `OAuthRequestDialog`, `AppRouter`, `SidebarPage`, registered plugins, APIs, themes, sign-in providers, and translation resources), redirect `/` to `defaultPage` when configured, and mount into `#root` using `react-dom/client`'s `createRoot`.\n   - `createDevApp()` in `packages/frontend-dev-utils/src/createDevApp.tsx` continues to validate the presence of `#root` (throwing `\"Could not find the dev app root element '#root'; make sure your dev entry HTML contains a root element with that id.\"` when absent), apply `appPluginOverride` (disabling `sign-in-page:app`), forward `bindRoutes` and `features` to `createApp`, wrap `<BuiCss />` in `<Suspense fallback={null}>` alongside `{AppRoot}`, and mount via `createRoot(rootElement).render(rootNode)`.\n2. **TechDocs Rendering (`@backstage/plugin-techdocs`)**:\n   - `renderReactElement(element, root)` in `plugins/techdocs/src/reader/transformers/renderReactElement.ts` continues to asynchronously import `react-dom/client` and render `element` into `root` via `createRoot(root).render(element)`.\n3. **Route-Ref Hooks (`@backstage/frontend-plugin-api`)**:\n   - `useRouteRef(routeRef"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      }
+    ]
+  },
+  "files": {
+    "added": [],
+    "modified": [],
+    "removed": [],
+    "unchanged": 19340,
+    "scanned": 19340,
+    "truncated": false,
+    "unreadable": []
+  },
+  "artifacts": {
+    "brief": "worker-task-20261104-refactor-react18-only-requirements.md",
+    "usage": "worker-usage-20261104-refactor-react18-only-requirements.json",
+    "system": "worker-system-20261104-refactor-react18-only-requirements.md"
+  },
+  "gemini": {
+    "project": "temp-genmedia-study",
+    "location": "global",
+    "tries": [
+      {
+        "location": "global",
+        "ended_by": "answer",
+        "http_codes": [],
+        "s": 170.915,
+        "served_tier": "standard",
+        "input_tokens": 140969,
+        "input_tokens_cached": 122272,
+        "output_tokens": 13421,
+        "cost_usd": 0.428375
+      }
+    ],
+    "ended_by": "answer",
+    "last_status": null,
+    "stall_cuts": 0,
+    "failovers": 0,
+    "cut_calls": 0,
+    "google_wait_ms": 0,
+    "work_ms": 171200,
+    "slept_ms": 0,
+    "sdk_version": "0.1.22",
+    "usage_semantics": "inclusive",
+    "unavailable": null,
+    "endpoint_override": null
+  }
+}

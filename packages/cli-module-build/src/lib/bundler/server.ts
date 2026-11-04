@@ -51,8 +51,6 @@ DEPRECATION WARNING: React Router Beta is deprecated and support for it will be 
     }
   }
 
-  checkReactVersion();
-
   const { name } = await fs.readJson(
     resolvePath(options.targetDir ?? targetPaths.dir, 'package.json'),
   );
@@ -264,28 +262,4 @@ DEPRECATION WARNING: React Router Beta is deprecated and support for it will be 
   };
 
   return waitForExit;
-}
-
-function checkReactVersion() {
-  try {
-    // Make sure we're looking at the root of the target repo
-    const reactPkgPath = require.resolve('react/package.json', {
-      paths: [targetPaths.rootDir],
-    });
-    const reactPkg = require(reactPkgPath);
-    if (reactPkg.version.startsWith('16.')) {
-      console.log(
-        chalk.yellow(
-          `
-⚠️                                                                           ⚠️
-⚠️ You are using React version 16, which is deprecated for use in Backstage. ⚠️
-⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️
-⚠️                                                                           ⚠️
-`,
-        ),
-      );
-    }
-  } catch {
-    /* ignored */
-  }
 }
