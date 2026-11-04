@@ -30,6 +30,36 @@ All parametrization is done through component properties, such as the `Notificat
 
 In the `packages/app/src/components/Root/Root.tsx`, tweak the [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) of the `<NotificationsSidebarItem />` per specific needs.
 
+### Unread Notifications Card on the Homepage
+
+The notifications plugin also provides a `HomePageUnreadNotifications` card for the [home plugin](https://backstage.io/docs/getting-started/homepage). It lists the current user's unread notifications, links each one to the notifications page, and refreshes automatically when signals are available. When signals are not available, it falls back to polling.
+
+Import `HomePageUnreadNotifications` from `@backstage/plugin-notifications` and render `<HomePageUnreadNotifications />` in your homepage, for example in `packages/app/src/components/home/HomePage.tsx`:
+
+```tsx
+import { Grid } from '@material-ui/core';
+import { Page, Content } from '@backstage/core-components';
+import { HomePageUnreadNotifications } from '@backstage/plugin-notifications';
+
+export const HomePage = () => (
+  <Page themeId="home">
+    <Content>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <HomePageUnreadNotifications />
+        </Grid>
+      </Grid>
+    </Content>
+  </Page>
+);
+```
+
+By default, the card polls every 10 seconds when signals are unavailable. You can change this interval with the `pollingIntervalMs` property:
+
+```tsx
+<HomePageUnreadNotifications pollingIntervalMs={30000} />
+```
+
 ## Usage
 
 New notifications can be sent either by a backend plugin or by an external service through the REST API.

@@ -1,0 +1,175 @@
+[
+  {
+    "id": "U16",
+    "path": "plugins/notifications/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate API reports (report.api.md and report-alpha.api.md) for @backstage/plugin-notifications and @backstage/plugin-home-react.",
+    "run": "yarn build:api-reports plugins/notifications plugins/home-react",
+    "depends_on": [
+      "U01",
+      "U08",
+      "U13",
+      "U14"
+    ],
+    "covers": [
+      "FR-14",
+      "AC-9",
+      "AC-10"
+    ]
+  },
+  {
+    "id": "U17",
+    "path": "plugins/notifications/knip-report.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate knip reports for @backstage/plugin-notifications and @backstage/plugin-home-react.",
+    "run": "yarn build:knip-reports plugins/notifications plugins/home-react",
+    "depends_on": [
+      "U16"
+    ],
+    "covers": [
+      "FR-14",
+      "AC-9",
+      "AC-10"
+    ]
+  },
+  {
+    "id": "U18",
+    "path": ".changeset/notifications-unread-home-card.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset recording a patch bump for @backstage/plugin-notifications in adopter-facing language.",
+    "rules": [
+      "1. Include YAML frontmatter with only '@backstage/plugin-notifications': patch.",
+      "2. Describe the new unread notifications homepage card and widget, live updates with mark-as-read actions, and deep-linking to highlighted items on the notifications page in plain adopter-facing language without internal code, component, function, or variable names."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/neat-notification-context.md",
+      "reason": "Follows Backstage single-package changeset markdown format."
+    },
+    "depends_on": [
+      "U13",
+      "U14"
+    ],
+    "covers": [
+      "FR-15",
+      "AC-9"
+    ]
+  },
+  {
+    "id": "U19",
+    "path": ".changeset/home-react-card-fallback.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset recording a patch bump for @backstage/plugin-home-react in adopter-facing language.",
+    "rules": [
+      "1. Include YAML frontmatter with only '@backstage/plugin-home-react': patch.",
+      "2. Describe in plain adopter-facing language that homepage cards now fall back to a default loading indicator when rendered outside of a full Backstage app context, without naming internal functions, components, or variables."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/neat-notification-context.md",
+      "reason": "Follows Backstage single-package changeset markdown format."
+    },
+    "depends_on": [
+      "U01"
+    ],
+    "covers": [
+      "FR-15",
+      "AC-9"
+    ]
+  },
+  {
+    "id": "U20",
+    "path": "plugins/notifications/README.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the unread notifications home page card and new frontend system widget in plugins/notifications/README.md.",
+    "rules": [
+      "1. Add a Homepage Card section explaining how to use HomePageUnreadNotifications in the legacy frontend system and the home-page-widget:notifications/unread-notifications widget in the new frontend system."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 14,
+        "to": 14,
+        "first_line": "add `@backstage/plugin-signals` package to your installation.",
+        "rule": "Add a section documenting the HomePageUnreadNotifications home page card and widget."
+      }
+    ],
+    "depends_on": [
+      "U13",
+      "U14"
+    ],
+    "covers": [
+      "FR-16",
+      "AC-9"
+    ]
+  },
+  {
+    "id": "U21",
+    "path": "docs/notifications/usage.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the unread notifications home page widget in the new frontend system usage guide.",
+    "rules": [
+      "1. Under Notifications Frontend, document the HomePageUnreadNotifications home page widget (home-page-widget:notifications/unread-notifications) contributed by @backstage/plugin-notifications/alpha and how it can be added to the homepage or configured in defaultConfig."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 32,
+        "to": 32,
+        "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+        "rule": "Add documentation for the Unread Notifications homepage widget in the new frontend system."
+      }
+    ],
+    "depends_on": [
+      "U14"
+    ],
+    "covers": [
+      "FR-16",
+      "AC-9"
+    ]
+  },
+  {
+    "id": "U22",
+    "path": "docs/notifications/usage--old.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Document the HomePageUnreadNotifications card extension in the old frontend system usage guide.",
+    "rules": [
+      "1. Under Notifications Frontend, document importing HomePageUnreadNotifications from @backstage/plugin-notifications and rendering <HomePageUnreadNotifications /> on the homepage."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 31,
+        "to": 31,
+        "first_line": "In the `packages/app/src/components/Root/Root.tsx`, tweak the [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) of the `<NotificationsSidebarItem />` per specific needs.",
+        "rule": "Add documentation and a code snippet showing how to add <HomePageUnreadNotifications /> to the homepage in the old frontend system."
+      }
+    ],
+    "depends_on": [
+      "U13"
+    ],
+    "covers": [
+      "FR-16",
+      "AC-9",
+      "AC-10"
+    ]
+  }
+]

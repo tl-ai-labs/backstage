@@ -17,7 +17,10 @@
 import { useState, Suspense } from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import SettingsIcon from '@material-ui/icons/Settings';
-import { InfoCard } from '@backstage/core-components';
+import {
+  InfoCard,
+  Progress as DefaultProgress,
+} from '@backstage/core-components';
 import { SettingsModal } from './components';
 import { createReactExtension, useApp } from '@backstage/core-plugin-api';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
@@ -132,8 +135,13 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
     title,
     ...childProps
   } = props;
-  const app = useApp();
-  const { Progress } = app.getComponents();
+  let Progress: React.ComponentType = DefaultProgress;
+  try {
+    const app = useApp();
+    Progress = app.getComponents().Progress;
+  } catch {
+    // Rendered outside an AppContext, fall back to the default Progress
+  }
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { t } = useTranslationRef(homeReactTranslationRef);
 

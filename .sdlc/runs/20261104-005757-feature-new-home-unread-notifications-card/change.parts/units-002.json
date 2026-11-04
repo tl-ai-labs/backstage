@@ -1,0 +1,370 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U06",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Add CSS styling for highlighted notification rows in NotificationsTable.",
+      "rules": [
+        "1. Inside @layer components, add a .highlighted class with a subtle highlight background (background-color: var(--bui-bg-neutral-1, rgba(0, 0, 0, 0.04)); border-radius: var(--bui-radius-2, 4px); padding: var(--bui-space-1, 4px);)."
+      ],
+      "exports": [],
+      "import_line": "import styles from './NotificationsTable.module.css';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 33,
+          "to": 36,
+          "first_line": ".notificationInfoRow:not(:first-child) {",
+          "last_line": "}",
+          "rule": "Keep .notificationInfoRow:not(:first-child) and add .highlighted inside @layer components."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-9"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Highlight the notification row matching highlightedId or the URL ?id= query parameter through visual styling.",
+      "rules": [
+        "1. Import useSearchParams from react-router-dom.",
+        "2. Add optional highlightedId?: string to NotificationsTableProps and destructure it in NotificationsTable.",
+        "3. Compute const [searchParams] = useSearchParams(); and const activeHighlightedId = highlightedId ?? searchParams.get('id') ?? undefined; so highlighting works both when passed from NotificationsPage and when NotificationsTable is rendered directly at /notifications?id=<id>.",
+        "4. In the compact-data column render function, when notification.id === activeHighlightedId, apply className={styles.highlighted} on the outer Flex container (without any data-* or test-only attributes), and include activeHighlightedId in compactColumns useMemo dependencies.",
+        "5. In Table options, add rowStyle: (rowData: Notification) => (rowData.id === activeHighlightedId ? { backgroundColor: 'var(--bui-bg-neutral-1, rgba(0, 0, 0, 0.04))' } : {})."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsTableProps",
+          "kind": "type",
+          "params": [],
+          "returns": "NotificationsTableProps"
+        },
+        {
+          "name": "NotificationsTable",
+          "kind": "function",
+          "params": [
+            {
+              "name": "input",
+              "type": "NotificationsTableProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { NotificationsTable, NotificationsTableProps } from './NotificationsTable';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "import { useCallback, useEffect, useMemo, useState } from 'react';",
+          "rule": "Import useSearchParams from react-router-dom alongside React hooks."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 58,
+          "to": 65,
+          "first_line": "markAsReadOnLinkOpen?: boolean;",
+          "last_line": "};",
+          "rule": "Add optional highlightedId?: string to NotificationsTableProps."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 68,
+          "to": 82,
+          "first_line": "export const NotificationsTable = ({",
+          "last_line": "const { t } = useTranslationRef(notificationsTranslationRef);",
+          "rule": "Destructure highlightedId from props and compute activeHighlightedId = highlightedId ?? searchParams.get('id') ?? undefined using useSearchParams()."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 201,
+          "to": 202,
+          "first_line": "return (",
+          "last_line": "<Flex gap=\"4\" align=\"center\">",
+          "rule": "Apply className={notification.id === activeHighlightedId ? styles.highlighted : undefined} to the outer Flex element without adding any data-* or test-only attributes."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 284,
+          "to": 293,
+          "first_line": "}, [",
+          "last_line": "]);",
+          "rule": "Include activeHighlightedId in the compactColumns useMemo dependency array."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 299,
+          "to": 306,
+          "first_line": "options={{",
+          "last_line": "}}",
+          "rule": "Add rowStyle to Table options that sets backgroundColor when rowData.id === activeHighlightedId."
+        }
+      ],
+      "depends_on": [
+        "U06"
+      ],
+      "covers": [
+        "FR-9",
+        "NFR-2",
+        "NFR-4"
+      ],
+      "checks": [
+        "eslint"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Read the id query parameter from the URL in NotificationsPage and pass it as highlightedId to NotificationsTable.",
+      "rules": [
+        "1. Import useSearchParams from react-router-dom.",
+        "2. In NotificationsPageContent, read const [searchParams] = useSearchParams(); and const highlightedId = searchParams.get('id') ?? undefined;.",
+        "3. Pass highlightedId={highlightedId} to <NotificationsTable /> without altering any other NotificationsPage logic."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsPageProps",
+          "kind": "type",
+          "params": [],
+          "returns": "NotificationsPageProps"
+        },
+        {
+          "name": "NotificationsPage",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "NotificationsPageProps | undefined"
+            }
+          ],
+          "returns": "JSX.Element"
+        },
+        {
+          "name": "NfsNotificationsPage",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "NotificationsPageProps | undefined"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { NotificationsPage, NfsNotificationsPage, NotificationsPageProps } from './NotificationsPage';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { useEffect, useMemo, useState } from 'react';",
+          "last_line": "import throttle from 'lodash/throttle';",
+          "rule": "Import useSearchParams from react-router-dom alongside React and lodash imports."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 83,
+          "to": 84,
+          "first_line": "const [refresh, setRefresh] = useState(false);",
+          "last_line": "const { lastSignal } = useSignal('notifications');",
+          "rule": "Read const [searchParams] = useSearchParams(); and const highlightedId = searchParams.get('id') ?? undefined;."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 212,
+          "to": 225,
+          "first_line": "<NotificationsTable",
+          "last_line": "/>",
+          "rule": "Pass highlightedId={highlightedId} to NotificationsTable."
+        }
+      ],
+      "depends_on": [
+        "U07"
+      ],
+      "covers": [
+        "FR-9",
+        "NFR-2"
+      ],
+      "checks": [
+        "eslint"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/notifications/src/components/HomePageUnreadNotifications/HomePageUnreadNotifications.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Home-page card content component that fetches and displays the signed-in user's latest unread notifications with mark-as-read, deep-linking to /notifications?id=<id>, live signal updates, and polling fallback.",
+      "rules": [
+        "1. Start the file with the 2026 Backstage Apache-2.0 license header.",
+        "2. Export type HomePageUnreadNotificationsProps (@public) with optional limit?: number (default 5) and pollingIntervalMs?: number (default 10000).",
+        "3. Export function Content(props: HomePageUnreadNotificationsProps) (@public) that resolves notificationsRootRoute via useRouteRef(rootRouteRef), translations via useTranslationRef(notificationsTranslationRef), notificationsApi via useApi(notificationsApiRef), toastApi via useApi(toastApiRef), and signal state via const { lastSignal, isSignalsAvailable } = useSignal<NotificationSignal>('notifications').",
+        "4. Fetch unread notifications using useNotificationsApi(api => api.getNotifications({ read: false, limit, sort: 'created', sortOrder: 'desc' }), [limit]) and maintain local displayed notifications state synced from value?.notifications (filtering out any notification IDs marked as read locally).",
+        "5. When lastSignal arrives with action 'new_notification', 'notification_read', or 'notification_unread', call retry() to refresh the unread list.",
+        "6. When isSignalsAvailable === false, set up a setInterval timer every pollingIntervalMs (when pollingIntervalMs > 0) that calls retry(), and do not start an interval when isSignalsAvailable is true; always call clearInterval(intervalId) in the useEffect cleanup function on unmount or dependency change.",
+        "7. Render <Progress /> from @backstage/core-components while initial data is loading, <ResponseErrorPanel error={error} /> when an error occurs, and <Text>{t('homeWidget.emptyMessage')}</Text> when there are no unread notifications to display.",
+        "8. For each unread notification, render its SeverityIcon, a <Link to={`${notificationsRootRoute()}?id=${encodeURIComponent(notification.id)}`}>{notification.payload.title}</Link>, optional description, origin/topic/RelativeTime metadata, and a mark-as-read ButtonIcon (with aria-label={t('homeWidget.markAsRead')}) that calls notificationsApi.updateNotifications({ ids: [notification.id], read: true }), immediately removes notification.id from the displayed unread list, calls retry(), and posts a danger toast if updateNotifications fails."
+      ],
+      "exports": [
+        {
+          "name": "HomePageUnreadNotificationsProps",
+          "kind": "type",
+          "params": [],
+          "returns": "HomePageUnreadNotificationsProps"
+        },
+        {
+          "name": "Content",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "HomePageUnreadNotificationsProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { Content, HomePageUnreadNotificationsProps } from './HomePageUnreadNotifications';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx",
+        "lines": [
+          1,
+          48
+        ],
+        "reason": "Matches imports, hooks (useNotificationsApi, useSignal, useRouteRef, useApi), and @backstage/ui + @remixicon/react usage in plugins/notifications."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "lines": [
+            24,
+            89
+          ],
+          "reason": "Uses notificationsApiRef, getNotifications, and updateNotifications."
+        },
+        {
+          "path": "plugins/notifications/src/routes.ts",
+          "lines": [
+            1,
+            20
+          ],
+          "reason": "Uses rootRouteRef for deep-linking to /notifications?id=<id>."
+        },
+        {
+          "path": "plugins/notifications/src/translation.ts",
+          "lines": [
+            19,
+            121
+          ],
+          "reason": "Uses notificationsTranslationRef for homeWidget strings."
+        },
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/SeverityIcon.tsx",
+          "lines": [
+            25,
+            70
+          ],
+          "reason": "Renders SeverityIcon for each unread notification."
+        }
+      ],
+      "depends_on": [
+        "U05"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-12",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-6"
+      ],
+      "checks": [
+        "eslint"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/notifications/src/components/HomePageUnreadNotifications/index.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Barrel file re-exporting Content and HomePageUnreadNotificationsProps for the unread notifications home card.",
+      "rules": [
+        "1. Include the 2026 Backstage Apache-2.0 license header.",
+        "2. Re-export Content and type HomePageUnreadNotificationsProps from ./HomePageUnreadNotifications."
+      ],
+      "exports": [
+        {
+          "name": "Content",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "HomePageUnreadNotificationsProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        },
+        {
+          "name": "HomePageUnreadNotificationsProps",
+          "kind": "type",
+          "params": [],
+          "returns": "HomePageUnreadNotificationsProps"
+        }
+      ],
+      "import_line": "import { Content, type HomePageUnreadNotificationsProps } from './components/HomePageUnreadNotifications';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/UserNotificationSettingsCard/index.ts",
+        "reason": "Matches component barrel export style in plugins/notifications."
+      },
+      "depends_on": [
+        "U09"
+      ],
+      "covers": [
+        "FR-10",
+        "NFR-1"
+      ],
+      "checks": [
+        "eslint"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css": "6a76ba9b1b187732c563ddae568a12b3522f0eef5615f464d28e4c5640bcc344",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx": "e5c70ee41407f8f1a66ff2bf61c697523e094df60b47c4cb6785daec1fda4584",
+    "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx": "5c82ffcf77e140195480bdc27eca15e49994f5b749d5b856fef28d4a8714d247",
+    "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx": "850880333b4f0f1c4021d0b66e441461a45a73ef3a4e147510f7cb5c33a55873",
+    "plugins/notifications/src/api/NotificationsApi.ts": "a6e26256a031f43baae212207ee06ad5700c1155a59b43ea1073ce393872ea6b",
+    "plugins/notifications/src/routes.ts": "a7fff5b26e700d2c0fcf7050bb837cd6c8c14015a4ebb93a3a84b7648cfe36cb",
+    "plugins/notifications/src/translation.ts": "8ac1ee9920c2d73124cfff7826ee11deadcc9eaf1b09f92494f927f4fadf1f4a",
+    "plugins/notifications/src/components/NotificationsTable/SeverityIcon.tsx": "f8198b29af93308c33777f7d45e283958050c6772c4c32c61a3d0e08be9e3809",
+    "plugins/notifications/src/components/UserNotificationSettingsCard/index.ts": "b127c3b589383a7136fdbc765e45a90ff1ddfa1d047fb6513b729efdb73053c5"
+  }
+}
