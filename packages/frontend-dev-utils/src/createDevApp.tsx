@@ -21,7 +21,7 @@ import {
 import { createApp, CreateAppOptions } from '@backstage/frontend-defaults';
 import appPlugin from '@backstage/plugin-app';
 import { Suspense, lazy } from 'react';
-import 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 type AppPluginWithSimpleOverrides = {
   withOverrides(options: { extensions: unknown[] }): FrontendFeature;
@@ -39,15 +39,6 @@ const appPluginOverride = (
 });
 
 const BuiCss = lazy(() => import('./BuiCss'));
-
-let ReactDOMPromise: Promise<
-  typeof import('react-dom') | typeof import('react-dom/client')
->;
-if (process.env.HAS_REACT_DOM_CLIENT) {
-  ReactDOMPromise = import('react-dom/client');
-} else {
-  ReactDOMPromise = import('react-dom');
-}
 
 /**
  * Options for {@link createDevApp}.
@@ -106,20 +97,14 @@ export function createDevApp(options: CreateDevAppOptions): void {
   const app = createApp(appOptions);
   const AppRoot = app.createRoot();
 
-  ReactDOMPromise.then(ReactDOM => {
-    const rootNode = (
-      <>
-        <Suspense fallback={null}>
-          <BuiCss />
-        </Suspense>
-        {AppRoot}
-      </>
-    );
+  const rootNode = (
+    <>
+      <Suspense fallback={null}>
+        <BuiCss />
+      </Suspense>
+      {AppRoot}
+    </>
+  );
 
-    if ('createRoot' in ReactDOM) {
-      ReactDOM.createRoot(rootElement).render(rootNode);
-    } else {
-      ReactDOM.render(rootNode, rootElement);
-    }
-  });
+  createRoot(rootElement).render(rootNode);
 }

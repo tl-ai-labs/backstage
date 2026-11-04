@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { forwardRef } from 'react';
-import { useId } from 'react-aria';
+import { forwardRef, useId } from 'react';
 import {
   OverlayArrow,
   Tooltip as AriaTooltip,

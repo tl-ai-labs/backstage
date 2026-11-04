@@ -146,48 +146,4 @@ describe('createDevApp', () => {
       "Could not find the dev app root element '#root'; make sure your dev entry HTML contains a root element with that id.",
     );
   });
-
-  it('should fall back to legacy react-dom rendering when createRoot is unavailable', async () => {
-    jest.resetModules();
-    delete process.env.HAS_REACT_DOM_CLIENT;
-
-    const createApp = jest.fn(() => ({
-      createRoot: () => <div>Test App Root</div>,
-    }));
-    const render = jest.fn();
-
-    jest.doMock('@backstage/frontend-defaults', () => ({
-      createApp,
-    }));
-    jest.doMock('@backstage/plugin-app', () => ({
-      __esModule: true,
-      default: {
-        withOverrides: jest.fn(() => 'app-plugin-override'),
-        getExtension: jest.fn(() => ({
-          override: jest.fn(() => 'disabled-sign-in-page'),
-        })),
-      },
-    }));
-    jest.doMock('react-dom', () => ({
-      __esModule: true,
-      render,
-    }));
-
-    const root = document.createElement('div');
-    root.id = 'root';
-    document.body.appendChild(root);
-
-    const isolatedCreateDevApp = loadCreateDevAppIsolated();
-    isolatedCreateDevApp({
-      features: ['plugin-feature'] as any,
-    });
-
-    await waitFor(() => {
-      expect(render).toHaveBeenCalled();
-      expect(createApp).toHaveBeenCalledWith({
-        bindRoutes: undefined,
-        features: ['app-plugin-override', 'plugin-feature'],
-      });
-    });
-  });
 });

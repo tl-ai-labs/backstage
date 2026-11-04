@@ -1,0 +1,347 @@
+[
+  {
+    "id": "U72",
+    "path": "packages/ui/src/components/Popover/Popover.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useId from 'react' instead of 'react-aria' in Popover while preserving per-instance SVG arrow path IDs.",
+    "rules": [
+      "1. Combine forwardRef and useId into the 'react' import and remove the 'react-aria' import."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 18,
+        "first_line": "import { forwardRef } from 'react';",
+        "last_line": "import { useId } from 'react-aria';",
+        "rule": "Replace with import { forwardRef, useId } from 'react';."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-16", "NFR-1", "NFR-2", "AC-4", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U73",
+    "path": "packages/ui/src/components/Tooltip/Tooltip.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useId from 'react' instead of 'react-aria' in Tooltip while preserving per-instance SVG arrow path IDs.",
+    "rules": [
+      "1. Combine forwardRef and useId into the 'react' import and remove the 'react-aria' import."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 18,
+        "first_line": "import { forwardRef } from 'react';",
+        "last_line": "import { useId } from 'react-aria';",
+        "rule": "Replace with import { forwardRef, useId } from 'react';."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-16", "NFR-1", "NFR-2", "AC-4", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U74",
+    "path": "packages/ui/src/components/Table/components/Table.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useId from 'react' instead of 'react-aria' in Table while preserving the live-region aria-describedby relationship.",
+    "rules": [
+      "1. Remove the import of useId from 'react-aria'.",
+      "2. Import both useId and useMemo from 'react'."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { useId } from 'react-aria';",
+        "rule": "Remove useId import from 'react-aria'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 39,
+        "to": 39,
+        "first_line": "import { useMemo } from 'react';",
+        "rule": "Replace with import { useId, useMemo } from 'react';."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/ui/src/components/Table/components/Table.test.tsx",
+        "lines": [1, 83],
+        "reason": "Existing Table component test suite that must continue passing."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-16", "NFR-1", "NFR-2", "AC-4", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U75",
+    "path": "packages/ui/src/components/TablePagination/TablePagination.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useId from 'react' instead of 'react-aria' in TablePagination while preserving pagination button aria-describedby relationships.",
+    "rules": [
+      "1. Remove the import of useId from 'react-aria'.",
+      "2. Import both useId and useMemo from 'react'."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { useId } from 'react-aria';",
+        "rule": "Remove useId import from 'react-aria'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 25,
+        "to": 25,
+        "first_line": "import { useMemo } from 'react';",
+        "rule": "Replace with import { useId, useMemo } from 'react';."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/ui/src/components/TablePagination/TablePagination.test.tsx",
+        "lines": [1, 116],
+        "reason": "Existing TablePagination component test suite that must continue passing."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-16", "NFR-1", "NFR-2", "AC-4", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U76",
+    "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove LegacyRootOption type export and drop LegacyRootOption from renderWithEffects options.",
+    "rules": [
+      "1. Delete export type LegacyRootOption = { legacyRoot?: boolean }; and its JSDoc comment.",
+      "2. Change renderWithEffects options parameter type to Pick<RenderOptions, 'wrapper'>."
+    ],
+    "exports": [
+      {
+        "name": "renderWithEffects",
+        "kind": "function",
+        "params": [
+          { "name": "nodes", "type": "ReactElement" },
+          { "name": "options", "type": "Pick<RenderOptions, 'wrapper'>" }
+        ],
+        "returns": "Promise<RenderResult>"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 25,
+        "to": 30,
+        "first_line": "/**",
+        "last_line": "export type LegacyRootOption = { legacyRoot?: boolean };",
+        "rule": "Delete LegacyRootOption and its JSDoc comment."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 46,
+        "to": 46,
+        "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+        "rule": "Change parameter type to options?: Pick<RenderOptions, 'wrapper'>,."
+      }
+    ],
+    "depends_on": ["U16", "U58"],
+    "covers": ["FR-17", "NFR-1", "NFR-2", "AC-5", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U77",
+    "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove LegacyRootOption from renderInTestApp options and stop forwarding legacyRoot to renderWithEffects.",
+    "rules": [
+      "1. Remove LegacyRootOption from the './testingLibrary' import.",
+      "2. Change renderInTestApp options parameter to options: TestAppOptions = {}.",
+      "3. Remove const { legacyRoot } = options and pass only { wrapper: createTestAppWrapper(options) } to renderWithEffects."
+    ],
+    "exports": [
+      {
+        "name": "renderInTestApp",
+        "kind": "function",
+        "params": [
+          { "name": "Component", "type": "ComponentType<PropsWithChildren<{}>> | ReactNode" },
+          { "name": "options", "type": "TestAppOptions" }
+        ],
+        "returns": "Promise<RenderResult>"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 38,
+        "to": 38,
+        "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+        "rule": "Replace with import { renderWithEffects } from './testingLibrary';."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 257,
+        "to": 257,
+        "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+        "rule": "Replace with options: TestAppOptions = {},."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 265,
+        "to": 270,
+        "first_line": "const { legacyRoot } = options;",
+        "last_line": "});",
+        "rule": "Remove legacyRoot destructuring and forwarding, calling renderWithEffects(wrappedElement, { wrapper: createTestAppWrapper(options) })."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/test-utils/src/testUtils/appWrappers.test.tsx",
+        "lines": [1, 100],
+        "reason": "Existing appWrappers test suite that must continue passing."
+      }
+    ],
+    "depends_on": ["U76"],
+    "covers": ["FR-17", "NFR-1", "NFR-2", "AC-5", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U78",
+    "path": "packages/test-utils/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate and verify packages/test-utils/report.api.md after removing LegacyRootOption.",
+    "run": "yarn tsc:full && yarn build:api-reports:only packages/test-utils && yarn build:api-reports:only packages/test-utils --ci",
+    "depends_on": [
+      "U58", "U60", "U61", "U62", "U63", "U65", "U66", "U67", "U68", "U69",
+      "U72", "U73", "U74", "U75", "U76", "U77"
+    ],
+    "covers": ["FR-18", "AC-5"]
+  },
+  {
+    "id": "U79",
+    "path": "packages/cli-module-new/templates/frontend-plugin/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Update React version query in frontend-plugin template to '^18.0.0'.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 30,
+        "to": 30,
+        "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+        "rule": "Set peerDependencies.react to \"{{versionQuery 'react' '^18.0.0'}}\"."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 41,
+        "to": 41,
+        "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+        "rule": "Set devDependencies.react to \"{{versionQuery 'react' '^18.0.0'}}\"."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-19", "AC-1"]
+  },
+  {
+    "id": "U80",
+    "path": "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Update React and react-dom version queries in legacy-frontend-plugin template to '^18.0.0'.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 34,
+        "to": 35,
+        "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+        "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+        "rule": "Set peerDependencies.react and peerDependencies['react-dom'] version queries to '^18.0.0'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 47,
+        "to": 48,
+        "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+        "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+        "rule": "Set devDependencies.react and devDependencies['react-dom'] version queries to '^18.0.0'."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-19", "AC-1"]
+  },
+  {
+    "id": "U81",
+    "path": "packages/cli-module-new/templates/plugin-web-library/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Update React version query in plugin-web-library template to '^18.0.0'.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 31,
+        "to": 31,
+        "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+        "rule": "Set peerDependencies.react to \"{{versionQuery 'react' '^18.0.0'}}\"."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 38,
+        "to": 38,
+        "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+        "rule": "Set devDependencies.react to \"{{versionQuery 'react' '^18.0.0'}}\"."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-19", "AC-1"]
+  },
+  {
+    "id": "U82",
+    "path": "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Update peerDependencies.react in scaffolder-field-extension-module template to '^18.0.0'.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 35,
+        "to": 35,
+        "first_line": "\"react\": \"^17.0.0 || ^18.0.0\"",
+        "rule": "Set peerDependencies.react to \"^18.0.0\"."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-19", "AC-1"]
+  }
+]

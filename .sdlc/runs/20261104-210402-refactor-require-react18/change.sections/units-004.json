@@ -1,0 +1,296 @@
+[
+  {
+    "id": "U59",
+    "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Make '^18.0.0' the default expected peer dependency range for '@types/react', 'react', and 'react-dom' and remove the React-18-only exception set.",
+    "rules": [
+      "1. In peerDependencies, set '@types/react', 'react', and 'react-dom' to '^18.0.0'.",
+      "2. Remove peerDependenciesReact18Only, react18OnlyPackages, and getExpectedPeerDependencies.",
+      "3. Reference peerDependencies directly in matchesPeerDependency and in all fix callbacks instead of expectedPeerDeps."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 36,
+        "to": 50,
+        "first_line": "'@types/react': '^17.0.0 || ^18.0.0',",
+        "last_line": "const react18OnlyPackages = new Set(['@backstage/ui']);",
+        "rule": "Set '@types/react', 'react', and 'react-dom' to '^18.0.0' in peerDependencies and delete peerDependenciesReact18Only and react18OnlyPackages."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 92,
+        "to": 108,
+        "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+        "last_line": "};",
+        "rule": "Delete getExpectedPeerDependencies and compare packageJson.peerDependencies[dep] directly against peerDependencies[dep as keyof typeof peerDependencies] in matchesPeerDependency."
+      },
+      {
+        "id": "S3",
+        "at": "delete",
+        "from": 145,
+        "to": 145,
+        "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+        "rule": "Remove expectedPeerDeps declaration."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 217,
+        "to": 218,
+        "first_line": "packageJson.peerDependencies[groupDep] =",
+        "last_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];",
+        "rule": "Assign peerDependencies[groupDep as keyof typeof peerDependencies]."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 244,
+        "to": 245,
+        "first_line": "packageJson.peerDependencies[dep] =",
+        "last_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+        "rule": "Assign peerDependencies[dep as keyof typeof peerDependencies]."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 254,
+        "to": 255,
+        "first_line": "packageJson.peerDependencies[dep] =",
+        "last_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+        "rule": "Assign peerDependencies[dep as keyof typeof peerDependencies]."
+      }
+    ],
+    "depends_on": ["U58"],
+    "covers": ["FR-4", "FR-5", "NFR-1", "NFR-2", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U60",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useSyncExternalStore directly from 'react' instead of 'use-sync-external-store/shim'.",
+    "rules": [
+      "1. Combine useMemo and useSyncExternalStore into the 'react' import and remove the 'use-sync-external-store/shim' import."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 18,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+        "rule": "Replace with import { useMemo, useSyncExternalStore } from 'react';."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+        "lines": [1, 80],
+        "reason": "Existing useRouteRef hook test suite that must continue passing unchanged."
+      }
+    ],
+    "depends_on": ["U12", "U58"],
+    "covers": ["FR-6", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U61",
+    "path": "packages/ui/src/hooks/useBreakpoint.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useSyncExternalStore directly from 'react' instead of 'use-sync-external-store/shim'.",
+    "rules": [
+      "1. Combine useMemo and useSyncExternalStore into the 'react' import and remove the 'use-sync-external-store/shim' import."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 16,
+        "to": 17,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+        "rule": "Replace with import { useMemo, useSyncExternalStore } from 'react';."
+      }
+    ],
+    "depends_on": ["U19", "U58"],
+    "covers": ["FR-7", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U62",
+    "path": "packages/dev-utils/src/devApp/render.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Render <DevApp /> unconditionally using createRoot from 'react-dom/client' without HAS_REACT_DOM_CLIENT branching or ReactDOM.render fallback.",
+    "rules": [
+      "1. Replace import 'react-dom' with import { createRoot } from 'react-dom/client'.",
+      "2. Remove ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT conditional dynamic import.",
+      "3. In DevAppBuilder.render(), call createRoot(document.getElementById('root')!).render(<DevApp />) directly."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 53,
+        "to": 53,
+        "first_line": "import 'react-dom';",
+        "rule": "Replace with import { createRoot } from 'react-dom/client';."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 58,
+        "to": 65,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "Delete ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT check."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 320,
+        "to": 328,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Replace with createRoot(document.getElementById('root')!).render(<DevApp />);."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/dev-utils/src/devApp/render.test.tsx",
+        "lines": [1, 49],
+        "reason": "Existing DevAppBuilder test suite that must continue passing."
+      }
+    ],
+    "depends_on": ["U07", "U58"],
+    "covers": ["FR-9", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U63",
+    "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Render rootNode directly using createRoot from 'react-dom/client' without HAS_REACT_DOM_CLIENT branching or ReactDOM.render fallback.",
+    "rules": [
+      "1. Replace import 'react-dom' with import { createRoot } from 'react-dom/client'.",
+      "2. Remove ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT conditional dynamic import.",
+      "3. In createDevApp(), construct rootNode and call createRoot(rootElement).render(rootNode) directly."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 24,
+        "to": 24,
+        "first_line": "import 'react-dom';",
+        "rule": "Replace with import { createRoot } from 'react-dom/client';."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 43,
+        "to": 50,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "Delete ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT check."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 109,
+        "to": 124,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Construct rootNode directly and call createRoot(rootElement).render(rootNode);."
+      }
+    ],
+    "depends_on": ["U10", "U58"],
+    "covers": ["FR-10", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U64",
+    "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Remove the React 17 legacy ReactDOM.render fallback test while preserving the plugin mounting, bindRoutes forwarding, and missing #root error tests.",
+    "rules": [
+      "1. Delete the 'should fall back to legacy react-dom rendering when createRoot is unavailable' test case.",
+      "2. Preserve all three React 18 test cases unchanged."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 150,
+        "to": 192,
+        "first_line": "it('should fall back to legacy react-dom rendering when createRoot is unavailable', async () => {",
+        "last_line": "});",
+        "rule": "Delete the legacy react-dom rendering fallback test."
+      }
+    ],
+    "depends_on": ["U63"],
+    "covers": ["FR-10", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "tests": [
+      {
+        "name": "should render a dev app with a plugin",
+        "given": "A#root element in document.body and a frontend plugin with a PageBlueprint at '/'",
+        "expect": "createDevApp mounts the app and renders 'Test Plugin Page'"
+      },
+      {
+        "name": "should forward bindRoutes to createApp",
+        "given": "Mocked createApp, appPlugin, and react-dom/client createRoot with a bindRoutes callback",
+        "expect": "createApp is called with bindRoutes and features, and createRoot(root).render is called with the Suspense-wrapped BuiCss and AppRoot"
+      },
+      {
+        "name": "should throw a clear error when the root element is missing",
+        "given": "An empty document.body with no #root element",
+        "expect": "createDevApp throws the missing '#root' element error"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U65",
+    "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Render React elements into the TechDocs reader root unconditionally using createRoot from 'react-dom/client'.",
+    "rules": [
+      "1. Replace the ReactDOMPromise declaration and conditional import with import { createRoot } from 'react-dom/client'.",
+      "2. In renderReactElement, call createRoot(root).render(element) directly."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 24,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "Replace with import { createRoot } from 'react-dom/client';."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 28,
+        "to": 34,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Replace with createRoot(root).render(element);."
+      }
+    ],
+    "depends_on": ["U56", "U58"],
+    "covers": ["FR-11", "NFR-1", "NFR-2", "AC-3", "AC-7"],
+    "checks": ["prettier"]
+  }
+]
