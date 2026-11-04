@@ -19,6 +19,7 @@ import { Entity } from '@backstage/catalog-model';
 import { applyDatabaseMigrations } from '../../migrations';
 import {
   DbFinalEntitiesRow,
+  DbFinalEntityPreviousNamesRow,
   DbRefreshStateReferencesRow,
   DbRefreshStateRow,
   DbRelationsRow,
@@ -1029,6 +1030,170 @@ describe.each(databases.eachSupportedId())(
           },
         ]),
       );
+    });
+
+    it('synchronizes final_entity_previous_names during stitching and cascades on delete', async () => {
+      const knex = await databases.init(databaseId);
+      await applyDatabaseMigrations(knex);
+      const logger = mockServices.logger.mock();
+
+      await knex<DbRefreshStateRow>('refresh_state').insert({
+        entity_id: 'my-id',
+        entity_ref: 'component:ns/new-name',
+        unprocessed_entity: '{}',
+        processed_entity: JSON.stringify({
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-name',
+            namespace: 'ns',
+            annotations: {
+              'backstage.io/previous-names':
+                'old-name, default/legacy-name, user:ns/ignored, new-name',
+            },
+          },
+        }),
+        errors: '[]',
+        next_update_at: knex.fn.now(),
+        last_discovery_at: knex.fn.now(),
+      });
+
+      await markForStitching({ knex, entityRefs: ['component:ns/new-name'] });
+      await expect(
+        performStitching({
+          knex,
+          logger,
+          ...(await getStitchClaim(knex, 'component:ns/new-name')),
+        }),
+      ).resolves.toBe('changed');
+
+      expect(
+        await knex<DbFinalEntityPreviousNamesRow>(
+          'final_entity_previous_names',
+        ).orderBy('previous_entity_ref'),
+      ).toEqual([
+        {
+          entity_id: 'my-id',
+          previous_entity_ref: 'component:default/legacy-name',
+        },
+        {
+          entity_id: 'my-id',
+          previous_entity_ref: 'component:ns/old-name',
+        },
+      ]);
+
+      // Update annotation to replace previous names
+      await knex<DbRefreshStateRow>('refresh_state')
+        .where('entity_id', 'my-id')
+        .update({
+          processed_entity: JSON.stringify({
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'new-name',
+              namespace: 'ns',
+              annotations: {
+                'backstage.io/previous-names': 'renamed-once',
+              },
+            },
+          }),
+        });
+
+      await markForStitching({ knex, entityRefs: ['component:ns/new-name'] });
+      await expect(
+        performStitching({
+          knex,
+          logger,
+          ...(await getStitchClaim(knex, 'component:ns/new-name')),
+        }),
+      ).resolves.toBe('changed');
+
+      expect(
+        await knex<DbFinalEntityPreviousNamesRow>(
+          'final_entity_previous_names',
+        ),
+      ).toEqual([
+        {
+          entity_id: 'my-id',
+          previous_entity_ref: 'component:ns/renamed-once',
+        },
+      ]);
+
+      // Remove annotation and verify rows are deleted
+      await knex<DbRefreshStateRow>('refresh_state')
+        .where('entity_id', 'my-id')
+        .update({
+          processed_entity: JSON.stringify({
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'new-name',
+              namespace: 'ns',
+            },
+          }),
+        });
+
+      await markForStitching({ knex, entityRefs: ['component:ns/new-name'] });
+      await expect(
+        performStitching({
+          knex,
+          logger,
+          ...(await getStitchClaim(knex, 'component:ns/new-name')),
+        }),
+      ).resolves.toBe('changed');
+
+      expect(
+        await knex<DbFinalEntityPreviousNamesRow>(
+          'final_entity_previous_names',
+        ),
+      ).toEqual([]);
+
+      // Re-add previous name and verify ON DELETE CASCADE from final_entities
+      await knex<DbRefreshStateRow>('refresh_state')
+        .where('entity_id', 'my-id')
+        .update({
+          processed_entity: JSON.stringify({
+            apiVersion: 'backstage.io/v1alpha1',
+            kind: 'Component',
+            metadata: {
+              name: 'new-name',
+              namespace: 'ns',
+              annotations: {
+                'backstage.io/previous-names': 'cascade-old-name',
+              },
+            },
+          }),
+        });
+
+      await markForStitching({ knex, entityRefs: ['component:ns/new-name'] });
+      await expect(
+        performStitching({
+          knex,
+          logger,
+          ...(await getStitchClaim(knex, 'component:ns/new-name')),
+        }),
+      ).resolves.toBe('changed');
+
+      expect(
+        await knex<DbFinalEntityPreviousNamesRow>(
+          'final_entity_previous_names',
+        ),
+      ).toEqual([
+        {
+          entity_id: 'my-id',
+          previous_entity_ref: 'component:ns/cascade-old-name',
+        },
+      ]);
+
+      await knex<DbFinalEntitiesRow>('final_entities')
+        .where('entity_id', 'my-id')
+        .delete();
+
+      expect(
+        await knex<DbFinalEntityPreviousNamesRow>(
+          'final_entity_previous_names',
+        ),
+      ).toEqual([]);
     });
   },
 );

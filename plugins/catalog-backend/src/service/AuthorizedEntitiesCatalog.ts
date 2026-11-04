@@ -32,6 +32,8 @@ import {
   EntityAncestryResponse,
   EntityFacetsRequest,
   EntityFacetsResponse,
+  EntityRedirectRequest,
+  EntityRedirectResponse,
   QueryEntitiesRequest,
   QueryEntitiesResponse,
 } from '../catalog/types';
@@ -321,6 +323,33 @@ export class AuthorizedEntitiesCatalog implements EntitiesCatalog {
     }
 
     return this.entitiesCatalog.facets(request);
+  }
+
+  async entityRedirect(
+    request: EntityRedirectRequest,
+  ): Promise<EntityRedirectResponse | undefined> {
+    const authorizeDecision = (
+      await this.permissionApi.authorizeConditional(
+        [{ permission: catalogEntityReadPermission }],
+        { credentials: request.credentials },
+      )
+    )[0];
+
+    if (authorizeDecision.result === AuthorizeResult.DENY) {
+      return undefined;
+    }
+
+    if (authorizeDecision.result === AuthorizeResult.CONDITIONAL) {
+      return this.entitiesCatalog.entityRedirect?.({
+        ...request,
+        filter: this.permissionPredicate(
+          authorizeDecision.conditions,
+          request.filter,
+        ),
+      });
+    }
+
+    return this.entitiesCatalog.entityRedirect?.(request);
   }
 
   private findParents(

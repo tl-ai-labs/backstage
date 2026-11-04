@@ -1,0 +1,789 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/catalog-model/src/entity/constants.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Export the ANNOTATION_PREVIOUS_NAMES annotation constant ('backstage.io/previous-names') from @backstage/catalog-model.",
+    "rules": [
+      "1. Add a @public JSDoc comment and export const ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names'; at the end of packages/catalog-model/src/entity/constants.ts."
+    ],
+    "exports": [
+      {
+        "name": "ANNOTATION_PREVIOUS_NAMES",
+        "kind": "const",
+        "params": [],
+        "returns": "string"
+      }
+    ],
+    "import_line": "import { ANNOTATION_PREVIOUS_NAMES } from '@backstage/catalog-model';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 62,
+        "to": 62,
+        "first_line": "'kubernetes.io/auth-provider';",
+        "rule": "Add @public JSDoc and export const ANNOTATION_PREVIOUS_NAMES = 'backstage.io/previous-names';"
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "AC-1"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/catalog-model/src/entity/ref.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add parseEntityPreviousNames(entity: Entity): string[] to parse, normalize, validate, filter, and deduplicate backstage.io/previous-names entries.",
+    "rules": [
+      "1. Import ANNOTATION_PREVIOUS_NAMES alongside DEFAULT_NAMESPACE from './constants' and import { KubernetesValidatorFunctions } from '../validation/KubernetesValidatorFunctions'.",
+      "2. Read rawAnnotation = entity.metadata?.annotations?.[ANNOTATION_PREVIOUS_NAMES]; if typeof rawAnnotation !== 'string' or !rawAnnotation.trim() or !entity.kind or !entity.metadata?.name, return [].",
+      "3. Compute entityNamespace = entity.metadata.namespace || DEFAULT_NAMESPACE and currentRef = stringifyEntityRef({ kind: entity.kind, namespace: entityNamespace, name: entity.metadata.name }).",
+      "4. Split rawAnnotation on ',', trim each entry, skip empty strings, and inside a try/catch call parseEntityRef(entry, { defaultKind: entity.kind, defaultNamespace: entityNamespace }).",
+      "5. Skip any entry where parseEntityRef throws, where parsed.kind.toLocaleLowerCase('en-US') !== entity.kind.toLocaleLowerCase('en-US'), or where !KubernetesValidatorFunctions.isValidKind(parsed.kind) || !KubernetesValidatorFunctions.isValidNamespace(parsed.namespace) || !KubernetesValidatorFunctions.isValidObjectName(parsed.name).",
+      "6. Normalize each valid entry with stringifyEntityRef(parsed), skip any entry equal to currentRef, deduplicate while preserving order using a Set<string>, and return Array.from(result)."
+    ],
+    "exports": [
+      {
+        "name": "parseEntityPreviousNames",
+        "kind": "function",
+        "params": [
+          {
+            "name": "entity",
+            "type": "Entity"
+          }
+        ],
+        "returns": "string[]"
+      }
+    ],
+    "import_line": "import { parseEntityPreviousNames } from '@backstage/catalog-model';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 19,
+        "first_line": "import { DEFAULT_NAMESPACE } from './constants';",
+        "last_line": "import { Entity } from './Entity';",
+        "rule": "Import ANNOTATION_PREVIOUS_NAMES alongside DEFAULT_NAMESPACE from './constants' and KubernetesValidatorFunctions from '../validation/KubernetesValidatorFunctions'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 158,
+        "to": 158,
+        "first_line": "}",
+        "rule": "Add @public JSDoc and export function parseEntityPreviousNames(entity: Entity): string[]."
+      }
+    ],
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+        "lines": [28, 59],
+        "reason": "Validate kind, namespace, and object name of parsed previous entity references."
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": ["FR-1", "FR-2", "NFR-4", "AC-1"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/catalog-model/src/entity/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Re-export parseEntityPreviousNames from packages/catalog-model/src/entity/index.ts.",
+    "rules": [
+      "1. Add parseEntityPreviousNames to the export list from './ref'."
+    ],
+    "exports": [
+      {
+        "name": "parseEntityPreviousNames",
+        "kind": "function",
+        "params": [
+          {
+            "name": "entity",
+            "type": "Entity"
+          }
+        ],
+        "returns": "string[]"
+      }
+    ],
+    "import_line": "import { ANNOTATION_PREVIOUS_NAMES, parseEntityPreviousNames } from '@backstage/catalog-model';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 22,
+        "to": 26,
+        "first_line": "export {",
+        "last_line": "} from './ref';",
+        "rule": "Re-export getCompoundEntityRef, parseEntityPreviousNames, parseEntityRef, and stringifyEntityRef from './ref'."
+      }
+    ],
+    "depends_on": ["U01", "U02"],
+    "covers": ["FR-1", "FR-2", "AC-1"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U04",
+    "path": "plugins/catalog-backend/migrations/20261104000000_previous_entity_names.js",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Create the final_entity_previous_names table with foreign key to final_entities(entity_id) ON DELETE CASCADE and lookup indices.",
+    "rules": [
+      "1. Start with the 2026 Backstage Apache 2.0 license header and // @ts-check.",
+      "2. In exports.up = async function up(knex), create table 'final_entity_previous_names' with table.comment('Previous entity references for stitched entities in the catalog'), table.string('entity_id').notNullable().references('entity_id').inTable('final_entities').onDelete('CASCADE').comment('The entity_id of the stitched entity that claims this previous name'), and table.string('previous_entity_ref').notNullable().comment('The normalized entity reference that the entity was previously known as').",
+      "3. Add table.unique(['entity_id', 'previous_entity_ref'], { indexName: 'final_entity_previous_names_entity_id_ref_uniq' }), table.index('entity_id', 'final_entity_previous_names_entity_id_idx'), and table.index('previous_entity_ref', 'final_entity_previous_names_previous_entity_ref_idx').",
+      "4. In exports.down = async function down(knex), drop table 'final_entity_previous_names' via await knex.schema.dropTable('final_entity_previous_names')."
+    ],
+    "exports": [
+      {
+        "name": "exports.up",
+        "kind": "function",
+        "params": [
+          {
+            "name": "knex",
+            "type": "import('knex').Knex"
+          }
+        ],
+        "returns": "Promise<void>"
+      },
+      {
+        "name": "exports.down",
+        "kind": "function",
+        "params": [
+          {
+            "name": "knex",
+            "type": "import('knex').Knex"
+          }
+        ],
+        "returns": "Promise<void>"
+      }
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": "plugins/catalog-backend/migrations/20210302150147_refresh_state.js",
+      "lines": [1, 91],
+      "reason": "Match Knex migration structure, JSDoc typing, foreign key ON DELETE CASCADE, and index definitions."
+    },
+    "depends_on": [],
+    "covers": ["FR-3", "FR-16", "NFR-2", "NFR-3", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U05",
+    "path": "plugins/catalog-backend/src/database/tables.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Export DbFinalEntityPreviousNamesRow row type for the final_entity_previous_names table.",
+    "rules": [
+      "1. Append export type DbFinalEntityPreviousNamesRow = { entity_id: string; previous_entity_ref: string; }; after DbSearchRow."
+    ],
+    "exports": [
+      {
+        "name": "DbFinalEntityPreviousNamesRow",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entity_id: string; previous_entity_ref: string }"
+      }
+    ],
+    "import_line": "import { DbFinalEntityPreviousNamesRow } from '../database/tables';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 202,
+        "to": 202,
+        "first_line": "};",
+        "rule": "Add export type DbFinalEntityPreviousNamesRow = { entity_id: string; previous_entity_ref: string; };"
+      }
+    ],
+    "depends_on": ["U04"],
+    "covers": ["FR-3", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U06",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Synchronize final_entity_previous_names rows within the stitching transaction whenever an entity's stitched output changes.",
+    "rules": [
+      "1. Import parseEntityPreviousNames from '@backstage/catalog-model' and DbFinalEntityPreviousNamesRow from '../../tables'.",
+      "2. Right after const searchEntries = buildEntitySearch(entityId, entity); compute const previousEntityRefs = parseEntityPreviousNames(entity);.",
+      "3. Inside the stitch transaction right after await syncSearchRows(tx, entityId, searchEntries); delete existing rows via await tx<DbFinalEntityPreviousNamesRow>('final_entity_previous_names').where({ entity_id: entityId }).delete(); and if previousEntityRefs.length > 0 insert previousEntityRefs.map(previous_entity_ref => ({ entity_id: entityId, previous_entity_ref })) into tx<DbFinalEntityPreviousNamesRow>('final_entity_previous_names')."
+    ],
+    "exports": [],
+    "import_line": "import { performStitching } from './performStitching';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 18,
+        "to": 29,
+        "first_line": "import {",
+        "last_line": "import { DbFinalEntitiesRow, DbStitchQueueRow } from '../../tables';",
+        "rule": "Import parseEntityPreviousNames from '@backstage/catalog-model' and DbFinalEntityPreviousNamesRow from '../../tables'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 206,
+        "to": 206,
+        "first_line": "const searchEntries = buildEntitySearch(entityId, entity);",
+        "rule": "Compute const previousEntityRefs = parseEntityPreviousNames(entity);"
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 307,
+        "to": 307,
+        "first_line": "await syncSearchRows(tx, entityId, searchEntries);",
+        "rule": "Delete existing final_entity_previous_names rows for entityId on tx and insert new rows when previousEntityRefs.length > 0."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03", "U04", "U05"],
+    "covers": ["FR-4", "NFR-2", "NFR-3", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U07",
+    "path": "plugins/catalog-backend/src/catalog/types.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add EntityRedirectRequest, EntityRedirectResponse, and EntitiesCatalog.entityRedirect to catalog-backend types.",
+    "rules": [
+      "1. Add entityRedirect?(request: EntityRedirectRequest): Promise<EntityRedirectResponse | undefined>; to the EntitiesCatalog interface.",
+      "2. Export type EntityRedirectRequest = { entityRef: string; filter?: FilterPredicate; credentials: BackstageCredentials; }; (using FilterPredicate from '@backstage/filter-predicates', matching EntitiesBatchRequest.filter) and export type EntityRedirectResponse = { entityRef: string; }; at the end of the file."
+    ],
+    "exports": [
+      {
+        "name": "EntityRedirectRequest",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entityRef: string; filter?: FilterPredicate; credentials: BackstageCredentials }"
+      },
+      {
+        "name": "EntityRedirectResponse",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entityRef: string }"
+      },
+      {
+        "name": "EntitiesCatalog",
+        "kind": "interface",
+        "params": [],
+        "returns": "EntitiesCatalog"
+      }
+    ],
+    "import_line": "import { EntitiesCatalog, EntityRedirectRequest, EntityRedirectResponse } from '../catalog/types';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 195,
+        "to": 196,
+        "first_line": "facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;",
+        "last_line": "}",
+        "rule": "Add entityRedirect?(request: EntityRedirectRequest): Promise<EntityRedirectResponse | undefined>; to EntitiesCatalog."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 319,
+        "to": 319,
+        "first_line": "};",
+        "rule": "Export EntityRedirectRequest (with filter?: FilterPredicate) and EntityRedirectResponse types."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-5", "FR-6", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U08",
+    "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Implement DefaultEntitiesCatalog.entityRedirect without altering entitiesBatch or any existing catalog query methods.",
+    "rules": [
+      "1. Import parseEntityRef alongside Entity and stringifyEntityRef from '@backstage/catalog-model', EntityRedirectRequest and EntityRedirectResponse from '../catalog/types', and DbFinalEntityPreviousNamesRow from '../database/tables'.",
+      "2. Do not modify entitiesBatch or any existing method in DefaultEntitiesCatalog (AC-5, NFR-1).",
+      "3. In async entityRedirect(request: EntityRedirectRequest): Promise<EntityRedirectResponse | undefined>, normalize targetRef = stringifyEntityRef(parseEntityRef(request.entityRef)).",
+      "4. First check if a stitched live entity already exists at targetRef: query this.database<DbFinalEntitiesRow>('final_entities').where('final_entities.entity_ref', targetRef).whereNotNull('final_entities.final_entity').select('final_entities.entity_id').first(); if found, return undefined (live entity takes precedence, AC-3, NFR-4).",
+      "5. Build a query on this.database<DbFinalEntityPreviousNamesRow>('final_entity_previous_names').join('final_entities', 'final_entity_previous_names.entity_id', 'final_entities.entity_id').where('final_entity_previous_names.previous_entity_ref', targetRef).whereNotNull('final_entities.final_entity').",
+      "6. If request?.filter is provided, apply query = applyEntityFilterToQuery({ filter: request.filter, targetQuery: query, onEntityIdField: 'final_entities.entity_id', knex: this.database }), matching entitiesBatch.",
+      "7. Select distinct 'final_entities.entity_ref as entity_ref' ordered by 'final_entities.entity_ref' asc with .limit(2); return { entityRef: rows[0].entity_ref } only when rows.length === 1 and Boolean(rows[0].entity_ref), otherwise return undefined."
+    ],
+    "exports": [
+      {
+        "name": "DefaultEntitiesCatalog.entityRedirect",
+        "kind": "method",
+        "params": [
+          {
+            "name": "request",
+            "type": "EntityRedirectRequest"
+          }
+        ],
+        "returns": "Promise<EntityRedirectResponse | undefined>"
+      }
+    ],
+    "import_line": "import { DefaultEntitiesCatalog } from './DefaultEntitiesCatalog';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 44,
+        "first_line": "import { Entity, stringifyEntityRef } from '@backstage/catalog-model';",
+        "last_line": "} from '../database/tables';",
+        "rule": "Import parseEntityRef from '@backstage/catalog-model', EntityRedirectRequest and EntityRedirectResponse from '../catalog/types', and DbFinalEntityPreviousNamesRow from '../database/tables'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 849,
+        "to": 851,
+        "first_line": "return { facets };",
+        "last_line": "}",
+        "rule": "Add async entityRedirect(request: EntityRedirectRequest): Promise<EntityRedirectResponse | undefined> method at the end of DefaultEntitiesCatalog."
+      }
+    ],
+    "depends_on": ["U02", "U03", "U04", "U05", "U06", "U07"],
+    "covers": ["FR-5", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-2", "AC-3", "AC-4", "AC-5"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U09",
+    "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Authorize entityRedirect in AuthorizedEntitiesCatalog using catalogEntityReadPermission and conditional permission filters.",
+    "rules": [
+      "1. Import EntityRedirectRequest and EntityRedirectResponse from '../catalog/types'.",
+      "2. Implement async entityRedirect(request: EntityRedirectRequest): Promise<EntityRedirectResponse | undefined> which reads const authorizeDecision = (await this.permissionApi.authorizeConditional([{ permission: catalogEntityReadPermission }], { credentials: request.credentials }))[0]; matching entitiesBatch.",
+      "3. If authorizeDecision.result === AuthorizeResult.DENY, return undefined.",
+      "4. If authorizeDecision.result === AuthorizeResult.CONDITIONAL, return this.entitiesCatalog.entityRedirect?.({ ...request, filter: this.permissionPredicate(authorizeDecision.conditions, request.filter) }).",
+      "5. Otherwise return this.entitiesCatalog.entityRedirect?.(request)."
+    ],
+    "exports": [
+      {
+        "name": "AuthorizedEntitiesCatalog.entityRedirect",
+        "kind": "method",
+        "params": [
+          {
+            "name": "request",
+            "type": "EntityRedirectRequest"
+          }
+        ],
+        "returns": "Promise<EntityRedirectResponse | undefined>"
+      }
+    ],
+    "import_line": "import { AuthorizedEntitiesCatalog } from './AuthorizedEntitiesCatalog';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 35,
+        "to": 37,
+        "first_line": "QueryEntitiesRequest,",
+        "last_line": "} from '../catalog/types';",
+        "rule": "Import EntityRedirectRequest and EntityRedirectResponse from '../catalog/types'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 324,
+        "to": 324,
+        "first_line": "}",
+        "rule": "Add async entityRedirect(request: EntityRedirectRequest): Promise<EntityRedirectResponse | undefined> method to AuthorizedEntitiesCatalog."
+      }
+    ],
+    "depends_on": ["U07", "U08"],
+    "covers": ["FR-6", "AC-4"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U10",
+    "path": "plugins/catalog-backend/src/schema/openapi.yaml",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Define EntityRedirectResponse schema and GET /entities/by-name/{kind}/{namespace}/{name}/redirect operation in openapi.yaml.",
+    "rules": [
+      "1. Under components.schemas after QueryEntitiesResponse, add EntityRedirectResponse: { type: object, properties: { entityRef: { type: string, description: 'The entity reference that the requested entity redirects to.' } }, required: [entityRef], additionalProperties: false }.",
+      "2. Under paths after /entities/by-name/{kind}/{namespace}/{name}/ancestry, add /entities/by-name/{kind}/{namespace}/{name}/redirect with get operationId GetEntityRedirectByName, summary 'Get the redirect target entity ref for a previously named entity.', responses 200 ($ref '#/components/schemas/EntityRedirectResponse'), 400 ($ref '#/components/schemas/ErrorResponse'), 404 ($ref '#/components/schemas/ErrorResponse'), default ($ref '#/components/schemas/ErrorResponse'), security [{}, { JWT: [] }], and parameters $ref kind, namespace, name."
+    ],
+    "exports": [],
+    "import_line": "",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 860,
+        "to": 860,
+        "first_line": "additionalProperties: false",
+        "rule": "Add EntityRedirectResponse schema definition under components.schemas."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 1022,
+        "to": 1022,
+        "first_line": "- $ref: '#/components/parameters/name'",
+        "rule": "Add /entities/by-name/{kind}/{namespace}/{name}/redirect GET operation (operationId: GetEntityRedirectByName)."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-7", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U11",
+    "path": "plugins/catalog-backend/src/schema/openapi/generated/router.ts",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate OpenAPI server and client code in catalog-backend and catalog-client from openapi.yaml.",
+    "run": "yarn generate",
+    "cwd": "plugins/catalog-backend",
+    "depends_on": ["U10"],
+    "covers": ["FR-7", "FR-8", "FR-14", "AC-10"]
+  },
+  {
+    "id": "U12",
+    "path": "plugins/catalog-backend/src/service/createRouter.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Register the GET /entities/by-name/:kind/:namespace/:name/redirect route handler in createRouter.",
+    "rules": [
+      "1. Import NotFoundError alongside InputError and serializeError from '@backstage/errors'.",
+      "2. Chain .get('/entities/by-name/:kind/:namespace/:name/redirect', async (req, res) => { ... }) right after the '/entities/by-name/:kind/:namespace/:name/ancestry' handler on entitiesCatalog router setup.",
+      "3. Inside the handler, compute const entityRef = stringifyEntityRef(req.params); create an auditor event via const auditorEvent = await auditor?.createEvent({ eventId: 'entity-fetch', request: req, meta: { queryType: 'by-previous-name', entityRef } });.",
+      "4. Obtain credentials via const credentials = await httpAuth.credentials(req); and call const response = await entitiesCatalog.entityRedirect?.({ entityRef, credentials });.",
+      "5. If !response, throw new NotFoundError(`No entity redirect found for ${entityRef}`); otherwise call await auditorEvent?.success(); and res.status(200).json(response); catching errors to call await auditorEvent?.fail({ error }); throw error;."
+    ],
+    "exports": [],
+    "import_line": "import { createRouter } from './createRouter';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 32,
+        "to": 32,
+        "first_line": "import { InputError, serializeError } from '@backstage/errors';",
+        "rule": "Import NotFoundError alongside InputError and serializeError from '@backstage/errors'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 496,
+        "to": 496,
+        "first_line": ")",
+        "rule": "Add .get('/entities/by-name/:kind/:namespace/:name/redirect', ...) route handler with auditor queryType: 'by-previous-name'."
+      }
+    ],
+    "depends_on": ["U07", "U08", "U09", "U10", "U11"],
+    "covers": ["FR-7", "AC-2", "AC-3", "AC-4"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/catalog-client/src/types/api.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Export CatalogEntityRedirect and add getEntityRedirectByRef to the CatalogApi interface.",
+    "rules": [
+      "1. Add @public JSDoc and export type CatalogEntityRedirect = { entityRef: string; }; right after GetEntityAncestorsResponse.",
+      "2. Add @public JSDoc and optional method getEntityRedirectByRef?(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<CatalogEntityRedirect | undefined>; to CatalogApi right after getEntityByRef."
+    ],
+    "exports": [
+      {
+        "name": "CatalogEntityRedirect",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entityRef: string }"
+      },
+      {
+        "name": "CatalogApi",
+        "kind": "interface",
+        "params": [],
+        "returns": "CatalogApi"
+      }
+    ],
+    "import_line": "import { CatalogApi, CatalogEntityRedirect } from './types/api';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 264,
+        "to": 264,
+        "first_line": "}",
+        "rule": "Add @public JSDoc and export type CatalogEntityRedirect = { entityRef: string; };"
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 699,
+        "to": 699,
+        "first_line": "): Promise<Entity | undefined>;",
+        "rule": "Add @public JSDoc and getEntityRedirectByRef?(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<CatalogEntityRedirect | undefined>; to CatalogApi."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-8", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/catalog-client/src/types/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Re-export CatalogEntityRedirect from packages/catalog-client/src/types/index.ts.",
+    "rules": [
+      "1. Add CatalogEntityRedirect to the type export list from './api'."
+    ],
+    "exports": [
+      {
+        "name": "CatalogEntityRedirect",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entityRef: string }"
+      }
+    ],
+    "import_line": "import { CatalogApi, CatalogEntityRedirect } from '@backstage/catalog-client';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 18,
+        "to": 22,
+        "first_line": "export type {",
+        "last_line": "CatalogRequestOptions,",
+        "rule": "Re-export CatalogEntityRedirect from './api'."
+      }
+    ],
+    "depends_on": ["U13"],
+    "covers": ["FR-8", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U15",
+    "path": "packages/catalog-client/src/CatalogClient.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Implement getEntityRedirectByRef on CatalogClient using the generated getEntityRedirectByName OpenAPI client method.",
+    "rules": [
+      "1. Import CatalogEntityRedirect from './types/api'.",
+      "2. Add async getEntityRedirectByRef(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<CatalogEntityRedirect | undefined> right after getEntityByRef.",
+      "3. Parse { kind, namespace, name } = parseEntityRef(entityRef) and return this.requestOptional(await this.apiClient.getEntityRedirectByName({ path: { kind, namespace, name } }, options))."
+    ],
+    "exports": [
+      {
+        "name": "CatalogClient.getEntityRedirectByRef",
+        "kind": "method",
+        "params": [
+          {
+            "name": "entityRef",
+            "type": "string | CompoundEntityRef"
+          },
+          {
+            "name": "options",
+            "type": "CatalogRequestOptions | undefined"
+          }
+        ],
+        "returns": "Promise<CatalogEntityRedirect | undefined>"
+      }
+    ],
+    "import_line": "import { CatalogClient } from '@backstage/catalog-client';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 25,
+        "to": 30,
+        "first_line": "import {",
+        "last_line": "CatalogRequestOptions,",
+        "rule": "Import CatalogEntityRedirect alongside CatalogApi and CatalogRequestOptions from './types/api'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 480,
+        "to": 480,
+        "first_line": "}",
+        "rule": "Implement async getEntityRedirectByRef(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<CatalogEntityRedirect | undefined>."
+      }
+    ],
+    "depends_on": ["U02", "U03", "U11", "U13", "U14"],
+    "covers": ["FR-8", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U16",
+    "path": "packages/catalog-client/src/testUtils/InMemoryCatalogClient.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Implement getEntityRedirectByRef on InMemoryCatalogClient using parseEntityPreviousNames.",
+    "rules": [
+      "1. Import CatalogEntityRedirect from '@backstage/catalog-client' and parseEntityPreviousNames from '@backstage/catalog-model'.",
+      "2. Add async getEntityRedirectByRef(entityRef: string | CompoundEntityRef): Promise<CatalogEntityRedirect | undefined> right after getEntityByRef.",
+      "3. Normalize targetRef = stringifyEntityRef(parseEntityRef(entityRef)); if this.#createEntityRefMap().has(targetRef), return undefined.",
+      "4. Collect all entities in this.#entities where parseEntityPreviousNames(entity).includes(targetRef); if matches.length === 1, return { entityRef: stringifyEntityRef(matches[0]) }, otherwise return undefined."
+    ],
+    "exports": [
+      {
+        "name": "InMemoryCatalogClient.getEntityRedirectByRef",
+        "kind": "method",
+        "params": [
+          {
+            "name": "entityRef",
+            "type": "string | CompoundEntityRef"
+          }
+        ],
+        "returns": "Promise<CatalogEntityRedirect | undefined>"
+      }
+    ],
+    "import_line": "import { InMemoryCatalogClient } from '@backstage/catalog-client/testUtils';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 20,
+        "to": 22,
+        "first_line": "CATALOG_FILTER_EXISTS,",
+        "last_line": "EntityFilterQuery,",
+        "rule": "Import CatalogEntityRedirect from '@backstage/catalog-client'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 42,
+        "to": 47,
+        "first_line": "import {",
+        "last_line": "} from '@backstage/catalog-model';",
+        "rule": "Import parseEntityPreviousNames from '@backstage/catalog-model'."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 623,
+        "to": 623,
+        "first_line": "}",
+        "rule": "Implement async getEntityRedirectByRef(entityRef: string | CompoundEntityRef): Promise<CatalogEntityRedirect | undefined>."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03", "U13", "U14"],
+    "covers": ["FR-9", "AC-3", "AC-6"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U17",
+    "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Keep useEntityFromUrl's useRouteRefParams, useAsyncRetry with refresh, and 'No name provided!' errorApi guard, adding redirect lookup inside try/catch only after getEntityByRef misses and hiding entity only while a redirect is pending.",
+    "rules": [
+      "1. Import DEFAULT_NAMESPACE, parseEntityRef, and stringifyEntityRef from '@backstage/catalog-model', alertApiRef, errorApiRef, useApi, useApiHolder, useRouteRef, and useRouteRefParams from '@backstage/core-plugin-api', catalogApiRef, EntityLoadingStatus, and entityRouteRef from '@backstage/plugin-catalog-react', useEffect from 'react', useLocation and useNavigate from 'react-router-dom', and useAsyncRetry from 'react-use/esm/useAsyncRetry'.",
+      "2. Keep const { kind, namespace = DEFAULT_NAMESPACE, name } = useRouteRefParams(entityRouteRef); const navigate = useNavigate(); const location = useLocation(); const errorApi = useApi(errorApiRef); const catalogApi = useApi(catalogApiRef); const apiHolder = useApiHolder(); const entityRoute = useRouteRef(entityRouteRef);.",
+      "3. Keep useAsyncRetry (exposing retry: refresh) with dependencies [catalogApi, kind, namespace, name]: first call const foundEntity = await catalogApi.getEntityByRef({ kind, namespace, name }); if foundEntity is defined, return { entity: foundEntity, redirectUrl: undefined }.",
+      "4. Only when foundEntity is undefined and name is truthy, wrap the redirect lookup in a try { const redirect = await catalogApi.getEntityRedirectByRef?.({ kind, namespace, name }); ... } catch { // ignore redirect lookup errors and fall back to not-found state } block (matching useExternalRedirect): if redirect?.entityRef is returned, parse targetRef = parseEntityRef(redirect.entityRef) and normalize currentRef = stringifyEntityRef({ kind, namespace, name }) and targetRefStr = stringifyEntityRef(targetRef); if targetRefStr !== currentRef, compute currentBase = entityRoute({ kind, namespace, name }) and targetBase = entityRoute({ kind: targetRef.kind, namespace: targetRef.namespace, name: targetRef.name }), extract any sub-route suffix = location.pathname.startsWith(currentBase) ? location.pathname.slice(currentBase.length) : '', build redirectUrl = `${targetBase}${suffix}${location.search}${location.hash}`, post a transient info alert via apiHolder.get(alertApiRef)?.post({ message: `Redirected from ${currentRef} to ${targetRefStr} as the entity was renamed.`, severity: 'info', display: 'transient' }), and return { entity: undefined, redirectUrl }; if no redirect is found or if getEntityRedirectByRef throws, return { entity: undefined, redirectUrl: undefined } so the page falls back to the not-found state.",
+      "5. Derive const entity = value?.entity; and const redirectUrl = value?.redirectUrl; so that when refresh() is invoked on a directly resolved entity, useAsyncRetry retains value.entity and keeps the entity content mounted while loading.",
+      "6. Keep the existing useEffect checking if (!name) { errorApi.post(new Error('No name provided!')); navigate('/'); }, add a useEffect that calls if (redirectUrl) { navigate(redirectUrl, { replace: true }); }, and return { entity: redirectUrl ? undefined : entity, loading: loading || Boolean(redirectUrl), error, refresh }."
+    ],
+    "exports": [
+      {
+        "name": "useEntityFromUrl",
+        "kind": "function",
+        "params": [],
+        "returns": "EntityLoadingStatus"
+      }
+    ],
+    "import_line": "import { useEntityFromUrl } from './useEntityFromUrl';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 55,
+        "first_line": "import {",
+        "last_line": "};",
+        "rule": "Keep useRouteRefParams, useAsyncRetry with refresh, and the errorApi guard for 'No name provided!', adding getEntityRedirectByRef fallback wrapped in try/catch only after getEntityByRef misses and hiding entity only when redirectUrl is pending."
+      }
+    ],
+    "depends_on": ["U02", "U03", "U13", "U14", "U15", "U16"],
+    "covers": ["FR-10", "FR-11", "NFR-4", "AC-7"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U18",
+    "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Extend useExternalRedirect in TechDocs to resolve entity rename redirects via catalogApi.getEntityRedirectByRef using useLocation() and useParams().",
+    "rules": [
+      "1. Import useEffect and useRef from 'react', useLocation, useNavigate, and useParams from 'react-router-dom', useAsync from 'react-use/esm/useAsync', alertApiRef, useApi, useApiHolder, and useRouteRef from '@backstage/core-plugin-api', catalogApiRef from '@backstage/plugin-catalog-react', CompoundEntityRef, parseEntityRef, and stringifyEntityRef from '@backstage/catalog-model', buildTechDocsURL from '@backstage/plugin-techdocs-react', TECHDOCS_EXTERNAL_ANNOTATION from '@backstage/plugin-techdocs-common', and rootDocsRouteRef from '../../../routes'.",
+      "2. Obtain const apiHolder = useApiHolder(); const params = useParams(); const location = useLocation(); alongside catalogApi, navigate, and viewTechdocLink.",
+      "3. Inside useAsync, when catalogEntity is undefined, call const redirect = await catalogApi.getEntityRedirectByRef?.(entityRef); if redirect?.entityRef is returned, parse targetRef = parseEntityRef(redirect.entityRef) and normalize targetRefStr = stringifyEntityRef(targetRef); if targetRefStr !== entityKey, build targetBase = viewTechdocLink({ kind: targetRef.kind, namespace: targetRef.namespace, name: targetRef.name }).",
+      "4. Compute the sub-path suffix from params['*'] (if non-empty, `/${params['*'].replace(/^\\/+/, '')}`, or if location.pathname starts with currentBase = viewTechdocLink({ kind: entityRef.kind, namespace: entityRef.namespace, name: entityRef.name }), slice after currentBase), append location.search and location.hash, post a transient info alert via apiHolder.get(alertApiRef)?.post({ message: `Redirected from ${entityKey} to ${targetRefStr} as the entity was renamed.`, severity: 'info', display: 'transient' }), and return `${targetBase}${suffix}${location.search}${location.hash}`."
+    ],
+    "exports": [
+      {
+        "name": "useExternalRedirect",
+        "kind": "function",
+        "params": [
+          {
+            "name": "entityRef",
+            "type": "CompoundEntityRef"
+          }
+        ],
+        "returns": "{ loading: boolean; shouldShowProgress: boolean }"
+      }
+    ],
+    "import_line": "import { useExternalRedirect } from './useExternalRedirect';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 73,
+        "first_line": "import { useEffect, useRef } from 'react';",
+        "last_line": "}, [entityKey, catalogApi]);",
+        "rule": "Keep all existing imports (useEffect, useRef, useNavigate, useAsync, useApi, useRouteRef, catalogApiRef, CompoundEntityRef, stringifyEntityRef, buildTechDocsURL, TECHDOCS_EXTERNAL_ANNOTATION, rootDocsRouteRef), add useLocation, useParams, alertApiRef, useApiHolder, and parseEntityRef, and when getEntityByRef returns undefined check catalogApi.getEntityRedirectByRef?.(entityRef), preserve sub-path/query/hash, and post a transient info alert."
+      }
+    ],
+    "depends_on": ["U02", "U03", "U13", "U14", "U15", "U16"],
+    "covers": ["FR-12", "FR-13", "NFR-4", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U19",
+    "path": "plugins/catalog-backend/report.sql.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Run yarn tsc:full, regenerate API Extractor and SQL reports for all five changed packages, and verify with --ci.",
+    "run": "yarn tsc:full && yarn build:api-reports:only packages/catalog-model packages/catalog-client plugins/catalog-backend plugins/catalog plugins/techdocs && yarn build:api-reports:only --ci packages/catalog-model packages/catalog-client plugins/catalog-backend plugins/catalog plugins/techdocs",
+    "depends_on": [
+      "U01",
+      "U02",
+      "U03",
+      "U04",
+      "U05",
+      "U06",
+      "U07",
+      "U08",
+      "U09",
+      "U10",
+      "U11",
+      "U12",
+      "U13",
+      "U14",
+      "U15",
+      "U16",
+      "U17",
+      "U18"
+    ],
+    "covers": ["FR-14", "NFR-1", "NFR-5", "AC-5", "AC-10"]
+  }
+]

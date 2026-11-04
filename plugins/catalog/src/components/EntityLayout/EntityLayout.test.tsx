@@ -44,6 +44,7 @@ import {
 import { mockApis } from '@backstage/frontend-test-utils';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { EntityLayout } from './EntityLayout';
+import { CatalogEntityPage } from '../CatalogEntityPage/CatalogEntityPage';
 import { rootRouteRef, unregisterRedirectRouteRef } from '../../routes';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import { ReactNode, useEffect } from 'react';
@@ -546,5 +547,68 @@ describe('EntityLayout - inspect dialog', () => {
     expect(mountCount).toBe(mountsBefore);
     expect(renderCount).toBe(rendersBefore);
     expect(analyticsRenderCount).toBe(analyticsRendersBefore);
+  });
+
+  it('redirects from a previous entity name preserving sub-route and posts an info alert', async () => {
+    const renamedEntity: Entity = {
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'MyKind',
+      metadata: {
+        name: 'my-entity',
+        namespace: 'default',
+        annotations: {
+          'backstage.io/previous-names': 'old-entity',
+        },
+      },
+    };
+    const alertApi = mockApis.alert.mock();
+
+    await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [catalogApiRef, catalogApiMock({ entities: [renamedEntity] })],
+          [alertApiRef, alertApi],
+          [starredEntitiesApiRef, new MockStarredEntitiesApi()],
+          [permissionApiRef, mockApis.permission()],
+        ]}
+      >
+        <Routes>
+          <Route
+            path="/catalog/:namespace/:kind/:name/*"
+            element={<CatalogEntityPage />}
+          >
+            <Route
+              path="*"
+              element={
+                <EntityLayout>
+                  <EntityLayout.Route path="/" title="Overview">
+                    <div>overview-content</div>
+                  </EntityLayout.Route>
+                  <EntityLayout.Route path="/ci-cd" title="CI/CD">
+                    <div>cicd-content</div>
+                  </EntityLayout.Route>
+                </EntityLayout>
+              }
+            />
+          </Route>
+        </Routes>
+      </TestApiProvider>,
+      {
+        routeEntries: ['/catalog/default/mykind/old-entity/ci-cd'],
+        mountedRoutes: {
+          '/catalog/:namespace/:kind/:name': entityRouteRef,
+          '/catalog': rootRouteRef,
+        },
+      },
+    );
+
+    expect(await screen.findByText('cicd-content')).toBeInTheDocument();
+    expect(screen.getByText('my-entity')).toBeInTheDocument();
+    expect(alertApi.post).toHaveBeenCalledWith({
+      message:
+        'Redirected from mykind:default/old-entity to mykind:default/my-entity as the entity was renamed.',
+      severity: 'info',
+      display: 'transient',
+    });
   });
 });

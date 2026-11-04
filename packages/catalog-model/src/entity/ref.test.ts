@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { parseEntityRef } from './ref';
+import { ANNOTATION_PREVIOUS_NAMES } from './constants';
+import { Entity } from './Entity';
+import { parseEntityPreviousNames, parseEntityRef } from './ref';
 
 describe('ref', () => {
   describe('parseEntityRef', () => {
@@ -161,6 +163,68 @@ describe('ref', () => {
           { defaultKind: 'x', defaultNamespace: 'y' },
         ),
       ).toThrow(/namespace/);
+    });
+  });
+
+  describe('parseEntityPreviousNames', () => {
+    it('returns empty array when annotation is missing or empty', () => {
+      const entity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+        },
+      };
+      expect(parseEntityPreviousNames(entity)).toEqual([]);
+      expect(
+        parseEntityPreviousNames({
+          ...entity,
+          metadata: {
+            ...entity.metadata,
+            annotations: { [ANNOTATION_PREVIOUS_NAMES]: '   ' },
+          },
+        }),
+      ).toEqual([]);
+    });
+
+    it('parses bare name, namespace/name, and full entity ref entries', () => {
+      const entity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          namespace: 'custom-ns',
+          annotations: {
+            [ANNOTATION_PREVIOUS_NAMES]:
+              'old-name, other-ns/old-ns-name, component:third-ns/full-old',
+          },
+        },
+      };
+
+      expect(parseEntityPreviousNames(entity)).toEqual([
+        'component:custom-ns/old-name',
+        'component:other-ns/old-ns-name',
+        'component:third-ns/full-old',
+      ]);
+    });
+
+    it('filters out different kind, invalid syntax, self-ref, and duplicate entries', () => {
+      const entity: Entity = {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'new-name',
+          annotations: {
+            [ANNOTATION_PREVIOUS_NAMES]:
+              ' api:default/foo , bad name! , :empty-kind/foo , new-name , component:default/new-name , valid-old , default/valid-old , Component:default/valid-old , second-old ',
+          },
+        },
+      };
+
+      expect(parseEntityPreviousNames(entity)).toEqual([
+        'component:default/valid-old',
+        'component:default/second-old',
+      ]);
     });
   });
 });

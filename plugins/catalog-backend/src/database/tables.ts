@@ -200,3 +200,8 @@ export type DbSearchRow = {
   original_value: string | null;
   value: string | null;
 };
+
+export type DbFinalEntityPreviousNamesRow = {
+  entity_id: string;
+  previous_entity_ref: string;
+};

@@ -36,6 +36,7 @@ describe('AuthorizedEntitiesCatalog', () => {
     refresh: jest.fn(),
     listAncestors: jest.fn(),
     queryEntities: jest.fn(),
+    entityRedirect: jest.fn(),
   };
   const fakePermissionApi = {
     authorize: jest.fn(),
@@ -678,6 +679,79 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       expect(fakeCatalog.facets).toHaveBeenCalledWith({
         facets: ['a'],
+        credentials: mockCredentials.none(),
+      });
+    });
+  });
+
+  describe('entityRedirect', () => {
+    it('returns undefined on DENY', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog();
+
+      await expect(
+        catalog.entityRedirect({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(fakeCatalog.entityRedirect).not.toHaveBeenCalled();
+    });
+
+    it('calls underlying catalog method with correct filter on CONDITIONAL', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        {
+          result: AuthorizeResult.CONDITIONAL,
+          conditions: {
+            rule: 'IS_ENTITY_KIND',
+            params: { kinds: ['b'] },
+          },
+        },
+      ]);
+      fakeCatalog.entityRedirect.mockResolvedValue({
+        entityRef: 'component:default/new-name',
+      });
+      const catalog = createCatalog(isEntityKind);
+
+      await expect(
+        catalog.entityRedirect({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        }),
+      ).resolves.toEqual({
+        entityRef: 'component:default/new-name',
+      });
+
+      expect(fakeCatalog.entityRedirect).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+        filter: { kind: 'b' },
+      });
+    });
+
+    it('calls underlying catalog method on ALLOW', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.ALLOW },
+      ]);
+      fakeCatalog.entityRedirect.mockResolvedValue({
+        entityRef: 'component:default/new-name',
+      });
+      const catalog = createCatalog();
+
+      await expect(
+        catalog.entityRedirect({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        }),
+      ).resolves.toEqual({
+        entityRef: 'component:default/new-name',
+      });
+
+      expect(fakeCatalog.entityRedirect).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
         credentials: mockCredentials.none(),
       });
     });

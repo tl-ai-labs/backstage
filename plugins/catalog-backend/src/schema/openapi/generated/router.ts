@@ -838,6 +838,18 @@ export const spec = {
         required: ['items', 'totalItems', 'pageInfo'],
         additionalProperties: false,
       },
+      EntityRedirectResponse: {
+        type: 'object',
+        properties: {
+          entityRef: {
+            type: 'string',
+            description:
+              'The entity reference that the requested entity redirects to.',
+          },
+        },
+        required: ['entityRef'],
+        additionalProperties: false,
+      },
     },
     securitySchemes: {
       JWT: {
@@ -1082,6 +1094,52 @@ export const spec = {
             },
           },
           '400': {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+          default: {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+        },
+        security: [
+          {},
+          {
+            JWT: [],
+          },
+        ],
+        parameters: [
+          {
+            $ref: '#/components/parameters/kind',
+          },
+          {
+            $ref: '#/components/parameters/namespace',
+          },
+          {
+            $ref: '#/components/parameters/name',
+          },
+        ],
+      },
+    },
+    '/entities/by-name/{kind}/{namespace}/{name}/redirect': {
+      get: {
+        operationId: 'GetEntityRedirectByName',
+        tags: ['Entity'],
+        description:
+          'Get the redirect target entity ref for a previously named entity.',
+        responses: {
+          '200': {
+            description: 'Ok',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/EntityRedirectResponse',
+                },
+              },
+            },
+          },
+          '400': {
+            $ref: '#/components/responses/ErrorResponse',
+          },
+          '404': {
             $ref: '#/components/responses/ErrorResponse',
           },
           default: {

@@ -28,6 +28,7 @@ import { EntitiesQueryResponse } from '../models/EntitiesQueryResponse.model';
 import { Entity } from '../models/Entity.model';
 import { EntityAncestryResponse } from '../models/EntityAncestryResponse.model';
 import { EntityFacetsResponse } from '../models/EntityFacetsResponse.model';
+import { EntityRedirectResponse } from '../models/EntityRedirectResponse.model';
 import { GetEntitiesByRefsRequest } from '../models/GetEntitiesByRefsRequest.model';
 import { QueryEntitiesByPredicateRequest } from '../models/QueryEntitiesByPredicateRequest.model';
 import { QueryEntityFacetsByPredicateRequest } from '../models/QueryEntityFacetsByPredicateRequest.model';
@@ -141,6 +142,16 @@ export type GetEntityFacets = {
   query: {
     facet: Array<string>;
     filter?: Array<string>;
+  };
+};
+/**
+ * @public
+ */
+export type GetEntityRedirectByName = {
+  path: {
+    kind: string;
+    namespace: string;
+    name: string;
   };
 };
 /**
@@ -465,6 +476,36 @@ export class DefaultApiClient {
 
     const uri = parser.parse(uriTemplate).expand({
       ...request.query,
+    });
+
+    return await this.fetchApi.fetch(`${baseUrl}${uri}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.token && { Authorization: `Bearer ${options?.token}` }),
+      },
+      method: 'GET',
+    });
+  }
+
+  /**
+   * Get the redirect target entity ref for a previously named entity.
+   * @param kind -
+   * @param namespace -
+   * @param name -
+   */
+  public async getEntityRedirectByName(
+    // @ts-ignore
+    request: GetEntityRedirectByName,
+    options?: RequestOptions,
+  ): Promise<TypedResponse<EntityRedirectResponse>> {
+    const baseUrl = await this.discoveryApi.getBaseUrl(pluginId);
+
+    const uriTemplate = `/entities/by-name/{kind}/{namespace}/{name}/redirect`;
+
+    const uri = parser.parse(uriTemplate).expand({
+      kind: request.path.kind,
+      namespace: request.path.namespace,
+      name: request.path.name,
     });
 
     return await this.fetchApi.fetch(`${baseUrl}${uri}`, {

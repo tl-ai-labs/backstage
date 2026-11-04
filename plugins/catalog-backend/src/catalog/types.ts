@@ -193,6 +193,15 @@ export interface EntitiesCatalog {
    * @param request - Request options
    */
   facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;
+
+  /**
+   * Resolves a redirect target for a former entity reference.
+   *
+   * @param request - Request options
+   */
+  entityRedirect?(
+    request: EntityRedirectRequest,
+  ): Promise<EntityRedirectResponse | undefined>;
 }
 
 /**
@@ -316,6 +325,16 @@ export type Cursor = {
    * The number of items that match the provided filters
    */
   totalItems?: number;
+};
+
+export type EntityRedirectRequest = {
+  entityRef: string;
+  filter?: FilterPredicate;
+  credentials: BackstageCredentials;
+};
+
+export type EntityRedirectResponse = {
+  entityRef: string;
 };
 
 /**

@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
+import {
+  Entity,
+  parseEntityRef,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { InputError, NotFoundError } from '@backstage/errors';
 import { Knex } from 'knex';
 import { chunk as lodashChunk, isEqual } from 'lodash';
@@ -30,12 +34,15 @@ import {
   EntityFacetsResponse,
   EntityOrder,
   EntityPagination,
+  EntityRedirectRequest,
+  EntityRedirectResponse,
   QueryEntitiesRequest,
   QueryEntitiesResponse,
   TotalItemsMode,
 } from '../catalog/types';
 import {
   DbFinalEntitiesRow,
+  DbFinalEntityPreviousNamesRow,
   DbPageInfo,
   DbRefreshStateReferencesRow,
   DbRefreshStateRow,
@@ -847,6 +854,64 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
     }
 
     return { facets };
+  }
+
+  async entityRedirect(
+    request: EntityRedirectRequest,
+  ): Promise<EntityRedirectResponse | undefined> {
+    const targetRef = stringifyEntityRef(parseEntityRef(request.entityRef));
+
+    const existing = await this.database<DbFinalEntitiesRow>('final_entities')
+      .where('final_entities.entity_ref', targetRef)
+      .whereNotNull('final_entities.final_entity')
+      .select('final_entities.entity_id')
+      .first();
+
+    if (existing) {
+      return undefined;
+    }
+
+    const rows = await this.database<DbFinalEntityPreviousNamesRow>(
+      'final_entity_previous_names',
+    )
+      .join(
+        'final_entities',
+        'final_entity_previous_names.entity_id',
+        'final_entities.entity_id',
+      )
+      .where('final_entity_previous_names.previous_entity_ref', targetRef)
+      .whereNotNull('final_entities.final_entity')
+      .distinct<{ entity_id: string; entity_ref: string }[]>(
+        'final_entities.entity_id as entity_id',
+        'final_entities.entity_ref as entity_ref',
+      )
+      .orderBy('final_entities.entity_ref', 'asc')
+      .limit(2);
+
+    if (rows.length !== 1 || !rows[0].entity_ref) {
+      return undefined;
+    }
+
+    if (request?.filter) {
+      let targetQuery = this.database<DbFinalEntitiesRow>('final_entities')
+        .where('final_entities.entity_id', rows[0].entity_id)
+        .whereNotNull('final_entities.final_entity')
+        .select('final_entities.entity_id');
+
+      targetQuery = applyEntityFilterToQuery({
+        filter: request.filter,
+        targetQuery,
+        onEntityIdField: 'final_entities.entity_id',
+        knex: this.database,
+      });
+
+      const authorized = await targetQuery.first();
+      if (!authorized) {
+        return undefined;
+      }
+    }
+
+    return { entityRef: rows[0].entity_ref };
   }
 }
 

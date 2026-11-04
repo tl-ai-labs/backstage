@@ -31,6 +31,7 @@ export * from '../models/EntityFacet.model';
 export * from '../models/EntityFacetsResponse.model';
 export * from '../models/EntityLink.model';
 export * from '../models/EntityMeta.model';
+export * from '../models/EntityRedirectResponse.model';
 export * from '../models/EntityRelation.model';
 export * from '../models/ErrorError.model';
 export * from '../models/ErrorRequest.model';

@@ -58,6 +58,10 @@ export interface CatalogApi {
     request: GetEntityFacetsRequest,
     options?: CatalogRequestOptions,
   ): Promise<GetEntityFacetsResponse>;
+  getEntityRedirectByRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<CatalogEntityRedirect | undefined>;
   getLocationByEntity(
     entityRef: string | CompoundEntityRef,
     options?: CatalogRequestOptions,
@@ -160,6 +164,10 @@ export class CatalogClient implements CatalogApi {
     request: GetEntityFacetsRequest,
     options?: CatalogRequestOptions,
   ): Promise<GetEntityFacetsResponse>;
+  getEntityRedirectByRef(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<CatalogEntityRedirect | undefined>;
   getLocationByEntity(
     entityRef: CompoundEntityRef | string,
     options?: CatalogRequestOptions,
@@ -218,6 +226,11 @@ export class CatalogClient implements CatalogApi {
     options?: CatalogRequestOptions,
   ): Promise<ValidateEntityResponse>;
 }
+
+// @public
+export type CatalogEntityRedirect = {
+  entityRef: string;
+};
 
 // @public
 export interface CatalogRequestOptions {

@@ -1,0 +1,12 @@
+## This invocation
+
+mode: brownfield. intent: feature-new. run_id: 20261104-130720-feature-new-entity-rename-redirect.
+Brief: .sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/intent_brief.md (approved at Gate 0; its "Brief (verbatim)", "Files in scope", "Files off-limits", "Acceptance criteria" and "Non-goals" bind this run). Repo discovery snapshot: .sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/discovery.md.
+Write .sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/requirements.md as new-feature requirements (Phase 1, feature-new form), with sections: In scope (numbered, testable); Out of scope (numbered); Functional requirements per module (FR-1, FR-2, ... for catalog-model, catalog-backend, catalog-client, catalog, techdocs, and the repo companions: API/SQL reports, docs, changesets); Non-functional requirements (NFR-1, ... including keeping existing lookups fast and not regressing existing by-name lookups); PII inventory (table); Role matrix (role x resource x action, including permission checks on the redirect target); Acceptance criteria (AC-1, ... numbered, executable, each traceable to the brief's 10 criteria); Open questions for HITL.
+The requirements must state answers (or clearly marked proposed answers for the person to confirm at Gate 1) to the brief's four design questions: who may claim a former name, what happens when a new entity takes an old name, permission checks on the redirect target, and keeping existing lookups fast.
+Rules: derive only from this branch's code and the brief; do not consult upstream PRs/commits for backstage/backstage#5231 or master's versions of files. Stay inside the brief's Files in scope; packages it does not name (catalog-react, catalog-node, techdocs-backend, techdocs-react, ...) are off-limits. The test command is fixed: `CI=true yarn test plugins/catalog-backend plugins/catalog plugins/techdocs && yarn tsc && yarn lint:all`. Repo rules: Apache 2.0 header year 2026 on new source files; changesets per CONTRIBUTING.md (catalog-model and catalog-client are >=1.0.0, a new API is minor); docs follow docs/contribute/doc-style-guide.md; frontend tests prefer screen and findBy* over waitFor, no added test IDs. Write only requirements.md.
+
+## The step's input files
+
+Copied into the project for you, in the order given (read each with read_file):
+- .sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/inputs/intent_brief.md

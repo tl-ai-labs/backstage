@@ -15,8 +15,16 @@
  */
 
 import {
+  DEFAULT_NAMESPACE,
+  parseEntityRef,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
+import {
+  alertApiRef,
   errorApiRef,
   useApi,
+  useApiHolder,
+  useRouteRef,
   useRouteRefParams,
 } from '@backstage/core-plugin-api';
 import {
@@ -25,24 +33,77 @@ import {
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useAsyncRetry from 'react-use/esm/useAsyncRetry';
 
 export const useEntityFromUrl = (): EntityLoadingStatus => {
-  const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
+  const {
+    kind,
+    namespace = DEFAULT_NAMESPACE,
+    name,
+  } = useRouteRefParams(entityRouteRef);
   const navigate = useNavigate();
+  const location = useLocation();
   const errorApi = useApi(errorApiRef);
   const catalogApi = useApi(catalogApiRef);
+  const apiHolder = useApiHolder();
+  const entityRoute = useRouteRef(entityRouteRef);
 
   const {
-    value: entity,
+    value,
     error,
     loading,
     retry: refresh,
-  } = useAsyncRetry(
-    () => catalogApi.getEntityByRef({ kind, namespace, name }),
-    [catalogApi, kind, namespace, name],
-  );
+  } = useAsyncRetry(async () => {
+    const foundEntity = await catalogApi.getEntityByRef({
+      kind,
+      namespace,
+      name,
+    });
+    if (foundEntity) {
+      return { entity: foundEntity, redirectUrl: undefined };
+    }
+
+    if (name) {
+      try {
+        const redirect = await catalogApi.getEntityRedirectByRef?.({
+          kind,
+          namespace,
+          name,
+        });
+        if (redirect?.entityRef) {
+          const targetRef = parseEntityRef(redirect.entityRef);
+          const currentRef = stringifyEntityRef({ kind, namespace, name });
+          const targetRefStr = stringifyEntityRef(targetRef);
+          if (targetRefStr !== currentRef) {
+            const currentBase = entityRoute({ kind, namespace, name });
+            const targetBase = entityRoute({
+              kind: targetRef.kind,
+              namespace: targetRef.namespace,
+              name: targetRef.name,
+            });
+            const suffix = location.pathname.startsWith(currentBase)
+              ? location.pathname.slice(currentBase.length)
+              : '';
+            const redirectUrl = `${targetBase}${suffix}${location.search}${location.hash}`;
+            apiHolder.get(alertApiRef)?.post({
+              message: `Redirected from ${currentRef} to ${targetRefStr} as the entity was renamed.`,
+              severity: 'info',
+              display: 'transient',
+            });
+            return { entity: undefined, redirectUrl };
+          }
+        }
+      } catch {
+        // ignore redirect lookup errors and fall back to not-found state
+      }
+    }
+
+    return { entity: undefined, redirectUrl: undefined };
+  }, [catalogApi, kind, namespace, name]);
+
+  const entity = value?.entity;
+  const redirectUrl = value?.redirectUrl;
 
   useEffect(() => {
     if (!name) {
@@ -51,5 +112,16 @@ export const useEntityFromUrl = (): EntityLoadingStatus => {
     }
   }, [errorApi, navigate, error, loading, entity, name]);
 
-  return { entity, loading, error, refresh };
+  useEffect(() => {
+    if (redirectUrl) {
+      navigate(redirectUrl, { replace: true });
+    }
+  }, [redirectUrl, navigate]);
+
+  return {
+    entity: redirectUrl ? undefined : entity,
+    loading: loading || Boolean(redirectUrl),
+    error,
+    refresh,
+  };
 };

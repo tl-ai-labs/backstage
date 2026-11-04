@@ -890,6 +890,91 @@ describe('InMemoryCatalogClient', () => {
     });
   });
 
+  describe('getEntityRedirectByRef', () => {
+    const renamedEntity: Entity = {
+      apiVersion: 'v1',
+      kind: 'CustomKind',
+      metadata: {
+        namespace: 'default',
+        name: 'renamed-e1',
+        annotations: {
+          'backstage.io/previous-names': 'old-e1, legacy/old-e1, e1',
+        },
+      },
+    };
+
+    const duplicateClaimantA: Entity = {
+      apiVersion: 'v1',
+      kind: 'CustomKind',
+      metadata: {
+        namespace: 'default',
+        name: 'claimant-a',
+        annotations: {
+          'backstage.io/previous-names': 'shared-old',
+        },
+      },
+    };
+
+    const duplicateClaimantB: Entity = {
+      apiVersion: 'v1',
+      kind: 'CustomKind',
+      metadata: {
+        namespace: 'default',
+        name: 'claimant-b',
+        annotations: {
+          'backstage.io/previous-names': 'shared-old',
+        },
+      },
+    };
+
+    it('resolves redirect when exactly one entity claims the previous name', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [...entities, renamedEntity],
+      });
+      await expect(
+        client.getEntityRedirectByRef('customkind:default/old-e1'),
+      ).resolves.toEqual({
+        entityRef: 'customkind:default/renamed-e1',
+      });
+      await expect(
+        client.getEntityRedirectByRef({
+          kind: 'CustomKind',
+          namespace: 'legacy',
+          name: 'old-e1',
+        }),
+      ).resolves.toEqual({
+        entityRef: 'customkind:default/renamed-e1',
+      });
+    });
+
+    it('returns undefined when a live entity exists at the requested ref', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [...entities, renamedEntity],
+      });
+      await expect(
+        client.getEntityRedirectByRef('customkind:default/e1'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when multiple entities claim the same previous name', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [duplicateClaimantA, duplicateClaimantB],
+      });
+      await expect(
+        client.getEntityRedirectByRef('customkind:default/shared-old'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined for an unknown entity ref', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [...entities, renamedEntity],
+      });
+      await expect(
+        client.getEntityRedirectByRef('customkind:default/unknown'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('removeEntityByUid', () => {
     it('removes an entity by uid', async () => {
       const client = new InMemoryCatalogClient({ entities });

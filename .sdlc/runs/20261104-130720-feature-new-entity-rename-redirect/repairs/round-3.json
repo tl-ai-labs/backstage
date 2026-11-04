@@ -1,0 +1,234 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 security review, accepted by the person: in entityRedirect (end of the class), the caller's request.filter is applied to the claimant query (applyEntityFilterToQuery) before .distinct(...).orderBy(...).limit(2), so a caller whose filter sees only one of two entities claiming the same former ref is redirected, while the documented rule is that another entity of the same kind claiming the same former name turns that redirect into a 404. Required: keep the unfiltered live-entity check as is. Then count the claimants of the former ref WITHOUT the caller's filter (final_entity_previous_names joined with final_entities, previous_entity_ref = targetRef, final_entity not null, distinct entity_ref, limit 2) and return undefined unless exactly one. Only then, if request.filter is set, check that single target against it: a second query on final_entities where entity_id = the claimant's entity_id with applyEntityFilterToQuery({ filter: request.filter, targetQuery, onEntityIdField: 'final_entities.entity_id', knex: this.database }); return undefined when it finds no row. Otherwise return { entityRef }. Do not change any other method.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/request/applyEntityFilterToQuery.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 security review, accepted by the person: add a test inside the existing describe('entityRedirect', ...) (line 2808), in the same style and database setup as its existing cases, where two stitched entities of the same kind both claim the same former name via backstage.io/previous-names, and the caller's request.filter (a FilterPredicate such as one matching only one claimant's metadata.name) can see only one of the two claimants: entityRedirect must still return undefined. Keep every existing test unchanged. The implementation change: DefaultEntitiesCatalog.entityRedirect now counts claimants without the caller's filter, requires exactly one, and only then checks that target against request.filter.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U22.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": ".changeset/catalog-entity-redirect.md",
+    "instruction": "Fix `.changeset/catalog-entity-redirect.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise from the person: name the `backstage.io/previous-names` annotation in this changeset's message, e.g. that the entity page redirects requests for an entity that was renamed (declared with the `backstage.io/previous-names` annotation) to its current page. Keep the frontmatter ('@backstage/plugin-catalog': minor) and the rest of the message's meaning; plain language for adopters, no internal code symbols.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/catalog-entity-redirect.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/catalog-entity-redirect.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U38.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/catalog-entity-redirect.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": ".changeset/techdocs-entity-redirect.md",
+    "instruction": "Fix `.changeset/techdocs-entity-redirect.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise from the person: name the `backstage.io/previous-names` annotation in this changeset's message, e.g. that the TechDocs reader redirects documentation requests for an entity that was renamed (declared with the `backstage.io/previous-names` annotation) to its current docs. Keep the frontmatter ('@backstage/plugin-techdocs': minor) and the rest of the message's meaning; plain language for adopters, no internal code symbols.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/techdocs-entity-redirect.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/techdocs-entity-redirect.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U39.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/techdocs-entity-redirect.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_005",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-130720-feature-new-entity-rename-redirect",
+    "artifact_path": ".changeset/catalog-backend-entity-redirect.md",
+    "instruction": "Fix `.changeset/catalog-backend-entity-redirect.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise from the person: replace \"during entity stitching\" with wording an adopter understands, e.g. that the catalog now records the former names an entity declares in its `backstage.io/previous-names` annotation when it processes the entity. Keep the frontmatter ('@backstage/plugin-catalog-backend': minor), the endpoint GET /entities/by-name/:kind/:namespace/:name/redirect, and the rest of the meaning; plain language, no internal code symbols.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \".changeset/catalog-backend-entity-redirect.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \".changeset/catalog-backend-entity-redirect.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-130720-feature-new-entity-rename-redirect/briefs/U37.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/catalog-backend-entity-redirect.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

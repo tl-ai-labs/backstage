@@ -264,6 +264,15 @@ export interface GetEntityAncestorsResponse {
 }
 
 /**
+ * The response type for {@link CatalogApi.getEntityRedirectByRef}.
+ *
+ * @public
+ */
+export type CatalogEntityRedirect = {
+  entityRef: string;
+};
+
+/**
  * The request type for {@link CatalogApi.getEntityFacets}.
  *
  * @public
@@ -697,6 +706,21 @@ export interface CatalogApi {
     entityRef: string | CompoundEntityRef,
     options?: CatalogRequestOptions,
   ): Promise<Entity | undefined>;
+
+  /**
+   * Resolves a redirect target for an entity ref that was previously renamed
+   * via the `backstage.io/previous-names` annotation.
+   *
+   * @public
+   *
+   * @param entityRef - A complete entity ref, either on string or compound form
+   * @param options - Additional options
+   * @returns The redirect target, or undefined if no unique redirect target exists
+   */
+  getEntityRedirectByRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<CatalogEntityRedirect | undefined>;
 
   /**
    * Removes a single entity from the catalog by entity UID.

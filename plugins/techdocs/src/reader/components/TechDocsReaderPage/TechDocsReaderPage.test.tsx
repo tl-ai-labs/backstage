@@ -97,7 +97,9 @@ const entityPresentationApiMock: jest.Mocked<
   }),
 };
 
-const catalogApiMock = catalogApiMockFactory.mock();
+const catalogApiMock = Object.assign(catalogApiMockFactory.mock(), {
+  getEntityRedirectByRef: jest.fn(),
+});
 
 const fetchApiMock = {
   fetch: jest.fn().mockResolvedValue({
@@ -445,6 +447,33 @@ describe('<TechDocsReaderPage />', () => {
       expect(rendered.container.querySelector('header')).toBeInTheDocument();
       expect(rendered.container.querySelector('article')).toBeInTheDocument();
       expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('should navigate to renamed entity docs URL when entity is not found and getEntityRedirectByRef returns a target', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      catalogApiMock.getEntityRedirectByRef.mockResolvedValue({
+        entityRef: 'component:renamed-namespace/renamed-docs',
+      });
+
+      await renderInTestApp(
+        <Wrapper>
+          <TechDocsReaderPage
+            entityRef={{
+              name: 'old-name',
+              namespace: 'test-namespace',
+              kind: 'component',
+            }}
+          />
+        </Wrapper>,
+        {
+          mountedRoutes,
+        },
+      );
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/docs/renamed-namespace/component/renamed-docs',
+        { replace: true },
+      );
     });
   });
 });
