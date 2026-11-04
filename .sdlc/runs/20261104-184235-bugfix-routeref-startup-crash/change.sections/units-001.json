@@ -1,0 +1,267 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds a reproducing integration test verifying that an app/root.elements component calling useRouteRef for a page route behind app/root.children renders during bootstrap and resolves the page path after finalization within a single React root without render loops.",
+    "rules": [
+      "1. Inside describe('prepareSpecializedApp', ...), add test 'should resolve page route refs in app root elements after finalization'.",
+      "2. Create a pageRouteRef with createRouteRef() and track renderCount = 0 inside a root element component attached to { id: 'app/root', input: 'elements' } that calls useRouteRef(pageRouteRef) and renders 'Banner link: ' followed by link ? link() : 'unresolved'.",
+      "3. Attach a page extension to { id: 'app/routes', input: 'routes' } outputting coreExtensionData.routePath('/my-page'), coreExtensionData.routeRef(pageRouteRef), and coreExtensionData.reactElement(<div>My Page</div>).",
+      "4. Override 'sign-in-page:app' on appPluginOriginal to capture onSignInSuccess and render <div>Custom Sign In</div>.",
+      "5. Render a single wrapper component (PreparedAppRoot) that calls preparedApp.getBootstrapApp(), subscribes via useEffect(() => preparedApp.onFinalized(setFinalizedApp), []), and switches from bootstrapApp.element to finalizedApp.element inside one React root without calling render() a second time.",
+      "6. Assert 'Custom Sign In' and 'Banner link: unresolved' are in the document during bootstrap, then call act(() => triggerSignInSuccess(identityApi)) and assert 'Banner link: /my-page' is found in the document and renderCount is less than 10."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 1913,
+        "to": 1913,
+        "first_line": "});",
+        "rule": "Insert the reproducing test 'should resolve page route refs in app root elements after finalization' after the last test in describe('prepareSpecializedApp', ...)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "lines": [1660, 1750],
+      "reason": "Follows the existing prepareSpecializedApp sign-in and app/root.elements test setup in the same file."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+        "lines": [243, 253],
+        "reason": "Uses PreparedSpecializedApp, FinalizedSpecializedApp, and prepareSpecializedApp."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-7", "FR-8", "FR-9", "FR-10", "NFR-1", "NFR-2", "NFR-4", "AC-1", "AC-2", "AC-3", "AC-4"],
+    "tests": [
+      {
+        "name": "should resolve page route refs in app root elements after finalization",
+        "given": "A prepared specialized app with a sign-in page, an app/root.elements banner calling useRouteRef(pageRouteRef), and a page route behind app/root.children mounted in a single React root",
+        "expect": "Renders 'Banner link: unresolved' before sign-in without error, then updates to 'Banner link: /my-page' after sign-in finalization with renderCount less than 10 across the whole test"
+      }
+    ],
+    "checks": ["lint", "prettier"],
+    "red_checks": ["red-specialized-app-routeref"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds a reproducing unit test verifying that useRouteRef subscribes to routeResolutionApi updates and re-resolves the route function when notified.",
+    "rules": [
+      "1. Import act alongside renderHook from '@testing-library/react'.",
+      "2. Add test 're-resolves the routeFunc when routeResolutionApi notifies subscribers' inside describe('v1 consumer', ...).",
+      "3. Create a routeRef with createRouteRef(), a listener variable (() => void) | undefined, a resolve mock initially returning undefined, and a subscribe mock on const api = { resolve, subscribe } that stores listener and returns an unsubscribe function.",
+      "4. Render useRouteRef(routeRef) inside TestApiProvider with [[routeResolutionApiRef, api]] and MemoryRouter at '/my-page', asserting result.current is initially undefined.",
+      "5. Update resolve.mockReturnValue(() => '/hello'), invoke the captured listener inside act(() => { listener?.(); }), and assert result.current?.() is '/hello' and resolve was called 2 times."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 17,
+        "first_line": "import { renderHook } from '@testing-library/react';",
+        "rule": "Import act and renderHook from '@testing-library/react'."
+      },
+      {
+        "id": "S2",
+        "at": "insert_after",
+        "from": 208,
+        "to": 208,
+        "first_line": "});",
+        "rule": "Insert the unit test 're-resolves the routeFunc when routeResolutionApi notifies subscribers' after the last test in describe('v1 consumer', ...)."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "lines": [59, 125],
+      "reason": "Follows the existing renderHook and TestApiProvider test structure in useRouteRef.test.tsx."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "lines": [36, 51],
+        "reason": "Tests the useRouteRef hook."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "FR-5", "FR-6", "NFR-1", "NFR-2", "NFR-4", "AC-3", "AC-4"],
+    "tests": [
+      {
+        "name": "re-resolves the routeFunc when routeResolutionApi notifies subscribers",
+        "given": "A routeResolutionApi implementation with a subscribe method whose resolve result changes from undefined to a RouteFunc when the subscriber callback is invoked",
+        "expect": "useRouteRef initially returns undefined and updates to return the resolved RouteFunc after the subscriber callback fires"
+      }
+    ],
+    "checks": ["lint", "prettier"],
+    "red_checks": ["red-use-route-ref"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds subscriber registration and notification to RouteResolutionApiProxy so active consumers are notified when initialize() replaces the underlying RouteResolver at finalization.",
+    "rules": [
+      "1. Add a private readonly #listeners = new Set<() => void>(); field to RouteResolutionApiProxy.",
+      "2. Add subscribe(listener: () => void): () => void to RouteResolutionApiProxy that adds listener to this.#listeners and returns an unsubscribe callback () => { this.#listeners.delete(listener); }.",
+      "3. In RouteResolutionApiProxy.initialize(routeInfo, routeRefsById), after assigning this.#delegate and this.#routeObjects, iterate over this.#listeners and invoke each listener() before returning routeInfo."
+    ],
+    "exports": [
+      {
+        "name": "RouteResolutionApiProxy",
+        "kind": "class",
+        "params": [
+          {
+            "name": "routeBindings",
+            "type": "Map<ExternalRouteRef, RouteRef | SubRouteRef>"
+          },
+          {
+            "name": "appBasePath",
+            "type": "string"
+          }
+        ],
+        "returns": "RouteResolutionApiProxy"
+      }
+    ],
+    "import_line": "import { RouteResolutionApiProxy } from './phaseApis';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 113,
+        "to": 165,
+        "first_line": "export class RouteResolutionApiProxy implements RouteResolutionApi {",
+        "last_line": "}",
+        "rule": "Add #listeners set, subscribe(listener: () => void): () => void method, and listener notification in initialize() on RouteResolutionApiProxy."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "lines": [112, 166],
+      "reason": "Preserves the private field and method style of RouteResolutionApiProxy."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [47, 61],
+        "reason": "Implements RouteResolutionApi."
+      }
+    ],
+    "depends_on": ["U01", "U02"],
+    "covers": ["FR-1", "FR-2", "FR-3", "FR-11", "NFR-1", "NFR-2", "NFR-4", "AC-1", "AC-2", "AC-3", "AC-4"],
+    "checks": ["lint", "prettier"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Subscribes useRouteRef to optional routeResolutionApi updates and invalidates memoized route resolution when the route resolver is re-initialized.",
+    "rules": [
+      "1. Import useEffect, useMemo, and useState from 'react', and RouteResolutionApi alongside RouteFunc, routeResolutionApiRef, and useApi from '../apis'.",
+      "2. Define an internal helper type SubscribableRouteResolutionApi = RouteResolutionApi & { subscribe?(listener: () => void): () => void; } so the public RouteResolutionApi interface gains no required members.",
+      "3. In useRouteRef, cast useApi(routeResolutionApiRef) to SubscribableRouteResolutionApi and maintain const [version, setVersion] = useState(0);.",
+      "4. Register a subscription in useEffect(() => routeResolutionApi.subscribe?.(() => { setVersion(v => v + 1); }), [routeResolutionApi]).",
+      "5. Include version in the useMemo dependency array ([routeResolutionApi, routeRef, pathname, version]) so routeResolutionApi.resolve(routeRef, { sourcePath: pathname }) recomputes whenever version increments, without calling resolve inside useEffect.",
+      "6. Update the TSDoc @remarks on useRouteRef to note that during phased app startup, routes mounted behind app/root.children resolve to undefined until finalization completes, at which point useRouteRef automatically re-resolves."
+    ],
+    "exports": [
+      {
+        "name": "useRouteRef",
+        "kind": "function",
+        "params": [
+          {
+            "name": "routeRef",
+            "type": "RouteRef<TParams> | SubRouteRef<TParams> | ExternalRouteRef<TParams>"
+          }
+        ],
+        "returns": "RouteFunc<TParams> | undefined"
+      }
+    ],
+    "import_line": "import { useRouteRef } from './useRouteRef';",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 51,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "}",
+        "rule": "Add subscription via useEffect and version state to invalidate useMemo in useRouteRef when routeResolutionApi.subscribe fires."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "lines": [1, 51],
+      "reason": "Preserves the structure and TSDoc style of useRouteRef.tsx."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [38, 71],
+        "reason": "Uses RouteResolutionApi, RouteFunc, and routeResolutionApiRef."
+      }
+    ],
+    "depends_on": ["U01", "U02", "U03"],
+    "covers": ["FR-4", "FR-5", "FR-6", "FR-11", "FR-12", "NFR-1", "NFR-2", "NFR-4", "AC-1", "AC-2", "AC-3", "AC-4", "AC-5"],
+    "checks": ["lint", "prettier"]
+  },
+  {
+    "id": "U05",
+    "path": "docs/frontend-system/architecture/10-app.md",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Documents how useRouteRef behaves in app/root.elements across bootstrap and finalization during phased app preparation.",
+    "rules": [
+      "1. Preserve the two existing paragraphs on lines 93-95 under 'Preparing an App in Phases'.",
+      "2. Add a concise paragraph after line 95 explaining that app/root.elements rendered during bootstrap may call useRouteRef for routes mounted behind app/root.children, receiving undefined during bootstrap and automatically re-resolving to the concrete route path once finalization completes."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 93,
+        "to": 95,
+        "first_line": "When using phased app preparation, `app/root.children` acts as the main session boundary. Conditional extensions behind that boundary are evaluated during finalization. Conditional `app/root.elements` and API branches are also deferred until finalization, while other bootstrap-visible predicates are ignored and reported as warnings.",
+        "last_line": "Utility APIs that are first materialized during bootstrap are frozen for the lifetime of that app instance. Finalization may still add new APIs and may override existing API refs that were not materialized during bootstrap, but any deferred override of an already materialized bootstrap API is ignored and reported as an app error.",
+        "rule": "Append documentation of route resolution behavior for app/root.elements across bootstrap and finalization."
+      }
+    ],
+    "style_from": {
+      "path": "docs/frontend-system/architecture/10-app.md",
+      "lines": [51, 96],
+      "reason": "Matches the prose style and terminology of the Preparing an App in Phases section."
+    },
+    "depends_on": ["U03", "U04"],
+    "covers": ["FR-12", "NFR-2", "AC-5"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U06",
+    "path": ".changeset/fix-root-element-route-ref.md",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Adds a patch changeset for @backstage/frontend-app-api and @backstage/frontend-plugin-api describing the route resolution fix across phased app startup.",
+    "rules": [
+      "1. Write YAML frontmatter with patch bumps for '@backstage/frontend-app-api' and '@backstage/frontend-plugin-api'.",
+      "2. Write a short adopter-facing summary explaining that app root elements calling useRouteRef during phased app startup now automatically re-resolve page routes once the app is finalized, without mentioning internal symbol names."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/quiet-patches-retarget.md",
+      "lines": [1, 9],
+      "reason": "Follows the repo's changeset markdown format."
+    },
+    "depends_on": ["U03", "U04"],
+    "covers": ["FR-13", "NFR-2", "NFR-3", "AC-5"],
+    "checks": ["prettier"]
+  }
+]

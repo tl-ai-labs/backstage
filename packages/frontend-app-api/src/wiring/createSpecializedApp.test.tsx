@@ -1911,5 +1911,119 @@ describe('createSpecializedApp', () => {
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
     });
+
+    it('should resolve page route refs in app root elements after finalization', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const pageRouteRef = createRouteRef();
+      let renderCount = 0;
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: {
+              page: pageRouteRef,
+            },
+            extensions: [
+              createExtension({
+                name: 'banner',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => {
+                  function Banner() {
+                    renderCount += 1;
+                    const link = useRouteRef(pageRouteRef);
+                    return (
+                      <div>Banner link: {link ? link() : 'unresolved'}</div>
+                    );
+                  }
+
+                  return [coreExtensionData.reactElement(<Banner />)];
+                },
+              }),
+              createExtension({
+                name: 'page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                  coreExtensionData.reactElement,
+                ],
+                factory: () => [
+                  coreExtensionData.routePath('/my-page'),
+                  coreExtensionData.routeRef(pageRouteRef),
+                  coreExtensionData.reactElement(<div>My Page</div>),
+                ],
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      function PreparedAppRoot() {
+        const [finalizedApp, setFinalizedApp] =
+          useState<FinalizedSpecializedApp>();
+
+        useEffect(() => preparedApp.onFinalized(setFinalizedApp), []);
+
+        if (finalizedApp) {
+          return finalizedApp.element;
+        }
+
+        const bootstrapApp = preparedApp.getBootstrapApp();
+        if (!bootstrapApp.element) {
+          throw new Error('Expected bootstrap tree to expose a root element');
+        }
+        return bootstrapApp.element;
+      }
+
+      render(<PreparedAppRoot />);
+
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('Banner link: unresolved')).toBeInTheDocument();
+
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      act(() => {
+        triggerSignInSuccess(identityApi);
+      });
+
+      await expect(
+        screen.findByText('Banner link: /my-page'),
+      ).resolves.toBeInTheDocument();
+      expect(renderCount).toBeLessThan(10);
+    });
   });
 });

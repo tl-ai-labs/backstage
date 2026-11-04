@@ -113,6 +113,7 @@ export class AppTreeApiProxy implements AppTreeApi {
 export class RouteResolutionApiProxy implements RouteResolutionApi {
   #delegate: RouteResolutionApi | undefined;
   #routeObjects: BackstageRouteObject[] | undefined;
+  readonly #listeners = new Set<() => void>();
 
   private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   private readonly appBasePath: string;
@@ -141,6 +142,13 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
     return this.#delegate.resolve(anyRouteRef, options);
   }
 
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  }
+
   initialize(
     routeInfo: RouteInfo,
     routeRefsById: Map<string, RouteRef | SubRouteRef>,
@@ -155,6 +163,10 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       routeRefsById,
     );
     this.#routeObjects = routeInfo.routeObjects;
+
+    for (const listener of this.#listeners) {
+      listener();
+    }
 
     return routeInfo;
   }
