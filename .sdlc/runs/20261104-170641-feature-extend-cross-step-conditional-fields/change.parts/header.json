@@ -1,0 +1,74 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Format with Prettier using @backstage/cli/config/prettier (single quotes, trailing commas, 2-space indentation, 80-col print width).",
+      "Retain existing Apache-2.0 copyright headers and years on edited files; do not alter license comments.",
+      "Import types and values using Backstage package and relative import conventions matching the surrounding module.",
+      "In React Testing Library tests, prefer screen queries and findBy* for async assertions, and never introduce data-testid attributes.",
+      "Documentation in docs/ must use U.S. English, meaningful parameter names (not foo/bar/baz), bold for UI labels, and yaml code fences."
+    ],
+    "decisions": [
+      {
+        "topic": "Cross-step conditional schema evaluation strategy",
+        "choice": "Resolve conditional JSON Schema constructs (dependencies, if/then/else, allOf, and conditional oneOf/anyOf) against accumulated stepsState in Stepper/utils.ts and reuse across Stepper, createAsyncValidators, ReviewState, and findSchemaForKey.",
+        "rejected": [
+          "Injecting earlier step properties into currentStep.schema.properties for RJSF to evaluate",
+          "Relying on raw JSONSchema Draft07 getSchema with unmodified formData"
+        ],
+        "reason": "Injecting earlier step properties into currentStep.schema.properties causes RJSF to re-render earlier steps' inputs in the active step, while raw JSONSchema Draft07 treats unset undefined properties as satisfying if: { properties: { flag: { const: true } } } when required is omitted."
+      },
+      {
+        "topic": "Unset boolean and optional property semantics in cross-step conditions",
+        "choice": "When evaluating condition predicates, populate schema default values for undefined fields, treat unset boolean properties (undefined) as false for boolean const/not comparisons, and require positive property conditions (such as const or enum without not) to match a defined value.",
+        "rejected": [
+          "Mutating stepsState to replace undefined with false on step submission"
+        ],
+        "reason": "Existing Stepper behavior and tests require untouched optional fields to remain present with undefined values in stepsState while preventing if: { properties: { flag: { const: true } } } from evaluating to true when flag is undefined."
+      },
+      {
+        "topic": "Pruning stale conditional values on back-navigation",
+        "choice": "Compare all property keys defined across template steps (including conditional branches) against the active resolved property keys for the current stepsState, and omit keys that belong only to inactive conditional branches when advancing steps, rendering ReviewState, or calling onCreate.",
+        "rejected": [
+          "Enabling RJSF omitExtraData and liveOmit on the per-step Form"
+        ],
+        "reason": "RJSF omitExtraData only sees the active step's schema and would strip values collected in earlier steps from the shared stepsState."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "lint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "format",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 180
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test-suite",
+        "run": "CI=true yarn test plugins/scaffolder-react plugins/scaffolder"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      }
+    ]
+  },
+  "hashes": {}
+}

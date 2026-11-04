@@ -15,7 +15,7 @@
  */
 
 import { ReviewState } from './ReviewState';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 
 describe('ReviewState', () => {
@@ -612,5 +612,122 @@ describe('ReviewState', () => {
 
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
+  });
+
+  it('should display active cross-step conditional fields and omit inactive ones', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            deploymentTarget: {
+              type: 'string',
+              title: 'Deployment Target',
+            },
+            enableMonitoring: {
+              type: 'boolean',
+              title: 'Enable Monitoring',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: {
+              deploymentTarget: { const: 'kubernetes' },
+            },
+          },
+          then: {
+            properties: {
+              clusterName: {
+                type: 'string',
+                title: 'Cluster Name',
+              },
+            },
+          },
+          else: {
+            properties: {
+              vmSize: {
+                type: 'string',
+                title: 'VM Size',
+              },
+            },
+          },
+          dependencies: {
+            enableMonitoring: {
+              oneOf: [
+                {
+                  properties: {
+                    enableMonitoring: { enum: [true] },
+                    alertEmail: {
+                      type: 'string',
+                      'ui:backstage': {
+                        review: {
+                          name: 'Alert Email',
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const formState = {
+      deploymentTarget: 'kubernetes',
+      enableMonitoring: true,
+      clusterName: 'prod-cluster',
+      vmSize: 'stale-vm-size',
+      alertEmail: 'ops@example.com',
+    };
+
+    const { rerender } = render(
+      <ReviewState formState={formState} schemas={schemas} />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'Deployment Target kubernetes' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'Cluster Name prod-cluster' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: 'Alert Email ops@example.com' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'VM Size stale-vm-size' }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <ReviewState
+        formState={{
+          ...formState,
+          deploymentTarget: 'vm',
+          enableMonitoring: false,
+        }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(
+      screen.getByRole('row', { name: 'VM Size stale-vm-size' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'Cluster Name prod-cluster' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: 'Alert Email ops@example.com' }),
+    ).not.toBeInTheDocument();
   });
 });

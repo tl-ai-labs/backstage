@@ -598,4 +598,123 @@ describe('extractSchemaFromStep', () => {
       uiSchema: expectedUiSchema,
     });
   });
+
+  it('transforms cross-step conditional dependencies and if/then/else schema', () => {
+    const inputSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        step2Field: {
+          type: 'string',
+        },
+      },
+      dependencies: {
+        earlierStepDep: {
+          allOf: [
+            {
+              if: {
+                properties: {
+                  earlierStepDep: { const: 'custom' },
+                },
+              },
+              then: {
+                properties: {
+                  conditionalCustomInput: {
+                    type: 'string',
+                    'ui:field': 'CustomField',
+                    'ui:widget': 'textarea',
+                    'ui:options': {
+                      rows: 5,
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+      if: {
+        properties: {
+          earlierFlag: {
+            const: true,
+          },
+        },
+      },
+      then: {
+        properties: {
+          conditionalFlagInput: {
+            type: 'string',
+            'ui:field': 'EntityPicker',
+            'ui:options': {
+              catalogFilter: [{ kind: 'User' }],
+            },
+          },
+        },
+      },
+    };
+
+    const expectedSchema = {
+      type: 'object',
+      properties: {
+        step2Field: {
+          type: 'string',
+        },
+      },
+      dependencies: {
+        earlierStepDep: {
+          allOf: [
+            {
+              if: {
+                properties: {
+                  earlierStepDep: { const: 'custom' },
+                },
+              },
+              then: {
+                properties: {
+                  conditionalCustomInput: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+      if: {
+        properties: {
+          earlierFlag: {
+            const: true,
+          },
+        },
+      },
+      then: {
+        properties: {
+          conditionalFlagInput: {
+            type: 'string',
+          },
+        },
+      },
+    };
+
+    const expectedUiSchema = {
+      step2Field: {},
+      conditionalCustomInput: {
+        'ui:field': 'CustomField',
+        'ui:widget': 'textarea',
+        'ui:options': {
+          rows: 5,
+        },
+      },
+      conditionalFlagInput: {
+        'ui:field': 'EntityPicker',
+        'ui:options': {
+          catalogFilter: [{ kind: 'User' }],
+        },
+      },
+    };
+
+    expect(extractSchemaFromStep(inputSchema)).toEqual({
+      schema: expectedSchema,
+      uiSchema: expectedUiSchema,
+    });
+  });
 });

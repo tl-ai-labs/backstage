@@ -17,6 +17,10 @@ import { StructuredMetadataTable } from '@backstage/core-components';
 import { JsonObject, JsonValue } from '@backstage/types';
 import { Draft07 as JSONSchema } from 'json-schema-library';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
+import {
+  collectAllSchemaPropertyKeys,
+  resolveConditionalSchema,
+} from '../../lib/schema';
 import { isJsonObject, formatKey, findSchemaForKey } from './util';
 
 /**
@@ -34,7 +38,9 @@ function processSchema(
   schema: ParsedTemplateSchema,
   formState: JsonObject,
 ): [string, JsonValue | undefined][] {
-  const parsedSchema = new JSONSchema(schema.mergedSchema);
+  const parsedSchema = new JSONSchema(
+    resolveConditionalSchema(schema.mergedSchema, formState),
+  );
   const definitionInSchema = parsedSchema.getSchema({
     pointer: `#/${key}`,
     data: formState,
@@ -90,13 +96,25 @@ function processSchema(
  * @alpha
  */
 export const ReviewState = (props: ReviewStateProps) => {
+  const allKnownKeys = new Set<string>();
+  for (const step of props.schemas) {
+    const stepKeys = collectAllSchemaPropertyKeys(step.mergedSchema);
+    for (const k of stepKeys) {
+      allKnownKeys.add(k);
+    }
+  }
+
   const reviewData = Object.fromEntries(
     Object.entries(props.formState)
       .flatMap(([key, value]) => {
         const schema = findSchemaForKey(key, props.schemas, props.formState);
-        return schema
-          ? processSchema(key, value, schema, props.formState)
-          : [[formatKey(key), value]];
+        if (schema) {
+          return processSchema(key, value, schema, props.formState);
+        }
+        if (allKnownKeys.has(key)) {
+          return [];
+        }
+        return [[formatKey(key), value]];
       })
       .filter(prop => prop.length > 0),
   );

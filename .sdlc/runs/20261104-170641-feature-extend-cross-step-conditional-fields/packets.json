@@ -1,0 +1,1258 @@
+[
+  {
+    "id": "tp_codegen_U01",
+    "unit": "U01",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+    "depends_on": [],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/lib/schema.ts` (unit U01) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 16-18 (line 16 reads `import { JsonObject } from '@backstage/types';`, line 18 reads `import { FieldValidation, UiSchema } from '@rjsf/utils';`) — Import JsonObject and JsonValue from @backstage/types, Draft07 as JSONSchema from json-schema-library, isEqual from lodash, stringify and parse from flatted, and FieldValidation and UiSchema from @rjsf/utils.\n- S2: replace lines 71-75 (line 71 reads `if (isObject(items)) {`, line 75 reads `}`) — Preserve existing uiSchema.items object if already present before calling extractUiSchema(items, uiSchema.items as JsonObject).\n- S3: replace lines 140-149 (line 140 reads `export const createFieldValidation = (): FieldValidation => {`, line 149 reads `};`) — Keep createFieldValidation and add ResolveSchemaOptions, isConditionOnlyProperty, resolveConditionalSchema, and collectAllSchemaPropertyKeys.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 18
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 71,
+          "to": 75
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 140,
+          "to": 149
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U02",
+    "unit": "U02",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+    "depends_on": [
+      "tp_codegen_U01"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts` (unit U02) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 62-88 (line 62 reads `.map(step => {`, line 88 reads `});`) — Filter feature-flagged properties in top-level properties and recursively inside dependencies, then, else, allOf, oneOf, and anyOf while preserving conditional keywords and step structure.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          123,
+          135
+        ],
+        "reason": "uses: Uses extractSchemaFromStep output shape"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 88
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U03",
+    "unit": "U03",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+    "depends_on": [
+      "tp_codegen_U01",
+      "tp_codegen_U02"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/Stepper/utils.ts` (unit U03) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 16-18 (line 16 reads `import type { JsonObject, JsonValue } from '@backstage/types';`, line 18 reads `import { FormValidation } from './createAsyncValidators';`) — Import JsonObject and JsonValue from @backstage/types, FieldValidation from @rjsf/utils, type ParsedTemplateSchema from ../../hooks/useTemplateSchema, collectAllSchemaPropertyKeys, resolveConditionalSchema, and type ResolveSchemaOptions from ../../lib/schema, and type FormValidation from ./createAsyncValidators.\n- S2: replace lines 46-48 (line 46 reads `export function isObject(value: JsonValue | undefined): value is JsonObject {`, line 48 reads `}`) — Keep isObject, re-export resolveConditionalSchema and collectAllSchemaPropertyKeys, and implement resolveStepSchema and pruneInactiveStepsState.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/utils.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/utils.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          123,
+          150
+        ],
+        "reason": "uses: Imports resolveConditionalSchema and collectAllSchemaPropertyKeys"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [
+          27,
+          33
+        ],
+        "reason": "uses: Imports ParsedTemplateSchema interface"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 18
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 48
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U04",
+    "unit": "U04",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+    "depends_on": [
+      "tp_codegen_U01",
+      "tp_codegen_U03"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts` (unit U04) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 30 (line 30 reads `import { isObject } from './utils';`) — Import isObject and resolveConditionalSchema from './utils'.\n- S2: replace line 58 (line 58 reads `const parsedSchema = new JSONSchema(rootSchema);`) — Resolve rootSchema against formData via resolveConditionalSchema(rootSchema, formData) before constructing JSONSchema.\n- S3: replace lines 85-94 (line 85 reads `for (const [key, value] of Object.entries(current)) {`, line 94 reads `}`) — Skip top-level keys not present in resolvedSchema.properties when resolvedSchema.properties is an object, before looking up definitionInSchema.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "lines": [
+          1,
+          49
+        ],
+        "reason": "uses: Uses isObject and resolveConditionalSchema from ./utils"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 58,
+          "to": 58
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 85,
+          "to": 94
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U05",
+    "unit": "U05",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "depends_on": [
+      "tp_codegen_U01",
+      "tp_codegen_U02"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/ReviewState/util.ts` (unit U05) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 17-20 (line 17 reads `import { JsonObject, JsonValue } from '@backstage/types';`, line 20 reads `import { Draft07 as JSONSchema } from 'json-schema-library';`) — Add import of collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'.\n- S2: replace lines 35-76 (line 35 reads `export function findSchemaForKey(`, line 76 reads `}`) — Resolve each step's mergedSchema with resolveConditionalSchema against formState and check draft.getSchema({ pointer: `#/${key}` }) without data.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          123,
+          150
+        ],
+        "reason": "uses: Uses resolveConditionalSchema and collectAllSchemaPropertyKeys"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [
+          27,
+          33
+        ],
+        "reason": "uses: Uses ParsedTemplateSchema type"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 20
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 35,
+          "to": 76
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U06",
+    "unit": "U06",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+    "depends_on": [
+      "tp_codegen_U01",
+      "tp_codegen_U02",
+      "tp_codegen_U05"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx` (unit U06) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 19-20 (line 19 reads `import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';`, line 20 reads `import { isJsonObject, formatKey, findSchemaForKey } from './util';`) — Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'.\n- S2: replace lines 37-41 (line 37 reads `const parsedSchema = new JSONSchema(schema.mergedSchema);`, line 41 reads `});`) — Pass resolveConditionalSchema(schema.mergedSchema, formState) to new JSONSchema.\n- S3: replace lines 92-102 (line 92 reads `export const ReviewState = (props: ReviewStateProps) => {`, line 102 reads `);`) — Filter out keys that belong to allKnownKeys of props.schemas but are not active in findSchemaForKey, while keeping unknown keys when schemas is empty or does not define them.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "lines": [
+          22,
+          76
+        ],
+        "reason": "uses: Uses isJsonObject, formatKey, and findSchemaForKey"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          123,
+          150
+        ],
+        "reason": "uses: Uses resolveConditionalSchema and collectAllSchemaPropertyKeys"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 20
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 37,
+          "to": 41
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 92,
+          "to": 102
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U07",
+    "unit": "U07",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+    "depends_on": [
+      "tp_codegen_U02",
+      "tp_codegen_U03",
+      "tp_codegen_U04",
+      "tp_codegen_U06"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx` (unit U07) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 59 (line 59 reads `import { hasErrors } from './utils';`) — Import hasErrors, pruneInactiveStepsState, and resolveStepSchema from './utils'.\n- S2: replace line 175 (line 175 reads `const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });`) — Keep currentStep and memoize currentStepSchema (via resolveStepSchema) and activeStepsState (via pruneInactiveStepsState).\n- S3: replace lines 194-222 (line 194 reads `const handleNext = useCallback(`, line 222 reads `);`) — Compute nextState = pruneInactiveStepsState(steps, { ...stepsState, ...formData }), validate nextState, and setStepsState(nextState).\n- S4: replace lines 250-258 (line 250 reads `const handleCreate = useCallback(async () => {`, line 258 reads `}, [analytics, createLabel, onCreate, stepsState]);`) — Callawait onCreate(activeStepsState) with activeStepsState in the dependency array.\n- S5: replace line 298 (line 298 reads `schema={currentStep.schema}`) — Pass schema={currentStepSchema} to Form.\n- S6: replace lines 329-339 (line 329 reads `<ReviewStepComponent`, line 339 reads `<ReviewStateComponent formState={stepsState} schemas={steps} />`) — Pass formData={activeStepsState} to ReviewStepComponent and formState={activeStepsState} to ReviewStateComponent.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U07.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "lines": [
+          1,
+          49
+        ],
+        "reason": "uses: Uses hasErrors, resolveStepSchema, and pruneInactiveStepsState"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "lines": [
+          43,
+          55
+        ],
+        "reason": "uses: Uses createAsyncValidators"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "lines": [
+          26,
+          30
+        ],
+        "reason": "uses: Uses ReviewState and ReviewStateProps"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 59,
+          "to": 59
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 175,
+          "to": 175
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 194,
+          "to": 222
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 250,
+          "to": 258
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 298,
+          "to": 298
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 329,
+          "to": 339
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U08",
+    "unit": "U08",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+    "depends_on": [
+      "tp_codegen_U01"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/lib/schema.test.ts` (unit U08) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 596-601 (line 596 reads `expect(extractSchemaFromStep(inputSchema)).toEqual({`, line 601 reads `});`) — Keep the existing assertion and add a test for cross-step conditional uiSchema extraction.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/lib/schema.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U08.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          123,
+          135
+        ],
+        "reason": "uses: Tests extractSchemaFromStep"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "transforms cross-step conditional dependencies and if/then/else schema: given A step schema with dependencies and if/then/else referencing an earlier step property and containing ui:widget and ui:field on conditional properties, expect extractSchemaFromStep extracts the ui:* properties into uiSchema and strips them from the returned schema"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 596,
+          "to": 601
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U09",
+    "unit": "U09",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+    "depends_on": [
+      "tp_codegen_U02"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx` (unit U09) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 386-391 (line 386 reads `expect(second.schema).toEqual({`, line 391 reads `});`) — Keep existing assertion and add a test case for cross-step conditional steps with feature-flagged conditional properties.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U09.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [
+          41,
+          94
+        ],
+        "reason": "uses: Tests useTemplateSchema"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should preserve cross-step if/then/else and filter feature-flagged conditional properties: given A two-step manifest where step 2 defines conditional properties inside if/then/else with one property guarded by an inactive ui:backstage.featureFlag, expect useTemplateSchema preserves if/then/else on step 2 and removes the disabled feature-flagged property and its required entry"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 386,
+          "to": 391
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U10",
+    "unit": "U10",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+    "depends_on": [
+      "tp_codegen_U02",
+      "tp_codegen_U03"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts` (unit U10) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 16 (line 16 reads `import { hasErrors } from './utils';`) — Import hasErrors, pruneInactiveStepsState, resolveConditionalSchema, and resolveStepSchema from './utils' and type ParsedTemplateSchema from '../../hooks/useTemplateSchema'.\n- S2: replace lines 90-92 (line 90 reads `expect(hasErrors(errors)).toBe(true);`, line 92 reads `});`) — Keep existing assertion and add describe blocks for resolveStepSchema and pruneInactiveStepsState.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "lines": [
+          1,
+          49
+        ],
+        "reason": "uses: Tests resolveStepSchema, resolveConditionalSchema, and pruneInactiveStepsState"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "resolveStepSchema evaluates cross-step dependencies and if/then/else without duplicating earlier-step properties: given A 2-step schema where step 1 defines isMobileSdk and step 2 defines sdkPlatform conditionally via dependencies or if/then, expect sdkPlatform and required: ['sdkPlatform'] are included only when isMobileSdk is true, not when undefined or false, and isMobileSdk is never added to step 2 properties",
+      "pruneInactiveStepsState removes values of conditional fields whose cross-step condition is no longer satisfied: given A 2-step schema and state containing a value for step 2's conditional sdkPlatform while step 1's isMobileSdk is false, expect pruneInactiveStepsState omits sdkPlatform from the returned state while keeping isMobileSdk and unconditional fields"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 90,
+          "to": 92
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U11",
+    "unit": "U11",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+    "depends_on": [
+      "tp_codegen_U04"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts` (unit U11) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 539-541 (line 539 reads `expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();`, line 541 reads `});`) — Keep existing assertion and add a test for cross-step conditional custom field validation.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "lines": [
+          43,
+          179
+        ],
+        "reason": "uses: Tests createAsyncValidators"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should validate custom field inside cross-step conditional branch only when condition is satisfied: given A step schema with a custom ui:field inside if/then and dependencies referencing an earlier step flag, expect The custom validator runs when the flag in formData is true and is skipped when the flag is false or undefined"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 539,
+          "to": 541
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U12",
+    "unit": "U12",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+    "depends_on": [
+      "tp_codegen_U02",
+      "tp_codegen_U05"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts` (unit U12) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 169-173 (line 169 reads `it('should return the schema for an object key', () => {`, line 173 reads `});`) — Keep existing test and add tests for cross-step if/then/else and inactive conditional keys.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U12.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "lines": [
+          35,
+          76
+        ],
+        "reason": "uses: Tests findSchemaForKey"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should return the schema for a key in cross-step if/then/else when active and null when inactive: given Multi-step schemas where step 2 defines a property inside if/then referencing a step 1 property, expect findSchemaForKey returns step 2 when the step 1 condition in formState is met and null when unmet or undefined"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 169,
+          "to": 173
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U13",
+    "unit": "U13",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "depends_on": [
+      "tp_codegen_U02",
+      "tp_codegen_U06"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx` (unit U13) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 613-616 (line 613 reads `// handles options for property in dependencies in third schema`, line 616 reads `});`) — Keep existing assertion and add tests for active and inactive cross-step conditional fields in ReviewState.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U13.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "lines": [
+          92,
+          110
+        ],
+        "reason": "uses: Tests ReviewState component"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should display active cross-step conditional fields and omit inactive ones: given Multi-step schemas where step 2 has cross-step if/then and dependencies referencing step 1, expect ReviewState renders the conditional field row with its configured review title when active and omits the row when inactive"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 613,
+          "to": 616
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U14",
+    "unit": "U14",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "depends_on": [
+      "tp_codegen_U07"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` (unit U14) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 19 (line 19 reads `import { act, fireEvent, waitFor } from '@testing-library/react';`) — Import act, fireEvent, screen, and waitFor from '@testing-library/react'.\n- S2: replace lines 917-924 (line 917 reads `expect(onCreate).toHaveBeenCalledWith(`, line 924 reads `});`) — Keep existing assertion and add describe('cross-step conditional fields') covering visibility, required validation, and back-navigation cleanup.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U14.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "lines": [
+          92,
+          120
+        ],
+        "reason": "uses: Tests Stepper component"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should show step 2 conditional field only when step 1 flag is set: given A 2-step manifest where step 2 conditionally shows SDK Platform when step 1's Is this a mobile SDK? boolean is true, expect SDK Platform is absent in step 2 when the step 1 checkbox is unchecked, and present in step 2 without duplicating the step 1 checkbox when checked",
+      "should enforce required validation on step 2 conditional field only when step 1 flag is set: given A 2-step manifest where SDK Platform in step 2 is conditionally required when step 1's Is this a mobile SDK? is true, expect Submitting step 2 without SDK Platform fails validation when the step 1 flag is true, and succeeds advancing to Review when the step 1 flag is unset",
+      "should remove step 2 conditional field from Review and onCreate after going back to step 1 and unsetting the flag: given A user sets the step 1 flag, fills SDK Platform in step 2, reaches Review, navigates back to step 1, unsets the flag, advances to Review, and clicks Create, expect SDK Platform and its value are removed from the Review step and omitted from the onCreate payload"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 917,
+          "to": 924
+        }
+      ],
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U15",
+    "unit": "U15",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "docs/features/software-templates/input-examples.md",
+    "depends_on": [
+      "tp_codegen_U07"
+    ],
+    "subtype": "doc_update",
+    "instruction": "Edit `docs/features/software-templates/input-examples.md` (unit U15) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 339-341 (line 339 reads `required:`, line 341 reads `````) — Keep the end of the existing yaml block and append the '### Conditional fields across steps' subsection and worked multi-step yaml example.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-templates/input-examples.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-templates/input-examples.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 339,
+          "to": 341
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_docs_U16",
+    "unit": "U16",
+    "phase": "docs",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261104-170641-feature-extend-cross-step-conditional-fields",
+    "artifact_path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+    "depends_on": [
+      "tp_codegen_U07"
+    ],
+    "subtype": "doc_addition",
+    "instruction": "Write `.changeset/scaffolder-cross-step-conditional-fields.md` (unit U16) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170641-feature-extend-cross-step-conditional-fields/briefs/U16.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/features/software-templates/input-examples.md",
+        "lines": [
+          1,
+          10
+        ],
+        "reason": "style file: Markdown file with YAML frontmatter"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": "docs/features/software-templates/input-examples.md",
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    },
+    "verify_deferred": [
+      "CI=true yarn test plugins/scaffolder-react plugins/scaffolder",
+      "yarn tsc",
+      "yarn lint:all"
+    ]
+  }
+]

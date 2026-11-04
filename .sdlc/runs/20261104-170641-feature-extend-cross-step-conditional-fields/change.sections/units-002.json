@@ -1,0 +1,391 @@
+[
+  {
+    "id": "U08",
+    "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verifies extractSchemaFromStep extracts ui:* options from cross-step conditional dependencies and if/then/else schemas.",
+    "rules": [
+      "1. Add a test under describe('extractSchemaFromStep') verifying that when a step schema defines dependencies with allOf/if/then/else referencing a property from an earlier step (not in the step's own properties) and includes ui:field, ui:options, and ui:widget inside the conditional branches, extractSchemaFromStep extracts those ui:* keys into uiSchema and removes them from schema."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 596,
+        "to": 601,
+        "first_line": "expect(extractSchemaFromStep(inputSchema)).toEqual({",
+        "last_line": "});",
+        "rule": "Keep the existing assertion and add a test for cross-step conditional uiSchema extraction."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+      "lines": [520, 602],
+      "reason": "Existing extractSchemaFromStep conditional schema test style"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [123, 135],
+        "reason": "Tests extractSchemaFromStep"
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": ["FR-1", "AC-4", "NFR-1", "NFR-2"],
+    "tests": [
+      {
+        "name": "transforms cross-step conditional dependencies and if/then/else schema",
+        "given": "A step schema with dependencies and if/then/else referencing an earlier step property and containing ui:widget and ui:field on conditional properties",
+        "expect": "extractSchemaFromStep extracts the ui:* properties into uiSchema and strips them from the returned schema"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U09",
+    "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verifies useTemplateSchema preserves conditional keywords on conditional-only steps and filters feature-flagged properties inside conditional branches.",
+    "rules": [
+      "1. Add a test under describe('FeatureFlags') verifying that a step with cross-step if/then/else and dependencies retains its conditional structure and filters out properties inside conditional branches whose ui:backstage.featureFlag is inactive."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 386,
+        "to": 391,
+        "first_line": "expect(second.schema).toEqual({",
+        "last_line": "});",
+        "rule": "Keep existing assertion and add a test case for cross-step conditional steps with feature-flagged conditional properties."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.test.tsx",
+      "lines": [280, 391],
+      "reason": "Existing useTemplateSchema hook test patterns"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [41, 94],
+        "reason": "Tests useTemplateSchema"
+      }
+    ],
+    "depends_on": ["U02"],
+    "covers": ["FR-2", "AC-4", "NFR-1", "NFR-2"],
+    "tests": [
+      {
+        "name": "should preserve cross-step if/then/else and filter feature-flagged conditional properties",
+        "given": "A two-step manifest where step 2 defines conditional properties inside if/then/else with one property guarded by an inactive ui:backstage.featureFlag",
+        "expect": "useTemplateSchema preserves if/then/else on step 2 and removes the disabled feature-flagged property and its required entry"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U10",
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Tests resolveConditionalSchema, resolveStepSchema, and pruneInactiveStepsState across cross-step dependencies and if/then/else schemas.",
+    "rules": [
+      "1. Import hasErrors, resolveConditionalSchema, resolveStepSchema, and pruneInactiveStepsState from './utils', and type ParsedTemplateSchema from '../../hooks/useTemplateSchema'.",
+      "2. Add describe('resolveStepSchema') testing cross-step dependencies (oneOf and allOf/if/then) and top-level if/then/else when the earlier step boolean/enum value is undefined, false, or true, verifying that active conditional properties and required constraints are merged while earlier-step condition properties are not added to the active step's properties.",
+      "3. Add describe('pruneInactiveStepsState') testing that conditional properties from inactive branches are omitted from state when an earlier step's answer changes to false or undefined, while active properties and undefined unconditional properties are retained."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 16,
+        "to": 16,
+        "first_line": "import { hasErrors } from './utils';",
+        "rule": "Import hasErrors, pruneInactiveStepsState, resolveConditionalSchema, and resolveStepSchema from './utils' and type ParsedTemplateSchema from '../../hooks/useTemplateSchema'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 90,
+        "to": 92,
+        "first_line": "expect(hasErrors(errors)).toBe(true);",
+        "last_line": "});",
+        "rule": "Keep existing assertion and add describe blocks for resolveStepSchema and pruneInactiveStepsState."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+      "lines": [1, 92],
+      "reason": "Existing Stepper utils unit test file"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "lines": [1, 49],
+        "reason": "Tests resolveStepSchema, resolveConditionalSchema, and pruneInactiveStepsState"
+      }
+    ],
+    "depends_on": ["U02", "U03"],
+    "covers": ["FR-3", "FR-4", "FR-5", "FR-7", "AC-4", "NFR-1", "NFR-2"],
+    "tests": [
+      {
+        "name": "resolveStepSchema evaluates cross-step dependencies and if/then/else without duplicating earlier-step properties",
+        "given": "A 2-step schema where step 1 defines isMobileSdk and step 2 defines sdkPlatform conditionally via dependencies or if/then",
+        "expect": "sdkPlatform and required: ['sdkPlatform'] are included only when isMobileSdk is true, not when undefined or false, and isMobileSdk is never added to step 2 properties"
+      },
+      {
+        "name": "pruneInactiveStepsState removes values of conditional fields whose cross-step condition is no longer satisfied",
+        "given": "A 2-step schema and state containing a value for step 2's conditional sdkPlatform while step 1's isMobileSdk is false",
+        "expect": "pruneInactiveStepsState omits sdkPlatform from the returned state while keeping isMobileSdk and unconditional fields"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U11",
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verifies createAsyncValidators runs custom field validators on cross-step conditional fields when active and skips them when inactive.",
+    "rules": [
+      "1. Add a test under describe('createAsyncValidators') where a step schema defines a custom ui:field inside a cross-step conditional branch (dependencies and if/then referencing a flag from an earlier step not in the step's base properties), asserting that the custom validator is called when the flag is true in formData and not called when the flag is false or undefined."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 539,
+        "to": 541,
+        "first_line": "expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();",
+        "last_line": "});",
+        "rule": "Keep existing assertion and add a test for cross-step conditional custom field validation."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+      "lines": [465, 541],
+      "reason": "Existing createAsyncValidators conditional test style"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "lines": [43, 179],
+        "reason": "Tests createAsyncValidators"
+      }
+    ],
+    "depends_on": ["U04"],
+    "covers": ["FR-6", "AC-4", "NFR-1", "NFR-2"],
+    "tests": [
+      {
+        "name": "should validate custom field inside cross-step conditional branch only when condition is satisfied",
+        "given": "A step schema with a custom ui:field inside if/then and dependencies referencing an earlier step flag",
+        "expect": "The custom validator runs when the flag in formData is true and is skipped when the flag is false or undefined"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U12",
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verifies findSchemaForKey resolves cross-step dependencies, if/then/else, and allOf conditions and returns null for inactive conditional keys.",
+    "rules": [
+      "1. Add tests under describe('findSchemaForKey') verifying that findSchemaForKey returns null for a conditional dependency or if/then/else key when the cross-step condition in formState is not satisfied (false or undefined, even if a stale value for the key exists in formState), and returns the matching step schema when the cross-step if/then/else or allOf condition is satisfied."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 169,
+        "to": 173,
+        "first_line": "it('should return the schema for an object key', () => {",
+        "last_line": "});",
+        "rule": "Keep existing test and add tests for cross-step if/then/else and inactive conditional keys."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "lines": [83, 173],
+      "reason": "Existing findSchemaForKey unit tests"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "lines": [35, 76],
+        "reason": "Tests findSchemaForKey"
+      }
+    ],
+    "depends_on": ["U02", "U05"],
+    "covers": ["FR-8", "AC-4", "NFR-1", "NFR-2"],
+    "tests": [
+      {
+        "name": "should return the schema for a key in cross-step if/then/else when active and null when inactive",
+        "given": "Multi-step schemas where step 2 defines a property inside if/then referencing a step 1 property",
+        "expect": "findSchemaForKey returns step 2 when the step 1 condition in formState is met and null when unmet or undefined"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U13",
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verifies ReviewState formats active cross-step conditional fields and omits inactive conditional fields.",
+    "rules": [
+      "1. Add tests under describe('ReviewState') verifying that cross-step conditional fields defined via if/then/else or dependencies are rendered with their review metadata (such as title or ui:backstage.review.name) when the earlier step's condition is met, and omitted from the rendered table when the earlier step's condition is not met."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 613,
+        "to": 616,
+        "first_line": "// handles options for property in dependencies in third schema",
+        "last_line": "});",
+        "rule": "Keep existing assertion and add tests for active and inactive cross-step conditional fields in ReviewState."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+      "lines": [512, 616],
+      "reason": "Existing ReviewState multi-schema test style"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "lines": [92, 110],
+        "reason": "Tests ReviewState component"
+      }
+    ],
+    "depends_on": ["U02", "U06"],
+    "covers": ["FR-9", "AC-4", "NFR-1", "NFR-2"],
+    "tests": [
+      {
+        "name": "should display active cross-step conditional fields and omit inactive ones",
+        "given": "Multi-step schemas where step 2 has cross-step if/then and dependencies referencing step 1",
+        "expect": "ReviewState renders the conditional field row with its configured review title when active and omits the row when inactive"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U14",
+    "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verifies end-to-end cross-step conditional field visibility, conditional required validation, and back-navigation cleanup in Stepper.",
+    "rules": [
+      "1. Import screen alongside act, fireEvent, and waitFor from '@testing-library/react'.",
+      "2. Add a describe('cross-step conditional fields') block in Stepper.test.tsx with React Testing Library tests using screen queries and no data-testid attributes.",
+      "3. Test 1 (AC-1, FR-3, FR-4): Render a 2-step manifest where step 1 has boolean isMobileSdk ('Is this a mobile SDK?') and step 2 has conditional sdkPlatform ('SDK Platform') via dependencies / if-then; verify that advancing to step 2 with isMobileSdk unchecked hides 'SDK Platform', and going back to step 1, checking 'Is this a mobile SDK?', and advancing to step 2 shows 'SDK Platform' without rendering 'Is this a mobile SDK?' in step 2.",
+      "4. Test 2 (AC-2, FR-5): Verify that when 'Is this a mobile SDK?' is checked in step 1, clicking 'Review' in step 2 without filling the required 'SDK Platform' field shows a validation error and stays on step 2, whereas when 'Is this a mobile SDK?' is unchecked in step 1, clicking 'Review' in step 2 advances to the Review step without 'SDK Platform'.",
+      "5. Test 3 (AC-3, FR-7): Verify that after checking 'Is this a mobile SDK?' in step 1, filling 'SDK Platform' (e.g. 'iOS') in step 2, advancing to Review (where 'iOS' is visible), clicking 'Back' to return to step 1, unchecking 'Is this a mobile SDK?', advancing through step 2 to Review, and clicking 'Create', 'iOS' is removed from the Review table and onCreate is called with { isMobileSdk: false } without sdkPlatform."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 19,
+        "to": 19,
+        "first_line": "import { act, fireEvent, waitFor } from '@testing-library/react';",
+        "rule": "Import act, fireEvent, screen, and waitFor from '@testing-library/react'."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 917,
+        "to": 924,
+        "first_line": "expect(onCreate).toHaveBeenCalledWith(",
+        "last_line": "});",
+        "rule": "Keep existing assertion and add describe('cross-step conditional fields') covering visibility, required validation, and back-navigation cleanup."
+      }
+    ],
+    "style_from": {
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "lines": [170, 330],
+      "reason": "Existing Stepper multi-step and conditional test patterns"
+    },
+    "uses": [
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "lines": [92, 120],
+        "reason": "Tests Stepper component"
+      }
+    ],
+    "depends_on": ["U07"],
+    "covers": ["FR-3", "FR-4", "FR-5", "FR-7", "FR-10", "AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "NFR-1", "NFR-2", "NFR-5"],
+    "tests": [
+      {
+        "name": "should show step 2 conditional field only when step 1 flag is set",
+        "given": "A 2-step manifest where step 2 conditionally shows SDK Platform when step 1's Is this a mobile SDK? boolean is true",
+        "expect": "SDK Platform is absent in step 2 when the step 1 checkbox is unchecked, and present in step 2 without duplicating the step 1 checkbox when checked"
+      },
+      {
+        "name": "should enforce required validation on step 2 conditional field only when step 1 flag is set",
+        "given": "A 2-step manifest where SDK Platform in step 2 is conditionally required when step 1's Is this a mobile SDK? is true",
+        "expect": "Submitting step 2 without SDK Platform fails validation when the step 1 flag is true, and succeeds advancing to Review when the step 1 flag is unset"
+      },
+      {
+        "name": "should remove step 2 conditional field from Review and onCreate after going back to step 1 and unsetting the flag",
+        "given": "A user sets the step 1 flag, fills SDK Platform in step 2, reaches Review, navigates back to step 1, unsets the flag, advances to Review, and clicks Create",
+        "expect": "SDK Platform and its value are removed from the Review step and omitted from the onCreate payload"
+      }
+    ],
+    "checks": ["lint", "format", "test"]
+  },
+  {
+    "id": "U15",
+    "path": "docs/features/software-templates/input-examples.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Documents cross-step conditional fields with a worked multi-step YAML example under 'Use parameters as conditional for fields'.",
+    "rules": [
+      "1. Under '## Use parameters as conditional for fields' (after the '### Multiple conditional fields with custom ordering' code block), add a '### Conditional fields across steps' subsection explaining that `dependencies` and `if`/`then`/`else` conditions in a step can reference parameters defined in earlier steps of the wizard.",
+      "2. Include a valid multi-step `yaml` example where step 1 collects `isMobileSdk` (boolean) and step 2 uses `dependencies` with `if`/`then` on `isMobileSdk` to conditionally display and require `sdkPlatform`, using meaningful variable names and U.S. English."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 339,
+        "to": 341,
+        "first_line": "required:",
+        "last_line": "```",
+        "rule": "Keep the end of the existing yaml block and append the '### Conditional fields across steps' subsection and worked multi-step yaml example."
+      }
+    ],
+    "style_from": {
+      "path": "docs/features/software-templates/input-examples.md",
+      "lines": [262, 342],
+      "reason": "Existing conditional field documentation and YAML examples"
+    },
+    "depends_on": ["U07"],
+    "covers": ["FR-11", "AC-6", "NFR-4"],
+    "checks": ["format"]
+  },
+  {
+    "id": "U16",
+    "path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Adds a minor changeset for @backstage/plugin-scaffolder-react describing support for cross-step conditional fields.",
+    "rules": [
+      "1. Start with YAML frontmatter fencing `---`, `'\u0040backstage/plugin-scaffolder-react': minor`, `---`.",
+      "2. Follow with a concise release note stating that Scaffolder form wizard steps now support cross-step conditional fields (`dependencies`, `if`/`then`/`else`, `allOf`, `oneOf`, and `anyOf`) based on answers from earlier steps, including conditional `required` validation, `ReviewState` resolution, and pruning of inactive conditional values on back-navigation."
+    ],
+    "exports": [],
+    "import_line": "",
+    "style_from": {
+      "path": "docs/features/software-templates/input-examples.md",
+      "lines": [1, 10],
+      "reason": "Markdown file with YAML frontmatter"
+    },
+    "depends_on": ["U07"],
+    "covers": ["FR-12", "AC-7", "NFR-5"],
+    "checks": ["format"]
+  }
+]

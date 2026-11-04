@@ -1,0 +1,813 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Extracts uiSchema properties from step schemas and resolves conditional JSON Schema branches (dependencies, if/then/else, allOf, oneOf, anyOf) against accumulated formData.",
+      "rules": [
+        "1. In extractUiSchema, when items is an object, reuse uiSchema.items if it is already an object instead of overwriting it, then recurse into items.",
+        "2. Export type ResolveSchemaOptions = { earlierStepKeys?: Set<string>; booleanKeys?: Set<string> }.",
+        "3. Export function isConditionOnlyProperty(propKey: string, propSchema: JsonObject, options?: { depKey?: string; baseProperties?: JsonObject; earlierStepKeys?: Set<string> }): boolean that returns true when options?.depKey === propKey, or 'not' in propSchema, or 'const' in propSchema, or (!('type' in propSchema) && !('title' in propSchema) && !('ui:field' in propSchema) && !('ui:widget' in propSchema) && !('properties' in propSchema) && !('items' in propSchema)), or (Boolean(options?.earlierStepKeys?.has(propKey)) && !(options?.baseProperties && propKey in options.baseProperties) && 'enum' in propSchema && !('title' in propSchema)), and false otherwise.",
+        "4. Define helper hasDependencyValue(val: JsonValue | undefined): boolean returning val !== undefined && val !== null && val !== false && val !== '' && (!Array.isArray(val) || val.length > 0).",
+        "5. Define helper matchesPropertyCondition(propKey: string, propCond: JsonObject, data: JsonObject, booleanKeys: Set<string>): boolean that evaluates val = data[propKey] with isBooleanProp = booleanKeys.has(propKey) and effectiveVal = val === undefined && isBooleanProp ? false : val: handle propCond.not by negation (returning true if only 'not'/'type' keys exist and inner condition is false), propCond.allOf/anyOf/oneOf recursively, propCond.const via lodash isEqual(effectiveVal, propCond.const), propCond.enum via effectiveVal !== undefined && propCond.enum.some(item => isEqual(effectiveVal, item)), nested propCond.properties/required via isObject(effectiveVal) && matchesCondition(propCond, effectiveVal, booleanKeys), and any remaining JSON Schema keywords by returning val !== undefined && new JSONSchema({ type: 'object', properties: { [propKey]: propCond }, required: [propKey] }).validate({ [propKey]: effectiveVal }).length === 0.",
+        "6. Define helper matchesCondition(cond: JsonObject, data: JsonObject, booleanKeys: Set<string>): boolean that checks cond.not, cond.allOf, cond.anyOf, cond.oneOf, cond.required (every required key not in cond.properties must satisfy hasDependencyValue(data[reqKey])), and cond.properties (every object entry must satisfy matchesPropertyCondition).",
+        "7. Export function resolveConditionalSchema(schema: JsonObject, formData: JsonObject, options?: ResolveSchemaOptions): JsonObject that clones schema, populates effectiveData with defined values from formData plus default values from schema.properties when formData[k] === undefined, tracks booleanKeys for type === 'boolean' properties, and resolves allOf, if/then/else, dependencies (array required list when hasDependencyValue, or object dependency with oneOf/anyOf/allOf/if/properties), and conditional top-level oneOf/anyOf (where at least one branch has if or a property matching isConditionOnlyProperty).",
+        "8. When merging an active branch in resolveConditionalSchema, recursively resolve the branch first, merge non-condition properties (where !isConditionOnlyProperty) into resolvedProperties (updating effectiveData with branch property defaults when undefined and booleanKeys for boolean properties), add branch required keys to resolvedRequired only when reqKey !== depKey and (reqKey in resolvedProperties || !options?.earlierStepKeys?.has(reqKey)), delete resolved allOf/if/then/else/dependencies and conditional oneOf/anyOf keys, and recursively resolve nested object properties in resolvedProperties while leaving array items untouched.",
+        "9. Export function collectAllSchemaPropertyKeys(schema: JsonObject, earlierStepKeys?: Set<string>, depKey?: string): Set<string> that collects all non-condition property keys (where !isConditionOnlyProperty) across schema.properties, schema.then, schema.else, schema.allOf, schema.oneOf, schema.anyOf, and schema.dependencies."
+      ],
+      "exports": [
+        {
+          "name": "extractSchemaFromStep",
+          "kind": "function",
+          "params": [
+            {
+              "name": "inputStep",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "{ uiSchema: UiSchema; schema: JsonObject }"
+        },
+        {
+          "name": "createFieldValidation",
+          "kind": "function",
+          "params": [],
+          "returns": "FieldValidation"
+        },
+        {
+          "name": "isConditionOnlyProperty",
+          "kind": "function",
+          "params": [
+            {
+              "name": "propKey",
+              "type": "string"
+            },
+            {
+              "name": "propSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "options?",
+              "type": "{ depKey?: string; baseProperties?: JsonObject; earlierStepKeys?: Set<string> }"
+            }
+          ],
+          "returns": "boolean"
+        },
+        {
+          "name": "resolveConditionalSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formData",
+              "type": "JsonObject"
+            },
+            {
+              "name": "options?",
+              "type": "ResolveSchemaOptions"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "collectAllSchemaPropertyKeys",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "earlierStepKeys?",
+              "type": "Set<string>"
+            },
+            {
+              "name": "depKey?",
+              "type": "string"
+            }
+          ],
+          "returns": "Set<string>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 18,
+          "first_line": "import { JsonObject } from '@backstage/types';",
+          "last_line": "import { FieldValidation, UiSchema } from '@rjsf/utils';",
+          "rule": "Import JsonObject and JsonValue from @backstage/types, Draft07 as JSONSchema from json-schema-library, isEqual from lodash, stringify and parse from flatted, and FieldValidation and UiSchema from @rjsf/utils."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 71,
+          "to": 75,
+          "first_line": "if (isObject(items)) {",
+          "last_line": "}",
+          "rule": "Preserve existing uiSchema.items object if already present before calling extractUiSchema(items, uiSchema.items as JsonObject)."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 140,
+          "to": 149,
+          "first_line": "export const createFieldValidation = (): FieldValidation => {",
+          "last_line": "};",
+          "rule": "Keep createFieldValidation and add ResolveSchemaOptions, isConditionOnlyProperty, resolveConditionalSchema, and collectAllSchemaPropertyKeys."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          1,
+          150
+        ],
+        "reason": "Existing schema extraction implementation and style"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Preserves conditional schema keywords on each step while filtering feature-flagged properties across top-level and conditional branches.",
+      "rules": [
+        "1. Define a recursive helper filterSchemaByFeatureFlags(schemaNode: JsonObject, uiSchema: UiSchema, isActive: (flag: string) => boolean): JsonObject that filters schemaNode.properties entries by checking uiSchema[key]?.['ui:backstage']?.featureFlag, removes filtered-out property keys from schemaNode.required if Array.isArray(schemaNode.required), and recursively filters object nodes in dependencies, then, else, allOf, oneOf, and anyOf.",
+        "2. When step.schema has no properties and no conditional keywords (dependencies, if, allOf, oneOf, anyOf), set strippedSchema.schema.properties = {} so empty object steps keep properties: {}, while steps with only dependencies or conditional blocks preserve their structure."
+      ],
+      "exports": [
+        {
+          "name": "useTemplateSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "manifest",
+              "type": "TemplateParameterSchema"
+            }
+          ],
+          "returns": "{ steps: ParsedTemplateSchema[]; presentation?: TemplatePresentationV1beta3 }"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 88,
+          "first_line": ".map(step => {",
+          "last_line": "});",
+          "rule": "Filter feature-flagged properties in top-level properties and recursively inside dependencies, then, else, allOf, oneOf, and anyOf while preserving conditional keywords and step structure."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+        "lines": [
+          1,
+          95
+        ],
+        "reason": "Existing hook structure and feature flag filtering pattern"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            135
+          ],
+          "reason": "Uses extractSchemaFromStep output shape"
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-2",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Provides step schema resolution across steps and prunes inactive conditional field values from stepsState.",
+      "rules": [
+        "1. Re-export resolveConditionalSchema and collectAllSchemaPropertyKeys from '../../lib/schema'.",
+        "2. Export function resolveStepSchema(stepSchema: JsonObject, steps: ParsedTemplateSchema[], activeStep: number, formData: JsonObject): JsonObject that collects earlierStepKeys from steps.slice(0, activeStep) using collectAllSchemaPropertyKeys, collects booleanKeys (properties with type === 'boolean') and default values for undefined formData keys from steps.slice(0, activeStep + 1), and returns resolveConditionalSchema(stepSchema, effectiveFormData, { earlierStepKeys, booleanKeys }).",
+        "3. Export function pruneInactiveStepsState(steps: ParsedTemplateSchema[], state: Record<string, JsonValue>): Record<string, JsonValue> that collects allDefinedKeys (via collectAllSchemaPropertyKeys on each step.mergedSchema) and activeDefinedKeys (keys in resolveConditionalSchema(step.mergedSchema, state, { earlierStepKeys, booleanKeys }).properties for each step), omits any top-level key k from state where allDefinedKeys.has(k) && !activeDefinedKeys.has(k), and recursively prunes inactive conditional sub-keys inside nested object values."
+      ],
+      "exports": [
+        {
+          "name": "hasErrors",
+          "kind": "function",
+          "params": [
+            {
+              "name": "errors?",
+              "type": "FormValidation"
+            }
+          ],
+          "returns": "boolean"
+        },
+        {
+          "name": "isObject",
+          "kind": "function",
+          "params": [
+            {
+              "name": "value",
+              "type": "JsonValue | undefined"
+            }
+          ],
+          "returns": "value is JsonObject"
+        },
+        {
+          "name": "resolveConditionalSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "formData",
+              "type": "JsonObject"
+            },
+            {
+              "name": "options?",
+              "type": "ResolveSchemaOptions"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "collectAllSchemaPropertyKeys",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "earlierStepKeys?",
+              "type": "Set<string>"
+            },
+            {
+              "name": "depKey?",
+              "type": "string"
+            }
+          ],
+          "returns": "Set<string>"
+        },
+        {
+          "name": "resolveStepSchema",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "steps",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "activeStep",
+              "type": "number"
+            },
+            {
+              "name": "formData",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        },
+        {
+          "name": "pruneInactiveStepsState",
+          "kind": "function",
+          "params": [
+            {
+              "name": "steps",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "state",
+              "type": "Record<string, JsonValue>"
+            }
+          ],
+          "returns": "Record<string, JsonValue>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 18,
+          "first_line": "import type { JsonObject, JsonValue } from '@backstage/types';",
+          "last_line": "import { FormValidation } from './createAsyncValidators';",
+          "rule": "Import JsonObject and JsonValue from @backstage/types, FieldValidation from @rjsf/utils, type ParsedTemplateSchema from ../../hooks/useTemplateSchema, collectAllSchemaPropertyKeys, resolveConditionalSchema, and type ResolveSchemaOptions from ../../lib/schema, and type FormValidation from ./createAsyncValidators."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 48,
+          "first_line": "export function isObject(value: JsonValue | undefined): value is JsonObject {",
+          "last_line": "}",
+          "rule": "Keep isObject, re-export resolveConditionalSchema and collectAllSchemaPropertyKeys, and implement resolveStepSchema and pruneInactiveStepsState."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "lines": [
+          1,
+          49
+        ],
+        "reason": "Existing Stepper utility module style"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            150
+          ],
+          "reason": "Imports resolveConditionalSchema and collectAllSchemaPropertyKeys"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+          "lines": [
+            27,
+            33
+          ],
+          "reason": "Imports ParsedTemplateSchema interface"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-7",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves conditional branches in rootSchema against accumulated formData before running custom field validators.",
+      "rules": [
+        "1. Import resolveConditionalSchema alongside isObject from './utils'.",
+        "2. In validate, resolve const resolvedSchema = resolveConditionalSchema(rootSchema, formData) and pass resolvedSchema to new JSONSchema(resolvedSchema).",
+        "3. In the loop over Object.entries(current), when pathPrefix === '#' and isObject(resolvedSchema.properties) and !(key in resolvedSchema.properties), continue so keys from earlier steps or inactive conditional branches are not validated against synthesized fallback schemas."
+      ],
+      "exports": [
+        {
+          "name": "createAsyncValidators",
+          "kind": "function",
+          "params": [
+            {
+              "name": "rootSchema",
+              "type": "JsonObject"
+            },
+            {
+              "name": "validators",
+              "type": "Record<string, undefined | CustomFieldValidator<unknown, unknown>>"
+            },
+            {
+              "name": "context",
+              "type": "{ apiHolder: ApiHolder }"
+            }
+          ],
+          "returns": "(formData: JsonObject) => Promise<FormValidation>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "import { isObject } from './utils';",
+          "rule": "Import isObject and resolveConditionalSchema from './utils'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 58,
+          "to": 58,
+          "first_line": "const parsedSchema = new JSONSchema(rootSchema);",
+          "rule": "Resolve rootSchema against formData via resolveConditionalSchema(rootSchema, formData) before constructing JSONSchema."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 85,
+          "to": 94,
+          "first_line": "for (const [key, value] of Object.entries(current)) {",
+          "last_line": "}",
+          "rule": "Skip top-level keys not present in resolvedSchema.properties when resolvedSchema.properties is an object, before looking up definitionInSchema."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+        "lines": [
+          1,
+          180
+        ],
+        "reason": "Existing async validator implementation"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+          "lines": [
+            1,
+            49
+          ],
+          "reason": "Uses isObject and resolveConditionalSchema from ./utils"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U03"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves cross-step and same-step conditional schemas across dependencies, if/then/else, allOf, oneOf, and anyOf when locating the step schema for a key.",
+      "rules": [
+        "1. Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'.",
+        "2. In findSchemaForKey, collect booleanKeys (properties with type === 'boolean') across all schemas and maintain earlierStepKeys = new Set<string>() as steps are traversed.",
+        "3. For each step, compute resolvedSchema = resolveConditionalSchema(step.mergedSchema, (formState ?? {}) as JsonObject, { earlierStepKeys, booleanKeys }), add collectAllSchemaPropertyKeys(step.mergedSchema, earlierStepKeys) to earlierStepKeys, and query new JSONSchema(resolvedSchema).getSchema({ pointer: `#/${key}` }) without passing data so json-schema-library only matches keys defined in the active resolved schema and never synthesizes fallback schemas from formState.",
+        "4. Return step when res is defined and !(isJsonObject(res) && res.type === 'error'); return null if no step matches."
+      ],
+      "exports": [
+        {
+          "name": "findSchemaForKey",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "ParsedTemplateSchema | null"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 20,
+          "first_line": "import { JsonObject, JsonValue } from '@backstage/types';",
+          "last_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Add import of collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 35,
+          "to": 76,
+          "first_line": "export function findSchemaForKey(",
+          "last_line": "}",
+          "rule": "Resolve each step's mergedSchema with resolveConditionalSchema against formState and check draft.getSchema({ pointer: `#/${key}` }) without data."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "lines": [
+          1,
+          76
+        ],
+        "reason": "Existing ReviewState utility module"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            150
+          ],
+          "reason": "Uses resolveConditionalSchema and collectAllSchemaPropertyKeys"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts",
+          "lines": [
+            27,
+            33
+          ],
+          "reason": "Uses ParsedTemplateSchema type"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02"
+      ],
+      "covers": [
+        "FR-8",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Resolves conditional schemas when formatting review rows and omits inactive conditional template fields from the ReviewState table.",
+      "rules": [
+        "1. Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'.",
+        "2. In processSchema, resolve schema.mergedSchema via resolveConditionalSchema(schema.mergedSchema, formState) before constructing new JSONSchema(...) so review options (title, ui:backstage.review, enumNames, password/Secret masking) are found for fields inside conditional branches.",
+        "3. In ReviewState, collect allKnownKeys across props.schemas using collectAllSchemaPropertyKeys on each step.mergedSchema; when findSchemaForKey returns null for a key that is in allKnownKeys, return [] to omit the inactive conditional field, while still returning [[formatKey(key), value]] when key is not in allKnownKeys (e.g. when schemas is empty)."
+      ],
+      "exports": [
+        {
+          "name": "ReviewState",
+          "kind": "function",
+          "params": [
+            {
+              "name": "props",
+              "type": "ReviewStateProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 20,
+          "first_line": "import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';",
+          "last_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Import collectAllSchemaPropertyKeys and resolveConditionalSchema from '../../lib/schema'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 37,
+          "to": 41,
+          "first_line": "const parsedSchema = new JSONSchema(schema.mergedSchema);",
+          "last_line": "});",
+          "rule": "Pass resolveConditionalSchema(schema.mergedSchema, formState) to new JSONSchema."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 92,
+          "to": 102,
+          "first_line": "export const ReviewState = (props: ReviewStateProps) => {",
+          "last_line": ");",
+          "rule": "Filter out keys that belong to allKnownKeys of props.schemas but are not active in findSchemaForKey, while keeping unknown keys when schemas is empty or does not define them."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+        "lines": [
+          1,
+          110
+        ],
+        "reason": "Existing ReviewState component"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+          "lines": [
+            22,
+            76
+          ],
+          "reason": "Uses isJsonObject, formatKey, and findSchemaForKey"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            123,
+            150
+          ],
+          "reason": "Uses resolveConditionalSchema and collectAllSchemaPropertyKeys"
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U02",
+        "U05"
+      ],
+      "covers": [
+        "FR-9",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Evaluates active step conditional schemas against stepsState without re-rendering earlier-step fields, and prunes inactive conditional values on step progression, review, and creation.",
+      "rules": [
+        "1. Import hasErrors, pruneInactiveStepsState, and resolveStepSchema from './utils'.",
+        "2. Compute currentStepSchema via useMemo calling resolveStepSchema(currentStep.schema, steps, activeStep, stepsState) when currentStep?.schema is present, and pass schema={currentStepSchema} to <Form>.",
+        "3. Compute activeStepsState via useMemo calling pruneInactiveStepsState(steps, stepsState).",
+        "4. In handleNext, compute const nextState = pruneInactiveStepsState(steps, { ...stepsState, ...formData }), pass nextState to await validation(nextState), and call setStepsState(nextState).",
+        "5. Pass activeStepsState to onCreate(activeStepsState) in handleCreate, formData={activeStepsState} on <ReviewStepComponent>, and formState={activeStepsState} on <ReviewStateComponent>."
+      ],
+      "exports": [
+        {
+          "name": "Stepper",
+          "kind": "function",
+          "params": [
+            {
+              "name": "stepperProps",
+              "type": "StepperProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "import { hasErrors } from './utils';",
+          "rule": "Import hasErrors, pruneInactiveStepsState, and resolveStepSchema from './utils'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 175,
+          "to": 175,
+          "first_line": "const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });",
+          "rule": "Keep currentStep and memoize currentStepSchema (via resolveStepSchema) and activeStepsState (via pruneInactiveStepsState)."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 194,
+          "to": 222,
+          "first_line": "const handleNext = useCallback(",
+          "last_line": ");",
+          "rule": "Compute nextState = pruneInactiveStepsState(steps, { ...stepsState, ...formData }), validate nextState, and setStepsState(nextState)."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 250,
+          "to": 258,
+          "first_line": "const handleCreate = useCallback(async () => {",
+          "last_line": "}, [analytics, createLabel, onCreate, stepsState]);",
+          "rule": "Callawait onCreate(activeStepsState) with activeStepsState in the dependency array."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 298,
+          "to": 298,
+          "first_line": "schema={currentStep.schema}",
+          "rule": "Pass schema={currentStepSchema} to Form."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 329,
+          "to": 339,
+          "first_line": "<ReviewStepComponent",
+          "last_line": "<ReviewStateComponent formState={stepsState} schemas={steps} />",
+          "rule": "Pass formData={activeStepsState} to ReviewStepComponent and formState={activeStepsState} to ReviewStateComponent."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "lines": [
+          114,
+          362
+        ],
+        "reason": "Existing Stepper component implementation"
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+          "lines": [
+            1,
+            49
+          ],
+          "reason": "Uses hasErrors, resolveStepSchema, and pruneInactiveStepsState"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts",
+          "lines": [
+            43,
+            55
+          ],
+          "reason": "Uses createAsyncValidators"
+        },
+        {
+          "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+          "lines": [
+            26,
+            30
+          ],
+          "reason": "Uses ReviewState and ReviewStateProps"
+        }
+      ],
+      "depends_on": [
+        "U02",
+        "U03",
+        "U04",
+        "U06"
+      ],
+      "covers": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-7",
+        "FR-10",
+        "NFR-1",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "lint",
+        "format"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.ts": "1dd5faea67e4b4b4fba22f446ff8765efcac6c7bb60529ca1868f1c38be82d88",
+    "plugins/scaffolder-react/src/next/hooks/useTemplateSchema.ts": "156eda16f208e855f6227da053f4e93e3364f23abe095f86acbf1f2ed52d4d54",
+    "plugins/scaffolder-react/src/next/components/Stepper/utils.ts": "290f8ded6cbb0679ac16e8acd1e266e6d58022e899fc7502b959217d9f335ede",
+    "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.ts": "880684218d1f1bfa377adc5137244cba13889d5211790f66b72d701c150f40d6",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.ts": "f189db9a2fe73997bc229936fccca5e15dd296098f624c17cf2ecaa6218384aa",
+    "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx": "e5fc61cbd0724835ab12912a10cba89446923eb0467feb83ba70aa7575943343",
+    "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx": "fb817544e4b8d1307bf96b87bc5685cc814aa0fab47caced9594a27ebc555a4a"
+  }
+}
