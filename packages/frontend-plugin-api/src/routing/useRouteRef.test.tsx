@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -205,5 +205,37 @@ describe('v1 consumer', () => {
     rerender();
 
     expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-resolves the routeFunc when routeResolutionApi notifies subscribers', () => {
+    const routeRef = createRouteRef();
+    let listener: (() => void) | undefined;
+    const resolve = jest.fn<(() => string) | undefined, []>(() => undefined);
+    const subscribe = jest.fn((cb: () => void) => {
+      listener = cb;
+      return () => {
+        listener = undefined;
+      };
+    });
+    const api = { resolve, subscribe };
+
+    const { result } = renderHook(() => useRouteRef(routeRef), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider apis={[[routeResolutionApiRef, api]]}>
+          <MemoryRouter initialEntries={['/my-page']} children={children} />
+        </TestApiProvider>
+      ),
+    });
+
+    expect(result.current).toBeUndefined();
+    expect(resolve).toHaveBeenCalledTimes(1);
+
+    resolve.mockReturnValue(() => '/hello');
+    act(() => {
+      listener?.();
+    });
+
+    expect(result.current?.()).toBe('/hello');
+    expect(resolve).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,0 +1,56 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "All TypeScript and TSX files use Prettier formatting with 2-space indentation, single quotes, and trailing commas.",
+      "New files must start with the standard Backstage Apache 2.0 license header (Copyright 2026 The Backstage Authors).",
+      "Avoid adding required members to public interfaces implemented outside scope (such as RouteResolutionApi implemented by CompatRouteResolutionApi in @backstage/core-compat-api).",
+      "React hooks in @backstage/frontend-plugin-api must support React 17 and React 18 using standard React hooks (useState, useEffect, useMemo).",
+      "Tests use @testing-library/react with Jest and must avoid triggering un-acted state updates or infinite render loops."
+    ],
+    "decisions": [
+      {
+        "topic": "Notifying useRouteRef when route resolution is re-initialized at app finalization",
+        "choice": "Add a subscribe(listener: () => void): () => void method on RouteResolutionApiProxy in @backstage/frontend-app-api that notifies registered listeners whenever initialize() replaces the underlying RouteResolver delegate, and have useRouteRef in @backstage/frontend-plugin-api subscribe to routeResolutionApi.subscribe?.(...) via useEffect to increment a local state counter included in its useMemo dependency array.",
+        "rejected": [
+          "Adding a required subscribe method to the public RouteResolutionApi interface",
+          "Creating a separate public lifecycle APIRef in @backstage/frontend-plugin-api",
+          "Clearing and remounting app/root.elements instances during clearFinalizationBoundaryInstances"
+        ],
+        "reason": "Adding a required member to RouteResolutionApi breaks CompatRouteResolutionApi in @backstage/core-compat-api (outside scope); clearing app/root.elements would unmount persistent root elements across sign-in; an optional/duck-typed subscribe method on RouteResolutionApiProxy keeps public API reports unchanged and directly invalidates useRouteRef memoization and triggers re-render on finalization."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "lint",
+        "run": "yarn eslint --max-warnings=0 {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "red-specialized-app-routeref",
+        "run": "CI=true yarn test {path} -t \"should resolve page route refs in app root elements after finalization\"",
+        "timeout_s": 120
+      },
+      {
+        "id": "red-use-route-ref",
+        "run": "CI=true yarn test {path} -t \"re-resolves the routeFunc when routeResolutionApi notifies subscribers\"",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test-and-verify",
+        "run": "CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api && yarn tsc && yarn lint:all && yarn build:api-reports"
+      }
+    ]
+  },
+  "hashes": {}
+}

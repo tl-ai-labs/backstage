@@ -1,0 +1,413 @@
+[
+  {
+    "id": "tp_tests_U01",
+    "unit": "U01",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-184235-bugfix-routeref-startup-crash",
+    "artifact_path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "depends_on": [],
+    "subtype": "bug_reproduce",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx` (unit U01) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: insert after line 1913 (line 1913 reads `});`) — Insert the reproducing test 'should resolve page route refs in app root elements after finalization' after the last test in describe('prepareSpecializedApp', ...).\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+        "lines": [
+          243,
+          253
+        ],
+        "reason": "uses: Uses PreparedSpecializedApp, FinalizedSpecializedApp, and prepareSpecializedApp."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "should resolve page route refs in app root elements after finalization: given A prepared specialized app with a sign-in page, an app/root.elements banner calling useRouteRef(pageRouteRef), and a page route behind app/root.children mounted in a single React root, expect Renders 'Banner link: unresolved' before sign-in without error, then updates to 'Banner link: /my-page' after sign-in finalization with renderCount less than 10 across the whole test"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings=0 '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "red-specialized-app-routeref",
+          "run": "CI=true yarn test '{path}' -t \"should resolve page route refs in app root elements after finalization\"",
+          "expect": "fail"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 1913,
+          "to": 1913
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_tests_U02",
+    "unit": "U02",
+    "phase": "tests",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-184235-bugfix-routeref-startup-crash",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+    "depends_on": [],
+    "subtype": "bug_reproduce",
+    "instruction": "Edit `packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx` (unit U02) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace line 17 (line 17 reads `import { renderHook } from '@testing-library/react';`) — Import act and renderHook from '@testing-library/react'.\n- S2: insert after line 208 (line 208 reads `});`) — Insert the unit test 're-resolves the routeFunc when routeResolutionApi notifies subscribers' after the last test in describe('v1 consumer', ...).\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/U02.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "lines": [
+          36,
+          51
+        ],
+        "reason": "uses: Tests the useRouteRef hook."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [
+      "re-resolves the routeFunc when routeResolutionApi notifies subscribers: given A routeResolutionApi implementation with a subscribe method whose resolve result changes from undefined to a RouteFunc when the subscriber callback is invoked, expect useRouteRef initially returns undefined and updates to return the resolved RouteFunc after the subscriber callback fires"
+    ],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings=0 '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "red-use-route-ref",
+          "run": "CI=true yarn test '{path}' -t \"re-resolves the routeFunc when routeResolutionApi notifies subscribers\"",
+          "expect": "fail"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 208,
+          "to": 208
+        }
+      ],
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U03",
+    "unit": "U03",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-184235-bugfix-routeref-startup-crash",
+    "artifact_path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "depends_on": [
+      "tp_tests_U01",
+      "tp_tests_U02"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-app-api/src/wiring/phaseApis.tsx` (unit U03) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 113-165 (line 113 reads `export class RouteResolutionApiProxy implements RouteResolutionApi {`, line 165 reads `}`) — Add #listeners set, subscribe(listener: () => void): () => void method, and listener notification in initialize() on RouteResolutionApiProxy.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-app-api/src/wiring/phaseApis.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/U03.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [
+          47,
+          61
+        ],
+        "reason": "uses: Implements RouteResolutionApi."
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings=0 '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 113,
+          "to": 165
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U04",
+    "unit": "U04",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-184235-bugfix-routeref-startup-crash",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "depends_on": [
+      "tp_tests_U01",
+      "tp_tests_U02",
+      "tp_codegen_U03"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` (unit U04) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 17-51 (line 17 reads `import { useMemo } from 'react';`, line 51 reads `}`) — Add subscription via useEffect and version state to invalidate useMemo in useRouteRef when routeResolutionApi.subscribe fires.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [
+          38,
+          71
+        ],
+        "reason": "uses: Uses RouteResolutionApi, RouteFunc, and routeResolutionApiRef."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "lint",
+          "run": "yarn eslint --max-warnings=0 '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 51
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U05",
+    "unit": "U05",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-184235-bugfix-routeref-startup-crash",
+    "artifact_path": "docs/frontend-system/architecture/10-app.md",
+    "depends_on": [
+      "tp_codegen_U03",
+      "tp_codegen_U04"
+    ],
+    "subtype": "existing_file_edit",
+    "instruction": "Edit `docs/frontend-system/architecture/10-app.md` (unit U05) at these sites only, as its brief says, following the conventions in the shared brief:\n- S1: replace lines 93-95 (line 93 reads `When using phased app preparation, `app/root.children` acts as the main session boundary. Conditional extensions behind that boundary are evaluated during finalization. Conditional `app/root.elements` and API branches are also deferred until finalization, while other bootstrap-visible predicates are ignored and reported as warnings.`, line 95 reads `Utility APIs that are first materialized during bootstrap are frozen for the lifetime of that app instance. Finalization may still add new APIs and may override existing API refs that were not materialized during bootstrap, but any deferred override of an already materialized bootstrap API is ignored and reported as an app error.`) — Append documentation of route resolution behavior for app/root.elements across bootstrap and finalization.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/frontend-system/architecture/10-app.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/frontend-system/architecture/10-app.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "docs/frontend-system/architecture/10-app.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 93,
+          "to": 95
+        }
+      ],
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_codegen_U06",
+    "unit": "U06",
+    "phase": "codegen",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-184235-bugfix-routeref-startup-crash",
+    "artifact_path": ".changeset/fix-root-element-route-ref.md",
+    "depends_on": [
+      "tp_codegen_U03",
+      "tp_codegen_U04"
+    ],
+    "subtype": "new_file_add",
+    "instruction": "Write `.changeset/fix-root-element-route-ref.md` (unit U06) as its brief says: its behaviour, rules and exports, importing other files exactly as their import lines say, in the shape of the style file, following the conventions in the shared brief. Return JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-184235-bugfix-routeref-startup-crash/briefs/U06.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": ".changeset/quiet-patches-retarget.md",
+        "lines": [
+          1,
+          9
+        ],
+        "reason": "style file: Follows the repo's changeset markdown format."
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline_from": ".changeset/quiet-patches-retarget.md",
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    },
+    "verify_deferred": [
+      "CI=true yarn test 'packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx' -t \"should resolve page route refs in app root elements after finalization\"",
+      "CI=true yarn test 'packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx' -t \"re-resolves the routeFunc when routeResolutionApi notifies subscribers\"",
+      "CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api && yarn tsc && yarn lint:all && yarn build:api-reports"
+    ]
+  }
+]
