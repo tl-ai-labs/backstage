@@ -1,0 +1,122 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-093718-feature-new-home-unread-notifs",
+    "artifact_path": "plugins/notifications/src/alpha.tsx",
+    "instruction": "Fix `plugins/notifications/src/alpha.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/notifications/src/alpha.tsx:57:7 - error TS2322: Type 'Promise<ComponentParts | { Component: (props?: UnreadNotificationsCardProps) => Element; }>' is not assignable to type 'Promise<ComponentParts>'. Property 'Content' is missing in type '{ Component: (props?: UnreadNotificationsCardProps) => JSX.Element; }' but required in type 'ComponentParts'. The HomePageWidgetBlueprint `components` loader must resolve to home-react's ComponentParts (see plugins/home-react/src/extensions.tsx, type ComponentParts): return `{ Content: m.UnreadNotificationsCard }` instead of `{ Component: ... }`. Change only that loader.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/alpha.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/alpha.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/alpha.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-093718-feature-new-home-unread-notifs",
+    "artifact_path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "instruction": "Fix `plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. The file must pass `yarn tsc` and `CI=true yarn test plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx` (now: Tests: 7 failed, 7 total). yarn tsc errors on the file as it is on disk:\n- 20:3 TS6133: 'render' is declared but its value is never read (remove the unused import).\n- 27:10 TS2305: Module '@backstage/core-plugin-api/alpha' has no exported member 'toastApiRef'. Import toastApiRef from '@backstage/frontend-plugin-api', as UnreadNotificationsCard.tsx does. This undefined ref is also why six tests throw `Cannot read properties of undefined (reading 'id')` in TestApiProvider.\n- 51:3 and 52:3 TS2322: Type 'null' is not assignable to type 'Date | undefined' (the Notification fixture's read/saved fields: omit them or use undefined).\n- 76:5 TS2322: the notificationsApi mock lacks 'getTopics' (NotificationsApi.ts line 88): give the mock every NotificationsApi method, typed as jest.Mocked<NotificationsApi>.\n- 479:40 TS2339: Property 'components' does not exist on HomePageWidgetBlueprint.dataRefs; its only data ref is `widget` (HomePageWidgetData). 481:26 TS2349: HomePageWidgetData is not callable. Use only what createExtensionTester.tsx defines and what HomePageWidgetData holds (see dataRefs and HomePageWidgetBlueprint.tsx); move the HomePageWidgetBlueprint import from line 505 to the top import block. alpha.tsx's widget loader is being fixed in this round to return `{ Content: UnreadNotificationsCard }`.\nPrevious fix rounds that fixed the import then failed on a Testing Library query that printed the rendered card DOM (react-aria ButtonIcon id \"react-aria-:r14:\"): a getBy/findBy query found no match or several. Write each query against what UnreadNotificationsCard.tsx actually renders (title, link text and href, the mark-as-read button's aria-label from translation.ts, the empty-state text); use findAllByRole or `within(item)` where several items render the same button. Keep screen + findBy*, no test IDs, the Apache-2.0 2026 header and the seven cases.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-093718-feature-new-home-unread-notifs/briefs/U15.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/translation.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/api/NotificationsApi.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/frontend-test-utils/src/app/createExtensionTester.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

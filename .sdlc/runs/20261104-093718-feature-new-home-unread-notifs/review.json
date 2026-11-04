@@ -1,0 +1,29 @@
+{
+  "module": "plugins/notifications, plugins/home-react",
+  "verdict": "needs_changes",
+  "tool_calls": 11,
+  "findings": [
+    {
+      "severity": "blocker",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "line": 148,
+      "issue": "UnreadNotificationsCard wraps its body in <InfoCard title={title} className={className}>, and when used as the Content component of HomePageWidgetBlueprint (which renders CardExtension's own <InfoCard>), it renders a nested InfoCard inside an InfoCard with duplicate 'Unread notifications' headers.",
+      "fix": "Extract and export `UnreadNotificationsCardContent(props: Pick<UnreadNotificationsCardProps, 'limit' | 'pollingIntervalMs'> = {}): JSX.Element` that renders the loading, error, empty, and unread list content without an outer `InfoCard`, and have `UnreadNotificationsCard` render `<InfoCard title={title} className={className}><UnreadNotificationsCardContent limit={limit} pollingIntervalMs={pollingIntervalMs} /></InfoCard>`."
+    },
+    {
+      "severity": "blocker",
+      "file": "plugins/notifications/src/alpha.tsx",
+      "line": 58,
+      "issue": "`unreadNotificationsCard` passes `Content: m.UnreadNotificationsCard` to `HomePageWidgetBlueprint.make`, causing `CardExtension` in `@backstage/plugin-home-react` (lines 176-188) to wrap `UnreadNotificationsCard`'s `InfoCard` inside a second `InfoCard`.",
+      "fix": "Update `components` in `unreadNotificationsCard` to `() => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent }))` so `CardExtension` renders the single outer `InfoCard` around the card content."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "line": 485,
+      "issue": "The extension test `'renders the unread-notifications HomePageWidgetBlueprint extension from alpha plugin'` only checks that the notification item text is in the document and does not verify that `'Unread notifications'` is rendered as a single card header rather than nested duplicate `InfoCard` headers.",
+      "fix": "In `'renders the unread-notifications HomePageWidgetBlueprint extension from alpha plugin'`, assert `expect(screen.getAllByText('Unread notifications')).toHaveLength(1)` after awaiting the notification row."
+    }
+  ],
+  "refinement_packets": []
+}

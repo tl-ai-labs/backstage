@@ -31,6 +31,10 @@ The `NotificationsSidebarItem` component can be used as an active left-side menu
 
 You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.
 
+### Home page widget
+
+The `@backstage/plugin-notifications/alpha` package registers an `UnreadNotificationsCard` home page widget via `HomePageWidgetBlueprint` (`home-page-widget:notifications/unread-notifications`). The card lists unread notifications, provides an action to mark individual items as read, and links each item to `/notifications?id=<id>` where the selected notification is highlighted.
+
 ## Usage
 
 New notifications can be sent either by a backend plugin or by an external service through the REST API.
