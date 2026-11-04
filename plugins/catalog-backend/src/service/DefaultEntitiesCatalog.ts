@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
+import {
+  Entity,
+  parseEntityRef,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { InputError, NotFoundError } from '@backstage/errors';
 import { Knex } from 'knex';
 import { chunk as lodashChunk, isEqual } from 'lodash';
@@ -26,6 +30,8 @@ import {
   EntitiesRequest,
   EntitiesResponse,
   EntityAncestryResponse,
+  EntityByFormerRefRequest,
+  EntityByFormerRefResponse,
   EntityFacetsRequest,
   EntityFacetsResponse,
   EntityOrder,
@@ -43,6 +49,7 @@ import {
   DbSearchRow,
 } from '../database/tables';
 import { markForStitching } from '../database/operations/stitcher/markForStitching';
+import { FORMER_NAME_SEARCH_KEY } from '../database/operations/stitcher/buildEntitySearch';
 
 import {
   isQueryEntitiesCursorRequest,
@@ -364,6 +371,87 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
     const items = request.entityRefs.map(ref => lookup.get(ref) ?? null);
 
     return { items: await processRawEntitiesResult(items, request.fields) };
+  }
+
+  async entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntityByFormerRefResponse> {
+    const targetRef = stringifyEntityRef(parseEntityRef(request.entityRef));
+
+    const liveRows = await this.database<DbFinalEntitiesRow>('final_entities')
+      .where('final_entities.entity_ref', targetRef)
+      .whereNotNull('final_entities.final_entity')
+      .select({
+        entityId: 'final_entities.entity_id',
+        entity: 'final_entities.final_entity',
+      });
+
+    if (liveRows.length > 0) {
+      if (request.filter) {
+        let filterCheckQuery = this.database<DbFinalEntitiesRow>(
+          'final_entities',
+        )
+          .where('final_entities.entity_id', liveRows[0].entityId)
+          .whereNotNull('final_entities.final_entity')
+          .select('final_entities.entity_id');
+
+        filterCheckQuery = applyEntityFilterToQuery({
+          filter: request.filter,
+          targetQuery: filterCheckQuery,
+          onEntityIdField: 'final_entities.entity_id',
+          knex: this.database,
+        });
+
+        const matchedRows = await filterCheckQuery;
+        if (matchedRows.length === 0) {
+          return { entity: undefined };
+        }
+      }
+
+      return { entity: JSON.parse(liveRows[0].entity!) as Entity };
+    }
+
+    // Check former name search index
+    const formerQuery = this.database('search')
+      .innerJoin(
+        'final_entities',
+        'final_entities.entity_id',
+        'search.entity_id',
+      )
+      .where('search.key', FORMER_NAME_SEARCH_KEY)
+      .where('search.value', targetRef)
+      .whereNotNull('final_entities.final_entity')
+      .select({
+        entityId: 'final_entities.entity_id',
+        entity: 'final_entities.final_entity',
+      })
+      .limit(2);
+
+    const formerRows = await formerQuery;
+    if (formerRows.length !== 1) {
+      return { entity: undefined };
+    }
+
+    if (request.filter) {
+      let filterCheckQuery = this.database<DbFinalEntitiesRow>('final_entities')
+        .where('final_entities.entity_id', formerRows[0].entityId)
+        .whereNotNull('final_entities.final_entity')
+        .select('final_entities.entity_id');
+
+      filterCheckQuery = applyEntityFilterToQuery({
+        filter: request.filter,
+        targetQuery: filterCheckQuery,
+        onEntityIdField: 'final_entities.entity_id',
+        knex: this.database,
+      });
+
+      const matchedRows = await filterCheckQuery;
+      if (matchedRows.length === 0) {
+        return { entity: undefined };
+      }
+    }
+
+    return { entity: JSON.parse(formerRows[0].entity) as Entity };
   }
 
   async queryEntities(

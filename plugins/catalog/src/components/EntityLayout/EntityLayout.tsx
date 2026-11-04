@@ -69,6 +69,34 @@ import { catalogTranslationRef } from '../../alpha/translation';
 import { rootRouteRef, unregisterRedirectRouteRef } from '../../routes';
 import { EntityContextMenu } from '../EntityContextMenu/EntityContextMenu';
 
+export function EntityRenamedNotice(): JSX.Element | null {
+  const location = useLocation();
+  const { t } = useTranslationRef(catalogTranslationRef);
+  const redirectedFrom = (location.state as { redirectedFrom?: string } | null)
+    ?.redirectedFrom;
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(false);
+  }, [redirectedFrom]);
+
+  if (!redirectedFrom || dismissed) {
+    return null;
+  }
+
+  return (
+    <Box mb={2}>
+      <Alert
+        severity="info"
+        onClose={() => setDismissed(true)}
+        data-testid="entity-renamed-notice"
+      >
+        {t('entityPage.renamedNotice', { formerEntityRef: redirectedFrom })}
+      </Alert>
+    </Box>
+  );
+}
+
 /** @public */
 export type EntityLayoutRouteProps = {
   path: string;
@@ -374,6 +402,8 @@ export const EntityLayout = (props: EntityLayoutProps) => {
       </Header>
 
       {loading && <Progress />}
+
+      {entity && <EntityRenamedNotice />}
 
       {entity && <RoutedTabs routes={routes} />}
 

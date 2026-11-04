@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';
+import {
+  ANNOTATION_FORMER_NAMES,
+  DEFAULT_NAMESPACE,
+  Entity,
+  parseEntityRef,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
 import { InputError } from '@backstage/errors';
 import { DbSearchRow } from '../../tables';
 import { NULL_SENTINEL } from './util';
+
+export const FORMER_NAME_SEARCH_KEY = 'formerrefs';
 
 // These are excluded in the generic loop, either because they do not make sense
 // to index, or because they are special-case always inserted whether they are
@@ -209,6 +217,39 @@ export function buildEntitySearch(
       key: `relations.${relation.type}`,
       value: relation.targetRef,
     });
+  }
+
+  // Visit former names
+  const formerNames = entity.metadata?.annotations?.[ANNOTATION_FORMER_NAMES];
+  if (typeof formerNames === 'string' && formerNames.length > 0) {
+    const currentRef = stringifyEntityRef(entity);
+    const defaultKind = entity.kind;
+    const defaultNamespace = entity.metadata.namespace || DEFAULT_NAMESPACE;
+    for (const rawPart of formerNames.split(',')) {
+      const part = rawPart.trim();
+      if (!part) {
+        continue;
+      }
+      try {
+        const parsed = parseEntityRef(part, {
+          defaultKind,
+          defaultNamespace,
+        });
+        if (parsed.kind.toLowerCase() !== defaultKind.toLowerCase()) {
+          continue;
+        }
+        const normalizedRef = stringifyEntityRef(parsed);
+        if (normalizedRef === currentRef) {
+          continue;
+        }
+        raw.push({
+          key: FORMER_NAME_SEARCH_KEY,
+          value: normalizedRef,
+        });
+      } catch {
+        // Ignore invalid entity refs in former-names during indexing
+      }
+    }
   }
 
   // This validates that there are no keys that vary only in casing, such

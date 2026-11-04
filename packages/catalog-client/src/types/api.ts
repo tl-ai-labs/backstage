@@ -699,6 +699,19 @@ export interface CatalogApi {
   ): Promise<Entity | undefined>;
 
   /**
+   * Gets a single entity from the catalog by a former entity ref, or by its
+   * current entity ref if a live entity matches.
+   *
+   * @param entityRef - An entity ref, either on string or compound form
+   * @param options - Additional options
+   * @returns The matching entity, or undefined if no entity or multiple conflicting entities matched
+   */
+  getEntityByFormerRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<Entity | undefined>;
+
+  /**
    * Removes a single entity from the catalog by entity UID.
    *
    * @param uid - An entity UID

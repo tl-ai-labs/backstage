@@ -36,6 +36,7 @@ describe('AuthorizedEntitiesCatalog', () => {
     refresh: jest.fn(),
     listAncestors: jest.fn(),
     queryEntities: jest.fn(),
+    entityByFormerRef: jest.fn(),
   };
   const fakePermissionApi = {
     authorize: jest.fn(),
@@ -678,6 +679,58 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       expect(fakeCatalog.facets).toHaveBeenCalledWith({
         facets: ['a'],
+        credentials: mockCredentials.none(),
+      });
+    });
+  });
+
+  describe('entityByFormerRef', () => {
+    it('returns undefined on DENY and applies permission filter on CONDITIONAL for entityByFormerRef', async () => {
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.DENY },
+      ]);
+      const catalog = createCatalog(isEntityKind);
+
+      await expect(
+        catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        }),
+      ).resolves.toEqual({
+        entity: undefined,
+      });
+
+      expect(fakeCatalog.entityByFormerRef).not.toHaveBeenCalled();
+
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        {
+          result: AuthorizeResult.CONDITIONAL,
+          conditions: { rule: 'IS_ENTITY_KIND', params: { kinds: ['b'] } },
+        },
+      ]);
+
+      await catalog.entityByFormerRef({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(fakeCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+        filter: { kind: 'b' },
+      });
+
+      fakePermissionApi.authorizeConditional.mockResolvedValue([
+        { result: AuthorizeResult.ALLOW },
+      ]);
+
+      await catalog.entityByFormerRef({
+        entityRef: 'component:default/old-name',
+        credentials: mockCredentials.none(),
+      });
+
+      expect(fakeCatalog.entityByFormerRef).toHaveBeenCalledWith({
+        entityRef: 'component:default/old-name',
         credentials: mockCredentials.none(),
       });
     });

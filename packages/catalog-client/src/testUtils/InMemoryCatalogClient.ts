@@ -57,7 +57,10 @@ import {
 } from '@backstage/filter-predicates';
 import lodash from 'lodash';
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
-import { buildEntitySearch } from '../../../../plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch';
+import {
+  FORMER_NAME_SEARCH_KEY,
+  buildEntitySearch,
+} from '../../../../plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch';
 import type {
   AnalyzeLocationRequest,
   AnalyzeLocationResponse,
@@ -620,6 +623,24 @@ export class InMemoryCatalogClient implements CatalogApi {
     return this.#createEntityRefMap().get(
       stringifyEntityRef(parseEntityRef(entityRef)),
     );
+  }
+
+  async getEntityByFormerRef(
+    entityRef: string | CompoundEntityRef,
+  ): Promise<Entity | undefined> {
+    const targetRef = stringifyEntityRef(parseEntityRef(entityRef));
+    const liveMatch = this.#createEntityRefMap().get(targetRef);
+    if (liveMatch) {
+      return liveMatch;
+    }
+
+    const matches = this.#entities.filter(entity =>
+      buildEntitySearch('', entity).some(
+        row => row.key === FORMER_NAME_SEARCH_KEY && row.value === targetRef,
+      ),
+    );
+
+    return matches.length === 1 ? matches[0] : undefined;
   }
 
   async removeEntityByUid(uid: string): Promise<void> {

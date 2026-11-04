@@ -1,0 +1,377 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "packages/catalog-model/src/entity/constants.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Defines and exports the @public ANNOTATION_FORMER_NAMES well-known annotation constant ('backstage.io/former-names').",
+      "rules": [
+        "1. Export a @public constant ANNOTATION_FORMER_NAMES = 'backstage.io/former-names' with a TSDoc comment describing it as a comma-separated list of former entity names or references under which the entity was previously known."
+      ],
+      "exports": [
+        {
+          "name": "ANNOTATION_FORMER_NAMES",
+          "kind": "const",
+          "params": [],
+          "returns": "'backstage.io/former-names'"
+        }
+      ],
+      "import_line": "import { ANNOTATION_FORMER_NAMES } from '@backstage/catalog-model';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 36,
+          "to": 36,
+          "first_line": "export const ANNOTATION_EDIT_URL = 'backstage.io/edit-url';",
+          "rule": "Insert @public TSDoc comment and export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names'; after ANNOTATION_EDIT_URL."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-1.1", "NFR-4", "NFR-5"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U02",
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Validates the backstage.io/former-names annotation entries in FieldFormatEntityPolicy when present on an entity.",
+      "rules": [
+        "1. Import ANNOTATION_FORMER_NAMES and DEFAULT_NAMESPACE from '../constants' and parseEntityRef and stringifyEntityRef from '../ref'.",
+        "2. After validating entity.metadata.annotations key/value strings, check if entity.metadata.annotations?.[ANNOTATION_FORMER_NAMES] is defined.",
+        "3. Split the annotation string on ',', trim each entry, and filter out empty strings; if no entries remain, throw new Error('\"annotations.backstage.io/former-names\" is not valid; expected at least one entity reference').",
+        "4. For each entry, parse it with parseEntityRef(entry, { defaultKind: entity.kind, defaultNamespace: entity.metadata.namespace || DEFAULT_NAMESPACE }) (wrapping parse errors in new Error('\"annotations.backstage.io/former-names\" is not valid; ...')).",
+        "5. Reject entries whose parsed kind (case-insensitive) does not match entity.kind, whose parsed name or namespace fails this.validators.isValidEntityName or this.validators.isValidNamespace, or whose stringifyEntityRef(parsed) equals stringifyEntityRef(entity)."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 24,
+          "to": 24,
+          "first_line": "import { Entity } from '../Entity';",
+          "rule": "Import ANNOTATION_FORMER_NAMES and DEFAULT_NAMESPACE from '../constants', Entity from '../Entity', and parseEntityRef and stringifyEntityRef from '../ref'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 143,
+          "to": 143,
+          "first_line": "}",
+          "rule": "Validate entity.metadata.annotations?.[ANNOTATION_FORMER_NAMES] entries when the annotation is present."
+        }
+      ],
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/entity/ref.ts",
+          "lines": [1, 120],
+          "reason": "Uses parseEntityRef and stringifyEntityRef to normalize and validate former entity refs."
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": ["FR-1.2", "NFR-4"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U03",
+      "path": "packages/catalog-model/report.api.md",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Updates the API Extractor report for @backstage/catalog-model with ANNOTATION_FORMER_NAMES.",
+      "rules": [
+        "1. Add the @public export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names'; entry in alphabetical order immediately after ANNOTATION_EDIT_URL."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 9,
+          "to": 9,
+          "first_line": "export const ANNOTATION_EDIT_URL = 'backstage.io/edit-url';",
+          "rule": "Insert blank line, // @public, and export const ANNOTATION_FORMER_NAMES = 'backstage.io/former-names';"
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": ["FR-1.1", "NFR-5"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Indexes normalized former entity references from ANNOTATION_FORMER_NAMES into the search table under key FORMER_NAME_SEARCH_KEY = 'formerrefs'.",
+      "rules": [
+        "1. Import ANNOTATION_FORMER_NAMES, parseEntityRef, and stringifyEntityRef alongside DEFAULT_NAMESPACE and Entity from '@backstage/catalog-model'.",
+        "2. Export const FORMER_NAME_SEARCH_KEY = 'formerrefs';.",
+        "3. In buildEntitySearch, after visiting entity.relations, read entity.metadata?.annotations?.[ANNOTATION_FORMER_NAMES].",
+        "4. When it is a non-empty string, split on ',', trim each part, skip empty parts, and inside a try/catch parse each part with parseEntityRef(part, { defaultKind: entity.kind, defaultNamespace: entity.metadata.namespace || DEFAULT_NAMESPACE }).",
+        "5. Skip any entry whose parsed.kind.toLowerCase() !== entity.kind.toLowerCase() or whose stringifyEntityRef(parsed) === stringifyEntityRef(entity); otherwise push { key: FORMER_NAME_SEARCH_KEY, value: stringifyEntityRef(parsed) } to raw."
+      ],
+      "exports": [
+        {
+          "name": "FORMER_NAME_SEARCH_KEY",
+          "kind": "const",
+          "params": [],
+          "returns": "'formerrefs'"
+        }
+      ],
+      "import_line": "import { FORMER_NAME_SEARCH_KEY, buildEntitySearch } from '../database/operations/stitcher/buildEntitySearch';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { DEFAULT_NAMESPACE, Entity } from '@backstage/catalog-model';",
+          "rule": "Import ANNOTATION_FORMER_NAMES, DEFAULT_NAMESPACE, Entity, parseEntityRef, and stringifyEntityRef from '@backstage/catalog-model'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { NULL_SENTINEL } from './util';",
+          "rule": "Export const FORMER_NAME_SEARCH_KEY = 'formerrefs';"
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 212,
+          "to": 212,
+          "first_line": "}",
+          "rule": "Parse ANNOTATION_FORMER_NAMES entries and push { key: FORMER_NAME_SEARCH_KEY, value: normalizedRef } to raw for each valid same-kind non-self former ref."
+        }
+      ],
+      "depends_on": ["U01"],
+      "covers": ["FR-1.2", "FR-2.1", "FR-2.2", "NFR-2", "NFR-4"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/catalog-backend/src/catalog/types.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds EntityByFormerRefRequest, EntityByFormerRefResponse, and EntitiesCatalog.entityByFormerRef to catalog backend types.",
+      "rules": [
+        "1. Define and export EntityByFormerRefRequest ({ entityRef: string; filter?: FilterPredicate; credentials: BackstageCredentials }) and EntityByFormerRefResponse ({ entity: Entity | undefined }).",
+        "2. Add entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntityByFormerRefResponse> to the EntitiesCatalog interface."
+      ],
+      "exports": [
+        {
+          "name": "EntityByFormerRefRequest",
+          "kind": "interface",
+          "params": [],
+          "returns": "{ entityRef: string; filter?: FilterPredicate; credentials: BackstageCredentials }"
+        },
+        {
+          "name": "EntityByFormerRefResponse",
+          "kind": "interface",
+          "params": [],
+          "returns": "{ entity: Entity | undefined }"
+        }
+      ],
+      "import_line": "import { EntityByFormerRefRequest, EntityByFormerRefResponse } from '../catalog/types';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 105,
+          "to": 105,
+          "first_line": "}",
+          "rule": "Insert exported interfaces EntityByFormerRefRequest and EntityByFormerRefResponse after EntitiesBatchResponse."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 160,
+          "to": 160,
+          "first_line": "entitiesBatch(request: EntitiesBatchRequest): Promise<EntitiesBatchResponse>;",
+          "rule": "Add entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntityByFormerRefResponse>; to EntitiesCatalog."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-2.3", "FR-2.4", "FR-2.5", "NFR-4"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Implements DefaultEntitiesCatalog.entityByFormerRef with live-entity precedence, conflict detection across claimants, and filter predicate enforcement.",
+      "rules": [
+        "1. Import parseEntityRef from '@backstage/catalog-model', EntityByFormerRefRequest and EntityByFormerRefResponse from '../catalog/types', and FORMER_NAME_SEARCH_KEY from '../database/operations/stitcher/buildEntitySearch'.",
+        "2. Implement async entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntityByFormerRefResponse> on DefaultEntitiesCatalog.",
+        "3. Normalize targetRef = stringifyEntityRef(parseEntityRef(request.entityRef)).",
+        "4. First check if any live row exists in final_entities where final_entities.entity_ref = targetRef and final_entities.final_entity is not null; if a live row exists, apply request.filter (when defined) via applyEntityFilterToQuery on final_entities for that entity_id and return { entity: matched ? JSON.parse(liveRow.entity) : undefined } so a live entity always takes precedence over any former-name claimant.",
+        "5. If no live entity exists at targetRef, query search inner-joined with final_entities (on final_entities.entity_id = search.entity_id) where search.key = FORMER_NAME_SEARCH_KEY, search.value = targetRef, and final_entities.final_entity is not null, selecting final_entities.entity_id and final_entities.final_entity with .limit(2).",
+        "6. If rows.length !== 1, return { entity: undefined } (both 0 claimants and >=2 conflicting claimants return undefined).",
+        "7. When request.filter is defined, verify that rows[0].entity_id matches applyEntityFilterToQuery on final_entities; if not, return { entity: undefined }; otherwise return { entity: JSON.parse(rows[0].entity) as Entity }."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 36,
+          "first_line": "import { Entity, stringifyEntityRef } from '@backstage/catalog-model';",
+          "last_line": "} from '../catalog/types';",
+          "rule": "Import parseEntityRef alongside Entity and stringifyEntityRef from '@backstage/catalog-model', and EntityByFormerRefRequest and EntityByFormerRefResponse from '../catalog/types'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 45,
+          "to": 45,
+          "first_line": "import { markForStitching } from '../database/operations/stitcher/markForStitching';",
+          "rule": "Import FORMER_NAME_SEARCH_KEY from '../database/operations/stitcher/buildEntitySearch'."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 367,
+          "to": 367,
+          "first_line": "}",
+          "rule": "Implement async entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntityByFormerRefResponse> after entitiesBatch."
+        }
+      ],
+      "depends_on": ["U04", "U05"],
+      "covers": [
+        "FR-2.1",
+        "FR-2.2",
+        "FR-2.3",
+        "FR-2.4",
+        "FR-2.5",
+        "NFR-1",
+        "NFR-3"
+      ],
+      "checks": ["format"]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Implements AuthorizedEntitiesCatalog.entityByFormerRef enforcing catalogEntityReadPermission (including conditional permission predicates) on the resolved entity.",
+      "rules": [
+        "1. Import EntityByFormerRefRequest and EntityByFormerRefResponse from '../catalog/types'.",
+        "2. Implement async entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntityByFormerRefResponse> on AuthorizedEntitiesCatalog.",
+        "3. Call this.permissionApi.authorizeConditional([{ permission: catalogEntityReadPermission }], { credentials: request.credentials }).",
+        "4. If authorizeDecision.result === AuthorizeResult.DENY, return { entity: undefined }.",
+        "5. If authorizeDecision.result === AuthorizeResult.CONDITIONAL, delegate to this.entitiesCatalog.entityByFormerRef({ ...request, filter: this.permissionPredicate(authorizeDecision.conditions, request.filter) }); otherwise delegate to this.entitiesCatalog.entityByFormerRef(request)."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 25,
+          "to": 37,
+          "first_line": "import {",
+          "last_line": "} from '../catalog/types';",
+          "rule": "Import EntityByFormerRefRequest and EntityByFormerRefResponse alongside the existing imports from '../catalog/types'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 130,
+          "to": 130,
+          "first_line": "}",
+          "rule": "Implement async entityByFormerRef(request: EntityByFormerRefRequest): Promise<EntityByFormerRefResponse> after entitiesBatch."
+        }
+      ],
+      "depends_on": ["U05"],
+      "covers": ["FR-2.5", "NFR-3"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/catalog-backend/src/schema/openapi.yaml",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds GET /entities/by-former-name/{kind}/{namespace}/{name} (operationId: GetEntityByFormerName) to the catalog OpenAPI specification.",
+      "rules": [
+        "1. Add path /entities/by-former-name/{kind}/{namespace}/{name} with a GET operation (operationId: GetEntityByFormerName, tag: Entity) returning 200 ($ref: '#/components/schemas/Entity'), 400 ($ref: '#/components/responses/ErrorResponse'), and default ($ref: '#/components/responses/ErrorResponse'), with security [{}, { JWT: [] }] and path parameters kind, namespace, and name matching /entities/by-name/{kind}/{namespace}/{name}."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 1022,
+          "to": 1022,
+          "first_line": "- $ref: '#/components/parameters/name'",
+          "rule": "Insert /entities/by-former-name/{kind}/{namespace}/{name} GET operation right after /entities/by-name/{kind}/{namespace}/{name}/ancestry."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-2.6"],
+      "checks": ["format"]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/catalog-backend/src/schema/openapi/generated/router.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerates OpenAPI server router and client code in plugins/catalog-backend and packages/catalog-client from openapi.yaml.",
+      "run": "yarn generate",
+      "cwd": "plugins/catalog-backend",
+      "depends_on": ["U08"],
+      "covers": ["FR-2.6", "NFR-5"]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/catalog-backend/src/service/createRouter.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Registers GET /entities/by-former-name/:kind/:namespace/:name on the catalog router with auditor tracking and 404 handling.",
+      "rules": [
+        "1. Register .get('/entities/by-former-name/:kind/:namespace/:name', async (req, res) => { ... }) on router right after the /entities/by-name/:kind/:namespace/:name/ancestry handler.",
+        "2. Create an auditor event with eventId: 'entity-fetch' and meta: { queryType: 'by-former-name', entityRef: stringifyEntityRef({ kind, namespace, name }) }.",
+        "3. Call entitiesCatalog.entityByFormerRef({ entityRef, credentials: await httpAuth.credentials(req) }), record auditorEvent?.success(), and call writeSingleEntityResponse(res, { type: 'object', entities: [entity ?? null] }, `No entity with former name '${name}' found, with kind '${kind}' in namespace '${namespace}'`); on error, call auditorEvent?.fail({ error: err }) and rethrow."
+      ],
+      "exports": [],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 496,
+          "to": 496,
+          "first_line": ")",
+          "rule": "Add .get('/entities/by-former-name/:kind/:namespace/:name', ...) route handler after the ancestry route handler."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/catalog-backend/src/service/response/write.ts",
+          "lines": [1, 75],
+          "reason": "Uses writeSingleEntityResponse to write the resolved entity or throw NotFoundError."
+        }
+      ],
+      "depends_on": ["U05", "U09"],
+      "covers": ["FR-2.6"],
+      "checks": ["format"]
+    }
+  ],
+  "hashes": {
+    "packages/catalog-model/src/entity/constants.ts": "efa7abef43133b613f72dfe6d7e7d27edb24ca4af5b26595e6e8e89d1abab604",
+    "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts": "258af7a44aad051c0bf3049e7fda7af5d6d1d24674ef9fc11b041e751528f90c",
+    "packages/catalog-model/src/entity/ref.ts": "38d54bd3c0d0727564473fa004251922d164aa67ce9b58d7b52b6ea7590faffe",
+    "packages/catalog-model/report.api.md": "01853696e0d21b42c4ddafb8b4df65da30233b851a7eb4775c1727238e19e09e",
+    "plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.ts": "35418e41f42e35b8e814a67d49a98861336363f2e57fcf949231aafbacf219d0",
+    "plugins/catalog-backend/src/catalog/types.ts": "2259187bf405b52a4c4ce79001538f2855a062d6b99eec018bbe80e2f98d820f",
+    "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts": "f71ddf1617331f791cf4d8792c91d35a0dc439c3d92c95b75ba02031d9780f51",
+    "plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.ts": "ccefdb5eae4dec5d99898e104cc29f69ff05150f6f9ff0b94cc3ca2ddcdbe93b",
+    "plugins/catalog-backend/src/schema/openapi.yaml": "cf26233702b7e9a356ad00edc75b52b57cfc9fad72d39de3d5f37c23a8900719",
+    "plugins/catalog-backend/src/service/createRouter.ts": "e9f7ea913cd77b0d92a06343c44bc0c6004780c0db470061d14d96bb8ef24f9b",
+    "plugins/catalog-backend/src/service/response/write.ts": "50aec5e5bf4bcf5e1218feb2a062f01bff083a5b0320ec4ee8a9b60a9338bedf"
+  }
+}

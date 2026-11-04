@@ -890,6 +890,108 @@ describe('InMemoryCatalogClient', () => {
     });
   });
 
+  describe('getEntityByFormerRef', () => {
+    const renamedEntity: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        namespace: 'default',
+        name: 'new-service',
+        annotations: {
+          'backstage.io/former-names': 'old-service, legacy-service',
+        },
+      },
+    };
+
+    const conflictingEntity1: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        namespace: 'default',
+        name: 'claimant-one',
+        annotations: {
+          'backstage.io/former-names': 'shared-old-service',
+        },
+      },
+    };
+
+    const conflictingEntity2: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        namespace: 'default',
+        name: 'claimant-two',
+        annotations: {
+          'backstage.io/former-names': 'shared-old-service',
+        },
+      },
+    };
+
+    const livePrecedenceEntity: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        namespace: 'default',
+        name: 'live-entity',
+      },
+    };
+
+    const claimantOfLiveEntity: Entity = {
+      apiVersion: 'v1',
+      kind: 'Component',
+      metadata: {
+        namespace: 'default',
+        name: 'other-service',
+        annotations: {
+          'backstage.io/former-names': 'live-entity',
+        },
+      },
+    };
+
+    it('resolves entity by former name', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [renamedEntity],
+      });
+
+      await expect(
+        client.getEntityByFormerRef('component:default/old-service'),
+      ).resolves.toEqual(renamedEntity);
+      await expect(
+        client.getEntityByFormerRef('component:default/legacy-service'),
+      ).resolves.toEqual(renamedEntity);
+    });
+
+    it('respects live-entity precedence over former-name claimant', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [livePrecedenceEntity, claimantOfLiveEntity],
+      });
+
+      await expect(
+        client.getEntityByFormerRef('component:default/live-entity'),
+      ).resolves.toEqual(livePrecedenceEntity);
+    });
+
+    it('returns undefined when multiple entities claim the same former name', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [conflictingEntity1, conflictingEntity2],
+      });
+
+      await expect(
+        client.getEntityByFormerRef('component:default/shared-old-service'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when no entity claims the former name', async () => {
+      const client = new InMemoryCatalogClient({
+        entities: [renamedEntity],
+      });
+
+      await expect(
+        client.getEntityByFormerRef('component:default/non-existent'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('removeEntityByUid', () => {
     it('removes an entity by uid', async () => {
       const client = new InMemoryCatalogClient({ entities });

@@ -15,6 +15,7 @@
  */
 
 import { ReactNode } from 'react';
+import { fireEvent } from '@testing-library/react';
 import { scmIntegrationsApiRef } from '@backstage/integration-react';
 
 import {
@@ -445,6 +446,80 @@ describe('<TechDocsReaderPage />', () => {
       expect(rendered.container.querySelector('header')).toBeInTheDocument();
       expect(rendered.container.querySelector('article')).toBeInTheDocument();
       expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it('should redirect to the renamed entity TechDocs route when resolved via getEntityByFormerRef', async () => {
+      catalogApiMock.getEntityByRef.mockResolvedValue(undefined);
+      (catalogApiMock.getEntityByFormerRef as jest.Mock).mockResolvedValue({
+        ...mockEntityMetadata,
+        kind: 'test',
+        metadata: {
+          name: 'new-name',
+          namespace: 'test-namespace',
+        },
+      });
+
+      await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<TechDocsReaderPage />}
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          routeEntries: [
+            '/docs/test-namespace/test/old-name/sub/page?q=1#section',
+          ],
+          components: mockAppComponents,
+        },
+      );
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/docs/test-namespace/test/new-name/sub/page?q=1#section',
+        {
+          replace: true,
+          state: { redirectedFrom: 'test:test-namespace/old-name' },
+        },
+      );
+    });
+
+    it('should render and dismiss the renamed notice banner when location.state.redirectedFrom is set', async () => {
+      const rendered = await renderInTestApp(
+        <Wrapper>
+          <FlatRoutes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={
+                <TechDocsReaderPage>techdocs reader page</TechDocsReaderPage>
+              }
+            />
+          </FlatRoutes>
+        </Wrapper>,
+        {
+          mountedRoutes,
+          routeEntries: [
+            // routeEntries is typed string[] in test-utils, but MemoryRouter accepts location objects at runtime
+            {
+              pathname: '/docs/test-namespace/test/test-name',
+              state: { redirectedFrom: 'test:test-namespace/old-name' },
+            } as unknown as string,
+          ],
+        },
+      );
+
+      const notice = rendered.getByTestId('techdocs-renamed-notice');
+      expect(notice).toBeInTheDocument();
+      expect(notice).toHaveTextContent(
+        'This entity has been renamed from test:test-namespace/old-name. Please update any bookmarks or links.',
+      );
+
+      fireEvent.click(rendered.getByRole('button', { name: /close/i }));
+      expect(
+        rendered.queryByTestId('techdocs-renamed-notice'),
+      ).not.toBeInTheDocument();
     });
   });
 });

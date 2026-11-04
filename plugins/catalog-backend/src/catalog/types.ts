@@ -104,6 +104,16 @@ export interface EntitiesBatchResponse {
   items: EntitiesResponseItems;
 }
 
+export interface EntityByFormerRefRequest {
+  entityRef: string;
+  filter?: FilterPredicate;
+  credentials: BackstageCredentials;
+}
+
+export interface EntityByFormerRefResponse {
+  entity: Entity | undefined;
+}
+
 export type EntityAncestryResponse = {
   rootEntityRef: string;
   items: Array<{
@@ -158,6 +168,10 @@ export interface EntitiesCatalog {
    * Fetches a batch of entities.
    */
   entitiesBatch(request: EntitiesBatchRequest): Promise<EntitiesBatchResponse>;
+
+  entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntityByFormerRefResponse>;
 
   /**
    * Fetch entities and scroll back and forth between entities.

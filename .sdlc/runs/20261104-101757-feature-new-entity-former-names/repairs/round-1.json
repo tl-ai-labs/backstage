@@ -1,0 +1,206 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "packages/catalog-client/src/types/api.ts",
+    "instruction": "Fix `packages/catalog-client/src/types/api.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/catalog-node/src/testUtils/catalogServiceMock.ts:62:5 - error TS2345: Argument of type 'ServiceRef<CatalogService, \"plugin\", \"singleton\">' is not assignable to parameter of type 'ServiceRef<CatalogServiceMock, any>'. Cause: this run added getEntityByFormerRef to the public CatalogApi interface as a REQUIRED method; CatalogServiceMock (plugins/catalog-node, outside this run's write scope) extends CatalogApi and its mock factory does not define it, and every adopter implementing CatalogApi would break the same way. Fix: declare it optional on CatalogApi, i.e. `getEntityByFormerRef?(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions): Promise<Entity | undefined>;` keeping its TSDoc. The frontend callers already invoke it as `catalogApi.getEntityByFormerRef?.(...)`. Change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-client/src/types/api.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-client/src/types/api.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U11.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-node/src/testUtils/types.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-node/src/testUtils/catalogServiceMock.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/catalog-client/src/types/api.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+    "instruction": "Fix `plugins/catalog-backend/src/service/createRouter.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/catalog-backend/src/service/createRouter.test.ts:875:9 - error TS2741: Property 'entityByFormerRef' is missing in type '{ entities: jest.Mock<any, any, any>; entitiesBatch: jest.Mock<any, any, any>; queryEntities: jest.Mock<any, any, any>; removeEntityByUid: jest.Mock<any, any, any>; entityAncestry: jest.Mock<...>; facets: jest.Mock<...>; }' but required in type 'EntitiesCatalog'. Add `entityByFormerRef: jest.fn()` to that EntitiesCatalog mock object (around line 875), matching the other mock objects in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-backend/src/service/createRouter.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-backend/src/service/createRouter.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U30.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/catalog/types.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/createRouter.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn backstage-cli repo test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_003",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts",
+    "instruction": "Fix `plugins/catalog-react/src/testUtils/catalogApiMock.test.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/catalog-react/src/testUtils/catalogApiMock.test.ts:64:17 - error TS2554: Expected 1-2 arguments, but got 0. A call added at line 64 passes no arguments to a method that requires an entityRef; pass a valid entity ref (e.g. 'component:default/x') and keep the assertion's intent.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog-react/src/testUtils/catalogApiMock.test.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog-react/src/testUtils/catalogApiMock.test.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U33.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-react/src/testUtils/catalogApiMock.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog-react/src/testUtils/catalogApiMock.test.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn backstage-cli repo test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_004",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts:80:18 - error TS18048: 'baseUrl' is possibly 'undefined'. Guard the former-ref redirect branch so baseUrl is narrowed (or resolved) before it is used at line 80, without changing the existing external-redirect behaviour.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U23.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

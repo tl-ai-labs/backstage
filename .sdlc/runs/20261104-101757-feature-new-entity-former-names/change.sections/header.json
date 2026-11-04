@@ -1,0 +1,91 @@
+{
+  "conventions": [
+    "Every new .ts, .tsx, or .js file must start with the 2026 Apache-2.0 license header (Copyright 2026 The Backstage Authors); never alter the copyright year in existing files.",
+    "Formatting uses Prettier with singleQuote: true, trailingComma: 'all', arrowParens: 'avoid', and 80-column print width.",
+    "Public exports in @backstage/* packages must carry TSDoc comments with a release tag (@public or @alpha) and stay in sync with each package's report*.api.md file.",
+    "Frontend user-facing strings must be registered in the plugin's createTranslationRef messages object (catalogTranslationRef in plugins/catalog/src/alpha/translation.ts and techdocsTranslationRef in plugins/techdocs/src/translation.ts) and read with useTranslationRef.",
+    "Tests use Jest and @testing-library/react with renderInTestApp and TestApiProvider from @backstage/test-utils."
+  ],
+  "decisions": [
+    {
+      "topic": "Former-names annotation constant, syntax, and validation",
+      "choice": "Export @public ANNOTATION_FORMER_NAMES = 'backstage.io/former-names' from @backstage/catalog-model; value is a comma-separated list of entity names or references ([<kind>:][<namespace>/]<name>) resolved against the declaring entity's own kind and metadata.namespace (or 'default'), restricted to the same kind and excluding self-references.",
+      "rejected": [
+        "Dedicated metadata.formerNames array field on the Entity envelope",
+        "Allowing cross-kind former-name claims"
+      ],
+      "reason": "Well-known annotations require no Entity schema migration, and restricting claims to the same kind prevents cross-kind URL hijacking."
+    },
+    {
+      "topic": "Backend persistence and indexing of former entity refs",
+      "choice": "Index normalized lowercase former entity refs (kind:namespace/name) in the existing search table under key FORMER_NAME_SEARCH_KEY = 'formerrefs' inside buildEntitySearch.",
+      "rejected": ["Adding a new entity_former_refs SQL table and migration"],
+      "reason": "The search table already has ON DELETE CASCADE from final_entities, composite index (key, value, entity_id), atomic sync during performStitching via syncSearchRows, and automatic reuse in InMemoryCatalogClient."
+    },
+    {
+      "topic": "Precedence, conflict resolution, and permission enforcement",
+      "choice": "In DefaultEntitiesCatalog.entityByFormerRef and InMemoryCatalogClient.getEntityByFormerRef, a live entity in final_entities matching the requested ref always takes precedence; if no live entity exists at that ref, query search rows with key 'formerrefs' and value equal to the normalized ref (limit 2), returning the entity only when exactly 1 live entity claims it and returning undefined when 0 or >=2 live entities claim it; AuthorizedEntitiesCatalog.entityByFormerRef enforces catalogEntityReadPermission (including conditional permission predicates) on the resolved entity.",
+      "rejected": [
+        "First-come-first-served or lexicographical tie-breaking on conflicting former-name claims",
+        "Mutating GET /entities/by-name/:kind/:namespace/:name to return a differently named entity"
+      ],
+      "reason": "Returning undefined on >=2 claimants prevents silent hijacking on ambiguous claims, and keeping GET /entities/by-name exact preserves zero extra query cost on direct hits."
+    },
+    {
+      "topic": "OpenAPI route and CatalogApi lookup contract",
+      "choice": "Add GET /entities/by-former-name/{kind}/{namespace}/{name} (operationId: GetEntityByFormerName) to plugins/catalog-backend/src/schema/openapi.yaml, regenerate OpenAPI server/client code via yarn generate in plugins/catalog-backend, wire router.get('/entities/by-former-name/:kind/:namespace/:name') in createRouter.ts with entity-fetch auditing (queryType: 'by-former-name'), and expose getEntityByFormerRef(entityRef, options) on CatalogApi, CatalogClient, InMemoryCatalogClient, and catalogApiMock.",
+      "rejected": [
+        "Overloading queryEntities filter predicates in frontend hooks without a dedicated CatalogApi method"
+      ],
+      "reason": "A dedicated endpoint and CatalogApi method encapsulates precedence, conflict detection, and permission checks on the backend while keeping direct getEntityByRef calls untouched."
+    },
+    {
+      "topic": "Frontend redirect and dismissible notice state in Catalog and TechDocs",
+      "choice": "On a direct getEntityByRef miss in useEntityFromUrl (catalog) and useExternalRedirect (techdocs), call catalogApi.getEntityByFormerRef?.(entityRef); if a renamed entity is returned, navigate with { replace: true, state: { ...location.state, redirectedFrom: requestedRef } } preserving sub-route path, search, and hash, and render a dismissible MUI Alert (severity='info') when location.state.redirectedFrom is set.",
+      "rejected": [
+        "Passing redirectedFrom via URL query parameters",
+        "Module-level global state for redirect notices"
+      ],
+      "reason": "React Router location.state keeps the canonical redirected URL clean while surviving the replace navigation and scoping the notice to the redirected history entry."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "format",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "test",
+      "run": "CI=1 yarn backstage-cli repo test {path}",
+      "timeout_s": 180
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "test-catalog-model",
+      "run": "CI=1 yarn test packages/catalog-model"
+    },
+    {
+      "id": "test-catalog-backend",
+      "run": "CI=1 yarn test plugins/catalog-backend/src/database/operations/stitcher/buildEntitySearch.test.ts plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts plugins/catalog-backend/src/service/DefaultEntitiesCatalog.test.ts plugins/catalog-backend/src/service/AuthorizedEntitiesCatalog.test.ts plugins/catalog-backend/src/service/createRouter.test.ts"
+    },
+    {
+      "id": "test-catalog-client",
+      "run": "CI=1 yarn test packages/catalog-client plugins/catalog-react/src/testUtils/catalogApiMock.test.ts"
+    },
+    {
+      "id": "test-catalog-frontend",
+      "run": "CI=1 yarn test plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx plugins/catalog/src/alpha/components/EntityLayout/EntityLayoutBui.test.tsx"
+    },
+    {
+      "id": "test-techdocs",
+      "run": "CI=1 yarn test plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx"
+    },
+    {
+      "id": "api-reports",
+      "run": "yarn build:api-reports packages/catalog-model packages/catalog-client plugins/catalog-react plugins/catalog plugins/catalog-backend plugins/techdocs"
+    }
+  ]
+}

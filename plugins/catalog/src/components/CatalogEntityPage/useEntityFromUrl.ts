@@ -15,8 +15,13 @@
  */
 
 import {
+  DEFAULT_NAMESPACE,
+  stringifyEntityRef,
+} from '@backstage/catalog-model';
+import {
   errorApiRef,
   useApi,
+  useRouteRef,
   useRouteRefParams,
 } from '@backstage/core-plugin-api';
 import {
@@ -25,24 +30,101 @@ import {
   entityRouteRef,
 } from '@backstage/plugin-catalog-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useAsyncRetry from 'react-use/esm/useAsyncRetry';
 
 export const useEntityFromUrl = (): EntityLoadingStatus => {
   const { kind, namespace, name } = useRouteRefParams(entityRouteRef);
+  const entityRoute = useRouteRef(entityRouteRef);
+  const location = useLocation();
   const navigate = useNavigate();
   const errorApi = useApi(errorApiRef);
   const catalogApi = useApi(catalogApiRef);
 
   const {
-    value: entity,
+    value,
     error,
     loading,
     retry: refresh,
-  } = useAsyncRetry(
-    () => catalogApi.getEntityByRef({ kind, namespace, name }),
-    [catalogApi, kind, namespace, name],
-  );
+  } = useAsyncRetry(async () => {
+    const directEntity = await catalogApi.getEntityByRef({
+      kind,
+      namespace,
+      name,
+    });
+    if (directEntity) {
+      return { entity: directEntity, redirectedFrom: undefined };
+    }
+
+    const formerEntity = await catalogApi.getEntityByFormerRef?.({
+      kind,
+      namespace,
+      name,
+    });
+    const requestedRef = stringifyEntityRef({
+      kind: kind.toLocaleLowerCase('en-US'),
+      namespace: namespace.toLocaleLowerCase('en-US'),
+      name: name.toLocaleLowerCase('en-US'),
+    });
+    if (formerEntity) {
+      const targetRef = stringifyEntityRef(formerEntity);
+      return {
+        entity: formerEntity,
+        redirectedFrom: targetRef !== requestedRef ? requestedRef : undefined,
+      };
+    }
+
+    return { entity: undefined, redirectedFrom: undefined };
+  }, [catalogApi, kind, namespace, name]);
+
+  const entity = value?.entity;
+
+  useEffect(() => {
+    const currentRef = stringifyEntityRef({
+      kind: kind.toLocaleLowerCase('en-US'),
+      namespace: namespace.toLocaleLowerCase('en-US'),
+      name: name.toLocaleLowerCase('en-US'),
+    });
+    if (
+      value?.entity &&
+      value?.redirectedFrom &&
+      value.redirectedFrom === currentRef
+    ) {
+      const currentBasePath = entityRoute({ kind, namespace, name });
+      const subPath = location.pathname.startsWith(currentBasePath)
+        ? location.pathname.slice(currentBasePath.length)
+        : '';
+      const targetBasePath = entityRoute({
+        kind: value.entity.kind.toLocaleLowerCase('en-US'),
+        namespace: (
+          value.entity.metadata.namespace ?? DEFAULT_NAMESPACE
+        ).toLocaleLowerCase('en-US'),
+        name: value.entity.metadata.name,
+      });
+      const targetUrl = `${targetBasePath}${subPath}${location.search}${location.hash}`;
+      navigate(targetUrl, {
+        replace: true,
+        state: {
+          ...(typeof location.state === 'object' && location.state !== null
+            ? location.state
+            : {}),
+          redirectedFrom: value.redirectedFrom,
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    entityRoute,
+    kind,
+    location.hash,
+    location.pathname,
+    location.search,
+    name,
+    namespace,
+    navigate,
+    value?.entity,
+    value?.redirectedFrom,
+  ]);
 
   useEffect(() => {
     if (!name) {

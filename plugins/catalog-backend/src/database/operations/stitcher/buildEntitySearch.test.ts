@@ -341,5 +341,42 @@ describe('buildEntitySearch', () => {
         `Entity has duplicate keys that vary only in casing, 'spec.owner', 'spec.lifecycle'`,
       );
     });
+
+    it('indexes normalized former entity refs from backstage.io/former-names', () => {
+      const rows = buildEntitySearch('eid', {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'current-service',
+          namespace: 'team-a',
+          annotations: {
+            'backstage.io/former-names':
+              'old-service, other-ns/legacy-service, Component:team-b/full-service, old-service, API:team-a/wrong-kind, current-service, a:b:c',
+          },
+        },
+      });
+
+      const formerRows = rows.filter(r => r.key === 'formerrefs');
+      expect(formerRows).toEqual([
+        {
+          entity_id: 'eid',
+          key: 'formerrefs',
+          original_value: 'component:team-a/old-service',
+          value: 'component:team-a/old-service',
+        },
+        {
+          entity_id: 'eid',
+          key: 'formerrefs',
+          original_value: 'component:other-ns/legacy-service',
+          value: 'component:other-ns/legacy-service',
+        },
+        {
+          entity_id: 'eid',
+          key: 'formerrefs',
+          original_value: 'component:team-b/full-service',
+          value: 'component:team-b/full-service',
+        },
+      ]);
+    });
   });
 });

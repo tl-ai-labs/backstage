@@ -548,3 +548,59 @@ describe('EntityLayout - inspect dialog', () => {
     expect(analyticsRenderCount).toBe(analyticsRendersBefore);
   });
 });
+
+describe('EntityLayout - former-name redirect and renamed notice', () => {
+  const entity = {
+    apiVersion: 'backstage.io/v1alpha1',
+    kind: 'Component',
+    metadata: {
+      name: 'new-service',
+      namespace: 'default',
+    },
+  } as Entity;
+
+  const apis = TestApiRegistry.from(
+    [catalogApiRef, catalogApiMock()],
+    [alertApiRef, mockApis.alert()],
+    [starredEntitiesApiRef, new MockStarredEntitiesApi()],
+    [permissionApiRef, mockApis.permission()],
+  );
+
+  it('renders and dismisses the renamed notice banner when redirected from a former entity name', async () => {
+    await renderInTestApp(
+      <ApiProvider apis={apis}>
+        <EntityProvider entity={entity}>
+          <EntityLayout>
+            <EntityLayout.Route path="/" title="Overview">
+              <div>overview-content</div>
+            </EntityLayout.Route>
+          </EntityLayout>
+        </EntityProvider>
+      </ApiProvider>,
+      {
+        // routeEntries is typed as string[] but MemoryRouter accepts location objects
+        routeEntries: [
+          {
+            pathname: '/catalog/default/component/new-service',
+            state: { redirectedFrom: 'component:default/old-service' },
+          } as unknown as string,
+        ],
+        mountedRoutes: {
+          '/catalog/:namespace/:kind/:name': entityRouteRef,
+          '/catalog': rootRouteRef,
+        },
+      },
+    );
+
+    const notice = screen.getByTestId('entity-renamed-notice');
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveTextContent('component:default/old-service');
+
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    fireEvent.click(closeButton);
+
+    expect(
+      screen.queryByTestId('entity-renamed-notice'),
+    ).not.toBeInTheDocument();
+  });
+});

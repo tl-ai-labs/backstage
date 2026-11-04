@@ -2804,6 +2804,234 @@ describe.each(databases.eachSupportedId())(
         });
       });
     });
+
+    describe('entityByFormerRef', () => {
+      it('resolves an entity by its former name and cleans up on update or deletion', async () => {
+        await createDatabase();
+
+        const entityUid = uuid();
+        const initialEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-name',
+            namespace: 'default',
+            uid: entityUid,
+            annotations: {
+              'backstage.io/former-names': 'old-name, legacy/old-name',
+            },
+          },
+          spec: {},
+        };
+
+        await addEntityToSearch(initialEntity);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        // Resolves for both former refs (short/default and explicit namespace)
+        const res1 = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(res1.entity).toEqual(initialEntity);
+
+        const res2 = await catalog.entityByFormerRef({
+          entityRef: 'component:legacy/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(res2.entity).toEqual(initialEntity);
+
+        // Update the entity by removing the annotation: re-sync search table
+        const updatedEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-name',
+            namespace: 'default',
+            uid: entityUid,
+          },
+          spec: {},
+        };
+
+        await knex('final_entities')
+          .where({ entity_id: entityUid })
+          .update({ final_entity: JSON.stringify(updatedEntity) });
+        await knex('search').where({ entity_id: entityUid }).delete();
+        for (const row of buildEntitySearch(entityUid, updatedEntity)) {
+          await knex<DbSearchRow>('search').insert({
+            entity_id: entityUid,
+            key: row.key,
+            value: row.value,
+            original_value: row.original_value,
+          });
+        }
+
+        const resAfterUpdate = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(resAfterUpdate.entity).toBeUndefined();
+
+        // Re-add former names and verify deletion via removeEntityByUid
+        await knex('final_entities')
+          .where({ entity_id: entityUid })
+          .update({ final_entity: JSON.stringify(initialEntity) });
+        await knex('search').where({ entity_id: entityUid }).delete();
+        for (const row of buildEntitySearch(entityUid, initialEntity)) {
+          await knex<DbSearchRow>('search').insert({
+            entity_id: entityUid,
+            key: row.key,
+            value: row.value,
+            original_value: row.original_value,
+          });
+        }
+
+        const resBeforeDelete = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(resBeforeDelete.entity).toEqual(initialEntity);
+
+        await catalog.removeEntityByUid(entityUid);
+
+        const resAfterDelete = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(resAfterDelete.entity).toBeUndefined();
+      });
+
+      it('gives precedence to a live entity over a former-name claimant', async () => {
+        await createDatabase();
+
+        const liveEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'old-name',
+            namespace: 'default',
+            uid: uuid(),
+          },
+          spec: {},
+        };
+
+        const claimantEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-name',
+            namespace: 'default',
+            uid: uuid(),
+            annotations: {
+              'backstage.io/former-names': 'old-name',
+            },
+          },
+          spec: {},
+        };
+
+        await addEntityToSearch(liveEntity);
+        await addEntityToSearch(claimantEntity);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const res = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(res.entity).toEqual(liveEntity);
+      });
+
+      it('returns undefined when multiple live entities claim the same former ref', async () => {
+        await createDatabase();
+
+        const claimantA: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-a',
+            namespace: 'default',
+            uid: uuid(),
+            annotations: {
+              'backstage.io/former-names': 'old-name',
+            },
+          },
+          spec: {},
+        };
+
+        const claimantB: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-b',
+            namespace: 'default',
+            uid: uuid(),
+            annotations: {
+              'backstage.io/former-names': 'old-name',
+            },
+          },
+          spec: {},
+        };
+
+        await addEntityToSearch(claimantA);
+        await addEntityToSearch(claimantB);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const res = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(res.entity).toBeUndefined();
+      });
+
+      it('enforces filter predicates on the resolved entity', async () => {
+        await createDatabase();
+
+        const claimantEntity: Entity = {
+          apiVersion: 'backstage.io/v1alpha1',
+          kind: 'Component',
+          metadata: {
+            name: 'new-name',
+            namespace: 'default',
+            uid: uuid(),
+            annotations: {
+              'backstage.io/former-names': 'old-name',
+            },
+          },
+          spec: { type: 'service' },
+        };
+
+        await addEntityToSearch(claimantEntity);
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const matchingRes = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          filter: { 'spec.type': 'service' },
+          credentials: mockCredentials.none(),
+        });
+        expect(matchingRes.entity).toEqual(claimantEntity);
+
+        const nonMatchingRes = await catalog.entityByFormerRef({
+          entityRef: 'component:default/old-name',
+          filter: { 'spec.type': 'website' },
+          credentials: mockCredentials.none(),
+        });
+        expect(nonMatchingRes.entity).toBeUndefined();
+      });
+    });
   },
 );
 

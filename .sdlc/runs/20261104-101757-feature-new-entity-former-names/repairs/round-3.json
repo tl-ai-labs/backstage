@@ -1,0 +1,110 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+    "instruction": "Fix `plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=1 yarn backstage-cli repo test plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx timed out after 180s with React 'Maximum update depth' / checkForNestedUpdates warnings, stack: dispatchSetState <- react-router setStateImpl <- navigate (components/CatalogEntityPage/useEntityFromUrl.ts:92:7) <- commitHookEffectListMount. Cause: the former-ref redirect useEffect calls navigate(targetUrl, {replace: true, state: {...location.state, redirectedFrom}}) whenever value.entity && value.redirectedFrom are set; after the navigation the route params already point at the target entity but `value` is still the old async result (redirectedFrom set), and the new location.state object re-triggers the effect, so it navigates again forever. Fix: only navigate when the current URL params still equal the requested former ref, i.e. guard with `value.redirectedFrom === stringifyEntityRef({ kind, namespace, name })` (compare normalized/lowercased refs), and do not include location.state in a way that re-fires after the redirect. Keep the existing behaviour: direct hits never redirect; sub-path, search and hash are preserved; state.redirectedFrom is passed for the notice.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U18.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/EntityLayout/EntityLayout.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r3_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=1 yarn backstage-cli repo test plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx exit 1: ● <TechDocsReaderPage /> › former entity name redirect and notice › should render a dismissible renamed notice banner when location.state.redirectedFrom is set — Expected element to have text content: 'This entity was renamed from ...' Received: (different text). The component renders t('reader.renamedNotice', { formerEntityRef }) whose registered English message in plugins/techdocs/src/translation.ts is 'This entity has been renamed from {{formerEntityRef}}. Please update any bookmarks or links.' Make the test's expected text match that registered message (prefer a regex/partial match like /has been renamed from component:default\\/old-name/ using screen.findByText), and do not add new test IDs to the implementation.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U37.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/translation.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn backstage-cli repo test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]

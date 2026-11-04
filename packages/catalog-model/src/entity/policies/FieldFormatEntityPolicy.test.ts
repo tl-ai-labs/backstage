@@ -16,6 +16,7 @@
 
 import yaml from 'yaml';
 import { FieldFormatEntityPolicy } from './FieldFormatEntityPolicy';
+import { ANNOTATION_FORMER_NAMES } from '../constants';
 
 describe('FieldFormatEntityPolicy', () => {
   let data: any;
@@ -211,5 +212,55 @@ describe('FieldFormatEntityPolicy', () => {
       { url: 'http://foo', icon: 123 },
     ];
     await expect(policy.enforce(data)).rejects.toThrow(/links.1.icon.*"123"/i);
+  });
+
+  describe('former-names annotation', () => {
+    it('accepts valid backstage.io/former-names annotation entries', async () => {
+      expect(ANNOTATION_FORMER_NAMES).toBe('backstage.io/former-names');
+      data.metadata.annotations = {
+        [ANNOTATION_FORMER_NAMES]:
+          'old-name, other-namespace/old-name-2, component:the-namespace/old-name-3',
+      };
+      await expect(policy.enforce(data)).resolves.toBe(data);
+    });
+
+    it('rejects invalid backstage.io/former-names annotation entries', async () => {
+      // empty or whitespace only
+      data.metadata.annotations = { [ANNOTATION_FORMER_NAMES]: ' , ' };
+      await expect(policy.enforce(data)).rejects.toThrow(
+        /annotations\.backstage\.io\/former-names.*expected at least one entity reference/i,
+      );
+
+      // malformed ref
+      data.metadata.annotations = {
+        [ANNOTATION_FORMER_NAMES]: 'invalid#name',
+      };
+      await expect(policy.enforce(data)).rejects.toThrow(
+        /annotations\.backstage\.io\/former-names/i,
+      );
+
+      // cross-kind
+      data.metadata.annotations = {
+        [ANNOTATION_FORMER_NAMES]: 'api:the-namespace/old-name',
+      };
+      await expect(policy.enforce(data)).rejects.toThrow(
+        /annotations\.backstage\.io\/former-names/i,
+      );
+
+      // self-referencing (same kind, namespace, and name)
+      data.metadata.annotations = {
+        [ANNOTATION_FORMER_NAMES]: 'my-component-yay',
+      };
+      await expect(policy.enforce(data)).rejects.toThrow(
+        /annotations\.backstage\.io\/former-names/i,
+      );
+
+      data.metadata.annotations = {
+        [ANNOTATION_FORMER_NAMES]: 'component:the-namespace/my-component-yay',
+      };
+      await expect(policy.enforce(data)).rejects.toThrow(
+        /annotations\.backstage\.io\/former-names/i,
+      );
+    });
   });
 });

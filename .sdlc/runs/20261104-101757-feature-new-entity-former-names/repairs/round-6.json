@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r6_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261104-101757-feature-new-entity-former-names",
+    "artifact_path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+    "instruction": "Fix `plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc (3 errors, all in this file; the tests themselves pass under Jest): 453:7 TS18048 'catalogApiMock.getEntityByFormerRef' is possibly 'undefined'; 453:43 TS2339 Property 'mockResolvedValue' does not exist on type '(entityRef: string | CompoundEntityRef, options?: CatalogRequestOptions | undefined) => Promise<Entity | undefined>'; 504:13 TS2322 Type '{ pathname: string; state: { redirectedFrom: string; }; }' is not assignable to type 'string'. Causes: CatalogApi.getEntityByFormerRef is an OPTIONAL method, so on the mock it is possibly undefined and not typed as a jest mock; and the test-app route-entries option is typed string[] (test utils are outside this run's write scope; do not change them) although the router accepts location objects at runtime. Fix only this file, keeping runtime values and assertions: at 453 use `(catalogApiMock.getEntityByFormerRef as jest.Mock).mockResolvedValue(...)` (or a jest.MockedFunction<NonNullable<CatalogApi['getEntityByFormerRef']>> cast); at 504 cast the location object entry `as unknown as string` with a one-line comment that the option is typed string[] but the router accepts location objects. Change nothing else.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-101757-feature-new-entity-former-names/briefs/U37.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "format",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "test",
+          "run": "CI=1 yarn backstage-cli repo test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 180,
+      "max_retries": 2
+    }
+  }
+]

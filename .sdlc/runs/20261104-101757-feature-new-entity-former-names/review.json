@@ -1,0 +1,29 @@
+{
+  "module": "entity-former-names",
+  "verdict": "needs_changes",
+  "tool_calls": 14,
+  "findings": [
+    {
+      "severity": "blocker",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+      "line": 220,
+      "issue": "TechDocsReaderPage holds the dismissed state and reads location.state.redirectedFrom directly, passing the renamedNotice Alert element as children into TechDocsReaderPageProvider. Because TechDocsReaderPageProvider is wrapped in React.memo with a custom comparator ((prevProps, nextProps) => areEntityRefsEqual(prevProps.entityRef, nextProps.entityRef)) that ignores children changes, calling setDismissed(true) re-renders TechDocsReaderPage but TechDocsReaderPageProvider skips re-rendering its children, leaving the Alert in the DOM after clicking close.",
+      "fix": "Extract a TechDocsRenamedNotice child component in TechDocsReaderPage.tsx that calls useLocation(), useTranslationRef(techdocsTranslationRef), and useState(false) for dismissed internally, and render <TechDocsRenamedNotice /> inside TechDocsReaderPageProvider and StyledPage so state updates re-render TechDocsRenamedNotice directly without being blocked by TechDocsReaderPageProvider's memo comparator."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.test.tsx",
+      "line": 449,
+      "issue": "Planned unit U37 (TechDocsReaderPage.test.tsx) was left unchanged and has no tests verifying former-name redirection or rendering and dismissing the techdocs-renamed-notice alert banner on TechDocsReaderPage.",
+      "fix": "Add tests in TechDocsReaderPage.test.tsx verifying that TechDocsReaderPage redirects to the renamed entity's TechDocs route with { replace: true, state: { redirectedFrom } } when getEntityByRef returns undefined and getEntityByFormerRef resolves a renamed entity, and renders and dismisses the techdocs-renamed-notice alert when location.state.redirectedFrom is present."
+    },
+    {
+      "severity": "major",
+      "file": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+      "line": 389,
+      "issue": "In DefaultEntitiesCatalog.entityByFormerRef, request.filter is applied directly to liveQuery before checking whether a live entity exists at targetRef. When a live entity exists at targetRef but does not match request.filter (e.g. a conditional permission filter), liveRows is empty and execution falls through to formerQuery, returning a former-name claimant instead of { entity: undefined } and violating live-entity precedence (U06 Rule 4).",
+      "fix": "Query final_entities for targetRef without request.filter first; if a live row exists and request.filter is defined, check applyEntityFilterToQuery against liveRows[0].entityId and return { entity: undefined } when the filter does not match."
+    }
+  ],
+  "refinement_packets": []
+}

@@ -21,7 +21,9 @@ import {
   makeValidator,
   Validators,
 } from '../../validation';
+import { ANNOTATION_FORMER_NAMES, DEFAULT_NAMESPACE } from '../constants';
 import { Entity } from '../Entity';
+import { parseEntityRef, stringifyEntityRef } from '../ref';
 
 /**
  * Ensures that the format of individual fields of the entity envelope
@@ -140,6 +142,57 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     for (const [k, v] of Object.entries(entity.metadata.annotations ?? [])) {
       require(`annotations.${k}`, k, this.validators.isValidAnnotationKey);
       require(`annotations.${k}`, v, this.validators.isValidAnnotationValue);
+    }
+
+    const formerNames = entity.metadata.annotations?.[ANNOTATION_FORMER_NAMES];
+    if (formerNames !== undefined) {
+      const entries = formerNames
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (entries.length === 0) {
+        throw new Error(
+          `"annotations.${ANNOTATION_FORMER_NAMES}" is not valid; expected at least one entity reference`,
+        );
+      }
+
+      const defaultNamespace = entity.metadata.namespace || DEFAULT_NAMESPACE;
+      const selfRef = stringifyEntityRef(entity);
+
+      for (const entry of entries) {
+        let parsed: ReturnType<typeof parseEntityRef>;
+        try {
+          parsed = parseEntityRef(entry, {
+            defaultKind: entity.kind,
+            defaultNamespace,
+          });
+        } catch (e) {
+          throw new Error(
+            `"annotations.${ANNOTATION_FORMER_NAMES}" is not valid; ${e}`,
+          );
+        }
+
+        if (
+          parsed.kind.toLocaleLowerCase('en-US') !==
+          entity.kind.toLocaleLowerCase('en-US')
+        ) {
+          throw new Error(
+            `"annotations.${ANNOTATION_FORMER_NAMES}" is not valid; former name "${entry}" must have the same kind as the entity ("${entity.kind}")`,
+          );
+        }
+
+        require(`annotations.${ANNOTATION_FORMER_NAMES}`, parsed.namespace, this
+          .validators.isValidNamespace);
+        require(`annotations.${ANNOTATION_FORMER_NAMES}`, parsed.name, this
+          .validators.isValidEntityName);
+
+        if (stringifyEntityRef(parsed) === selfRef) {
+          throw new Error(
+            `"annotations.${ANNOTATION_FORMER_NAMES}" is not valid; former name "${entry}" cannot reference the entity itself`,
+          );
+        }
+      }
     }
 
     const tags = entity.metadata.tags ?? [];
