@@ -40,6 +40,32 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * Validates the format of the entity's envelope fields using the configured
+   * {@link Validators} instance (defaulting to {@link makeValidator}).
+   *
+   * @remarks
+   *
+   * Checks the required `apiVersion` (`isValidApiVersion`), `kind`
+   * (`isValidKind`), and `metadata.name` (`isValidEntityName`) fields, as well
+   * as the optional `metadata.namespace` (`isValidNamespace`), `metadata.labels`
+   * keys and values (`isValidLabelKey`, `isValidLabelValue`),
+   * `metadata.annotations` keys and values (`isValidAnnotationKey`,
+   * `isValidAnnotationValue`), `metadata.tags` items (`isValidTag`), and
+   * `metadata.links` items (requiring `url` via
+   * {@link CommonValidatorFunctions.isValidUrl}, and validating optional `title`
+   * and `icon` via {@link CommonValidatorFunctions.isNonEmptyString}).
+   *
+   * Does not check `metadata.uid`, `metadata.etag`, `metadata.title`,
+   * `metadata.description`, `metadata.links[].type`, or `spec`.
+   *
+   * @param entity - The entity to validate
+   * @returns Resolves with the unmodified entity if all checked fields are
+   *          valid
+   * @throws Rejects with an `Error` if a required field is `undefined` or
+   *         `null`, if a validator throws, or if any checked field fails
+   *         validation
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,

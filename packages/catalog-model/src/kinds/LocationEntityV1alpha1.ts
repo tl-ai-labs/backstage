@@ -25,8 +25,19 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface LocationEntityV1alpha1 extends Entity {
+  /**
+   * The version of specification format for this Location entity that this is
+   * written against (`'backstage.io/v1alpha1'` or `'backstage.io/v1beta1'`).
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The high level entity type being described, expected to be `'Location'` by
+   * this type and its validator schema.
+   */
   kind: 'Location';
+  /**
+   * The specification data describing the Location entity itself.
+   */
   spec: {
     type?: string;
     target?: string;
