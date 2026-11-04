@@ -1,0 +1,78 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Format all TypeScript, JavaScript, JSON, and Markdown files with Prettier (@backstage/cli/config/prettier: 2-space indent, single quotes in TS/JS, trailing commas).",
+      "Never run lint commands with --fix; never run yarn build, changesets version, or release.",
+      "Every new source file must start with the standard Backstage Apache 2.0 copyright header (Copyright 2026 The Backstage Authors).",
+      "Workspace package.json peerDependencies for @types/react, react, and react-dom must be exactly \"^18.0.0\".",
+      "Author changesets directly as Markdown files in .changeset/ (never via the changeset CLI) and exclude private packages (app-example-plugin, @internal/plugin-todo-list)."
+    ],
+    "decisions": [
+      {
+        "topic": "React peerDependency range across workspace packages and repo-tools peer-deps linter",
+        "choice": "Set @types/react, react, and react-dom in peerDependencies to '^18.0.0' in all 56 workspace package.json files and in packages/repo-tools/src/commands/peer-deps/peer-deps.ts, removing peerDependenciesReact18Only, react18OnlyPackages, and getExpectedPeerDependencies.",
+        "rejected": [
+          "Retaining react18OnlyPackages with all packages added to the set",
+          "Widening peerDependencies to include React 19"
+        ],
+        "reason": "All published frontend packages now uniformly require React 18, making the per-package React 18 allowlist redundant while keeping React 19 out of scope."
+      },
+      {
+        "topic": "React 18 root mounting in dev-utils, frontend-dev-utils, and plugin-techdocs",
+        "choice": "Use unconditional const ReactDOMPromise = import('react-dom/client') and ReactDOMPromise.then(({ createRoot }) => createRoot(...).render(...)) in render.tsx, createDevApp.tsx, and renderReactElement.ts.",
+        "rejected": [
+          "Keeping conditional HAS_REACT_DOM_CLIENT or 'createRoot' in ReactDOM checks",
+          "Switching to synchronous top-level createRoot imports where async import('react-dom/client') is expected"
+        ],
+        "reason": "Preserves the existing asynchronous module loading and knip/jest-mock contracts under React 18 while eliminating all React 17 ReactDOM.render fallback branches and HAS_REACT_DOM_CLIENT checks."
+      },
+      {
+        "topic": "useSyncExternalStore import source and dependency cleanup",
+        "choice": "Import useSyncExternalStore directly from 'react' in useRouteRef.tsx and useBreakpoint.ts, remove use-sync-external-store and @types/use-sync-external-store from frontend-plugin-api, ui, and plugins/app package.json files, and refresh yarn.lock via a yarn install tooling unit.",
+        "rejected": [
+          "Keeping use-sync-external-store/shim as a wrapper around React.useSyncExternalStore"
+        ],
+        "reason": "useSyncExternalStore is built into React 18, so the external shim package and its type definitions are no longer needed."
+      },
+      {
+        "topic": "Changeset versioning and 6-file split for affected published packages",
+        "choice": "Create six changeset files in .changeset/ (one per distinct adopter-facing message in plain adopter language with no internal code symbols): (a) .changeset/require-react-18.md for the 54 published packages narrowing React peer ranges to ^18.0.0 (major for 17 packages >= 1.0.0, minor for 37 packages < 1.0.0), (b) .changeset/test-utils-remove-legacy-root.md for @backstage/test-utils removing the legacyRoot render option (major), (c) .changeset/cli-drop-react-17.md for @backstage/cli-module-build and @backstage/cli-module-test-jest dropping React 17 support in build and test tooling (minor), (d) .changeset/cli-new-react-18-templates.md for @backstage/cli-module-new templates generating packages that require React 18 (patch), (e) .changeset/repo-tools-peer-deps-react-18.md for @backstage/repo-tools peer-deps check requiring ^18.0.0 ranges (minor), and (f) .changeset/ui-dependency-cleanup.md for @backstage/ui dependency cleanup (patch).",
+        "rejected": [
+          "Putting all 59 packages into a single changeset file with a combined message",
+          "Giving @backstage/cli-module-new a minor bump when template updates do not break existing adopters",
+          "Naming internal code symbols or including private packages app-example-plugin and @internal/plugin-todo-list"
+        ],
+        "reason": "AGENTS.md and REVIEWING.md require each changeset to be specific to its packages and written for adopters without internal code symbols, and template updates in @backstage/cli-module-new are non-breaking (patch)."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "full-suite",
+        "run": "yarn tsc && yarn lint:all && yarn lint:peer-deps && CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+      },
+      {
+        "id": "touched-tests",
+        "run": "CI=true yarn test packages/frontend-dev-utils packages/dev-utils packages/frontend-plugin-api packages/ui plugins/techdocs packages/cli-module-build packages/cli-module-new"
+      },
+      {
+        "id": "reports-ci",
+        "run": "yarn build:api-reports:only --ci packages/test-utils && yarn build:knip-reports --ci packages/cli-module-build plugins/app"
+      }
+    ]
+  },
+  "hashes": {}
+}

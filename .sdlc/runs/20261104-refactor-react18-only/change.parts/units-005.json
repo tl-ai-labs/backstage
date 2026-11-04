@@ -1,0 +1,309 @@
+{
+  "section": "units",
+  "source": "units-005.json",
+  "value": [
+    {
+      "id": "U80",
+      "path": "docs/tutorials/react18-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update React 18 migration tutorial to reflect that React 17 support has been removed and React 18 (^18.0.0) is required.",
+      "rules": [
+        "1. At S1, update the paragraph to state that Backstage core libraries and plugins require React 18 and no longer support React 17.",
+        "2. At S2 and S3, replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom'."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 13,
+          "to": 13,
+          "first_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+          "rule": "Replace compatibility statement to reflect that Backstage core libraries and plugins require React 18 and no longer support React 17."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 86,
+          "to": 88,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Narrow devDependencies example ranges for @types/react, react, and react-dom to '^18.0.0'."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 103,
+          "to": 105,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Narrow peerDependencies example ranges for @types/react, react, and react-dom to '^18.0.0'."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U81",
+      "path": "docs/tutorials/jsx-transform-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update JSX transform migration tutorial to reflect that React 17 support has been removed and React 18 is the minimum supported version.",
+      "rules": [
+        "1. At S1, remove active React 17 version references in the impact bullets so only supported React versions (18, or when 19 becomes available) are listed as active versions while keeping historical context that the transform was introduced in React 17.",
+        "2. At S2, update the sentence to reflect that React 17 is no longer supported rather than saying 'once React 17 is fully deprecated'."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 11,
+          "to": 12,
+          "first_line": "- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (17, 18, or when 19 becomes available for Backstage).",
+          "last_line": "- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended even on React 17 or 18, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.",
+          "rule": "Update supported React version references in the impact bullets to reflect that React 18 is required and React 17 is no longer supported."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 61,
+          "to": 61,
+          "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+          "rule": "Update future jsx setting note so it no longer refers to React 17 deprecation in the future tense."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U82",
+      "path": "docs/tutorials/migrate-to-mui5.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update MUI 5 migration tutorial to reference React '^18.0.0' peer dependency ranges instead of React 17 ranges.",
+      "rules": [
+        "1. At S1, replace '^17.0.0 || ^18.0.0' with '^18.0.0' for 'react' and 'react-dom'.",
+        "2. At S2, replace '\"react\": \"^17.0.0\"' with '\"react\": \"^18.0.0\"'."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 48,
+          "to": 49,
+          "first_line": "\"react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for 'react' and 'react-dom'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 69,
+          "to": 69,
+          "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency",
+          "rule": "Replace '\"react\": \"^17.0.0\"' with '\"react\": \"^18.0.0\"'."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U83",
+      "path": ".changeset/require-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create changeset file for the 54 published packages whose React peer dependency ranges now require React 18 (^18.0.0).",
+      "rules": [
+        "1. Write YAML frontmatter delimited by '---' lines mapping the 54 published packages whose React peer ranges narrow to '^18.0.0' (single-quoted, excluding '@backstage/ui' and private packages 'app-example-plugin' and '@internal/plugin-todo-list').",
+        "2. Declare 'major' for the 17 >= 1.0.0 packages: '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/integration-react', '@backstage/test-utils', '@backstage/version-bridge', '@backstage/plugin-catalog', '@backstage/plugin-catalog-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-react', '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib', '@backstage/plugin-techdocs-react'.",
+        "3. Declare 'minor' for the 37 < 1.0.0 packages whose React peer ranges narrow: '@backstage/core-compat-api', '@backstage/core-components', '@backstage/frontend-app-api', '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/module-federation-common', '@backstage/theme', '@backstage/plugin-api-docs', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-app', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-auth', '@backstage/plugin-auth-react', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import', '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools', '@backstage/plugin-devtools-react', '@backstage/plugin-home', '@backstage/plugin-home-react', '@backstage/plugin-kubernetes', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-mui-to-bui', '@backstage/plugin-notifications', '@backstage/plugin-org', '@backstage/plugin-org-react', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-signals', '@backstage/plugin-signals-react', '@backstage/plugin-user-settings'.",
+        "4. After the closing '---', write a plain adopter-facing summary stating that React 17 support has been dropped and peer dependencies for 'react', 'react-dom', and '@types/react' now require '^18.0.0', without naming any internal code symbols."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/deep-plugin-extensions.md",
+        "reason": "Changeset frontmatter and markdown summary format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-2",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U84",
+      "path": ".changeset/test-utils-remove-legacy-root.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create changeset file for @backstage/test-utils removing the legacyRoot render option.",
+      "rules": [
+        "1. Write YAML frontmatter delimited by '---' lines with \"'@backstage/test-utils': major\".",
+        "2. After the closing '---', write a plain adopter-facing summary stating that the 'legacyRoot' render option and 'LegacyRootOption' type have been removed from 'renderWithEffects' and 'renderInTestApp' now that React 18 is required, without naming any internal code symbols."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/deep-plugin-extensions.md",
+        "reason": "Changeset frontmatter and markdown summary format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U85",
+      "path": ".changeset/cli-drop-react-17.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create changeset file for @backstage/cli-module-build and @backstage/cli-module-test-jest dropping React 17 support in build and test tooling.",
+      "rules": [
+        "1. Write YAML frontmatter delimited by '---' lines with \"'@backstage/cli-module-build': minor\" and \"'@backstage/cli-module-test-jest': minor\".",
+        "2. After the closing '---', write a plain adopter-facing summary stating that React 17 support has been dropped from the frontend build and Jest test tooling, which now require React 18, without naming any internal code symbols."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/deep-plugin-extensions.md",
+        "reason": "Changeset frontmatter and markdown summary format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U86",
+      "path": ".changeset/cli-new-react-18-templates.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create changeset file for @backstage/cli-module-new templates generating packages that require React 18.",
+      "rules": [
+        "1. Write YAML frontmatter delimited by '---' lines with \"'@backstage/cli-module-new': patch\".",
+        "2. After the closing '---', write a plain adopter-facing summary stating that package templates now generate packages that require React 18 ('^18.0.0'), without naming any internal code symbols."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/deep-plugin-extensions.md",
+        "reason": "Changeset frontmatter and markdown summary format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U87",
+      "path": ".changeset/repo-tools-peer-deps-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create changeset file for @backstage/repo-tools peer-deps check requiring ^18.0.0 React ranges.",
+      "rules": [
+        "1. Write YAML frontmatter delimited by '---' lines with \"'@backstage/repo-tools': minor\".",
+        "2. After the closing '---', write a plain adopter-facing summary stating that the 'peer-deps' check now requires '^18.0.0' peer dependency ranges for 'react', 'react-dom', and '@types/react', without naming any internal code symbols."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/deep-plugin-extensions.md",
+        "reason": "Changeset frontmatter and markdown summary format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U88",
+      "path": ".changeset/ui-dependency-cleanup.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create changeset file for @backstage/ui internal dependency cleanup.",
+      "rules": [
+        "1. Write YAML frontmatter delimited by '---' lines with \"'@backstage/ui': patch\".",
+        "2. After the closing '---', write a plain adopter-facing summary stating that an unused compatibility dependency was removed now that React 18's built-in store subscription hook is used directly, without naming any internal code symbols."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/deep-plugin-extensions.md",
+        "reason": "Changeset frontmatter and markdown summary format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "NFR-3",
+        "NFR-5",
+        "NFR-6",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ],
+  "hashes": {
+    "docs/tutorials/react18-migration.md": "4f29f1e28bc5f61194cba89741a626f67b2be571d217fa13150502e2262c7246",
+    "docs/tutorials/jsx-transform-migration.md": "615c2241edb6b2b6b6946dcf933ffb4d53a2038af5d23289f92d49ec3c83009d",
+    "docs/tutorials/migrate-to-mui5.md": "4da995dec08de83626cf8506c913714dbff8a0f77d0b13f7d3b20cc512e1ab6f",
+    ".changeset/deep-plugin-extensions.md": "0ee95b3587047c0406e0b9e6b5c8a22639e2b927ad4da4bf86736c2c1b46b632"
+  }
+}

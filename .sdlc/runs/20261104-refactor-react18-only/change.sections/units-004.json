@@ -1,0 +1,455 @@
+[
+  {
+    "id": "U64",
+    "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove hasReactDomClient import and process.env.HAS_REACT_DOM_CLIENT DefinePlugin definitions from bundler config.",
+    "rules": [
+      "1. Remove import { hasReactDomClient } from './hasReactDomClient';.",
+      "2. Remove the comment and 'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(hasReactDomClient()) entry from both webpack.DefinePlugin and bundler.DefinePlugin."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 37,
+        "to": 37,
+        "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+        "rule": "Remove hasReactDomClient import."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 272,
+        "to": 276,
+        "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+        "last_line": "),",
+        "rule": "Remove HAS_REACT_DOM_CLIENT entry from webpack.DefinePlugin."
+      },
+      {
+        "id": "S3",
+        "at": "delete",
+        "from": 281,
+        "to": 285,
+        "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+        "last_line": "),",
+        "rule": "Remove HAS_REACT_DOM_CLIENT entry from bundler.DefinePlugin."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U65",
+    "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove hasReactDomClient import and React 17 deprecation warning from startFrontend.",
+    "rules": [
+      "1. Remove import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';.",
+      "2. Remove the if (!hasReactDomClient()) { console.warn(...); } block."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 26,
+        "to": 26,
+        "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+        "rule": "Remove hasReactDomClient import."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 45,
+        "to": 50,
+        "first_line": "if (!hasReactDomClient()) {",
+        "last_line": "",
+        "rule": "Remove React 17 deprecation warning block."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U66",
+    "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove React 16 version check from bundler dev server.",
+    "rules": [
+      "1. Remove the checkReactVersion(); call in serveBundle.",
+      "2. Remove the checkReactVersion() function definition at the bottom of the file."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 54,
+        "to": 55,
+        "first_line": "checkReactVersion();",
+        "last_line": "",
+        "rule": "Remove checkReactVersion() call."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 268,
+        "to": 291,
+        "first_line": "",
+        "last_line": "}",
+        "rule": "Remove checkReactVersion() function definition."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "AC-2"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U67",
+    "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Delete packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts after its callers are updated.",
+    "run": "rm -f packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+    "depends_on": ["U64", "U65"],
+    "covers": ["FR-3", "AC-2", "AC-3"]
+  },
+  {
+    "id": "U68",
+    "path": "packages/cli-module-test-jest/config/jest.js",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove process.env.HAS_REACT_DOM_CLIENT detection block from Jest config.",
+    "rules": [
+      "1. Remove the try { require.resolve('react-dom/client', ...); process.env.HAS_REACT_DOM_CLIENT = true; } catch {} block."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 52,
+        "to": 60,
+        "first_line": "try {",
+        "last_line": "",
+        "rule": "Remove HAS_REACT_DOM_CLIENT try/catch block."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U69",
+    "path": "packages/dev-utils/src/devApp/render.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Always import react-dom/client and mount DevApp via createRoot in DevAppBuilder.render.",
+    "rules": [
+      "1. Replace the conditional ReactDOMPromise declaration and HAS_REACT_DOM_CLIENT branch with const ReactDOMPromise = import('react-dom/client');.",
+      "2. In DevAppBuilder.render(), replace the 'createRoot' in ReactDOM / ReactDOM.render conditional with ReactDOMPromise.then(({ createRoot }) => { createRoot(document.getElementById('root')!).render(<DevApp />); });."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 65,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "Replace with const ReactDOMPromise = import('react-dom/client');"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 320,
+        "to": 328,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Render unconditionally via ReactDOMPromise.then(({ createRoot }) => { createRoot(document.getElementById('root')!).render(<DevApp />); });"
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "NFR-1", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U70",
+    "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Always import react-dom/client and mount rootNode via createRoot in createDevApp.",
+    "rules": [
+      "1. Replace the conditional ReactDOMPromise declaration and HAS_REACT_DOM_CLIENT branch with const ReactDOMPromise = import('react-dom/client');.",
+      "2. In createDevApp(), destructure { createRoot } in ReactDOMPromise.then(({ createRoot }) => { ... }) and call createRoot(rootElement).render(rootNode); directly without the 'createRoot' in ReactDOM / ReactDOM.render fallback."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 43,
+        "to": 50,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "Replace with const ReactDOMPromise = import('react-dom/client');"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 109,
+        "to": 124,
+        "first_line": "ReactDOMPromise.then(ReactDOM => {",
+        "last_line": "});",
+        "rule": "Destructure { createRoot } in ReactDOMPromise.then(({ createRoot }) => { ... }) and call createRoot(rootElement).render(rootNode); directly."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "NFR-1", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U71",
+    "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Remove legacy ReactDOM.render fallback test while preserving React 18 createDevApp tests.",
+    "rules": [
+      "1. Remove the 'should fall back to legacy react-dom rendering when createRoot is unavailable' test case.",
+      "2. Preserve all existing React 18 test cases (rendering a dev app with a plugin, forwarding bindRoutes to createApp and calling createRoot(root), and throwing a clear error when #root is missing)."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 149,
+        "to": 192,
+        "first_line": "",
+        "last_line": "});",
+        "rule": "Delete the legacy react-dom rendering fallback test case."
+      }
+    ],
+    "depends_on": ["U70"],
+    "covers": ["FR-4", "NFR-1", "AC-2", "AC-3"],
+    "tests": [
+      {
+        "name": "should render a dev app with a plugin",
+        "given": "a #root DOM element and a test frontend plugin with a page extension",
+        "expect": "renders the plugin page content into document.body"
+      },
+      {
+        "name": "should forward bindRoutes to createApp",
+        "given": "bindRoutes and features passed to createDevApp",
+        "expect": "forwards bindRoutes and appPluginOverride to createApp and mounts via createRoot(root)"
+      },
+      {
+        "name": "should throw a clear error when the root element is missing",
+        "given": "a document without a #root element",
+        "expect": "throws an error stating '#root' could not be found"
+      }
+    ],
+    "checks": ["prettier", "test"]
+  },
+  {
+    "id": "U72",
+    "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Always import react-dom/client and render via createRoot(root).render(element) in renderReactElement.",
+    "rules": [
+      "1. Replace the conditional ReactDOMPromise declaration and HAS_REACT_DOM_CLIENT branch with const ReactDOMPromise = import('react-dom/client');.",
+      "2. In renderReactElement, replace the 'createRoot' in ReactDOM / ReactDOM.render conditional with ReactDOMPromise.then(({ createRoot }) => { createRoot(root).render(element); });."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 35,
+        "first_line": "let ReactDOMPromise: Promise<",
+        "last_line": "}",
+        "rule": "Use const ReactDOMPromise = import('react-dom/client'); and render via ReactDOMPromise.then(({ createRoot }) => { createRoot(root).render(element); });"
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-4", "NFR-1", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U73",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useSyncExternalStore directly from react instead of use-sync-external-store/shim.",
+    "rules": [
+      "1. Combine useSyncExternalStore into the 'react' import (import { useMemo, useSyncExternalStore } from 'react';) and remove the 'use-sync-external-store/shim' import."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 18,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+        "rule": "Replace with import { useMemo, useSyncExternalStore } from 'react';"
+      }
+    ],
+    "depends_on": ["U12"],
+    "covers": ["FR-5", "NFR-1", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U74",
+    "path": "packages/ui/src/hooks/useBreakpoint.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Import useSyncExternalStore directly from react instead of use-sync-external-store/shim.",
+    "rules": [
+      "1. Combine useSyncExternalStore into the 'react' import (import { useMemo, useSyncExternalStore } from 'react';) and remove the 'use-sync-external-store/shim' import."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 16,
+        "to": 17,
+        "first_line": "import { useMemo } from 'react';",
+        "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+        "rule": "Replace with import { useMemo, useSyncExternalStore } from 'react';"
+      }
+    ],
+    "depends_on": ["U19"],
+    "covers": ["FR-5", "NFR-1", "AC-2", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U75",
+    "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove LegacyRootOption type and narrow renderWithEffects options parameter to Pick<RenderOptions, 'wrapper'>.",
+    "rules": [
+      "1. Delete the exported LegacyRootOption type and its JSDoc comment.",
+      "2. Update the options parameter of renderWithEffects from Pick<RenderOptions, 'wrapper'> & LegacyRootOption to Pick<RenderOptions, 'wrapper'>."
+    ],
+    "exports": [
+      {
+        "name": "renderWithEffects",
+        "kind": "function",
+        "params": [
+          { "name": "nodes", "type": "ReactElement" },
+          { "name": "options?", "type": "Pick<RenderOptions, 'wrapper'>" }
+        ],
+        "returns": "Promise<RenderResult>"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 25,
+        "to": 31,
+        "first_line": "/**",
+        "last_line": "",
+        "rule": "Remove LegacyRootOption type and its doc comment."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 46,
+        "to": 46,
+        "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+        "rule": "Change parameter type to options?: Pick<RenderOptions, 'wrapper'>,"
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6", "NFR-1", "AC-1", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U76",
+    "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Remove LegacyRootOption import and legacyRoot option handling from renderInTestApp.",
+    "rules": [
+      "1. Remove LegacyRootOption from the './testingLibrary' import.",
+      "2. Change renderInTestApp options parameter from options: TestAppOptions & LegacyRootOption = {} to options: TestAppOptions = {}.",
+      "3. Remove const { legacyRoot } = options; and the legacyRoot property passed to renderWithEffects."
+    ],
+    "exports": [
+      {
+        "name": "renderInTestApp",
+        "kind": "function",
+        "params": [
+          { "name": "Component", "type": "ComponentType<PropsWithChildren<{}>> | ReactNode" },
+          { "name": "options?", "type": "TestAppOptions" }
+        ],
+        "returns": "Promise<RenderResult>"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 38,
+        "to": 38,
+        "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+        "rule": "Replace with import { renderWithEffects } from './testingLibrary';"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 257,
+        "to": 257,
+        "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+        "rule": "Change parameter type to options: TestAppOptions = {},"
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 265,
+        "to": 270,
+        "first_line": "const { legacyRoot } = options;",
+        "last_line": "});",
+        "rule": "Remove legacyRoot extraction and pass only { wrapper: createTestAppWrapper(options) } to renderWithEffects."
+      }
+    ],
+    "depends_on": ["U75"],
+    "covers": ["FR-6", "NFR-1", "AC-1", "AC-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U77",
+    "path": "packages/test-utils/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate packages/test-utils/report.api.md using path-scoped yarn build:api-reports after removing LegacyRootOption.",
+    "run": "yarn build:api-reports packages/test-utils",
+    "depends_on": ["U16", "U58", "U75", "U76"],
+    "covers": ["FR-6", "FR-7", "NFR-4", "AC-3", "AC-6"]
+  },
+  {
+    "id": "U78",
+    "path": "packages/cli-module-build/knip-report.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate packages/cli-module-build/knip-report.md using path-scoped yarn build:knip-reports after removing hasReactDomClient.ts and checkReactVersion.",
+    "run": "yarn build:knip-reports packages/cli-module-build",
+    "depends_on": ["U58", "U64", "U65", "U66", "U67"],
+    "covers": ["FR-3", "FR-7", "NFR-4", "AC-6"]
+  },
+  {
+    "id": "U79",
+    "path": "plugins/app/knip-report.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerate plugins/app/knip-report.md using path-scoped yarn build:knip-reports after removing use-sync-external-store from plugins/app/package.json.",
+    "run": "yarn build:knip-reports plugins/app",
+    "depends_on": ["U24", "U58"],
+    "covers": ["FR-5", "FR-7", "NFR-4", "AC-6"]
+  }
+]
