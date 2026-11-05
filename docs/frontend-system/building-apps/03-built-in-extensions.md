@@ -103,6 +103,10 @@ This is the extension that creates the app root element, so it renders root leve
 | elements   | React elements to be rendered outside of the app layout, such as shared popups.         | -                                                                                                                                                                          | false    | See [default elements](#default-app-root-elements-extensions).                                                                                                                               | [AppRootElementBlueprint](https://backstage.io/docs/reference/frontend-plugin-api.approotelementblueprint)              |
 | wrappers   | React components that should wrap the root element.                                     | -                                                                                                                                                                          | true     | -                                                                                                                                                                                            | [createAppRootWrapperExtension](https://backstage.io/docs/reference/frontend-plugin-api.createapprootwrapperextension/) |
 
+:::note
+Elements attached to `app/root.elements` render during app startup, before deferred routes have been finalized. During this phase not all routes are initialized yet, so `useRouteRef` returns `undefined` initially and then resolves once startup finalization completes.
+:::
+
 #### Default app root elements extensions
 
 ##### Alert Display

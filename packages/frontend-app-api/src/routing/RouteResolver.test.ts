@@ -486,6 +486,23 @@ describe('RouteResolver', () => {
     );
   });
 
+  it('should return undefined when an ancestor route ref has no path', () => {
+    const r = new RouteResolver(
+      new Map<RouteRef, string>([[ref1, 'my-route']]),
+      new Map<RouteRef, RouteRef>([[ref1, ref2]]),
+      [{ routeRefs: new Set([ref1]), path: 'my-route', ...rest }],
+      new Map(),
+      '',
+      emptyResolver,
+      new Map(),
+    );
+
+    expect(() => r.resolve(ref1, src('/'))).not.toThrow();
+    expect(r.resolve(ref1, src('/'))).toBeUndefined();
+    expect(() => r.resolve(subRef1, src('/'))).not.toThrow();
+    expect(r.resolve(subRef1, src('/'))).toBeUndefined();
+  });
+
   describe('with legacy route refs', () => {
     const legacyRef1 = createLegacyRouteRef({ id: 'ref1' });
     const legacyRef2 = createLegacyRouteRef({ id: 'ref2', params: ['x'] });

@@ -1,0 +1,64 @@
+{
+  "conventions": [
+    "Include the standard Backstage Apache-2.0 license header at the top of every TypeScript/TSX file.",
+    "Use TypeScript strict typing matching existing @backstage/frontend-app-api and @backstage/frontend-plugin-api conventions.",
+    "Format all files according to @backstage/cli/config/prettier (single quotes, trailing commas, 2-space indentation).",
+    "Use const instead of let for any variable that is only assigned once (including variables captured by nested closures that are assigned once before the closure is invoked) to satisfy ESLint prefer-const.",
+    "Do not run ESLint with --fix and do not hand-edit report*.api.md files; regenerate API reports via yarn build:api-reports.",
+    "Use Jest and @testing-library/react for unit and integration tests."
+  ],
+  "decisions": [
+    {
+      "topic": "Unregistered ancestor route ref handling in RouteResolver",
+      "choice": "Return undefined from resolveBasePath and RouteResolver.resolve when any ancestor RouteRef in refDiffList has no entry in routePaths",
+      "rejected": [
+        "Throw Error('No path for ...') when an ancestor RouteRef is missing from routePaths",
+        "Skip missing ancestor segments and resolve a partial path"
+      ],
+      "reason": "During bootstrap only a partial tree is instantiated so ancestor route paths may not be registered yet, and useRouteRef is documented to return undefined when a route cannot be resolved."
+    },
+    {
+      "topic": "RouteResolutionApi change notification contract",
+      "choice": "Add optional subscribe?(listener: () => void): () => void method to RouteResolutionApi and implement it on RouteResolutionApiProxy to notify listeners whenever initialize() updates the delegate RouteResolver",
+      "rejected": [
+        "Make subscribe required on RouteResolutionApi",
+        "Replace RouteResolutionApiProxy instance identity in ApiHolder after finalization"
+      ],
+      "reason": "An optional subscribe method preserves backward compatibility for custom implementations and test mocks while allowing in-place re-initialization of RouteResolutionApiProxy to notify mounted hooks."
+    },
+    {
+      "topic": "useRouteRef re-resolution on RouteResolutionApi updates",
+      "choice": "Subscribe to routeResolutionApi.subscribe?.() in useEffect to increment a local state counter included in useMemo dependencies, and immediately re-check routeResolutionApi.resolve inside useEffect when the preceding render resolved to undefined so finalization occurring between initial render and effect subscription is also caught",
+      "rejected": [
+        "Only wait for future subscribe listener notifications without checking in useEffect whether finalization already happened between initial render and subscription",
+        "Use useSyncExternalStore directly with routeResolutionApi.resolve as getSnapshot",
+        "Call routeResolutionApi.resolve on every render without memoization"
+      ],
+      "reason": "Re-checking in useEffect right after subscribing closes the window where initialize() runs between the first render and effect commit, while avoiding infinite render loops from new closure instances returned by RouteResolver.resolve."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "prettier",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "test",
+      "run": "CI=true yarn test {path}",
+      "timeout_s": 120
+    },
+    {
+      "id": "test-repro",
+      "run": "CI=true yarn test {path} -t prepareSpecializedApp",
+      "timeout_s": 120
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "verify",
+      "run": "CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api && yarn tsc && yarn lint:all && yarn build:api-reports"
+    }
+  ]
+}

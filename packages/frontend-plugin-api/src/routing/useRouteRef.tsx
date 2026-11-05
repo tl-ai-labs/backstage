@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
@@ -41,11 +41,33 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const [version, setVersion] = useState(0);
 
-  const routeFunc = useMemo(
-    () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
-  );
+  const routeFunc = useMemo(() => {
+    void version;
+    return routeResolutionApi.resolve(routeRef, { sourcePath: pathname });
+  }, [routeResolutionApi, routeRef, pathname, version]);
+
+  const renderedResolvedRef = useRef(false);
+  renderedResolvedRef.current = routeFunc !== undefined;
+
+  useEffect(() => {
+    if (!routeResolutionApi.subscribe) {
+      return undefined;
+    }
+    const unsubscribe = routeResolutionApi.subscribe(() => {
+      setVersion(v => v + 1);
+    });
+    // Finalization may have happened between the render and this subscription
+    if (
+      !renderedResolvedRef.current &&
+      routeResolutionApi.resolve(routeRef, { sourcePath: pathname }) !==
+        undefined
+    ) {
+      setVersion(v => v + 1);
+    }
+    return unsubscribe;
+  }, [routeResolutionApi, routeRef, pathname]);
 
   return routeFunc;
 }
