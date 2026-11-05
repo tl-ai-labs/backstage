@@ -1911,5 +1911,70 @@ describe('createSpecializedApp', () => {
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
     });
+
+    it('should resolve page route refs in app root elements after finalization without render loops', () => {
+      const pageRouteRef = createRouteRef();
+      let renderCount = 0;
+
+      const noSignInAppPlugin = appPluginOriginal.withOverrides({
+        extensions: [
+          appPluginOriginal
+            .getExtension('sign-in-page:app')
+            .override({ disabled: true }),
+        ],
+      });
+
+      const RootElement = () => {
+        renderCount += 1;
+        const routeFunc = useRouteRef(pageRouteRef);
+        return <div>Root link: {routeFunc ? routeFunc() : 'unresolved'}</div>;
+      };
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          noSignInAppPlugin,
+          createFrontendPlugin({
+            pluginId: 'test',
+            extensions: [
+              createExtension({
+                name: 'root-element',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => [
+                  coreExtensionData.reactElement(<RootElement />),
+                ],
+              }),
+              createExtension({
+                name: 'page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                  coreExtensionData.reactElement,
+                ],
+                factory: () => [
+                  coreExtensionData.routePath('/my-page'),
+                  coreExtensionData.routeRef(pageRouteRef),
+                  coreExtensionData.reactElement(<div>My Page</div>),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const { rerender } = render(preparedApp.getBootstrapApp().element);
+
+      expect(screen.getByText('Root link: unresolved')).toBeInTheDocument();
+      expect(renderCount).toBe(1);
+
+      act(() => {
+        const finalizedApp = preparedApp.finalize();
+        rerender(finalizedApp.element);
+      });
+
+      expect(screen.getByText('Root link: /my-page')).toBeInTheDocument();
+      expect(renderCount).toBe(2);
+    });
   });
 });

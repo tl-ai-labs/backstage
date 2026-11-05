@@ -1,0 +1,51 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-170616-bugfix-routeref-startup",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "instruction": "Fix `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. blocker (line 55): U01 (`createSpecializedApp.test.tsx` -> `should resolve page route refs in app root elements after finalization without render loops`) fails because Round 1 replaced `useSyncExternalStore` with `useState` + `useEffect`. In `createSpecializedApp.test.tsx`, `rerender(finalizedApp.element)` runs on React's `DefaultLane` and mounts `app/routes` -> `<NotFoundErrorPage />` (`React.lazy(async () => ...)` in `DefaultSwappableComponentsApi`) inside `app/root`'s `<Suspense>` boundary (which also wraps `extraElements` / `<RootElement />`), suspending the `DefaultLane` render before it can commit during the synchronous test. With `useState`, `setSnapshot` schedules on `DefaultLane` and gets trapped in that suspended render pass so `'Root link: /my-page'` never commits to the DOM; whereas with `useSyncExternalStore` (Round 0), the store update flushes synchronously on `SyncLane` (committing `'Root link: /my-page'` with `renderCount = 2`), but calling `useApi(routeResolutionApiRef)` directly on every render subscribes `RootElement`'s fiber to `ApiContext`, which `<ApiProvider>` invalidates on `DefaultLane` via an unmemoized `createVersionedValueMap({ 1: holder })`, causing a 3rd render (`renderCount = 3`). — fix: Restore `useSyncExternalStore(subscribe, getSnapshot)` per `change_plan.md` U04 (with `subscribe` and `getSnapshot` memoized via `useMemo` on `[routeResolutionApi]`, and `snapshot` in the `routeFunc` `useMemo` dependency array alongside `// eslint-disable-next-line react-hooks/exhaustive-deps`), and read `routeResolutionApi` once via a lazy `useState` initializer (`import { ..., useApi as getApi } from '../apis';` and `const [routeResolutionApi] = useState(() => getApi(routeResolutionApiRef));`) so the `SyncLane` store re-render clears the fiber's `ApiContext` subscription and allows React to bail out on `<RootElement />` during `rerender(finalizedApp.element)`'s `DefaultLane` pass, keeping `renderCount` at 2.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170616-bugfix-routeref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170616-bugfix-routeref-startup/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

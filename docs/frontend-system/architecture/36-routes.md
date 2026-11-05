@@ -117,6 +117,10 @@ export const IndexPage = () => {
 
 We use the `useRouteRef` hook to create a link generator function that returns the details page path. First we need to check whether the route is available, the link generator function will be `undefined` if it isn't. We then call the link generator, passing it an object with the kind, namespace, and name. These parameters are used to construct a concrete path to the "Foo" details page.
 
+:::note
+App root elements (created with `AppRootElementBlueprint` or attached to the `app/root` elements input) render during startup before page routes are known. In these components, `useRouteRef` returns `undefined` during startup and updates to return the resolved link generator function once the app is finalized. Make sure your components handle the `undefined` case.
+:::
+
 Let's see how the details page can get the parameters from the URL:
 
 ```tsx title="plugins/catalog/src/components/DetailsPage.tsx"

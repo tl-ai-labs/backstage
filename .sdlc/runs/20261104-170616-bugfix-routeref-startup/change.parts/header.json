@@ -1,0 +1,87 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "TypeScript strict mode with ESM imports; use relative imports within a package and @backstage/* package imports across packages.",
+      "Preserve existing Apache-2.0 license headers and copyright years on edited files.",
+      "Format code and markdown with Prettier and adhere to Backstage ESLint rules (no unused variables, explicit types where required).",
+      "Write Jest tests using @testing-library/react (render, renderHook, screen, act) without introducing data-testid attributes.",
+      "Write changesets in .changeset/*.md with patch bump level using clear adopter-facing prose and no internal class or function symbol names."
+    ],
+    "decisions": [
+      {
+        "topic": "RouteResolutionApiProxy change notification contract",
+        "choice": "Expose subscribe(listener: () => void): () => void and getSnapshot(): RouteResolutionApi | undefined on RouteResolutionApiProxy, and invoke all subscribed listeners in initialize() after updating #delegate and #routeObjects.",
+        "rejected": [
+          "Adding required methods to the public RouteResolutionApi interface",
+          "Replacing the RouteResolutionApiProxy instance in ApiHolder on finalization"
+        ],
+        "reason": "Keeping subscribe and getSnapshot on RouteResolutionApiProxy and optional via structural typing in useRouteRef preserves backward compatibility with mock RouteResolutionApi implementations and avoids public API report drift while maintaining the singleton ApiHolder instance."
+      },
+      {
+        "topic": "Subscribing useRouteRef to route resolution updates without render loops",
+        "choice": "Use useSyncExternalStore from react in useRouteRef with a memoized subscribe/getSnapshot binding for routeResolutionApi, and in useMemo([routeResolutionApi, routeRef, pathname, snapshot]) resolve via snapshot when snapshot is an object with a resolve method, falling back to routeResolutionApi.",
+        "rejected": [
+          "Calling routeResolutionApi.resolve inside useSyncExternalStore getSnapshot",
+          "Using useLocation() object identity instead of pathname in useMemo"
+        ],
+        "reason": "RouteResolver.resolve creates a new RouteFunc closure on every invocation, which would cause an infinite render loop if used directly as a useSyncExternalStore snapshot; subscribing to the delegate snapshot and resolving in useMemo via the delegate snapshot guarantees bounded renders and referential stability across search and hash changes."
+      },
+      {
+        "topic": "Pre-finalization route resolution and RouteResolver error behavior",
+        "choice": "Keep RouteResolver.ts and RouteResolver.test.ts unchanged because RouteResolver.resolve already returns undefined when a target page RouteRef is not present in the bootstrap routePaths map.",
+        "rejected": [
+          "Swallowing the No path for <ref> error in RouteResolver.ts"
+        ],
+        "reason": "During bootstrap, page routes under app/root.children are not instantiated and thus not in routePaths, so RouteResolver.resolve already returns undefined without throwing; leaving RouteResolver.ts untouched preserves its post-finalization throw behavior."
+      },
+      {
+        "topic": "Sequencing the createSpecializedApp.test.tsx render-count assertion update with the fix already in the working tree",
+        "choice": "Keep U01 (useRouteRef.test.tsx) in phase 'tests' with red_checks ['test-unit'] running both {path} and createSpecializedApp.test.tsx, and place U02 (createSpecializedApp.test.tsx) in phase 'codegen' depending on U01 to replace expect(renderCount).toBe(2) with expect(renderCount).toBeLessThan(5).",
+        "rejected": [
+          "Keeping createSpecializedApp.test.tsx in phase 'tests' with red_checks when the runtime fix is already applied on disk"
+        ],
+        "reason": "Because phaseApis.tsx and useRouteRef.tsx already have the fix on disk, loosening createSpecializedApp.test.tsx inside a phase 'tests' packet with red_checks would cause the test to pass immediately and the packet to be rejected; running U01's red_check before U02 fails on the existing toBe(2) assertion during the red phase and passes once U02 updates the assertion in the codegen phase."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 30
+      },
+      {
+        "id": "test-unit",
+        "run": "CI=true yarn test {path} packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test",
+        "run": "CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint:all"
+      },
+      {
+        "id": "api-reports",
+        "run": "yarn build:api-reports"
+      }
+    ]
+  },
+  "hashes": {}
+}

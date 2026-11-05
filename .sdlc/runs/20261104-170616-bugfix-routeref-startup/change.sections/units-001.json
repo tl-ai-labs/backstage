@@ -1,0 +1,397 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Verify in useRouteRef.test.tsx that useRouteRef subscribes to routeResolutionApi updates and re-resolves the routeFunc only when the route resolution snapshot changes.",
+    "rules": [
+      "1. Keep the import of act and renderHook from '@testing-library/react'.",
+      "2. In the test 're-resolves the routeFunc when the route resolution state updates' inside describe('v1 consumer'), provide a mock RouteResolutionApi with resolve, subscribe, and getSnapshot where resolve initially returns undefined and getSnapshot returns the current state.",
+      "3. Assert that result.current is initially undefined and resolve was called once, then update the mock state and notify subscribers inside act(), asserting that result.current?.() returns '/hello' and resolve was called twice.",
+      "4. Notify subscribers again inside act() without changing the snapshot and assert that resolve was still only called twice."
+    ],
+    "exports": [],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 210,
+        "to": 255,
+        "first_line": "it('re-resolves the routeFunc when the route resolution state updates', () => {",
+        "last_line": "});",
+        "rule": "Maintain the unit test for re-resolving routeFunc when routeResolutionApi state updates."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "lines": [59, 125],
+      "reason": "Follows the existing renderHook and TestApiProvider test structure in useRouteRef.test.tsx."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "lines": [49, 103],
+        "reason": "Tests the useRouteRef hook."
+      }
+    ],
+    "depends_on": [],
+    "covers": [
+      "FR-4",
+      "FR-6",
+      "FR-8",
+      "NFR-1",
+      "NFR-3",
+      "NFR-4",
+      "AC-3",
+      "AC-4"
+    ],
+    "tests": [
+      {
+        "name": "re-resolves the routeFunc when the route resolution state updates",
+        "given": "A RouteResolutionApi implementation exposing subscribe and getSnapshot whose resolved route changes from undefined to '/hello'",
+        "expect": "useRouteRef initially returns undefined, re-evaluates and returns a RouteFunc resolving to '/hello' when notified of a snapshot update, and does not re-resolve if notified without a snapshot change"
+      }
+    ],
+    "checks": [
+      "eslint",
+      "prettier"
+    ],
+    "red_checks": [
+      "test-unit"
+    ]
+  },
+  {
+    "id": "U02",
+    "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Update the regression test in createSpecializedApp.test.tsx so it verifies that an app root element calling useRouteRef renders during bootstrap without crashing and resolves the route path after finalization with a bounded render count (no render loops) rather than asserting an exact render count of 2.",
+    "rules": [
+      "1. In the test 'should resolve page route refs in app root elements after finalization without render loops' inside describe('prepareSpecializedApp', ...), define pageRouteRef via createRouteRef(), track root element renders with a renderCount counter, and configure noSignInAppPlugin by overriding 'sign-in-page:app' with { disabled: true }.",
+      "2. Register a frontend plugin with an app/root element (attached to { id: 'app/root', input: 'elements' }) whose component increments renderCount, calls useRouteRef(pageRouteRef), and renders 'Root link: ' followed by routeFunc() when defined or 'unresolved' when undefined, plus a page extension (attached to { id: 'app/routes', input: 'routes' }) outputting routePath('/my-page'), routeRef(pageRouteRef), and a reactElement.",
+      "3. Render the bootstrap element via const { rerender } = render(preparedApp.getBootstrapApp().element) and assert that 'Root link: unresolved' is in the document.",
+      "4. Inside act(() => { ... }), call const finalizedApp = preparedApp.finalize() and rerender(finalizedApp.element), then assert that 'Root link: /my-page' is in the document and that renderCount is bounded via expect(renderCount).toBeLessThan(5) instead of expect(renderCount).toBe(2)."
+    ],
+    "exports": [],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 1915,
+        "to": 1978,
+        "first_line": "it('should resolve page route refs in app root elements after finalization without render loops', () => {",
+        "last_line": "});",
+        "rule": "Update the regression test to assert a bounded renderCount (expect(renderCount).toBeLessThan(5)) instead of an exact render count of 2."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "lines": [1068, 1140],
+      "reason": "Follows the existing prepareSpecializedApp bootstrap and finalize test pattern in the same file."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-app-api/src/wiring/prepareSpecializedApp.tsx",
+        "lines": [248, 253],
+        "reason": "Uses PreparedSpecializedApp.getBootstrapApp and finalize."
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "lines": [49, 103],
+        "reason": "Calls useRouteRef inside the app root element under test."
+      }
+    ],
+    "depends_on": [
+      "U01"
+    ],
+    "covers": [
+      "FR-3",
+      "FR-5",
+      "FR-7",
+      "NFR-1",
+      "NFR-2",
+      "NFR-4",
+      "AC-1",
+      "AC-2",
+      "AC-4"
+    ],
+    "tests": [
+      {
+        "name": "should resolve page route refs in app root elements after finalization without render loops",
+        "given": "A prepared app with a page route attached to app/routes and an app/root element that calls useRouteRef for that page route",
+        "expect": "During bootstrap the root element renders with useRouteRef returning undefined, and after finalization it re-renders with useRouteRef resolving to '/my-page' with a bounded render count (renderCount < 5, no render loops)"
+      }
+    ],
+    "checks": [
+      "eslint",
+      "prettier"
+    ]
+  },
+  {
+    "id": "U03",
+    "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Add subscribe and getSnapshot methods to RouteResolutionApiProxy and notify all subscribed listeners whenever initialize updates #delegate.",
+    "rules": [
+      "1. Maintain the private #listeners = new Set<() => void>() field on RouteResolutionApiProxy.",
+      "2. In RouteResolutionApiProxy.initialize(routeInfo, routeRefsById), after assigning this.#delegate and this.#routeObjects, iterate over this.#listeners and invoke each listener before returning routeInfo.",
+      "3. Expose subscribe(listener: () => void): () => void on RouteResolutionApiProxy that adds listener to this.#listeners and returns an unsubscribe function removing it from this.#listeners.",
+      "4. Expose getSnapshot(): RouteResolutionApi | undefined on RouteResolutionApiProxy that returns this.#delegate."
+    ],
+    "exports": [
+      {
+        "name": "RouteResolutionApiProxy",
+        "kind": "class",
+        "params": [
+          {
+            "name": "routeBindings",
+            "type": "Map<ExternalRouteRef, RouteRef | SubRouteRef>"
+          },
+          {
+            "name": "appBasePath",
+            "type": "string"
+          }
+        ],
+        "returns": "RouteResolutionApiProxy"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 113,
+        "to": 181,
+        "first_line": "export class RouteResolutionApiProxy implements RouteResolutionApi {",
+        "last_line": "}",
+        "rule": "Update RouteResolutionApiProxy to track listeners, expose subscribe and getSnapshot, and notify listeners in initialize."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "lines": [58, 110],
+      "reason": "Matches the class and #private field conventions in phaseApis.tsx."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [47, 61],
+        "reason": "Implements RouteResolutionApi."
+      },
+      {
+        "path": "packages/frontend-app-api/src/routing/RouteResolver.ts",
+        "lines": [166, 192],
+        "reason": "Instantiates RouteResolver as #delegate in initialize."
+      }
+    ],
+    "depends_on": [
+      "U01",
+      "U02"
+    ],
+    "covers": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "NFR-1",
+      "NFR-2",
+      "NFR-4",
+      "AC-1",
+      "AC-2",
+      "AC-4"
+    ],
+    "checks": [
+      "eslint",
+      "prettier"
+    ]
+  },
+  {
+    "id": "U04",
+    "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Subscribe useRouteRef to routeResolutionApi changes using useSyncExternalStore and recompute the memoized routeFunc via the delegate snapshot when the route resolution snapshot updates.",
+    "rules": [
+      "1. Import useMemo and useSyncExternalStore from 'react', and import RouteResolutionApi alongside RouteFunc, routeResolutionApiRef, and useApi from '../apis'.",
+      "2. Define an internal type SubscribableRouteResolutionApi = RouteResolutionApi & { subscribe?(listener: () => void): () => void; getSnapshot?(): unknown; } and module-level fallbacks noopSubscribe = () => () => {} and noopGetSnapshot = () => undefined.",
+      "3. Inside useRouteRef, use useMemo keyed on [routeResolutionApi] to construct { subscribe, getSnapshot }: if typeof routeResolutionApi.subscribe === 'function' and typeof routeResolutionApi.getSnapshot === 'function', bind both to routeResolutionApi; if only typeof routeResolutionApi.subscribe === 'function', track a local revision counter incremented when routeResolutionApi.subscribe notifies and returned by getSnapshot; otherwise return { subscribe: noopSubscribe, getSnapshot: noopGetSnapshot }.",
+      "4. Call const snapshot = useSyncExternalStore(subscribe, getSnapshot) and compute routeFunc in useMemo keyed on [routeResolutionApi, routeRef, pathname, snapshot]: check whether snapshot && typeof snapshot === 'object' && 'resolve' in snapshot && typeof snapshot.resolve === 'function' to select snapshot as RouteResolutionApi or fall back to routeResolutionApi, and return resolver.resolve(routeRef, { sourcePath: pathname })."
+    ],
+    "exports": [
+      {
+        "name": "useRouteRef",
+        "kind": "function",
+        "params": [
+          {
+            "name": "routeRef",
+            "type": "RouteRef<TParams> | SubRouteRef<TParams> | ExternalRouteRef<TParams>"
+          }
+        ],
+        "returns": "RouteFunc<TParams> | undefined"
+      }
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 17,
+        "to": 103,
+        "first_line": "import { useMemo, useSyncExternalStore } from 'react';",
+        "last_line": "}",
+        "rule": "Update useRouteRef to subscribe to routeResolutionApi via useSyncExternalStore and resolve via the delegate snapshot when it provides a resolve method."
+      }
+    ],
+    "style_from": {
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "lines": [1, 48],
+      "reason": "Preserves the existing hook signature, TSDoc, and style."
+    },
+    "uses": [
+      {
+        "path": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+        "lines": [38, 71],
+        "reason": "Uses RouteResolutionApi, RouteFunc, and routeResolutionApiRef."
+      }
+    ],
+    "depends_on": [
+      "U01",
+      "U02"
+    ],
+    "covers": [
+      "FR-4",
+      "FR-5",
+      "FR-6",
+      "FR-9",
+      "NFR-1",
+      "NFR-3",
+      "NFR-4",
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4"
+    ],
+    "checks": [
+      "eslint",
+      "prettier"
+    ]
+  },
+  {
+    "id": "U05",
+    "path": ".changeset/routeref-startup-resolution.md",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Maintain the patch changeset for @backstage/frontend-app-api and @backstage/frontend-plugin-api describing the fix for route resolution in app root elements during startup.",
+    "rules": [
+      "1. Write YAML frontmatter listing '@backstage/frontend-app-api': patch and '@backstage/frontend-plugin-api': patch.",
+      "2. Write a concise adopter-facing summary explaining that app root elements using route references now re-resolve their links once app startup completes, without referencing internal class or function names."
+    ],
+    "exports": [],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 1,
+        "to": 6,
+        "first_line": "---",
+        "last_line": "Fixed an issue where components mounted in the application root using route references could fail to resolve links during initial startup. Route references now automatically re-resolve once application startup completes.",
+        "rule": "Maintain the changeset frontmatter and adopter-facing description."
+      }
+    ],
+    "style_from": {
+      "path": ".changeset/tidy-component-names.md",
+      "lines": [1, 7],
+      "reason": "Matches the repo's multi-package patch changeset format."
+    },
+    "depends_on": [
+      "U03",
+      "U04"
+    ],
+    "covers": [
+      "FR-9",
+      "FR-10",
+      "NFR-4",
+      "AC-5"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U06",
+    "path": "docs/frontend-system/architecture/36-routes.md",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Document how useRouteRef behaves in app root elements during startup before page routes are initialized.",
+    "rules": [
+      "1. After the paragraph explaining that useRouteRef returns undefined when a route is not available, include a Docusaurus :::note admonition following docs/contribute/doc-style-guide.md (present tense, active voice, address the reader as you, code formatting for API references, no Latin abbreviations or filler words).",
+      "2. Explain that app root elements (created with AppRootElementBlueprint or attached to the app/root elements input) render during startup before page routes are known, so useRouteRef returns undefined during startup and updates to return the resolved link function once the app is finalized, and components must handle the undefined case."
+    ],
+    "exports": [],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 120,
+        "to": 122,
+        "first_line": ":::note",
+        "last_line": ":::",
+        "rule": "Maintain the :::note admonition explaining useRouteRef startup resolution behavior in app root elements."
+      }
+    ],
+    "style_from": {
+      "path": "docs/contribute/doc-style-guide.md",
+      "lines": [137, 179],
+      "reason": "Follows Backstage documentation style guide and Docusaurus admonition conventions."
+    },
+    "depends_on": [
+      "U03",
+      "U04"
+    ],
+    "covers": [
+      "FR-9",
+      "AC-5"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  },
+  {
+    "id": "U07",
+    "path": "docs/frontend-system/building-apps/03-built-in-extensions.md",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Document in the App root inputs section that app root elements render before page routes are known and must handle useRouteRef returning undefined during startup.",
+    "rules": [
+      "1. Immediately after the App root Inputs table, include a Docusaurus :::note admonition following docs/contribute/doc-style-guide.md (present tense, active voice, address the reader as you, code formatting for API and extension references, no Latin abbreviations or filler words).",
+      "2. Explain that extensions attached to the app/root elements input (such as those created with AppRootElementBlueprint) render during startup before page routes are known, so calling useRouteRef for a page route returns undefined during startup and updates to the resolved link once the app is finalized, and components must handle the undefined case."
+    ],
+    "exports": [],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 106,
+        "to": 108,
+        "first_line": ":::note",
+        "last_line": ":::",
+        "rule": "Maintain the :::note admonition after the App root Inputs table describing route resolution behavior in app/root elements during startup."
+      }
+    ],
+    "style_from": {
+      "path": "docs/contribute/doc-style-guide.md",
+      "lines": [137, 179],
+      "reason": "Follows Backstage documentation style guide and Docusaurus admonition conventions."
+    },
+    "depends_on": [
+      "U03",
+      "U04"
+    ],
+    "covers": [
+      "FR-9",
+      "AC-5"
+    ],
+    "checks": [
+      "prettier"
+    ]
+  }
+]

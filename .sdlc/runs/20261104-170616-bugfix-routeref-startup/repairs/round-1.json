@@ -1,0 +1,63 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-170616-bugfix-routeref-startup",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "instruction": "Fix `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Reproducing test fails after the fix (CI=true yarn test packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx): `createSpecializedApp › prepareSpecializedApp › should resolve page route refs in app root elements after finalization without render loops` — expect(renderCount).toBe(2) at createSpecializedApp.test.tsx:1977: Expected: 2, Received: 3. The link now resolves ('Root link: /my-page' is found), but the app root element renders one extra time across finalization. The test calls preparedApp.finalize() and rerender(finalizedApp.element) inside one act(); finalize() re-initializes the route resolution proxy, which notifies useRouteRef's useSyncExternalStore subscription, and the rerender also re-renders the element. Make useRouteRef (with the proxy in phaseApis.tsx as it is) cause no render beyond the one the finalized element already gets, so the element renders exactly once during bootstrap and once after finalization, while still resolving the link after finalization, keeping the RouteFunc stable across search/hash changes, and working with RouteResolutionApi implementations that only have resolve(). The reproducing test must not be changed.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170616-bugfix-routeref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170616-bugfix-routeref-startup/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]
