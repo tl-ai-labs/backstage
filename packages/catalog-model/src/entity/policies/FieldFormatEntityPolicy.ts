@@ -40,6 +40,9 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * {@inheritDoc EntityPolicy.enforce}
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,

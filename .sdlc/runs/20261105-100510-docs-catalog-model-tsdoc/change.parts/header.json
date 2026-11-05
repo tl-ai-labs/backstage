@@ -1,0 +1,91 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Use multi-line `/** ... */` TSDoc blocks for all added or updated documentation comments; never modify executable statements, type declarations, imports, exports, or existing Apache-2.0 license headers and copyright years.",
+      "Never add `@public` or `@alpha` release tags to interface properties or class methods; release tags belong only on top-level exported declarations.",
+      "Format parameter tags with a hyphen separator (`@param <name> - <description>`) and place `@param` after `@public` on top-level functions (matching `packages/catalog-model/src/entity/ref.ts`) or at the end of the method TSDoc block on class methods (matching `packages/catalog-model/src/validation/CommonValidatorFunctions.ts`).",
+      "Write U.S. English prose in present tense and active voice per `docs/contribute/doc-style-guide.md`, wrapping inline code and field names in backticks and avoiding Latin abbreviations (`e.g.`, `i.e.`).",
+      "Format all modified TypeScript and Markdown files with Prettier (`yarn prettier --write`)."
+    ],
+    "decisions": [
+      {
+        "topic": "Entity kind type guard TSDoc structure in `src/entity/conditions.ts`",
+        "choice": "Expand each existing `/** @public */` comment in place into a single multi-line TSDoc block containing a summary sentence noting case-insensitive `entity.kind` matching, followed by `@public` and `@param entity - The entity to check`.",
+        "rejected": [
+          "Adding a second TSDoc block above `/** @public */`",
+          "Omitting `@param entity` or case-insensitivity details"
+        ],
+        "reason": "API Extractor attaches only the immediately preceding TSDoc block to the export, and existing functions in `src/entity/ref.ts` place summary first, then `@public`, then `@param`."
+      },
+      {
+        "topic": "Class method TSDoc structure in `src/validation/KubernetesValidatorFunctions.ts`",
+        "choice": "Add a multi-line TSDoc block above each of the 8 static methods with a summary sentence starting with `Checks that the value is ...` that states the exact validation rule and `@param value - The value to check`, with no release tag.",
+        "rejected": [
+          "Adding `@public` to static class methods",
+          "Generic summaries that omit length or character-set rules"
+        ],
+        "reason": "Matches `CommonValidatorFunctions` in the same directory and satisfies API Extractor rules plus NFR-3 accuracy."
+      },
+      {
+        "topic": "Policy `enforce` method TSDoc in `src/entity/policies/*EntityPolicy.ts`",
+        "choice": "Add a multi-line `/** ... */` block containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>` in each of the 5 policy classes, with no release tag.",
+        "rejected": [
+          "Duplicating custom prose across all 5 `enforce` methods",
+          "Single-line `/** {@inheritDoc EntityPolicy.enforce} */`"
+        ],
+        "reason": "All 5 classes implement `EntityPolicy.enforce`, NFR-2 requires multi-line `/** ... */` blocks and `{@inheritDoc ...}` where appropriate, and API Extractor resolves `{@inheritDoc EntityPolicy.enforce}` cleanly."
+      },
+      {
+        "topic": "Kind interface member TSDoc in `src/kinds/*EntityV1alpha1.ts`",
+        "choice": "Add summary-only multi-line `/** ... */` blocks (no release tags) to `apiVersion`, `kind`, and `spec` on all 8 `*EntityV1alpha1` interfaces, aligning wording with `Entity` (`src/entity/Entity.ts`) and each kind's JSON schema (`src/schema/kinds/<Kind>.v1alpha1.schema.json`).",
+        "rejected": [
+          "Adding `@public` on interface members",
+          "Using `{@inheritDoc Entity.apiVersion}` on narrowed literal properties"
+        ],
+        "reason": "Follows `Entity` and `EntityMeta` member TSDoc style in `src/entity/Entity.ts` and provides kind-specific context from the JSON schemas."
+      },
+      {
+        "topic": "API report regeneration for `report.api.md` and `report-alpha.api.md`",
+        "choice": "Do not include `report.api.md` or `report-alpha.api.md` as typed units; let the Gate 0 test command (`yarn build:api-reports && ! grep -q \"(undocumented)\" packages/catalog-model/report.api.md`) regenerate them after source comments land.",
+        "rejected": [
+          "Hand-editing `report.api.md` and `report-alpha.api.md` as units"
+        ],
+        "reason": "FR-5 and Gate 0 forbid hand-editing API Extractor reports and require regeneration exclusively via `yarn build:api-reports`."
+      },
+      {
+        "topic": "Changeset file for `@backstage/catalog-model`",
+        "choice": "Create `.changeset/catalog-model-tsdoc-comments.md` with a `patch` bump for `@backstage/catalog-model` and a concise adopter-facing summary of the TSDoc improvements.",
+        "rejected": [
+          "Omitting a changeset",
+          "Listing raw internal file paths or all 45 symbol names in the changeset"
+        ],
+        "reason": "Satisfies FR-6 and NFR-6 for a published package (`@backstage/catalog-model`)."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "api-reports",
+        "run": "yarn build:api-reports && ! grep -q \"(undocumented)\" packages/catalog-model/report.api.md"
+      },
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "test",
+        "run": "CI=1 yarn test packages/catalog-model"
+      }
+    ]
+  },
+  "hashes": {}
+}

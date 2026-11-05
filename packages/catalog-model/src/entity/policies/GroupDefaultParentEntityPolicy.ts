@@ -48,6 +48,9 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * {@inheritDoc EntityPolicy.enforce}
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;
