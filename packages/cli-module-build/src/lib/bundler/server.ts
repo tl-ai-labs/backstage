@@ -273,13 +273,17 @@ function checkReactVersion() {
       paths: [targetPaths.rootDir],
     });
     const reactPkg = require(reactPkgPath);
-    if (reactPkg.version.startsWith('16.')) {
+    if (
+      reactPkg.version.startsWith('16.') ||
+      reactPkg.version.startsWith('17.')
+    ) {
       console.log(
         chalk.yellow(
           `
 ⚠️                                                                           ⚠️
-⚠️ You are using React version 16, which is deprecated for use in Backstage. ⚠️
-⚠️ Please upgrade to React 17 by updating your packages/app dependencies.    ⚠️
+⚠️ React versions below 18 are no longer supported in Backstage.             ⚠️
+⚠️ Please upgrade to React 18 by updating your dependencies.                 ⚠️
+⚠️ See https://backstage.io/docs/tutorials/react18-migration/                ⚠️
 ⚠️                                                                           ⚠️
 `,
         ),

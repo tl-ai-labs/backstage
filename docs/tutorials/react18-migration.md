@@ -6,11 +6,11 @@ description: A guide to migrating your project to React 18
 
 :::info
 
-This guide has been updated to include steps for removing support for React 16, as it is now deprecated.
+This guide has been updated to reflect that Backstage now requires React 18, as support for React 16 and 17 has been removed.
 
 :::
 
-The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.
+The Backstage core libraries and plugins require React 18 and no longer support React 16 or 17. If your project is still on an older version of React, follow the steps below to migrate to React 18.
 
 ## Migration
 
@@ -78,14 +78,14 @@ To migrate a Backstage instance to React 18, follow these steps:
      "devDependencies": {
        ...
        // highlight-remove-start
-       "@types/react": "^16.13.1 || ^17.0.0",
-       "react": "^16.13.1 || ^17.0.0",
-       "react-dom": "^16.13.1 || ^17.0.0",
-       // highlight-remove-end
-       // highlight-add-start
        "@types/react": "^17.0.0 || ^18.0.0",
        "react": "^17.0.0 || ^18.0.0",
        "react-dom": "^17.0.0 || ^18.0.0",
+       // highlight-remove-end
+       // highlight-add-start
+       "@types/react": "^18.0.0",
+       "react": "^18.0.0",
+       "react-dom": "^18.0.0",
        // highlight-add-end
        ...
      },
@@ -95,14 +95,14 @@ To migrate a Backstage instance to React 18, follow these steps:
      "peerDependencies": {
        ...
        // highlight-remove-start
-       "@types/react": "^16.13.1 || ^17.0.0",
-       "react": "^16.13.1 || ^17.0.0",
-       "react-dom": "^16.13.1 || ^17.0.0",
-       // highlight-remove-end
-       // highlight-add-start
        "@types/react": "^17.0.0 || ^18.0.0",
        "react": "^17.0.0 || ^18.0.0",
        "react-dom": "^17.0.0 || ^18.0.0",
+       // highlight-remove-end
+       // highlight-add-start
+       "@types/react": "^18.0.0",
+       "react": "^18.0.0",
+       "react-dom": "^18.0.0",
        // highlight-add-end
        ...
      },

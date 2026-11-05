@@ -1,0 +1,147 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Formatting uses Prettier with @backstage/cli/config/prettier (single quotes, trailing commas, 2-space indentation); run Prettier only on changed files.",
+      "New source files must start with the standard 15-line Apache 2.0 license header with Copyright 2026 The Backstage Authors; existing files must keep their original copyright year.",
+      "Never modify ESLint, Prettier, or TypeScript configuration files (.eslintrc.js, tsconfig.json, .prettierignore).",
+      "Never manually edit yarn.lock, workspaces/ui/yarn.lock, or packages/test-utils/report.api.md; update lockfiles only via yarn install and API reports only via yarn build:api-reports.",
+      "Changeset files in .changeset/*.md are authored directly in plain adopter-facing language without internal symbol names (never mention HAS_REACT_DOM_CLIENT, hasReactDomClient, or checkReactVersion).",
+      "Breaking changes (narrowing React peerDependencies to ^18.0.0 and removing LegacyRootOption/legacyRoot) use minor for packages below 1.0.0 and major for packages at 1.0.0 or above; private packages are excluded from changesets."
+    ],
+    "decisions": [
+      {
+        "topic": "Peer dependency range target and repo-tools enforcement",
+        "choice": "Set react, react-dom, and @types/react peerDependencies to ^18.0.0 across all 56 workspace manifests and make ^18.0.0 the sole default in packages/repo-tools/src/commands/peer-deps/peer-deps.ts by removing peerDependenciesReact18Only and react18OnlyPackages",
+        "rejected": [
+          "Keep react18OnlyPackages Set in peer-deps.ts",
+          "Use ^18.0.2 for peerDependencies instead of ^18.0.0"
+        ],
+        "reason": "All Backstage packages now require React 18+, matching the existing ^18.0.0 peer range used by @backstage/ui."
+      },
+      {
+        "topic": "External-store hook imports",
+        "choice": "Import useSyncExternalStore from react in useRouteRef.tsx and useBreakpoint.ts and remove use-sync-external-store and @types/use-sync-external-store from packages/frontend-plugin-api/package.json, packages/ui/package.json, and plugins/app/package.json",
+        "rejected": [
+          "Keep use-sync-external-store/shim re-exports"
+        ],
+        "reason": "useSyncExternalStore is built into React 18, making the React 17 compatibility shim package redundant."
+      },
+      {
+        "topic": "Root rendering in dev-utils, frontend-dev-utils, and techdocs",
+        "choice": "Use react-dom/client createRoot unconditionally without process.env.HAS_REACT_DOM_CLIENT checks or ReactDOM.render fallbacks",
+        "rejected": [
+          "Keep dynamic fallback to ReactDOM.render"
+        ],
+        "reason": "React 18 always provides react-dom/client and createRoot."
+      },
+      {
+        "topic": "CLI bundler flag and React version diagnostics",
+        "choice": "Remove process.env.HAS_REACT_DOM_CLIENT from bundler/config.ts and cli-module-test-jest/config/jest.js, remove hasReactDomClient.ts, and update startFrontend.ts and bundler/server.ts diagnostics to state React 18 as the minimum required version",
+        "rejected": [
+          "Hardcode process.env.HAS_REACT_DOM_CLIENT to true"
+        ],
+        "reason": "The bundler env flag existed solely for React 17 conditional imports, and CLI diagnostics must reflect the React 18 minimum requirement."
+      },
+      {
+        "topic": "Component ID generation in @backstage/ui",
+        "choice": "Import useId from react instead of react-aria in Popover.tsx, Tooltip.tsx, Table.tsx, and TablePagination.tsx",
+        "rejected": [
+          "Continue importing useId from react-aria"
+        ],
+        "reason": "React 18 provides native useId."
+      },
+      {
+        "topic": "Removal of LegacyRootOption and legacyRoot in @backstage/test-utils",
+        "choice": "Remove LegacyRootOption type and legacyRoot option forwarding from testingLibrary.ts and appWrappers.tsx and regenerate packages/test-utils/report.api.md",
+        "rejected": [
+          "Keep LegacyRootOption as a deprecated no-op type"
+        ],
+        "reason": "Approved at Gate 0 as a major breaking change for @backstage/test-utils with migration guidance in its changeset."
+      },
+      {
+        "topic": "Changeset organization and semver levels",
+        "choice": "Create new .changeset/*.md files covering all affected non-private packages with minor (<1.0.0) or major (>=1.0.0) bumps since existing .changeset/*.md files are already recorded in .changeset/pre.json",
+        "rejected": [
+          "Modify existing changesets already consumed in .changeset/pre.json"
+        ],
+        "reason": "Changesets listed in .changeset/pre.json have already been applied in pre-release mode, so new changesets are required to version affected packages."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      },
+      {
+        "id": "lint-peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "test-gate0",
+        "run": "CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+      },
+      {
+        "id": "test-frontend-dev-utils",
+        "run": "CI=1 yarn test packages/frontend-dev-utils"
+      },
+      {
+        "id": "test-dev-utils",
+        "run": "CI=1 yarn test packages/dev-utils"
+      },
+      {
+        "id": "test-techdocs-transformers",
+        "run": "CI=1 yarn test plugins/techdocs/src/reader/transformers"
+      },
+      {
+        "id": "test-test-utils",
+        "run": "CI=1 yarn test packages/test-utils"
+      },
+      {
+        "id": "test-cli-module-build",
+        "run": "CI=1 yarn test packages/cli-module-build"
+      },
+      {
+        "id": "test-cli-module-new",
+        "run": "CI=1 yarn test packages/cli-module-new"
+      },
+      {
+        "id": "test-repo-tools-peer-deps",
+        "run": "CI=1 yarn test packages/repo-tools/src/commands/peer-deps"
+      },
+      {
+        "id": "test-frontend-plugin-api",
+        "run": "CI=1 yarn test packages/frontend-plugin-api"
+      },
+      {
+        "id": "test-ui",
+        "run": "CI=1 yarn test packages/ui"
+      }
+    ]
+  },
+  "hashes": {}
+}
