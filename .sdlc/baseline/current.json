@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "plugin_version": "0.10.1",
-  "built_at": "2026-11-04T11:38:35.173Z",
-  "run_id": "20261104-170616-bugfix-routeref-startup",
-  "intent_hint": "bugfix",
+  "built_at": "2026-11-05T08:26:37.053Z",
+  "run_id": "20261105-135542-test-routeref-render-bound",
+  "intent_hint": "test",
   "git": {
-    "head": "2e8b88268c8ad911d46ee3ad404162eddcc36c8c",
+    "head": "73a1cbe3afaff5887e460837037a292bb55ba87d",
     "branch": "BS-BF-08/argon4-plus-flash38",
     "dirty": false,
     "remotes": [
@@ -19,7 +19,10 @@
     "gitignore_covers_sdlc": false,
     "sdlc_ignored_effectively": true,
     "sdlc_ignore_source": "/Users/macbook/Documents/GitHub/backstage/.git/info/exclude:7 (.sdlc/)",
-    "tracked_files": 12302
+    "tracked_files": 12302,
+    "upstream": "origin/BS-BF-08/argon4-plus-flash38 (in sync)",
+    "sdlc_tracked_files": 106,
+    "sdlc_tracked_note": "HEAD 73a1cbe commits 106 .sdlc/ files (previous run evidence, baseline/, ledger, .sdlc/local/write-contract.json). info/exclude does not apply to tracked files, so edits to them (e.g. baseline/current.json, ledger.json) show as modified in git status; new run dirs stay ignored."
   },
   "topology": {
     "top_level_dirs": [
@@ -72,10 +75,9 @@
   "test_command_proposed": "CI=1 yarn test <path>",
   "test_command_source": "package.json#scripts.test (backstage-cli repo test, jest) + .claude/CLAUDE.md (always pass a path)",
   "test_command_relevant_paths": [
+    "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
     "packages/frontend-app-api/src/wiring",
-    "packages/frontend-app-api/src/routing",
-    "packages/frontend-plugin-api/src/routing",
-    "plugins/app/src"
+    "packages/frontend-plugin-api/src/routing"
   ],
   "docs_present": [
     {
@@ -2029,7 +2031,8 @@
     "triggered": true,
     "reason": "primary stack is React + TypeScript (Backstage frontend/backend systems); shipped adapters are only generic, nest, python",
     "path": ".sdlc/baseline/stack-profile.md",
-    "runs_since_built": 0
+    "runs_since_built": 1,
+    "reused": true
   },
   "project_rules": [
     "Run tests with `CI=1 yarn test <path>` from repo root, always with a path",
@@ -2044,6 +2047,34 @@
     "Cursor rules detected at .cursor/rules/ (3 .mdc files, one a symlink to AGENTS.md) - untouched by default.",
     ".claude/ project dir with settings.local.json (contains an `env` block) and 2 skills - untouched by default.",
     ".gitignore does not list .sdlc/, but the parent repo's .git/info/exclude does - .sdlc/ is already ignored in this worktree.",
-    "No .mcp.json, Aider, Continue, Roo, Copilot instructions, or repo-local routing-policy.yaml found."
-  ]
+    "No .mcp.json, Aider, Continue, Roo, Copilot instructions, or repo-local routing-policy.yaml found.",
+    "HEAD commits .sdlc/ run evidence (106 tracked files). Changes to tracked .sdlc files will show in git status despite info/exclude; new .sdlc/runs/<id>/ files remain ignored."
+  ],
+  "refresh": {
+    "decision": "incremental",
+    "reason": "1 commit since baseline 2e8b882; no stack manifests, AI configs or policy changed; groups 3-4 and 6 not re-scanned",
+    "baseline_head": "2e8b88268c8ad911d46ee3ad404162eddcc36c8c",
+    "previous_run_id": "20261104-170616-bugfix-routeref-startup",
+    "source_delta_files": [
+      ".changeset/routeref-startup-resolution.md",
+      "docs/frontend-system/architecture/36-routes.md",
+      "docs/frontend-system/building-apps/03-built-in-extensions.md",
+      "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "packages/frontend-plugin-api/src/routing/useRouteRef.test.tsx",
+      "packages/frontend-plugin-api/src/routing/useRouteRef.tsx"
+    ],
+    "sdlc_delta_file_count": 106
+  },
+  "intent_focus": {
+    "intent": "test",
+    "target_file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+    "target_test": "should resolve page route refs in app root elements after finalization without render loops (line 1915)",
+    "exact_assertions": [
+      "line 1969: expect(renderCount).toBe(1)",
+      "line 1977: expect(renderCount).toBe(2)"
+    ],
+    "package": "@backstage/frontend-app-api@0.16.9-next.0 (published, <1.0.0)",
+    "changeset_note": "Test-only change; no changeset needed. Existing .changeset/routeref-startup-resolution.md already covers the fix and must not be edited."
+  }
 }
