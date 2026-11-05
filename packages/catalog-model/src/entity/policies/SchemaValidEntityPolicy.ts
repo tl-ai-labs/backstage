@@ -35,6 +35,9 @@ import { EntityPolicy } from './types';
 export class SchemaValidEntityPolicy implements EntityPolicy {
   private validate: ValidateFunction<Entity> | undefined;
 
+  /**
+   * {@inheritDoc EntityPolicy.enforce}
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (!this.validate) {
       const ajv = new Ajv({ allowUnionTypes: true });

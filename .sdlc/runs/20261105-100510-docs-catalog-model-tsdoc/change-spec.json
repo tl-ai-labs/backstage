@@ -1,0 +1,1173 @@
+{
+  "header": {
+    "conventions": [
+      "Use multi-line `/** ... */` TSDoc blocks for all added or updated documentation comments; never modify executable statements, type declarations, imports, exports, or existing Apache-2.0 license headers and copyright years.",
+      "Never add `@public` or `@alpha` release tags to interface properties or class methods; release tags belong only on top-level exported declarations.",
+      "Format parameter tags with a hyphen separator (`@param <name> - <description>`) and place `@param` after `@public` on top-level functions (matching `packages/catalog-model/src/entity/ref.ts`) or at the end of the method TSDoc block on class methods (matching `packages/catalog-model/src/validation/CommonValidatorFunctions.ts`).",
+      "Write U.S. English prose in present tense and active voice per `docs/contribute/doc-style-guide.md`, wrapping inline code and field names in backticks and avoiding Latin abbreviations (`e.g.`, `i.e.`).",
+      "Format all modified TypeScript and Markdown files with Prettier (`yarn prettier --write`)."
+    ],
+    "decisions": [
+      {
+        "topic": "Entity kind type guard TSDoc structure in `src/entity/conditions.ts`",
+        "choice": "Expand each existing `/** @public */` comment in place into a single multi-line TSDoc block containing a summary sentence noting case-insensitive `entity.kind` matching, followed by `@public` and `@param entity - The entity to check`.",
+        "rejected": [
+          "Adding a second TSDoc block above `/** @public */`",
+          "Omitting `@param entity` or case-insensitivity details"
+        ],
+        "reason": "API Extractor attaches only the immediately preceding TSDoc block to the export, and existing functions in `src/entity/ref.ts` place summary first, then `@public`, then `@param`."
+      },
+      {
+        "topic": "Class method TSDoc structure in `src/validation/KubernetesValidatorFunctions.ts`",
+        "choice": "Add a multi-line TSDoc block above each of the 8 static methods with a summary sentence starting with `Checks that the value is ...` that states the exact validation rule and `@param value - The value to check`, with no release tag.",
+        "rejected": [
+          "Adding `@public` to static class methods",
+          "Generic summaries that omit length or character-set rules"
+        ],
+        "reason": "Matches `CommonValidatorFunctions` in the same directory and satisfies API Extractor rules plus NFR-3 accuracy."
+      },
+      {
+        "topic": "Policy `enforce` method TSDoc in `src/entity/policies/*EntityPolicy.ts`",
+        "choice": "Add a multi-line `/** ... */` block containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>` in each of the 5 policy classes, with no release tag.",
+        "rejected": [
+          "Duplicating custom prose across all 5 `enforce` methods",
+          "Single-line `/** {@inheritDoc EntityPolicy.enforce} */`"
+        ],
+        "reason": "All 5 classes implement `EntityPolicy.enforce`, NFR-2 requires multi-line `/** ... */` blocks and `{@inheritDoc ...}` where appropriate, and API Extractor resolves `{@inheritDoc EntityPolicy.enforce}` cleanly."
+      },
+      {
+        "topic": "Kind interface member TSDoc in `src/kinds/*EntityV1alpha1.ts`",
+        "choice": "Add summary-only multi-line `/** ... */` blocks (no release tags) to `apiVersion`, `kind`, and `spec` on all 8 `*EntityV1alpha1` interfaces, aligning wording with `Entity` (`src/entity/Entity.ts`) and each kind's JSON schema (`src/schema/kinds/<Kind>.v1alpha1.schema.json`).",
+        "rejected": [
+          "Adding `@public` on interface members",
+          "Using `{@inheritDoc Entity.apiVersion}` on narrowed literal properties"
+        ],
+        "reason": "Follows `Entity` and `EntityMeta` member TSDoc style in `src/entity/Entity.ts` and provides kind-specific context from the JSON schemas."
+      },
+      {
+        "topic": "API report regeneration for `report.api.md` and `report-alpha.api.md`",
+        "choice": "Do not include `report.api.md` or `report-alpha.api.md` as typed units; let the Gate 0 test command (`yarn build:api-reports && ! grep -q \"(undocumented)\" packages/catalog-model/report.api.md`) regenerate them after source comments land.",
+        "rejected": [
+          "Hand-editing `report.api.md` and `report-alpha.api.md` as units"
+        ],
+        "reason": "FR-5 and Gate 0 forbid hand-editing API Extractor reports and require regeneration exclusively via `yarn build:api-reports`."
+      },
+      {
+        "topic": "Changeset file for `@backstage/catalog-model`",
+        "choice": "Create `.changeset/catalog-model-tsdoc-comments.md` with a `patch` bump for `@backstage/catalog-model` and a concise adopter-facing summary of the TSDoc improvements.",
+        "rejected": [
+          "Omitting a changeset",
+          "Listing raw internal file paths or all 45 symbol names in the changeset"
+        ],
+        "reason": "Satisfies FR-6 and NFR-6 for a published package (`@backstage/catalog-model`)."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "api-reports",
+        "run": "yarn build:api-reports && ! grep -q \"(undocumented)\" packages/catalog-model/report.api.md"
+      },
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "test",
+        "run": "CI=1 yarn test packages/catalog-model"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/catalog-model/src/entity/conditions.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Document the 8 exported entity kind type guard functions with accurate TSDoc summaries and @param tags inside their existing @public blocks.",
+      "rules": [
+        "Expand each existing 3-line `/** @public */` comment in place into a single multi-line TSDoc block; do not create a second TSDoc block or change any code lines.",
+        "State in each summary that the function is a type guard checking whether the given entity is of that specific kind via a case-insensitive comparison on `entity.kind`.",
+        "Keep `@public` and include `@param entity - The entity to check` in each of the 8 blocks.",
+        "Do not add blank lines outside the comment block sites or modify the Apache-2.0 license header."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 29,
+          "to": 31,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isApiEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is an ApiEntity (matching entity.kind === 'API' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 35,
+          "to": 37,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isComponentEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a ComponentEntity (matching entity.kind === 'Component' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 41,
+          "to": 43,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isDomainEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a DomainEntity (matching entity.kind === 'Domain' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 47,
+          "to": 49,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isGroupEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a GroupEntity (matching entity.kind === 'Group' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S5",
+          "at": "replace",
+          "from": 53,
+          "to": 55,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isLocationEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a LocationEntity (matching entity.kind === 'Location' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S6",
+          "at": "replace",
+          "from": 59,
+          "to": 61,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isResourceEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a ResourceEntity (matching entity.kind === 'Resource' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S7",
+          "at": "replace",
+          "from": 65,
+          "to": 67,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isSystemEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a SystemEntity (matching entity.kind === 'System' case-insensitively), @public, and '@param entity - The entity to check'."
+        },
+        {
+          "id": "S8",
+          "at": "replace",
+          "from": 71,
+          "to": 73,
+          "first_line": "/**",
+          "last_line": "*/",
+          "rule": "Replace the @public-only block on isUserEntity with a multi-line TSDoc comment containing a summary that it checks whether the entity is a UserEntity (matching entity.kind === 'User' case-insensitively), @public, and '@param entity - The entity to check'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/ref.ts",
+        "lines": [
+          47,
+          61
+        ],
+        "reason": "Shows package TSDoc convention for top-level exported functions with summary, @public, and hyphenated @param tag."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add accurate multi-line TSDoc comments with summaries and @param tags to all 8 static validation methods on KubernetesValidatorFunctions.",
+      "rules": [
+        "Insert a multi-line `/** ... */` TSDoc block before each of the 8 static methods without adding `@public` or `@alpha` release tags.",
+        "Include `@param value - The value to check` in every method's TSDoc block, matching `CommonValidatorFunctions`.",
+        "State each method's exact validation rules accurately in its summary sentence."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "static isValidApiVersion(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes apiVersion string (an optional DNS subdomain prefix followed by '/' and a 1-63 character alphanumeric [a-z0-9A-Z] suffix), with '@param value - The value to check'."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 38,
+          "to": 38,
+          "first_line": "static isValidKind(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes kind string (1-63 characters starting with a letter [a-zA-Z] followed by alphanumeric characters [a-z0-9A-Z]), with '@param value - The value to check'."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 47,
+          "to": 47,
+          "first_line": "static isValidObjectName(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes object name string (1-63 characters starting and ending with an alphanumeric character [A-Za-z0-9] and containing only alphanumerics, dashes, underscores, and dots [-A-Za-z0-9_.] in between), with '@param value - The value to check'."
+        },
+        {
+          "id": "S4",
+          "at": "insert_before",
+          "from": 56,
+          "to": 56,
+          "first_line": "static isValidNamespace(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes namespace string (a valid RFC 1123 DNS label), with '@param value - The value to check'."
+        },
+        {
+          "id": "S5",
+          "at": "insert_before",
+          "from": 60,
+          "to": 60,
+          "first_line": "static isValidLabelKey(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes label key string (an optional DNS subdomain prefix followed by '/' and a valid object name suffix), with '@param value - The value to check'."
+        },
+        {
+          "id": "S6",
+          "at": "insert_before",
+          "from": 69,
+          "to": 69,
+          "first_line": "static isValidLabelValue(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes label value string (an empty string or a valid object name), with '@param value - The value to check'."
+        },
+        {
+          "id": "S7",
+          "at": "insert_before",
+          "from": 75,
+          "to": 75,
+          "first_line": "static isValidAnnotationKey(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes annotation key string (an optional DNS subdomain prefix followed by '/' and a valid object name suffix), with '@param value - The value to check'."
+        },
+        {
+          "id": "S8",
+          "at": "insert_before",
+          "from": 84,
+          "to": 84,
+          "first_line": "static isValidAnnotationValue(value: unknown): boolean {",
+          "rule": "Insert a multi-line TSDoc block (no release tag) stating that it checks that the value is a valid Kubernetes annotation value (any string), with '@param value - The value to check'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts",
+        "lines": [
+          25,
+          96
+        ],
+        "reason": "Shows TSDoc style for static validator methods in the same folder (`Checks that the value is ...` and `@param value - The value to check` without member release tags)."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "packages/catalog-model/src/entity/policies/DefaultNamespaceEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add TSDoc comment to DefaultNamespaceEntityPolicy.enforce.",
+      "rules": [
+        "Insert a multi-line `/** ... */` TSDoc comment containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>`.",
+        "Do not add a release tag on the class method or change any code lines."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Insert a multi-line TSDoc comment with '{@inheritDoc EntityPolicy.enforce}' above enforce."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          19,
+          35
+        ],
+        "reason": "Defines EntityPolicy.enforce that this method implements and inherits documentation from."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "packages/catalog-model/src/entity/policies/FieldFormatEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add TSDoc comment to FieldFormatEntityPolicy.enforce.",
+      "rules": [
+        "Insert a multi-line `/** ... */` TSDoc comment containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>`.",
+        "Do not add a release tag on the class method or change any code lines."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 43,
+          "to": 43,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Insert a multi-line TSDoc comment with '{@inheritDoc EntityPolicy.enforce}' above enforce."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          19,
+          35
+        ],
+        "reason": "Defines EntityPolicy.enforce that this method implements and inherits documentation from."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "packages/catalog-model/src/entity/policies/GroupDefaultParentEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add TSDoc comment to GroupDefaultParentEntityPolicy.enforce.",
+      "rules": [
+        "Insert a multi-line `/** ... */` TSDoc comment containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>`.",
+        "Do not add a release tag on the class method or change any code lines."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 51,
+          "to": 51,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Insert a multi-line TSDoc comment with '{@inheritDoc EntityPolicy.enforce}' above enforce."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          19,
+          35
+        ],
+        "reason": "Defines EntityPolicy.enforce that this method implements and inherits documentation from."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "packages/catalog-model/src/entity/policies/NoForeignRootFieldsEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add TSDoc comment to NoForeignRootFieldsEntityPolicy.enforce.",
+      "rules": [
+        "Insert a multi-line `/** ... */` TSDoc comment containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>`.",
+        "Do not add a release tag on the class method or change any code lines."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Insert a multi-line TSDoc comment with '{@inheritDoc EntityPolicy.enforce}' above enforce."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          19,
+          35
+        ],
+        "reason": "Defines EntityPolicy.enforce that this method implements and inherits documentation from."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "packages/catalog-model/src/entity/policies/SchemaValidEntityPolicy.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add TSDoc comment to SchemaValidEntityPolicy.enforce.",
+      "rules": [
+        "Insert a multi-line `/** ... */` TSDoc comment containing `{@inheritDoc EntityPolicy.enforce}` above `async enforce(entity: Entity): Promise<Entity>`.",
+        "Do not add a release tag on the class method or change any code lines."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 38,
+          "to": 38,
+          "first_line": "async enforce(entity: Entity): Promise<Entity> {",
+          "rule": "Insert a multi-line TSDoc comment with '{@inheritDoc EntityPolicy.enforce}' above enforce."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/policies/types.ts",
+        "lines": [
+          19,
+          35
+        ],
+        "reason": "Defines EntityPolicy.enforce that this method implements and inherits documentation from."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on ApiEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/API.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the API entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'API';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('API') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the API entity (such as type, lifecycle, owner, definition, and optional system)."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/API.v1alpha1.schema.json",
+          "lines": [
+            1,
+            79
+          ],
+          "reason": "JSON schema for ApiEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "packages/catalog-model/src/kinds/ComponentEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on ComponentEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/Component.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the Component entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'Component';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('Component') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the Component entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Component.v1alpha1.schema.json",
+          "lines": [
+            1,
+            101
+          ],
+          "reason": "JSON schema for ComponentEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "packages/catalog-model/src/kinds/DomainEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on DomainEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/Domain.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the Domain entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'Domain';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('Domain') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the Domain entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Domain.v1alpha1.schema.json",
+          "lines": [
+            1,
+            61
+          ],
+          "reason": "JSON schema for DomainEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "packages/catalog-model/src/kinds/GroupEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on GroupEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/Group.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 28,
+          "to": 28,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the Group entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "kind: 'Group';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('Group') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 30,
+          "to": 30,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the Group entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Group.v1alpha1.schema.json",
+          "lines": [
+            1,
+            104
+          ],
+          "reason": "JSON schema for GroupEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "packages/catalog-model/src/kinds/LocationEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on LocationEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/Location.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 28,
+          "to": 28,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the Location entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "kind: 'Location';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('Location') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 30,
+          "to": 30,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the Location entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Location.v1alpha1.schema.json",
+          "lines": [
+            1,
+            75
+          ],
+          "reason": "JSON schema for LocationEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "packages/catalog-model/src/kinds/ResourceEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on ResourceEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/Resource.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the Resource entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'Resource';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('Resource') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the Resource entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/Resource.v1alpha1.schema.json",
+          "lines": [
+            1,
+            68
+          ],
+          "reason": "JSON schema for ResourceEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "packages/catalog-model/src/kinds/SystemEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on SystemEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/System.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 32,
+          "to": 32,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the System entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 33,
+          "to": 33,
+          "first_line": "kind: 'System';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('System') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 34,
+          "to": 34,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the System entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/System.v1alpha1.schema.json",
+          "lines": [
+            1,
+            61
+          ],
+          "reason": "JSON schema for SystemEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "packages/catalog-model/src/kinds/UserEntityV1alpha1.ts",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Add summary-only TSDoc comments to apiVersion, kind, and spec on UserEntityV1alpha1.",
+      "rules": [
+        "Insert multi-line `/** ... */` summary-only TSDoc blocks on `apiVersion`, `kind`, and `spec` with no `@public` or `@alpha` release tags.",
+        "Align member descriptions with `Entity` (`src/entity/Entity.ts`) and `src/schema/kinds/User.v1alpha1.schema.json`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 28,
+          "to": 28,
+          "first_line": "apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';",
+          "rule": "Insert a multi-line summary TSDoc block describing the apiVersion of the User entity specification format."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 29,
+          "to": 29,
+          "first_line": "kind: 'User';",
+          "rule": "Insert a multi-line summary TSDoc block describing the high-level entity kind ('User') being described."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 30,
+          "to": 30,
+          "first_line": "spec: {",
+          "rule": "Insert a multi-line summary TSDoc block describing the specification data of the User entity."
+        }
+      ],
+      "style_from": {
+        "path": "packages/catalog-model/src/entity/Entity.ts",
+        "lines": [
+          28,
+          54
+        ],
+        "reason": "Shows summary-only multi-line TSDoc comments on apiVersion, kind, and spec members without member release tags."
+      },
+      "uses": [
+        {
+          "path": "packages/catalog-model/src/schema/kinds/User.v1alpha1.schema.json",
+          "lines": [
+            1,
+            80
+          ],
+          "reason": "JSON schema for UserEntityV1alpha1."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "FR-5",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-5",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": ".changeset/catalog-model-tsdoc-comments.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Create a patch changeset for @backstage/catalog-model summarizing the TSDoc documentation improvements.",
+      "rules": [
+        "Use YAML frontmatter declaring `'@backstage/catalog-model': patch` delimited by `---`.",
+        "Write a concise adopter-facing summary describing the added TSDoc documentation for entity kind interfaces, type guards, policies, and Kubernetes validator functions without listing raw file paths or symbol dumps."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/calm-catalog-placeholders.md",
+        "lines": [
+          1,
+          5
+        ],
+        "reason": "Shows the repo's changeset frontmatter and concise adopter-facing prose format."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "NFR-5",
+        "NFR-6",
+        "AC-5",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ]
+}

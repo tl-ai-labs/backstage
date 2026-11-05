@@ -31,6 +31,9 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
     this.knownFields = knownFields;
   }
 
+  /**
+   * {@inheritDoc EntityPolicy.enforce}
+   */
   async enforce(entity: Entity): Promise<Entity> {
     for (const field of Object.keys(entity)) {
       if (!this.knownFields.includes(field)) {
