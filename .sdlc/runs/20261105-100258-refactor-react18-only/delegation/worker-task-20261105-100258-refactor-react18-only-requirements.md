@@ -1,0 +1,12 @@
+## This invocation
+
+mode: brownfield. intent: refactor. run_id: 20261105-100258-refactor-react18-only.
+Brief: .sdlc/runs/20261105-100258-refactor-react18-only/intent_brief.md (Gate 0 approved; its scope, off-limits list, non-goals and test command are fixed). Discovery snapshot: .sdlc/runs/20261105-100258-refactor-react18-only/discovery.md (lists the 56 manifests with React 17 peer ranges and the code sites).
+Write .sdlc/runs/20261105-100258-refactor-react18-only/requirements.md.
+Phase 1 rules for a refactor run: requirements are a DELTA — state what changes and, above all, what must be preserved (behaviour React 18 users see is unchanged; same test suites pass before and after except removed legacy-render expectations). Sections: In scope (numbered, testable); Out of scope (numbered, from the brief's non-goals and off-limits); Functional requirements as FR-1, FR-2, ... (one per goal item of the brief, items 1-9: peer ranges + peer-deps rule + lockfile via yarn install; external-store shims; render paths; CLI flag and diagnostics; useId; test-utils legacyRoot removal + API report; yarn new templates; docs; changesets); Non-functional requirements NFR-n (invariants preserved, project rules: no yarn build/release, changesets as files never via CLI, no internal symbols in changeset text, minor below 1.0.0 / major at 1.0.0+, Apache 2.0 header with year 2026 only on new source files, prettier only on changed files, lockfiles only via yarn install, API reports via yarn build:api-reports); PII inventory (state none); Role matrix (state not applicable); Acceptance criteria as AC-1, AC-2, ... (executable: yarn tsc, yarn lint:all, yarn lint:peer-deps, the Gate 0 test command, per-package CI=1 yarn test suites the brief lists, grep that no '^17' React range remains in published manifests or yarn new templates, API report consistency); Open questions (only if genuinely open; otherwise state the assumption taken). Keep it concise; reference file paths rather than quoting code.
+
+## The step's input files
+
+Copied into the project for you, in the order given (read each with read_file):
+- .sdlc/runs/20261105-100258-refactor-react18-only/inputs/intent_brief.md
+- .sdlc/runs/20261105-100258-refactor-react18-only/inputs/discovery.md

@@ -1,0 +1,451 @@
+{
+  "section": "units",
+  "source": "units-005.json",
+  "value": [
+    {
+      "id": "U76",
+      "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove LegacyRootOption and legacyRoot option forwarding from renderInTestApp.",
+      "rules": [
+        "1. Remove LegacyRootOption from the './testingLibrary' import.",
+        "2. Narrow the options parameter of renderInTestApp to options: TestAppOptions = {}.",
+        "3. Remove const { legacyRoot } = options and pass only { wrapper: createTestAppWrapper(options) } to renderWithEffects."
+      ],
+      "exports": [
+        {
+          "name": "renderInTestApp",
+          "kind": "function",
+          "params": [
+            {
+              "name": "Component",
+              "type": "ComponentType<PropsWithChildren<{}>> | ReactNode"
+            },
+            {
+              "name": "options",
+              "type": "TestAppOptions"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "import_line": "import { renderInTestApp } from './appWrappers';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+          "rule": "Import only renderWithEffects from './testingLibrary'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257,
+          "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+          "rule": "Change parameter type to options: TestAppOptions = {},"
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 265,
+          "to": 270,
+          "first_line": "const { legacyRoot } = options;",
+          "last_line": "});",
+          "rule": "Remove legacyRoot extraction and return renderWithEffects(wrappedElement, { wrapper: createTestAppWrapper(options) });"
+        }
+      ],
+      "depends_on": [
+        "U75"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-4",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U77",
+      "path": "packages/test-utils/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerate packages/test-utils/report.api.md after removing LegacyRootOption and legacyRoot.",
+      "run": "yarn build:api-reports packages/test-utils",
+      "depends_on": [
+        "U59",
+        "U75",
+        "U76"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-2",
+        "NFR-8",
+        "AC-7"
+      ]
+    },
+    {
+      "id": "U78",
+      "path": "packages/cli-module-new/templates/frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the frontend-plugin template to declare ^18.0.0 for react in peerDependencies and devDependencies.",
+      "rules": [
+        "1. Replace '^16.13.1 || ^17.0.0 || ^18.0.0' with '^18.0.0' in peerDependencies.react and devDependencies.react."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 41,
+          "to": 41,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U79",
+      "path": "packages/cli-module-new/templates/plugin-web-library/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the plugin-web-library template to declare ^18.0.0 for react in peerDependencies and devDependencies.",
+      "rules": [
+        "1. Replace '^16.13.1 || ^17.0.0 || ^18.0.0' with '^18.0.0' in peerDependencies.react and devDependencies.react."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 31,
+          "to": 31,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U80",
+      "path": "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the legacy-frontend-plugin template to declare ^18.0.0 for react and react-dom in peerDependencies and devDependencies.",
+      "rules": [
+        "1. Replace '^16.13.1 || ^17.0.0 || ^18.0.0' with '^18.0.0' for react and react-dom in peerDependencies and devDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 34,
+          "to": 35,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\", and \"react-dom\": \"{{versionQuery 'react-dom' '^18.0.0'}}\","
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 47,
+          "to": 48,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\", and \"react-dom\": \"{{versionQuery 'react-dom' '^18.0.0'}}\","
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U81",
+      "path": "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the scaffolder-field-extension-module template to declare ^18.0.0 for react in peerDependencies.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' in peerDependencies.react."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 35,
+          "first_line": "\"react\": \"^17.0.0 || ^18.0.0\"",
+          "rule": "Replace with \"react\": \"^18.0.0\""
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U82",
+      "path": "docs/tutorials/react18-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update the React 18 migration tutorial to state that Backstage requires React 18 and show ^18.0.0 peerDependency ranges while preserving migration examples.",
+      "rules": [
+        "1. Update the introductory note and opening paragraph to state that Backstage core libraries and plugins require React 18 (React 16 and 17 support has been removed).",
+        "2. In the Backstage Frontend Plugin section, update the target added ranges for @types/react, react, and react-dom in devDependencies and peerDependencies to '^18.0.0' (with '^17.0.0 || ^18.0.0' as the removed range).",
+        "3. Preserve all other migration steps and examples (ReactDOM.createRoot, TypeScript errors, and @testing-library/react test migration)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 7,
+          "to": 13,
+          "first_line": ":::info",
+          "last_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+          "rule": "State in the info block and opening paragraph that Backstage core libraries and plugins require React 18 and no longer support React 16 or 17."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 80,
+          "to": 89,
+          "first_line": "// highlight-remove-start",
+          "last_line": "// highlight-add-end",
+          "rule": "Show removing '^17.0.0 || ^18.0.0' and adding '^18.0.0' for '@types/react', 'react', and 'react-dom' in devDependencies."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 97,
+          "to": 106,
+          "first_line": "// highlight-remove-start",
+          "last_line": "// highlight-add-end",
+          "rule": "Show removing '^17.0.0 || ^18.0.0' and adding '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U83",
+      "path": "docs/tutorials/jsx-transform-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Reconcile React 17 statements in jsx-transform-migration.md to reflect that React 18 is now required.",
+      "rules": [
+        "1. In 'What this means for you', update the version references so React 18 (and future React 19) are the supported Backstage React versions while keeping the historical note that the transform was introduced in React 17.",
+        "2. Replace 'once React 17 is fully deprecated' with 'now that React 17 support has been removed' without changing any tsconfig compilerOptions examples."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 11,
+          "to": 12,
+          "first_line": "- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (17, 18, or when 19 becomes available for Backstage).",
+          "last_line": "- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended even on React 17 or 18, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.",
+          "rule": "Update active React version references to React 18 (and future 19) while noting the transform was introduced in React 17."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 61,
+          "to": 61,
+          "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+          "rule": "Replace with: In the future, this setting will change to `preserve` now that React 17 support has been removed."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U84",
+      "path": "docs/tutorials/migrate-to-mui5.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update migrate-to-mui5.md to specify ^18.0.0 React peerDependencies instead of ^17.0.0.",
+      "rules": [
+        "1. Update the peerDependencies snippet and prose to state '^18.0.0' for 'react' and 'react-dom'.",
+        "2. Update step 5 in the Plugins checklist to state '\"react\": \"^18.0.0\"' as a peer dependency."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 50,
+          "first_line": "Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:",
+          "last_line": "\"react-router-dom\": \"6.0.0-beta.0 || ^6.3.0\"",
+          "rule": "State that Material UI v5 and Backstage require React 18 and show \"react\": \"^18.0.0\" and \"react-dom\": \"^18.0.0\" in peerDependencies."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 69,
+          "to": 69,
+          "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency",
+          "rule": "Replace with: 5. Ensure you are using `\"react\": \"^18.0.0\"` as a peer dependency"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U85",
+      "path": ".changeset/require-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Record breaking-change changeset entries for the 57 affected published packages (excluding @backstage/test-utils) requiring React 18.",
+      "rules": [
+        "1. In YAML frontmatter, list the 16 affected published packages at >=1.0.0 (excluding '@backstage/test-utils') as major: '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/integration-react', '@backstage/version-bridge', '@backstage/plugin-catalog', '@backstage/plugin-catalog-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-react', '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib', '@backstage/plugin-techdocs-react'.",
+        "2. In YAML frontmatter, list all 41 affected published packages at <1.0.0 as minor: '@backstage/cli-module-build', '@backstage/cli-module-new', '@backstage/cli-module-test-jest', '@backstage/core-compat-api', '@backstage/core-components', '@backstage/frontend-app-api', '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/module-federation-common', '@backstage/theme', '@backstage/ui', '@backstage/plugin-api-docs', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-app', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-auth', '@backstage/plugin-auth-react', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import', '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools', '@backstage/plugin-devtools-react', '@backstage/plugin-home', '@backstage/plugin-home-react', '@backstage/plugin-kubernetes', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-mui-to-bui', '@backstage/plugin-notifications', '@backstage/plugin-org', '@backstage/plugin-org-react', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-signals', '@backstage/plugin-signals-react', '@backstage/plugin-user-settings'.",
+        "3. Do not include '@backstage/test-utils' (covered by U86) or private/repo-only packages ('app-example-plugin', '@internal/plugin-todo-list', '@backstage/repo-tools').",
+        "4. Write plain adopter-facing prose explaining only that React 17 support has been removed and React 18 ('^18.0.0') is now required for 'react', 'react-dom', and '@types/react' across Backstage packages and templates, with no '@backstage/test-utils' migration text.",
+        "5. Do not mention any internal or unexported symbol names."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "lines": [
+          1,
+          20
+        ],
+        "reason": "Backstage breaking changeset formatting and adopter-facing migration prose"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-9",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-6",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U86",
+      "path": ".changeset/test-utils-remove-legacy-root.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Record a dedicated major changeset for @backstage/test-utils covering both the removal of LegacyRootOption/legacyRoot with migration guidance and the React 18 (^18.0.0) peer dependency requirement.",
+      "rules": [
+        "1. In YAML frontmatter, list only `'@backstage/test-utils': major`.",
+        "2. Describe in plain adopter-facing prose that the `LegacyRootOption` type and the `legacyRoot` option on `renderWithEffects` and `renderInTestApp` have been removed, with migration guidance to remove `legacyRoot` from `renderWithEffects` and `renderInTestApp` calls.",
+        "3. Also state that `@backstage/test-utils` now requires React 18 (its `react`, `react-dom`, and `@types/react` peer dependency ranges are now `^18.0.0`).",
+        "4. Do not mention any internal or unexported symbol names."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "lines": [
+          1,
+          20
+        ],
+        "reason": "Backstage breaking changeset formatting and adopter-facing migration prose"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "FR-9",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-6",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ],
+  "hashes": {
+    "packages/test-utils/src/testUtils/appWrappers.tsx": "94779df6448853da391d2bc8e1410223561b30493e9e24399d55956356131af7",
+    "packages/cli-module-new/templates/frontend-plugin/package.json.hbs": "184339778924bbdc34acdedc66241e50001afbcca5df7af512a6293a24647911",
+    "packages/cli-module-new/templates/plugin-web-library/package.json.hbs": "10c2397840cc50b46c8f7a97d5f335f7b60842d6647168d0f9511bcad8ebbacc",
+    "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs": "2e657320946edc1c95292e3468fa622081741864db636126fa8c5c9859ce861a",
+    "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs": "bc92d1f1cd0f0b35416d0030daeb6ba57b7bba11f6503f62b0b0795b8e2ffb4e",
+    "docs/tutorials/react18-migration.md": "4f29f1e28bc5f61194cba89741a626f67b2be571d217fa13150502e2262c7246",
+    "docs/tutorials/jsx-transform-migration.md": "615c2241edb6b2b6b6946dcf933ffb4d53a2038af5d23289f92d49ec3c83009d",
+    "docs/tutorials/migrate-to-mui5.md": "4da995dec08de83626cf8506c913714dbff8a0f77d0b13f7d3b20cc512e1ab6f",
+    ".changeset/tidy-birds-mock.md": "291a7842176fe15f3f66d4cee5834aebe9451b93e3034efaa62c8275f3b3daab"
+  }
+}

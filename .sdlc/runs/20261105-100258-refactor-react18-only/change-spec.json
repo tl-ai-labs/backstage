@@ -1,0 +1,3810 @@
+{
+  "header": {
+    "conventions": [
+      "Formatting uses Prettier with @backstage/cli/config/prettier (single quotes, trailing commas, 2-space indentation); run Prettier only on changed files.",
+      "New source files must start with the standard 15-line Apache 2.0 license header with Copyright 2026 The Backstage Authors; existing files must keep their original copyright year.",
+      "Never modify ESLint, Prettier, or TypeScript configuration files (.eslintrc.js, tsconfig.json, .prettierignore).",
+      "Never manually edit yarn.lock, workspaces/ui/yarn.lock, or packages/test-utils/report.api.md; update lockfiles only via yarn install and API reports only via yarn build:api-reports.",
+      "Changeset files in .changeset/*.md are authored directly in plain adopter-facing language without internal symbol names (never mention HAS_REACT_DOM_CLIENT, hasReactDomClient, or checkReactVersion).",
+      "Breaking changes (narrowing React peerDependencies to ^18.0.0 and removing LegacyRootOption/legacyRoot) use minor for packages below 1.0.0 and major for packages at 1.0.0 or above; private packages are excluded from changesets."
+    ],
+    "decisions": [
+      {
+        "topic": "Peer dependency range target and repo-tools enforcement",
+        "choice": "Set react, react-dom, and @types/react peerDependencies to ^18.0.0 across all 56 workspace manifests and make ^18.0.0 the sole default in packages/repo-tools/src/commands/peer-deps/peer-deps.ts by removing peerDependenciesReact18Only and react18OnlyPackages",
+        "rejected": [
+          "Keep react18OnlyPackages Set in peer-deps.ts",
+          "Use ^18.0.2 for peerDependencies instead of ^18.0.0"
+        ],
+        "reason": "All Backstage packages now require React 18+, matching the existing ^18.0.0 peer range used by @backstage/ui."
+      },
+      {
+        "topic": "External-store hook imports",
+        "choice": "Import useSyncExternalStore from react in useRouteRef.tsx and useBreakpoint.ts and remove use-sync-external-store and @types/use-sync-external-store from packages/frontend-plugin-api/package.json, packages/ui/package.json, and plugins/app/package.json",
+        "rejected": [
+          "Keep use-sync-external-store/shim re-exports"
+        ],
+        "reason": "useSyncExternalStore is built into React 18, making the React 17 compatibility shim package redundant."
+      },
+      {
+        "topic": "Root rendering in dev-utils, frontend-dev-utils, and techdocs",
+        "choice": "Use react-dom/client createRoot unconditionally without process.env.HAS_REACT_DOM_CLIENT checks or ReactDOM.render fallbacks",
+        "rejected": [
+          "Keep dynamic fallback to ReactDOM.render"
+        ],
+        "reason": "React 18 always provides react-dom/client and createRoot."
+      },
+      {
+        "topic": "CLI bundler flag and React version diagnostics",
+        "choice": "Remove process.env.HAS_REACT_DOM_CLIENT from bundler/config.ts and cli-module-test-jest/config/jest.js, remove hasReactDomClient.ts, and update startFrontend.ts and bundler/server.ts diagnostics to state React 18 as the minimum required version",
+        "rejected": [
+          "Hardcode process.env.HAS_REACT_DOM_CLIENT to true"
+        ],
+        "reason": "The bundler env flag existed solely for React 17 conditional imports, and CLI diagnostics must reflect the React 18 minimum requirement."
+      },
+      {
+        "topic": "Component ID generation in @backstage/ui",
+        "choice": "Import useId from react instead of react-aria in Popover.tsx, Tooltip.tsx, Table.tsx, and TablePagination.tsx",
+        "rejected": [
+          "Continue importing useId from react-aria"
+        ],
+        "reason": "React 18 provides native useId."
+      },
+      {
+        "topic": "Removal of LegacyRootOption and legacyRoot in @backstage/test-utils",
+        "choice": "Remove LegacyRootOption type and legacyRoot option forwarding from testingLibrary.ts and appWrappers.tsx and regenerate packages/test-utils/report.api.md",
+        "rejected": [
+          "Keep LegacyRootOption as a deprecated no-op type"
+        ],
+        "reason": "Approved at Gate 0 as a major breaking change for @backstage/test-utils with migration guidance in its changeset."
+      },
+      {
+        "topic": "Changeset organization and semver levels",
+        "choice": "Create new .changeset/*.md files covering all affected non-private packages with minor (<1.0.0) or major (>=1.0.0) bumps since existing .changeset/*.md files are already recorded in .changeset/pre.json",
+        "rejected": [
+          "Modify existing changesets already consumed in .changeset/pre.json"
+        ],
+        "reason": "Changesets listed in .changeset/pre.json have already been applied in pre-release mode, so new changesets are required to version affected packages."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "test",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 120
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      },
+      {
+        "id": "lint-peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "test-gate0",
+        "run": "CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+      },
+      {
+        "id": "test-frontend-dev-utils",
+        "run": "CI=1 yarn test packages/frontend-dev-utils"
+      },
+      {
+        "id": "test-dev-utils",
+        "run": "CI=1 yarn test packages/dev-utils"
+      },
+      {
+        "id": "test-techdocs-transformers",
+        "run": "CI=1 yarn test plugins/techdocs/src/reader/transformers"
+      },
+      {
+        "id": "test-test-utils",
+        "run": "CI=1 yarn test packages/test-utils"
+      },
+      {
+        "id": "test-cli-module-build",
+        "run": "CI=1 yarn test packages/cli-module-build"
+      },
+      {
+        "id": "test-cli-module-new",
+        "run": "CI=1 yarn test packages/cli-module-new"
+      },
+      {
+        "id": "test-repo-tools-peer-deps",
+        "run": "CI=1 yarn test packages/repo-tools/src/commands/peer-deps"
+      },
+      {
+        "id": "test-frontend-plugin-api",
+        "run": "CI=1 yarn test packages/frontend-plugin-api"
+      },
+      {
+        "id": "test-ui",
+        "run": "CI=1 yarn test packages/ui"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Require ^18.0.0 for @types/react, react, and react-dom peerDependencies by default and remove the react18OnlyPackages exception.",
+      "rules": [
+        "1. In peerDependencies, set '@types/react', 'react', and 'react-dom' to '^18.0.0' while keeping 'react-router-dom' at '^6.30.2'.",
+        "2. Remove peerDependenciesReact18Only, react18OnlyPackages, and getExpectedPeerDependencies.",
+        "3. Update matchesPeerDependency and the package loop to read expected versions directly from peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 50,
+          "first_line": "const peerDependencies = {",
+          "last_line": "const react18OnlyPackages = new Set(['@backstage/ui']);",
+          "rule": "Set '@types/react', 'react', and 'react-dom' to '^18.0.0' in peerDependencies and delete peerDependenciesReact18Only and react18OnlyPackages."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 92,
+          "to": 108,
+          "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+          "last_line": "};",
+          "rule": "Remove getExpectedPeerDependencies and compare packageJson.peerDependencies[dep] against peerDependencies[dep as keyof typeof peerDependencies] in matchesPeerDependency."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 145,
+          "to": 145,
+          "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+          "rule": "Assign const expectedPeerDeps = peerDependencies;"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "packages/app-defaults/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/app-defaults to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 60,
+          "to": 62,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "packages/app-example-plugin/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in app-example-plugin to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 57,
+          "to": 59,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "packages/core-app-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/core-app-api to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 83,
+          "to": 85,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "packages/core-compat-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/core-compat-api to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 61,
+          "to": 63,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "packages/core-components/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/core-components to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 131,
+          "to": 133,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "packages/core-plugin-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/core-plugin-api to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 74,
+          "to": 76,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "packages/dev-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/dev-utils to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 66,
+          "to": 68,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "packages/frontend-app-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/frontend-app-api to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 64,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "packages/frontend-defaults/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/frontend-defaults to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "packages/frontend-dev-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/frontend-dev-utils to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 56,
+          "to": 58,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "packages/frontend-dynamic-feature-loader/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/frontend-dynamic-feature-loader to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "packages/frontend-plugin-api/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove use-sync-external-store and @types/use-sync-external-store and narrow React peerDependencies in @backstage/frontend-plugin-api to ^18.0.0.",
+      "rules": [
+        "1. Remove 'use-sync-external-store' from dependencies and strip the trailing comma from '@standard-schema/spec'.",
+        "2. Remove '@types/use-sync-external-store' from devDependencies.",
+        "3. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 52,
+          "to": 53,
+          "first_line": "\"@standard-schema/spec\": \"^1.1.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "Remove 'use-sync-external-store' and keep '\"@standard-schema/spec\": \"^1.1.0\"' without a trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 64,
+          "to": 64,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Delete '@types/use-sync-external-store' from devDependencies."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 72,
+          "to": 74,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U14",
+      "path": "packages/frontend-test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/frontend-test-utils to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 68,
+          "to": 70,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U15",
+      "path": "packages/integration-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/integration-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 55,
+          "to": 57,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U16",
+      "path": "packages/module-federation-common/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/module-federation-common to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 57,
+          "to": 59,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U17",
+      "path": "packages/test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/test-utils to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 79,
+          "to": 81,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-4",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U18",
+      "path": "packages/theme/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/theme to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 56,
+          "to": 58,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U19",
+      "path": "packages/version-bridge/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/version-bridge to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 49,
+          "to": 51,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U20",
+      "path": "packages/ui/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove use-sync-external-store and @types/use-sync-external-store from @backstage/ui.",
+      "rules": [
+        "1. Remove 'use-sync-external-store' from dependencies and strip the trailing comma from 'react-stately'.",
+        "2. Remove '@types/use-sync-external-store' from devDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 59,
+          "first_line": "\"react-stately\": \"~3.51.0\",",
+          "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+          "rule": "Remove 'use-sync-external-store' and keep '\"react-stately\": \"~3.51.0\"' without a trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 70,
+          "to": 70,
+          "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+          "rule": "Delete '@types/use-sync-external-store' from devDependencies."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-2",
+        "NFR-6",
+        "AC-3"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U21",
+      "path": "plugins/api-docs/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-api-docs to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 96,
+          "to": 98,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U22",
+      "path": "plugins/api-docs-module-protoc-gen-doc/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-api-docs-module-protoc-gen-doc to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 51,
+          "to": 53,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U23",
+      "path": "plugins/app/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove use-sync-external-store and narrow React peerDependencies in @backstage/plugin-app to ^18.0.0.",
+      "rules": [
+        "1. Delete 'use-sync-external-store' from dependencies.",
+        "2. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 78,
+          "to": 78,
+          "first_line": "\"use-sync-external-store\": \"^1.4.0\",",
+          "rule": "Delete 'use-sync-external-store' from dependencies."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 98,
+          "to": 100,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U24",
+      "path": "plugins/app-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-app-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 60,
+          "to": 62,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U25",
+      "path": "plugins/app-visualizer/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-app-visualizer to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 53,
+          "to": 55,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U26",
+      "path": "plugins/auth/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-auth to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 72,
+          "to": 74,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U27",
+      "path": "plugins/auth-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-auth-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 61,
+          "to": 63,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U28",
+      "path": "plugins/catalog/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-catalog to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 115,
+          "to": 117,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U29",
+      "path": "plugins/catalog-graph/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-catalog-graph to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 87,
+          "to": 89,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U30",
+      "path": "plugins/catalog-import/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-catalog-import to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 98,
+          "to": 100,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U31",
+      "path": "plugins/catalog-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-catalog-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 115,
+          "to": 117,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U32",
+      "path": "plugins/catalog-unprocessed-entities/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-catalog-unprocessed-entities to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 81,
+          "to": 83,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U33",
+      "path": "plugins/config-schema/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-config-schema to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 63,
+          "to": 65,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U34",
+      "path": "plugins/devtools/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-devtools to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 83,
+          "to": 85,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U35",
+      "path": "plugins/devtools-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-devtools-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U36",
+      "path": "plugins/example-todo-list/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @internal/plugin-todo-list to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 59,
+          "to": 61,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U37",
+      "path": "plugins/home/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-home to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 101,
+          "to": 103,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U38",
+      "path": "plugins/home-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-home-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 78,
+          "to": 80,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U39",
+      "path": "plugins/kubernetes/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-kubernetes to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 84,
+          "to": 86,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U40",
+      "path": "plugins/kubernetes-cluster/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-kubernetes-cluster to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 83,
+          "to": 85,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U41",
+      "path": "plugins/kubernetes-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-kubernetes-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 94,
+          "to": 96,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U42",
+      "path": "plugins/mui-to-bui/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-mui-to-bui to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U43",
+      "path": "plugins/notifications/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-notifications to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 86,
+          "to": 88,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U44",
+      "path": "plugins/org/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-org to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 93,
+          "to": 95,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U45",
+      "path": "plugins/org-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-org-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 67,
+          "to": 69,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U46",
+      "path": "plugins/permission-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-permission-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies (keeping no trailing comma on 'react-dom')."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 62,
+          "to": 64,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\"",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0' without a trailing comma on 'react-dom'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U47",
+      "path": "plugins/scaffolder/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-scaffolder to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 136,
+          "to": 138,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U48",
+      "path": "plugins/scaffolder-node-test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-scaffolder-node-test-utils to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U49",
+      "path": "plugins/scaffolder-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-scaffolder-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 125,
+          "to": 127,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U50",
+      "path": "plugins/search/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-search to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 95,
+          "to": 97,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U51",
+      "path": "plugins/search-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-search-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 90,
+          "to": 92,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U52",
+      "path": "plugins/signals/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-signals to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 78,
+          "to": 80,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U53",
+      "path": "plugins/signals-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-signals-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 58,
+          "to": 60,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U54",
+      "path": "plugins/techdocs/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-techdocs to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 111,
+          "to": 113,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U55",
+      "path": "plugins/techdocs-addons-test-utils/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-techdocs-addons-test-utils to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 66,
+          "to": 68,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U56",
+      "path": "plugins/techdocs-module-addons-contrib/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-techdocs-module-addons-contrib to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 82,
+          "to": 84,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U57",
+      "path": "plugins/techdocs-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-techdocs-react to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 87,
+          "to": 89,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U58",
+      "path": "plugins/user-settings/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Narrow React peerDependencies in @backstage/plugin-user-settings to ^18.0.0.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 93,
+          "to": 95,
+          "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+          "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+          "rule": "Set '@types/react', 'react', and 'react-dom' peerDependencies to '^18.0.0'."
+        }
+      ],
+      "style_from": {
+        "path": "packages/ui/package.json",
+        "lines": [
+          79,
+          84
+        ],
+        "reason": "React 18 peerDependencies declaration format"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "NFR-6",
+        "AC-3",
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U59",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Refresh yarn.lock after all workspace package.json manifest edits.",
+      "run": "yarn install",
+      "depends_on": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10",
+        "U11",
+        "U12",
+        "U13",
+        "U14",
+        "U15",
+        "U16",
+        "U17",
+        "U18",
+        "U19",
+        "U20",
+        "U21",
+        "U22",
+        "U23",
+        "U24",
+        "U25",
+        "U26",
+        "U27",
+        "U28",
+        "U29",
+        "U30",
+        "U31",
+        "U32",
+        "U33",
+        "U34",
+        "U35",
+        "U36",
+        "U37",
+        "U38",
+        "U39",
+        "U40",
+        "U41",
+        "U42",
+        "U43",
+        "U44",
+        "U45",
+        "U46",
+        "U47",
+        "U48",
+        "U49",
+        "U50",
+        "U51",
+        "U52",
+        "U53",
+        "U54",
+        "U55",
+        "U56",
+        "U57",
+        "U58"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "NFR-7",
+        "AC-3"
+      ]
+    },
+    {
+      "id": "U60",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Import useSyncExternalStore directly from react instead of use-sync-external-store/shim in useRouteRef.",
+      "rules": [
+        "1. Replace the separate 'react' and 'use-sync-external-store/shim' imports with a single import { useMemo, useSyncExternalStore } from 'react'."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "Import both useMemo and useSyncExternalStore from 'react': import { useMemo, useSyncExternalStore } from 'react';"
+        }
+      ],
+      "depends_on": [
+        "U13"
+      ],
+      "covers": [
+        "FR-2",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U61",
+      "path": "packages/ui/src/hooks/useBreakpoint.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Import useSyncExternalStore directly from react instead of use-sync-external-store/shim in useBreakpoint.",
+      "rules": [
+        "1. Replace the separate 'react' and 'use-sync-external-store/shim' imports with a single import { useMemo, useSyncExternalStore } from 'react'."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "Import both useMemo and useSyncExternalStore from 'react': import { useMemo, useSyncExternalStore } from 'react';"
+        }
+      ],
+      "depends_on": [
+        "U20"
+      ],
+      "covers": [
+        "FR-2",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U62",
+      "path": "packages/ui/src/components/Popover/Popover.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Import useId from react instead of react-aria in Popover.",
+      "rules": [
+        "1. Replace the separate 'react' and 'react-aria' imports with a single import { forwardRef, useId } from 'react'."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { forwardRef } from 'react';",
+          "last_line": "import { useId } from 'react-aria';",
+          "rule": "Import both forwardRef and useId from 'react': import { forwardRef, useId } from 'react';"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-5",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U63",
+      "path": "packages/ui/src/components/Tooltip/Tooltip.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Import useId from react instead of react-aria in Tooltip.",
+      "rules": [
+        "1. Replace the separate 'react' and 'react-aria' imports with a single import { forwardRef, useId } from 'react'."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { forwardRef } from 'react';",
+          "last_line": "import { useId } from 'react-aria';",
+          "rule": "Import both forwardRef and useId from 'react': import { forwardRef, useId } from 'react';"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-5",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U64",
+      "path": "packages/ui/src/components/Table/components/Table.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Import useId from react instead of react-aria in Table.",
+      "rules": [
+        "1. Delete import { useId } from 'react-aria'.",
+        "2. Add useId to the existing import from 'react' (import { useId, useMemo } from 'react')."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useId } from 'react-aria';",
+          "rule": "Delete the react-aria useId import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 39,
+          "to": 39,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Import both useId and useMemo from 'react': import { useId, useMemo } from 'react';"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-5",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U65",
+      "path": "packages/ui/src/components/TablePagination/TablePagination.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Import useId from react instead of react-aria in TablePagination.",
+      "rules": [
+        "1. Delete import { useId } from 'react-aria'.",
+        "2. Add useId to the existing import from 'react' (import { useId, useMemo } from 'react')."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useId } from 'react-aria';",
+          "rule": "Delete the react-aria useId import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 25,
+          "to": 25,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "Import both useId and useMemo from 'react': import { useId, useMemo } from 'react';"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-5",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U66",
+      "path": "packages/dev-utils/src/devApp/render.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Render DevApp directly with createRoot from react-dom/client without HAS_REACT_DOM_CLIENT or ReactDOM.render fallback.",
+      "rules": [
+        "1. Replace import 'react-dom' with import { createRoot } from 'react-dom/client'.",
+        "2. Delete the ReactDOMPromise variable and process.env.HAS_REACT_DOM_CLIENT conditional import.",
+        "3. In DevAppBuilder.render(), mount directly via createRoot(document.getElementById('root')!).render(<DevApp />)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 53,
+          "to": 53,
+          "first_line": "import 'react-dom';",
+          "rule": "Replace with import { createRoot } from 'react-dom/client';"
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 58,
+          "to": 65,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "Delete ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT branch."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 320,
+          "to": 328,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Replace with createRoot(document.getElementById('root')!).render(<DevApp />);"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U67",
+      "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Render createDevApp directly with createRoot from react-dom/client without HAS_REACT_DOM_CLIENT or ReactDOM.render fallback.",
+      "rules": [
+        "1. Replace import 'react-dom' with import { createRoot } from 'react-dom/client'.",
+        "2. Delete the ReactDOMPromise variable and process.env.HAS_REACT_DOM_CLIENT conditional import.",
+        "3. In createDevApp(), render the root fragment directly via createRoot(rootElement).render(...)."
+      ],
+      "exports": [],
+      "import_line": "import { createDevApp } from './createDevApp';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 24,
+          "to": 24,
+          "first_line": "import 'react-dom';",
+          "rule": "Replace with import { createRoot } from 'react-dom/client';"
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 43,
+          "to": 50,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "Delete ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT branch."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 109,
+          "to": 124,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Render the fragment directly with createRoot(rootElement).render(<><Suspense fallback={null}><BuiCss /></Suspense>{AppRoot}</>);"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U68",
+      "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Remove the legacy ReactDOM.render fallback test while preserving React 18 mounting, bindRoutes, and missing root element coverage.",
+      "rules": [
+        "1. Delete the test case 'should fall back to legacy react-dom rendering when createRoot is unavailable'.",
+        "2. Keep the remaining three test cases ('should render a dev app with a plugin', 'should forward bindRoutes to createApp', 'should throw a clear error when the root element is missing') unchanged."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 150,
+          "to": 192,
+          "first_line": "it('should fall back to legacy react-dom rendering when createRoot is unavailable', async () => {",
+          "last_line": "});",
+          "rule": "Delete the legacy react-dom rendering fallback test case."
+        }
+      ],
+      "depends_on": [
+        "U67"
+      ],
+      "covers": [
+        "FR-3",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "tests": [
+        {
+          "name": "should render a dev app with a plugin",
+          "given": "a #root DOM element and a test frontend plugin with a PageBlueprint",
+          "expect": "mounts and renders the plugin page content into document.body"
+        },
+        {
+          "name": "should forward bindRoutes to createApp",
+          "given": "mocked createApp, plugin-app, and react-dom/client createRoot",
+          "expect": "passes bindRoutes and features to createApp and mounts via createRoot(root)"
+        },
+        {
+          "name": "should throw a clear error when the root element is missing",
+          "given": "document.body without a #root element",
+          "expect": "throws an error stating the '#root' element could not be found"
+        }
+      ],
+      "checks": [
+        "test",
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U69",
+      "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Render React elements in TechDocs transformers directly with createRoot from react-dom/client.",
+      "rules": [
+        "1. Replace ReactDOMPromise and the process.env.HAS_REACT_DOM_CLIENT branch with import { createRoot } from 'react-dom/client'.",
+        "2. In renderReactElement(element, root), call createRoot(root).render(element) directly."
+      ],
+      "exports": [
+        {
+          "name": "renderReactElement",
+          "kind": "function",
+          "params": [
+            {
+              "name": "element",
+              "type": "JSX.Element"
+            },
+            {
+              "name": "root",
+              "type": "HTMLElement"
+            }
+          ],
+          "returns": "void"
+        }
+      ],
+      "import_line": "import { renderReactElement } from './renderReactElement';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 35,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "Import { createRoot } from 'react-dom/client' and implement renderReactElement(element: JSX.Element, root: HTMLElement) using createRoot(root).render(element)."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-3",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U70",
+      "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove hasReactDomClient import and process.env.HAS_REACT_DOM_CLIENT definitions from both webpack and rspack bundler configs.",
+      "rules": [
+        "1. Delete import { hasReactDomClient } from './hasReactDomClient'.",
+        "2. Delete the 'process.env.HAS_REACT_DOM_CLIENT' entry and its comment from both the webpack.DefinePlugin and bundler.DefinePlugin calls."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37,
+          "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+          "rule": "Delete the hasReactDomClient import."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 272,
+          "to": 276,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Delete the comment and 'process.env.HAS_REACT_DOM_CLIENT' definition in the webpack DefinePlugin branch."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 281,
+          "to": 285,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Delete the comment and 'process.env.HAS_REACT_DOM_CLIENT' definition in the rspack DefinePlugin branch."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U71",
+      "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove hasReactDomClient import and React 17 deprecation warning from startFrontend (delegating React 18 minimum version check to serveBundle).",
+      "rules": [
+        "1. Delete import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient'.",
+        "2. Delete the if (!hasReactDomClient()) warning block so React version diagnostics are handled by serveBundle's checkReactVersion()."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+          "rule": "Delete the hasReactDomClient import."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 45,
+          "to": 49,
+          "first_line": "if (!hasReactDomClient()) {",
+          "last_line": "}",
+          "rule": "Delete the if (!hasReactDomClient()) deprecation warning block."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U72",
+      "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update checkReactVersion in bundler/server.ts to warn when React is below version 18 (16 or 17) and state React 18 as the minimum required version.",
+      "rules": [
+        "1. In checkReactVersion(), check if reactPkg.version.startsWith('16.') || reactPkg.version.startsWith('17.').",
+        "2. Update the warning message to state that React versions below 18 are no longer supported in Backstage and instruct upgrading to React 18 (referencing https://backstage.io/docs/tutorials/react18-migration/)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 276,
+          "to": 287,
+          "first_line": "if (reactPkg.version.startsWith('16.')) {",
+          "last_line": "}",
+          "rule": "Check for React 16 or 17 (reactPkg.version.startsWith('16.') || reactPkg.version.startsWith('17.')) and log a yellow warning stating React 18 is the minimum required version and to upgrade to React 18."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U73",
+      "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Delete the unused hasReactDomClient.ts helper after removing its imports from config.ts and startFrontend.ts.",
+      "run": "rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "depends_on": [
+        "U70",
+        "U71"
+      ],
+      "covers": [
+        "FR-4",
+        "AC-1",
+        "AC-2",
+        "AC-5"
+      ]
+    },
+    {
+      "id": "U74",
+      "path": "packages/cli-module-test-jest/config/jest.js",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove process.env.HAS_REACT_DOM_CLIENT initialization from the Jest configuration.",
+      "rules": [
+        "1. Delete the try/catch block that resolves 'react-dom/client' and sets process.env.HAS_REACT_DOM_CLIENT = true."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 52,
+          "to": 59,
+          "first_line": "try {",
+          "last_line": "}",
+          "rule": "Delete the try/catch block setting process.env.HAS_REACT_DOM_CLIENT."
+        }
+      ],
+      "depends_on": [
+        "U66",
+        "U67",
+        "U68",
+        "U69"
+      ],
+      "covers": [
+        "FR-4",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-2",
+        "AC-4",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U75",
+      "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove the exported LegacyRootOption type and remove LegacyRootOption from renderWithEffects options.",
+      "rules": [
+        "1. Delete the LegacyRootOption type export and its JSDoc comment.",
+        "2. Narrow the options parameter of renderWithEffects to options?: Pick<RenderOptions, 'wrapper'>."
+      ],
+      "exports": [
+        {
+          "name": "renderWithEffects",
+          "kind": "function",
+          "params": [
+            {
+              "name": "nodes",
+              "type": "ReactElement"
+            },
+            {
+              "name": "options",
+              "type": "Pick<RenderOptions, 'wrapper'>"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "import_line": "import { renderWithEffects } from './testingLibrary';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 25,
+          "to": 31,
+          "first_line": "/**",
+          "last_line": "",
+          "rule": "Delete the LegacyRootOption JSDoc comment, type declaration, and trailing blank line."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 46,
+          "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+          "rule": "Change parameter type to options?: Pick<RenderOptions, 'wrapper'>,"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-4",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U76",
+      "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove LegacyRootOption and legacyRoot option forwarding from renderInTestApp.",
+      "rules": [
+        "1. Remove LegacyRootOption from the './testingLibrary' import.",
+        "2. Narrow the options parameter of renderInTestApp to options: TestAppOptions = {}.",
+        "3. Remove const { legacyRoot } = options and pass only { wrapper: createTestAppWrapper(options) } to renderWithEffects."
+      ],
+      "exports": [
+        {
+          "name": "renderInTestApp",
+          "kind": "function",
+          "params": [
+            {
+              "name": "Component",
+              "type": "ComponentType<PropsWithChildren<{}>> | ReactNode"
+            },
+            {
+              "name": "options",
+              "type": "TestAppOptions"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "import_line": "import { renderInTestApp } from './appWrappers';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+          "rule": "Import only renderWithEffects from './testingLibrary'."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257,
+          "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+          "rule": "Change parameter type to options: TestAppOptions = {},"
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 265,
+          "to": 270,
+          "first_line": "const { legacyRoot } = options;",
+          "last_line": "});",
+          "rule": "Remove legacyRoot extraction and return renderWithEffects(wrappedElement, { wrapper: createTestAppWrapper(options) });"
+        }
+      ],
+      "depends_on": [
+        "U75"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-1",
+        "NFR-5",
+        "NFR-6",
+        "AC-1",
+        "AC-2",
+        "AC-4",
+        "AC-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U77",
+      "path": "packages/test-utils/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerate packages/test-utils/report.api.md after removing LegacyRootOption and legacyRoot.",
+      "run": "yarn build:api-reports packages/test-utils",
+      "depends_on": [
+        "U59",
+        "U75",
+        "U76"
+      ],
+      "covers": [
+        "FR-6",
+        "NFR-2",
+        "NFR-8",
+        "AC-7"
+      ]
+    },
+    {
+      "id": "U78",
+      "path": "packages/cli-module-new/templates/frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the frontend-plugin template to declare ^18.0.0 for react in peerDependencies and devDependencies.",
+      "rules": [
+        "1. Replace '^16.13.1 || ^17.0.0 || ^18.0.0' with '^18.0.0' in peerDependencies.react and devDependencies.react."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 41,
+          "to": 41,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U79",
+      "path": "packages/cli-module-new/templates/plugin-web-library/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the plugin-web-library template to declare ^18.0.0 for react in peerDependencies and devDependencies.",
+      "rules": [
+        "1. Replace '^16.13.1 || ^17.0.0 || ^18.0.0' with '^18.0.0' in peerDependencies.react and devDependencies.react."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 31,
+          "to": 31,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\""
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U80",
+      "path": "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the legacy-frontend-plugin template to declare ^18.0.0 for react and react-dom in peerDependencies and devDependencies.",
+      "rules": [
+        "1. Replace '^16.13.1 || ^17.0.0 || ^18.0.0' with '^18.0.0' for react and react-dom in peerDependencies and devDependencies."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 34,
+          "to": 35,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\", and \"react-dom\": \"{{versionQuery 'react-dom' '^18.0.0'}}\","
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 47,
+          "to": 48,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Replace with \"react\": \"{{versionQuery 'react' '^18.0.0'}}\", and \"react-dom\": \"{{versionQuery 'react-dom' '^18.0.0'}}\","
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U81",
+      "path": "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Update the scaffolder-field-extension-module template to declare ^18.0.0 for react in peerDependencies.",
+      "rules": [
+        "1. Replace '^17.0.0 || ^18.0.0' with '^18.0.0' in peerDependencies.react."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 35,
+          "first_line": "\"react\": \"^17.0.0 || ^18.0.0\"",
+          "rule": "Replace with \"react\": \"^18.0.0\""
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-7",
+        "AC-5",
+        "AC-6"
+      ]
+    },
+    {
+      "id": "U82",
+      "path": "docs/tutorials/react18-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update the React 18 migration tutorial to state that Backstage requires React 18 and show ^18.0.0 peerDependency ranges while preserving migration examples.",
+      "rules": [
+        "1. Update the introductory note and opening paragraph to state that Backstage core libraries and plugins require React 18 (React 16 and 17 support has been removed).",
+        "2. In the Backstage Frontend Plugin section, update the target added ranges for @types/react, react, and react-dom in devDependencies and peerDependencies to '^18.0.0' (with '^17.0.0 || ^18.0.0' as the removed range).",
+        "3. Preserve all other migration steps and examples (ReactDOM.createRoot, TypeScript errors, and @testing-library/react test migration)."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 7,
+          "to": 13,
+          "first_line": ":::info",
+          "last_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+          "rule": "State in the info block and opening paragraph that Backstage core libraries and plugins require React 18 and no longer support React 16 or 17."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 80,
+          "to": 89,
+          "first_line": "// highlight-remove-start",
+          "last_line": "// highlight-add-end",
+          "rule": "Show removing '^17.0.0 || ^18.0.0' and adding '^18.0.0' for '@types/react', 'react', and 'react-dom' in devDependencies."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 97,
+          "to": 106,
+          "first_line": "// highlight-remove-start",
+          "last_line": "// highlight-add-end",
+          "rule": "Show removing '^17.0.0 || ^18.0.0' and adding '^18.0.0' for '@types/react', 'react', and 'react-dom' in peerDependencies."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U83",
+      "path": "docs/tutorials/jsx-transform-migration.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Reconcile React 17 statements in jsx-transform-migration.md to reflect that React 18 is now required.",
+      "rules": [
+        "1. In 'What this means for you', update the version references so React 18 (and future React 19) are the supported Backstage React versions while keeping the historical note that the transform was introduced in React 17.",
+        "2. Replace 'once React 17 is fully deprecated' with 'now that React 17 support has been removed' without changing any tsconfig compilerOptions examples."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 11,
+          "to": 12,
+          "first_line": "- **If you are already using the New JSX Transform:** You are not impacted by this change, regardless of your React version (17, 18, or when 19 becomes available for Backstage).",
+          "last_line": "- **If you are NOT using the New JSX Transform (likely if you're importing React like `import React from 'react'`):** You will need to adopt it before upgrading to React 19. This typically involves changing your imports, as the New JSX Transform doesn't require importing the entire React namespace to use JSX. This is recommended even on React 17 or 18, as it was a change introduced with React 17. Although a best practice since React 17, Backstage did not adopt this transform when it upgraded.",
+          "rule": "Update active React version references to React 18 (and future 19) while noting the transform was introduced in React 17."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 61,
+          "to": 61,
+          "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+          "rule": "Replace with: In the future, this setting will change to `preserve` now that React 17 support has been removed."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U84",
+      "path": "docs/tutorials/migrate-to-mui5.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Update migrate-to-mui5.md to specify ^18.0.0 React peerDependencies instead of ^17.0.0.",
+      "rules": [
+        "1. Update the peerDependencies snippet and prose to state '^18.0.0' for 'react' and 'react-dom'.",
+        "2. Update step 5 in the Plugins checklist to state '\"react\": \"^18.0.0\"' as a peer dependency."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 43,
+          "to": 50,
+          "first_line": "Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:",
+          "last_line": "\"react-router-dom\": \"6.0.0-beta.0 || ^6.3.0\"",
+          "rule": "State that Material UI v5 and Backstage require React 18 and show \"react\": \"^18.0.0\" and \"react-dom\": \"^18.0.0\" in peerDependencies."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 69,
+          "to": 69,
+          "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency",
+          "rule": "Replace with: 5. Ensure you are using `\"react\": \"^18.0.0\"` as a peer dependency"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-8",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U85",
+      "path": ".changeset/require-react-18.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Record breaking-change changeset entries for the 57 affected published packages (excluding @backstage/test-utils) requiring React 18.",
+      "rules": [
+        "1. In YAML frontmatter, list the 16 affected published packages at >=1.0.0 (excluding '@backstage/test-utils') as major: '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/integration-react', '@backstage/version-bridge', '@backstage/plugin-catalog', '@backstage/plugin-catalog-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-react', '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib', '@backstage/plugin-techdocs-react'.",
+        "2. In YAML frontmatter, list all 41 affected published packages at <1.0.0 as minor: '@backstage/cli-module-build', '@backstage/cli-module-new', '@backstage/cli-module-test-jest', '@backstage/core-compat-api', '@backstage/core-components', '@backstage/frontend-app-api', '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/module-federation-common', '@backstage/theme', '@backstage/ui', '@backstage/plugin-api-docs', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-app', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-auth', '@backstage/plugin-auth-react', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import', '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools', '@backstage/plugin-devtools-react', '@backstage/plugin-home', '@backstage/plugin-home-react', '@backstage/plugin-kubernetes', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-mui-to-bui', '@backstage/plugin-notifications', '@backstage/plugin-org', '@backstage/plugin-org-react', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-signals', '@backstage/plugin-signals-react', '@backstage/plugin-user-settings'.",
+        "3. Do not include '@backstage/test-utils' (covered by U86) or private/repo-only packages ('app-example-plugin', '@internal/plugin-todo-list', '@backstage/repo-tools').",
+        "4. Write plain adopter-facing prose explaining only that React 17 support has been removed and React 18 ('^18.0.0') is now required for 'react', 'react-dom', and '@types/react' across Backstage packages and templates, with no '@backstage/test-utils' migration text.",
+        "5. Do not mention any internal or unexported symbol names."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "lines": [
+          1,
+          20
+        ],
+        "reason": "Backstage breaking changeset formatting and adopter-facing migration prose"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-9",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-6",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U86",
+      "path": ".changeset/test-utils-remove-legacy-root.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Record a dedicated major changeset for @backstage/test-utils covering both the removal of LegacyRootOption/legacyRoot with migration guidance and the React 18 (^18.0.0) peer dependency requirement.",
+      "rules": [
+        "1. In YAML frontmatter, list only `'@backstage/test-utils': major`.",
+        "2. Describe in plain adopter-facing prose that the `LegacyRootOption` type and the `legacyRoot` option on `renderWithEffects` and `renderInTestApp` have been removed, with migration guidance to remove `legacyRoot` from `renderWithEffects` and `renderInTestApp` calls.",
+        "3. Also state that `@backstage/test-utils` now requires React 18 (its `react`, `react-dom`, and `@types/react` peer dependency ranges are now `^18.0.0`).",
+        "4. Do not mention any internal or unexported symbol names."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/tidy-birds-mock.md",
+        "lines": [
+          1,
+          20
+        ],
+        "reason": "Backstage breaking changeset formatting and adopter-facing migration prose"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-6",
+        "FR-9",
+        "NFR-2",
+        "NFR-3",
+        "NFR-4",
+        "NFR-6",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ]
+}

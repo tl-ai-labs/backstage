@@ -1,0 +1,8 @@
+Changes asked for this step:
+
+Gate 2 revise from the person: Split U85 into two changesets, each its own docs unit under .changeset/*.md (allowed by the frozen write contract):
+(a) a new changeset for @backstage/test-utils only, bump major, describing BOTH that the LegacyRootOption type and the legacyRoot option (on renderWithEffects / renderInTestApp) were removed, with migration guidance (remove legacyRoot from render calls), AND that the package now requires React 18 (its react/react-dom/@types/react peer range is now ^18.0.0) — test-utils is itself one of the narrowed packages, so its own changeset must keep its peer change covered.
+(b) U85's changeset for the other 57 packages (the 16 other major packages and the 41 minor packages, exactly as planned, with @backstage/test-utils removed from its frontmatter), covering only the React 18 peer requirement and with no test-utils migration text.
+Both: plain adopter-facing prose, no internal symbol names, Prettier check, style from .changeset/tidy-birds-mock.md. Split the Covers ids so FR-6/AC-8 test-utils guidance lands on the test-utils unit and FR-9/AC-8 on both. Change nothing else in the spec: every other unit, site, check, decision and the scope stay as they are. Edit only the units section holding U85 (and add the new unit there), re-check it with plan-lint --section, and return.
+
+Edit the pieces you handed in and hand each changed one in again.

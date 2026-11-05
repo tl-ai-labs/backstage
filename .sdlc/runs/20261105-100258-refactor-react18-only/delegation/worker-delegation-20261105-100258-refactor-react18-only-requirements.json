@@ -1,0 +1,101 @@
+{
+  "schema": "delegation-record/1",
+  "task_id": "20261105-100258-refactor-react18-only-requirements",
+  "phase": "requirements_analysis",
+  "task_type": "judgment",
+  "module": "judgment",
+  "model_id": "argon",
+  "model_name": "gemini-4-argon",
+  "cable": {
+    "sdk": "google-antigravity",
+    "sdk_version": "0.1.22",
+    "vertex_project": "temp-genmedia-study",
+    "vertex_location": "global",
+    "thinking": "HIGH"
+  },
+  "workdir": "/Users/macbook/Documents/GitHub/backstage",
+  "started_at": "2026-11-05T04:58:39.931Z",
+  "duration_ms": 137556,
+  "success": true,
+  "error": null,
+  "cost_usd": 0.177658,
+  "tokens": {
+    "input": 37614,
+    "input_cached": 0,
+    "output": 10243,
+    "output_reasoning": 5513
+  },
+  "tool_calls": {
+    "count": 3,
+    "truncated": false,
+    "sample": [
+      {
+        "name": "read_file",
+        "args": {
+          "path": ".sdlc/runs/20261105-100258-refactor-react18-only/inputs/intent_brief.md"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "read_file",
+        "args": {
+          "path": ".sdlc/runs/20261105-100258-refactor-react18-only/inputs/discovery.md"
+        },
+        "canonical_path": null,
+        "args_clipped": false
+      },
+      {
+        "name": "write_requirements",
+        "args": {
+          "content": "# Requirements — Require React 18 and Remove React 17 Compatibility\n\n- **Run ID**: `20261105-100258-refactor-react18-only`\n- **Mode / Intent**: `brownfield` / `refactor`\n- **Delta Summary**:\n  - **What changes**: Narrow React peer dependency ranges (`react`, `react-dom`, `@types/react`) from `^17.0.0 || ^18.0.0` to `^18.0.0` across 56 workspace manifests and the `repo-tools` peer-deps policy; replace `use-sync-external-store/shim` and `react-aria` `useId` imports with native React 18 APIs; replace `HAS_REACT_DOM_CLIENT` conditional imports and `ReactDOM.render` fallbacks with `react-dom/client` `createRoot`; remove `HAS_REACT_DOM_CLIENT` bundler/Jest definitions and `hasReactDomClient.ts`; update CLI React version diagnostics to require React 18; remove `LegacyRootOption` and `legacyRoot` from `@backstage/test-utils` and regenerate its API report; update `yarn new` templates and tutorial docs to specify React 18; and record breaking-change changesets for all affected published packages.\n  - **What is preserved**: Runtime, rendering, hook, and build behaviour visible to React 18 users is completely unchanged. All existing test suites pass before and after the refactor, except for the removed legacy `ReactDOM.render` fallback expectation in `packages/frontend-dev-utils/src/createDevApp.test.tsx`.\n\n---\n\n## In scope\n\n1. Narrow `react`, `react-dom`, and `@types/react` peer dependency ranges to `^18.0.0` in the 56 `package.json` manifests listed in `discovery.md` (preserving `peerDependenciesMeta` optional flags), update `packages/repo-tools/src/commands/peer-deps/peer-deps.ts` (and its tests if present) to enforce `^18.0.0` by default without `react18OnlyPackages`, and refresh `yarn.lock` (and `workspaces/ui/yarn.lock` if affected) via `yarn install`.\n2. Replace `use-sync-external-store/shim` with native `useSyncExternalStore` from `react` in `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` and `packages/ui/src/hooks/useBreakpoint.ts`, and remove `use-sync-exte"
+        },
+        "canonical_path": null,
+        "args_clipped": true
+      }
+    ]
+  },
+  "files": {
+    "added": [],
+    "modified": [],
+    "removed": [],
+    "unchanged": 19361,
+    "scanned": 19361,
+    "truncated": false,
+    "unreadable": []
+  },
+  "artifacts": {
+    "brief": "worker-task-20261105-100258-refactor-react18-only-requirements.md",
+    "usage": "worker-usage-20261105-100258-refactor-react18-only-requirements.json",
+    "system": "worker-system-20261105-100258-refactor-react18-only-requirements.md"
+  },
+  "gemini": {
+    "project": "temp-genmedia-study",
+    "location": "global",
+    "tries": [
+      {
+        "location": "global",
+        "ended_by": "answer",
+        "http_codes": [],
+        "s": 132.217,
+        "served_tier": "standard",
+        "input_tokens": 37614,
+        "input_tokens_cached": 0,
+        "output_tokens": 10243,
+        "cost_usd": 0.177658
+      }
+    ],
+    "ended_by": "answer",
+    "last_status": null,
+    "stall_cuts": 0,
+    "failovers": 0,
+    "cut_calls": 0,
+    "google_wait_ms": 0,
+    "work_ms": 132569,
+    "slept_ms": 0,
+    "sdk_version": "0.1.22",
+    "usage_semantics": "inclusive",
+    "unavailable": null,
+    "endpoint_override": null
+  }
+}

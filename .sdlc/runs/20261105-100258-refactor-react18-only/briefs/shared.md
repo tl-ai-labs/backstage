@@ -1,0 +1,107 @@
+## Conventions
+
+- Formatting uses Prettier with @backstage/cli/config/prettier (single quotes, trailing commas, 2-space indentation); run Prettier only on changed files.
+- New source files must start with the standard 15-line Apache 2.0 license header with Copyright 2026 The Backstage Authors; existing files must keep their original copyright year.
+- Never modify ESLint, Prettier, or TypeScript configuration files (.eslintrc.js, tsconfig.json, .prettierignore).
+- Never manually edit yarn.lock, workspaces/ui/yarn.lock, or packages/test-utils/report.api.md; update lockfiles only via yarn install and API reports only via yarn build:api-reports.
+- Changeset files in .changeset/*.md are authored directly in plain adopter-facing language without internal symbol names (never mention HAS_REACT_DOM_CLIENT, hasReactDomClient, or checkReactVersion).
+- Breaking changes (narrowing React peerDependencies to ^18.0.0 and removing LegacyRootOption/legacyRoot) use minor for packages below 1.0.0 and major for packages at 1.0.0 or above; private packages are excluded from changesets.
+
+## Decisions
+
+- Peer dependency range target and repo-tools enforcement: Set react, react-dom, and @types/react peerDependencies to ^18.0.0 across all 56 workspace manifests and make ^18.0.0 the sole default in packages/repo-tools/src/commands/peer-deps/peer-deps.ts by removing peerDependenciesReact18Only and react18OnlyPackages (not Keep react18OnlyPackages Set in peer-deps.ts; not Use ^18.0.2 for peerDependencies instead of ^18.0.0) — All Backstage packages now require React 18+, matching the existing ^18.0.0 peer range used by @backstage/ui.
+- External-store hook imports: Import useSyncExternalStore from react in useRouteRef.tsx and useBreakpoint.ts and remove use-sync-external-store and @types/use-sync-external-store from packages/frontend-plugin-api/package.json, packages/ui/package.json, and plugins/app/package.json (not Keep use-sync-external-store/shim re-exports) — useSyncExternalStore is built into React 18, making the React 17 compatibility shim package redundant.
+- Root rendering in dev-utils, frontend-dev-utils, and techdocs: Use react-dom/client createRoot unconditionally without process.env.HAS_REACT_DOM_CLIENT checks or ReactDOM.render fallbacks (not Keep dynamic fallback to ReactDOM.render) — React 18 always provides react-dom/client and createRoot.
+- CLI bundler flag and React version diagnostics: Remove process.env.HAS_REACT_DOM_CLIENT from bundler/config.ts and cli-module-test-jest/config/jest.js, remove hasReactDomClient.ts, and update startFrontend.ts and bundler/server.ts diagnostics to state React 18 as the minimum required version (not Hardcode process.env.HAS_REACT_DOM_CLIENT to true) — The bundler env flag existed solely for React 17 conditional imports, and CLI diagnostics must reflect the React 18 minimum requirement.
+- Component ID generation in @backstage/ui: Import useId from react instead of react-aria in Popover.tsx, Tooltip.tsx, Table.tsx, and TablePagination.tsx (not Continue importing useId from react-aria) — React 18 provides native useId.
+- Removal of LegacyRootOption and legacyRoot in @backstage/test-utils: Remove LegacyRootOption type and legacyRoot option forwarding from testingLibrary.ts and appWrappers.tsx and regenerate packages/test-utils/report.api.md (not Keep LegacyRootOption as a deprecated no-op type) — Approved at Gate 0 as a major breaking change for @backstage/test-utils with migration guidance in its changeset.
+- Changeset organization and semver levels: Create new .changeset/*.md files covering all affected non-private packages with minor (<1.0.0) or major (>=1.0.0) bumps since existing .changeset/*.md files are already recorded in .changeset/pre.json (not Modify existing changesets already consumed in .changeset/pre.json) — Changesets listed in .changeset/pre.json have already been applied in pre-release mode, so new changesets are required to version affected packages.
+
+## Files of this change
+
+- `packages/repo-tools/src/commands/peer-deps/peer-deps.ts` (U01, edit)
+- `packages/app-defaults/package.json` (U02, edit)
+- `packages/app-example-plugin/package.json` (U03, edit)
+- `packages/core-app-api/package.json` (U04, edit)
+- `packages/core-compat-api/package.json` (U05, edit)
+- `packages/core-components/package.json` (U06, edit)
+- `packages/core-plugin-api/package.json` (U07, edit)
+- `packages/dev-utils/package.json` (U08, edit)
+- `packages/frontend-app-api/package.json` (U09, edit)
+- `packages/frontend-defaults/package.json` (U10, edit)
+- `packages/frontend-dev-utils/package.json` (U11, edit)
+- `packages/frontend-dynamic-feature-loader/package.json` (U12, edit)
+- `packages/frontend-plugin-api/package.json` (U13, edit)
+- `packages/frontend-test-utils/package.json` (U14, edit)
+- `packages/integration-react/package.json` (U15, edit)
+- `packages/module-federation-common/package.json` (U16, edit)
+- `packages/test-utils/package.json` (U17, edit)
+- `packages/theme/package.json` (U18, edit)
+- `packages/version-bridge/package.json` (U19, edit)
+- `packages/ui/package.json` (U20, edit)
+- `plugins/api-docs/package.json` (U21, edit)
+- `plugins/api-docs-module-protoc-gen-doc/package.json` (U22, edit)
+- `plugins/app/package.json` (U23, edit)
+- `plugins/app-react/package.json` (U24, edit)
+- `plugins/app-visualizer/package.json` (U25, edit)
+- `plugins/auth/package.json` (U26, edit)
+- `plugins/auth-react/package.json` (U27, edit)
+- `plugins/catalog/package.json` (U28, edit)
+- `plugins/catalog-graph/package.json` (U29, edit)
+- `plugins/catalog-import/package.json` (U30, edit)
+- `plugins/catalog-react/package.json` (U31, edit)
+- `plugins/catalog-unprocessed-entities/package.json` (U32, edit)
+- `plugins/config-schema/package.json` (U33, edit)
+- `plugins/devtools/package.json` (U34, edit)
+- `plugins/devtools-react/package.json` (U35, edit)
+- `plugins/example-todo-list/package.json` (U36, edit)
+- `plugins/home/package.json` (U37, edit)
+- `plugins/home-react/package.json` (U38, edit)
+- `plugins/kubernetes/package.json` (U39, edit)
+- `plugins/kubernetes-cluster/package.json` (U40, edit)
+- `plugins/kubernetes-react/package.json` (U41, edit)
+- `plugins/mui-to-bui/package.json` (U42, edit)
+- `plugins/notifications/package.json` (U43, edit)
+- `plugins/org/package.json` (U44, edit)
+- `plugins/org-react/package.json` (U45, edit)
+- `plugins/permission-react/package.json` (U46, edit)
+- `plugins/scaffolder/package.json` (U47, edit)
+- `plugins/scaffolder-node-test-utils/package.json` (U48, edit)
+- `plugins/scaffolder-react/package.json` (U49, edit)
+- `plugins/search/package.json` (U50, edit)
+- `plugins/search-react/package.json` (U51, edit)
+- `plugins/signals/package.json` (U52, edit)
+- `plugins/signals-react/package.json` (U53, edit)
+- `plugins/techdocs/package.json` (U54, edit)
+- `plugins/techdocs-addons-test-utils/package.json` (U55, edit)
+- `plugins/techdocs-module-addons-contrib/package.json` (U56, edit)
+- `plugins/techdocs-react/package.json` (U57, edit)
+- `plugins/user-settings/package.json` (U58, edit)
+- `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` (U60, edit)
+- `packages/ui/src/hooks/useBreakpoint.ts` (U61, edit)
+- `packages/ui/src/components/Popover/Popover.tsx` (U62, edit)
+- `packages/ui/src/components/Tooltip/Tooltip.tsx` (U63, edit)
+- `packages/ui/src/components/Table/components/Table.tsx` (U64, edit)
+- `packages/ui/src/components/TablePagination/TablePagination.tsx` (U65, edit)
+- `packages/dev-utils/src/devApp/render.tsx` (U66, edit)
+- `packages/frontend-dev-utils/src/createDevApp.tsx` (U67, edit) — import: `import { createDevApp } from './createDevApp';`
+- `packages/frontend-dev-utils/src/createDevApp.test.tsx` (U68, edit)
+- `plugins/techdocs/src/reader/transformers/renderReactElement.ts` (U69, edit) — import: `import { renderReactElement } from './renderReactElement';`
+  - `function renderReactElement(element: JSX.Element, root: HTMLElement): void`
+- `packages/cli-module-build/src/lib/bundler/config.ts` (U70, edit)
+- `packages/cli-module-build/src/commands/package/start/startFrontend.ts` (U71, edit)
+- `packages/cli-module-build/src/lib/bundler/server.ts` (U72, edit)
+- `packages/cli-module-test-jest/config/jest.js` (U74, edit)
+- `packages/test-utils/src/testUtils/testingLibrary.ts` (U75, edit) — import: `import { renderWithEffects } from './testingLibrary';`
+  - `function renderWithEffects(nodes: ReactElement, options: Pick<RenderOptions, 'wrapper'>): Promise<RenderResult>`
+- `packages/test-utils/src/testUtils/appWrappers.tsx` (U76, edit) — import: `import { renderInTestApp } from './appWrappers';`
+  - `function renderInTestApp(Component: ComponentType<PropsWithChildren<{}>> | ReactNode, options: TestAppOptions): Promise<RenderResult>`
+- `packages/cli-module-new/templates/frontend-plugin/package.json.hbs` (U78, edit)
+- `packages/cli-module-new/templates/plugin-web-library/package.json.hbs` (U79, edit)
+- `packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs` (U80, edit)
+- `packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs` (U81, edit)
+- `docs/tutorials/react18-migration.md` (U82, edit)
+- `docs/tutorials/jsx-transform-migration.md` (U83, edit)
+- `docs/tutorials/migrate-to-mui5.md` (U84, edit)
+- `.changeset/require-react-18.md` (U85, create)
+- `.changeset/test-utils-remove-legacy-root.md` (U86, create)
