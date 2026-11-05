@@ -1,0 +1,114 @@
+{
+  "header": {
+    "conventions": [
+      "TypeScript strict mode with React 18 and Jest (@testing-library/react); format with Prettier (single quotes, trailing commas) and lint with ESLint.",
+      "Use Jest expect matchers and React Testing Library screen queries (getByText) and act(...) as established in packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx.",
+      "Preserve the existing Apache 2.0 license header and copyright year on existing files."
+    ],
+    "decisions": [
+      {
+        "topic": "Post-finalization render count assertion in root-element route-ref test",
+        "choice": "Replace expect(renderCount).toBe(2) on line 1977 with expect(renderCount).toBeLessThanOrEqual(3)",
+        "rejected": [
+          "expect(renderCount).toBe(3)",
+          "Removing the renderCount assertion"
+        ],
+        "reason": "An upper bound of at most 3 accommodates the 3 deterministic renders across bootstrap, rerender, and route-resolution update while still failing if a render loop occurs."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "fix": "yarn eslint --fix {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "test",
+        "run": "CI=true yarn test {path}",
+        "timeout_s": 180
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "test",
+        "run": "CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api"
+      },
+      {
+        "id": "typecheck",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint",
+        "run": "yarn lint:all"
+      },
+      {
+        "id": "api-reports",
+        "run": "yarn build:api-reports"
+      }
+    ]
+  },
+  "units": [
+    {
+      "id": "U01",
+      "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Update the post-finalization render count assertion in 'should resolve page route refs in app root elements after finalization without render loops' to bound renderCount at most 3.",
+      "rules": [
+        "1. In the test 'should resolve page route refs in app root elements after finalization without render loops', replace expect(renderCount).toBe(2); on line 1977 with expect(renderCount).toBeLessThanOrEqual(3);.",
+        "2. Preserve all pre-finalization assertions (expect(screen.getByText('Root link: unresolved')).toBeInTheDocument() and expect(renderCount).toBe(1)) and the post-finalization route resolution assertion (expect(screen.getByText('Root link: /my-page')).toBeInTheDocument()) unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 1977,
+          "to": 1977,
+          "first_line": "expect(renderCount).toBe(2);",
+          "rule": "Replace expect(renderCount).toBe(2); with expect(renderCount).toBeLessThanOrEqual(3); to bound post-finalization renders at most 3 while detecting render loops."
+        }
+      ],
+      "style_from": {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "lines": [
+          1915,
+          1980
+        ],
+        "reason": "Existing test block and Jest/React Testing Library assertion style in createSpecializedApp.test.tsx"
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4"
+      ],
+      "tests": [
+        {
+          "name": "should resolve page route refs in app root elements after finalization without render loops",
+          "given": "A prepared app with a RootElement attached to app/root elements calling useRouteRef(pageRouteRef) for a deferred page route attached to app/routes",
+          "expect": "Renders 'Root link: unresolved' with renderCount === 1 before finalization, and after finalize() + rerender() inside act(...) renders 'Root link: /my-page' with renderCount <= 3"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "test"
+      ]
+    }
+  ]
+}

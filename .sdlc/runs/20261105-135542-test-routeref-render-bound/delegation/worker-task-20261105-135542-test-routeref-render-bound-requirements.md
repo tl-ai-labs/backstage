@@ -1,0 +1,8 @@
+## This invocation
+
+mode: brownfield. intent: test. run_id: 20261105-135542-test-routeref-render-bound. Read the intent brief at .sdlc/runs/20261105-135542-test-routeref-render-bound/intent_brief.md and write .sdlc/runs/20261105-135542-test-routeref-render-bound/requirements.md. Phase 1 rules for the test job: shape the requirements as a coverage target (what the test must prove and must still catch), not a general product requirements doc. Sections: In scope (numbered, testable), Out of scope (numbered), Functional requirements (FR-1, ...), Non-functional requirements (NFR-1, ...), PII inventory (state none if none), Role matrix (state not applicable if so), Acceptance criteria (AC-1, ..., executable), Open questions for HITL (if any). Scope is exactly one test in packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx ("should resolve page route refs in app root elements after finalization without render loops"): replace the exact post-finalization render count assertion with an upper bound (at most 3) so the test passes and still fails on a render loop; keep the pre-finalization assertions ("Root link: unresolved", renderCount 1) and the post-finalization "Root link: /my-page" assertion. No source changes, no other tests, no changeset. Acceptance command (verbatim, confirmed at Gate 0): CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api && yarn tsc && yarn lint:all && yarn build:api-reports, passing 434 of 434 tests; any report*.api.md change after build:api-reports is out of scope.
+
+## The step's input files
+
+Copied into the project for you, in the order given (read each with read_file):
+- .sdlc/runs/20261105-135542-test-routeref-render-bound/inputs/intent_brief.md

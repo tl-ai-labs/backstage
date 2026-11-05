@@ -14,13 +14,26 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
 import { SubRouteRef } from './SubRouteRef';
 import { ExternalRouteRef } from './ExternalRouteRef';
-import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
+import {
+  RouteFunc,
+  RouteResolutionApi,
+  routeResolutionApiRef,
+  useApi,
+} from '../apis';
+
+type SubscribableRouteResolutionApi = RouteResolutionApi & {
+  subscribe?(listener: () => void): () => void;
+  getSnapshot?(): unknown;
+};
+
+const noopSubscribe = () => () => {};
+const noopGetSnapshot = () => undefined;
 
 /**
  * React hook for constructing URLs to routes.
@@ -40,12 +53,51 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
     | ExternalRouteRef<TParams>,
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
-  const routeResolutionApi = useApi(routeResolutionApiRef);
-
-  const routeFunc = useMemo(
-    () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+  const routeResolutionApi: SubscribableRouteResolutionApi = useApi(
+    routeResolutionApiRef,
   );
+
+  const { subscribe, getSnapshot } = useMemo(() => {
+    if (
+      typeof routeResolutionApi.subscribe === 'function' &&
+      typeof routeResolutionApi.getSnapshot === 'function'
+    ) {
+      return {
+        subscribe: routeResolutionApi.subscribe.bind(routeResolutionApi),
+        getSnapshot: routeResolutionApi.getSnapshot.bind(routeResolutionApi),
+      };
+    }
+    if (typeof routeResolutionApi.subscribe === 'function') {
+      let revision = 0;
+      const boundSubscribe =
+        routeResolutionApi.subscribe.bind(routeResolutionApi);
+      return {
+        subscribe: (listener: () => void) =>
+          boundSubscribe(() => {
+            revision += 1;
+            listener();
+          }),
+        getSnapshot: () => revision,
+      };
+    }
+    return {
+      subscribe: noopSubscribe,
+      getSnapshot: noopGetSnapshot,
+    };
+  }, [routeResolutionApi]);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
+
+  const routeFunc = useMemo(() => {
+    const resolver =
+      snapshot &&
+      typeof snapshot === 'object' &&
+      'resolve' in snapshot &&
+      typeof snapshot.resolve === 'function'
+        ? (snapshot as RouteResolutionApi)
+        : routeResolutionApi;
+    return resolver.resolve(routeRef, { sourcePath: pathname });
+  }, [routeResolutionApi, routeRef, pathname, snapshot]);
 
   return routeFunc;
 }

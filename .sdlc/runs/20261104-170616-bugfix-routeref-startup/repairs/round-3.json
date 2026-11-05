@@ -1,0 +1,55 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261104-170616-bugfix-routeref-startup",
+    "artifact_path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+    "instruction": "Fix `packages/frontend-plugin-api/src/routing/useRouteRef.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api fails:\n  ● createSpecializedApp › prepareSpecializedApp › should resolve page route refs in app root elements after finalization without render loops\n\n    expect(received).toBe(expected) // Object.is equality\n\n    Expected: 1\n    Received: 2\n\n      1967 |\n      1968 |       expect(screen.getByText('Root link: unresolved')).toBeInTheDocument();\n    > 1969 |       expect(renderCount).toBe(1);\n           |                           ^\n      1970 |\n      1971 |       act(() => {\n      1972 |         const finalizedApp = preparedApp.finalize();\n\n      at Object.toBe (wiring/createSpecializedApp.test.tsx:1969:27)\n\n\nSummary of all failing tests\nFAIL packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx\n  ● createSpecializedApp › prepareSpecializedApp › should resolve page route refs in app root elements after finalization without render loops\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/frontend-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261104-170616-bugfix-routeref-startup/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261104-170616-bugfix-routeref-startup/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        },
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]

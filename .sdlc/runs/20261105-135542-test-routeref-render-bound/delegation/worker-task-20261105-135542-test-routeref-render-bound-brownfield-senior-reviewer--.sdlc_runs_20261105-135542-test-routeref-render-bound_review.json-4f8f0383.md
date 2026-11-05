@@ -1,0 +1,3 @@
+## This invocation
+
+mode: brownfield. intent: test. run_id: 20261105-135542-test-routeref-render-bound. change plan: .sdlc/runs/20261105-135542-test-routeref-render-bound/change_plan.md. provenance: .sdlc/runs/20261105-135542-test-routeref-render-bound/provenance.json. Write your review to: .sdlc/runs/20261105-135542-test-routeref-render-bound/review.json. Suite summary: before the run, CI=true yarn test packages/frontend-app-api packages/frontend-plugin-api FAIL 433/434 (only the target test); after the run, PASS 434/434 (50/50 suites); yarn tsc PASS; yarn lint:all PASS; yarn build:api-reports PASS with no report*.api.md changes.
