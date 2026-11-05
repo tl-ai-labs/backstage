@@ -2007,16 +2007,16 @@ describe('createSpecializedApp', () => {
       it('should resolve route refs in app root elements when finalization happens between initial render and effect subscription', () => {
         const state = { renderCount: 0 };
         const bannerFeature = makeBannerFeature(state);
-        let preparedApp: PreparedSpecializedApp | undefined;
+        const app: { current?: PreparedSpecializedApp } = {};
 
         function Finalizer() {
           useLayoutEffect(() => {
-            preparedApp!.finalize();
+            app.current!.finalize();
           }, []);
           return <div>Finalizer</div>;
         }
 
-        preparedApp = prepareSpecializedApp({
+        app.current = prepareSpecializedApp({
           features: [
             noSignInAppPlugin,
             bannerFeature,
@@ -2036,7 +2036,7 @@ describe('createSpecializedApp', () => {
           ],
         });
 
-        renderPreparedBootstrap(preparedApp);
+        renderPreparedBootstrap(app.current);
 
         expect(screen.getByText('Banner: /parent/child')).toBeInTheDocument();
         expect(state.renderCount).toBe(2);
