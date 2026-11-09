@@ -1,0 +1,270 @@
+[
+  {
+    "id": "U84",
+    "path": "docs/tutorials/react18-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The migration guide states that Backstage packages require React 18 and recommends React 18 only ranges for plugins.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 9,
+        "to": 9,
+        "first_line": "This guide has been updated to include steps for removing support for React 16, as it is now deprecated.",
+        "rule": "`Backstage packages require React 18. React 17 is no longer supported, so you must complete this migration before you upgrade to a Backstage release that requires React 18.`"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 13,
+        "to": 13,
+        "first_line": "The Backstage core libraries and plugins are compatible with all versions of React from v17 to v18. This means that you can migrate projects at your own pace. We do however encourage you to do so sooner rather than later, both to keep up with the evolving ecosystem, but also because React 18 brings performance improvements, in particular in tests.",
+        "rule": "One paragraph: the Backstage core libraries and plugins require React 18 and declare `^18.0.0` peer dependencies for `react`, `react-dom` and `@types/react`; this guide shows how to move an app and its plugins from React 17 to React 18; React 18 also brings performance improvements, in particular in tests."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 86,
+        "to": 88,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Same indentation and commas: `\"@types/react\": \"^18.0.0\",`, `\"react\": \"^18.0.2\",`, `\"react-dom\": \"^18.0.2\",`."
+      },
+      {
+        "id": "S4",
+        "at": "replace",
+        "from": 103,
+        "to": 105,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Same indentation and commas, each value \"^18.0.0\"."
+      },
+      {
+        "id": "S5",
+        "at": "delete",
+        "from": 131,
+        "to": 134,
+        "first_line": ":::info",
+        "last_line": "",
+        "rule": "Remove the admonition that suggests keeping React 17 devDependencies in some plugins (it no longer satisfies the React 18 peers) and the blank line after it."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-16"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U85",
+    "path": "docs/tutorials/migrate-to-mui5.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The MUI 5 guide recommends React 18 only peer ranges.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 43,
+        "to": 43,
+        "first_line": "Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:",
+        "rule": "`Material UI v5 requires React 17 or higher, and Backstage packages require React 18. If you use Material UI v5 components in your plugins, declare React 18 peer dependencies for these plugins:`"
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 48,
+        "to": 49,
+        "first_line": "\"react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Same indentation and commas, each value \"^18.0.0\"."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 69,
+        "to": 69,
+        "first_line": "5. Ensure you are using `\"react\": \"^17.0.0\"` (or newer) as a peer dependency",
+        "rule": "`5. Ensure you are using `\"react\": \"^18.0.0\"` as a peer dependency.`"
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-16"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U86",
+    "path": "docs/tutorials/jsx-transform-migration.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The JSX transform guide no longer speaks of React 17 being deprecated in the future.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 61,
+        "to": 62,
+        "first_line": "In the future, this setting will change to `preserve` once React 17 is fully deprecated.",
+        "last_line": "",
+        "rule": "Remove the sentence and the blank line after it."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-16"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U87",
+    "path": "packages/eslint-plugin/docs/rules/no-undeclared-imports.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "The rule example uses a React 18 range.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 35,
+        "to": 35,
+        "first_line": "\"react\": \"^17.0.0\"",
+        "rule": "`\"react\": \"^18.0.0\"` with the same indentation and no trailing comma."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-16"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U88",
+    "path": ".changeset/react18-required-peer-ranges.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Breaking changeset for the 54 published packages whose React peer ranges now require React 18.",
+    "rules": [
+      "Front matter, one line each in this order, `major`: '@backstage/app-defaults', '@backstage/core-app-api', '@backstage/core-plugin-api', '@backstage/dev-utils', '@backstage/integration-react', '@backstage/test-utils', '@backstage/version-bridge', '@backstage/plugin-catalog', '@backstage/plugin-catalog-react', '@backstage/plugin-scaffolder', '@backstage/plugin-scaffolder-react', '@backstage/plugin-search', '@backstage/plugin-search-react', '@backstage/plugin-techdocs', '@backstage/plugin-techdocs-addons-test-utils', '@backstage/plugin-techdocs-module-addons-contrib', '@backstage/plugin-techdocs-react'.",
+      "Then `minor`: '@backstage/core-compat-api', '@backstage/core-components', '@backstage/frontend-app-api', '@backstage/frontend-defaults', '@backstage/frontend-dev-utils', '@backstage/frontend-dynamic-feature-loader', '@backstage/frontend-plugin-api', '@backstage/frontend-test-utils', '@backstage/module-federation-common', '@backstage/theme', '@backstage/plugin-api-docs', '@backstage/plugin-api-docs-module-protoc-gen-doc', '@backstage/plugin-app', '@backstage/plugin-app-react', '@backstage/plugin-app-visualizer', '@backstage/plugin-auth', '@backstage/plugin-auth-react', '@backstage/plugin-catalog-graph', '@backstage/plugin-catalog-import'.",
+      "Then `minor`: '@backstage/plugin-catalog-unprocessed-entities', '@backstage/plugin-config-schema', '@backstage/plugin-devtools', '@backstage/plugin-devtools-react', '@backstage/plugin-home', '@backstage/plugin-home-react', '@backstage/plugin-kubernetes', '@backstage/plugin-kubernetes-cluster', '@backstage/plugin-kubernetes-react', '@backstage/plugin-mui-to-bui', '@backstage/plugin-notifications', '@backstage/plugin-org', '@backstage/plugin-org-react', '@backstage/plugin-permission-react', '@backstage/plugin-scaffolder-node-test-utils', '@backstage/plugin-signals', '@backstage/plugin-signals-react', '@backstage/plugin-user-settings'.",
+      "Body: `**BREAKING**: React 17 is no longer supported. These packages now require React 18, with `^18.0.0` peer dependency ranges for `react`, `react-dom` and `@types/react`. If your app still uses React 17, follow the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration) before you upgrade.`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset front matter and body shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18", "AC-7", "NFR-3"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U89",
+    "path": ".changeset/react18-test-utils-legacy-root.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Breaking changeset for the removed legacyRoot option of @backstage/test-utils.",
+    "rules": [
+      "Front matter: `'@backstage/test-utils': major`.",
+      "Body: `**BREAKING**: Removed the `legacyRoot` option and the `LegacyRootOption` type from `renderWithEffects` and `renderInTestApp`. Tests always render with the React 18 root; remove any `legacyRoot` option you pass to these helpers.`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U90",
+    "path": ".changeset/react18-cli-module-build.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for the React 18 requirement in @backstage/cli-module-build.",
+    "rules": [
+      "Front matter: `'@backstage/cli-module-build': minor`.",
+      "Body: `**BREAKING**: The frontend build and dev server now assume React 18 and no longer inject the build-time flag that reported whether `react-dom/client` is available. When the app you start resolves a React version older than 18, `package start` warns that Backstage requires React 18 and links the [React 18 migration guide](https://backstage.io/docs/tutorials/react18-migration).`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U91",
+    "path": ".changeset/react18-cli-module-test-jest.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for the dropped React 17 probe in @backstage/cli-module-test-jest.",
+    "rules": [
+      "Front matter: `'@backstage/cli-module-test-jest': minor`.",
+      "Body: `**BREAKING**: The Jest configuration now assumes React 18 and no longer sets the environment flag that reported whether `react-dom/client` is available.`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U92",
+    "path": ".changeset/react18-cli-module-new-templates.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for the React 18 only ranges of the yarn new templates.",
+    "rules": [
+      "Front matter: `'@backstage/cli-module-new': minor`.",
+      "Body: `Frontend plugins, plugin web libraries and scaffolder field extension modules created with `yarn new` now declare React 18 only version ranges for `react` and `react-dom`.`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U93",
+    "path": ".changeset/react18-repo-tools-peer-deps.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for the single React 18 range enforced by the repo-tools peer-deps command.",
+    "rules": [
+      "Front matter: `'@backstage/repo-tools': minor`.",
+      "Body: `**BREAKING**: The `peer-deps` command now expects `^18.0.0` peer dependency ranges for `react`, `react-dom` and `@types/react` in every package, and reports packages that still allow React 17. Run it with `--fix` to update your packages.`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U94",
+    "path": ".changeset/react18-ui-builtin-hooks.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Non-breaking changeset for @backstage/ui using React's built-in hooks.",
+    "rules": [
+      "Front matter: `'@backstage/ui': patch`.",
+      "Body, no BREAKING prefix: `Uses the hooks built into React 18 instead of polyfills, and no longer depends on `use-sync-external-store`. The generated element ids that link popovers, tooltips, tables and table pagination to their labels and descriptions now use the React id format.`"
+    ],
+    "import_line": "",
+    "style_from": {
+      "path": ".changeset/four-dingos-filter.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": [],
+    "covers": ["FR-18"],
+    "checks": ["prettier"]
+  }
+]

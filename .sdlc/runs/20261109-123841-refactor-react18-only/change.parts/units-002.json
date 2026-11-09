@@ -1,0 +1,777 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U59",
+      "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useRouteRef takes useSyncExternalStore from React instead of the shim; behaviour and signature are unchanged.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "One line: `import { useMemo, useSyncExternalStore } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-5", "AC-3"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U60",
+      "path": "packages/ui/src/hooks/useBreakpoint.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "useBreakpoint takes useSyncExternalStore from React instead of the shim; behaviour and signature are unchanged.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 17,
+          "first_line": "import { useMemo } from 'react';",
+          "last_line": "import { useSyncExternalStore } from 'use-sync-external-store/shim';",
+          "rule": "One line: `import { useMemo, useSyncExternalStore } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U61",
+      "path": "packages/ui/src/components/Popover/Popover.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Popover takes useId from React instead of react-aria; the id still links the SVG path to its two `use` elements.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { forwardRef } from 'react';",
+          "last_line": "import { useId } from 'react-aria';",
+          "rule": "One line: `import { forwardRef, useId } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U62",
+      "path": "packages/ui/src/components/Tooltip/Tooltip.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Tooltip takes useId from React instead of react-aria; the id still links the SVG path to its two `use` elements.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 18,
+          "first_line": "import { forwardRef } from 'react';",
+          "last_line": "import { useId } from 'react-aria';",
+          "rule": "One line: `import { forwardRef, useId } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U63",
+      "path": "packages/ui/src/components/Table/components/Table.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Table takes useId from React instead of react-aria; the live region id still feeds the region `id` and the table's `aria-describedby`.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useId } from 'react-aria';",
+          "rule": "Remove the react-aria import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 39,
+          "to": 39,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "`import { useId, useMemo } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U64",
+      "path": "packages/ui/src/components/TablePagination/TablePagination.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "TablePagination takes useId from React instead of react-aria; the label id still feeds the label `id` and both buttons' `aria-describedby`.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { useId } from 'react-aria';",
+          "rule": "Remove the react-aria import."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 25,
+          "to": 25,
+          "first_line": "import { useMemo } from 'react';",
+          "rule": "`import { useId, useMemo } from 'react';`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-7"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U65",
+      "path": "packages/dev-utils/src/devApp/render.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The old-system dev app always renders through createRoot from react-dom/client.",
+      "rules": [
+        "Import `createRoot` statically; no `ReactDOMPromise`, no `process.env.HAS_REACT_DOM_CLIENT`, no `ReactDOM.render`.",
+        "`render()` keeps its defaultPage redirect and then calls `createRoot(document.getElementById('root')!).render(<DevApp />);` synchronously."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 53,
+          "to": 53,
+          "first_line": "import 'react-dom';",
+          "rule": "`import { createRoot } from 'react-dom/client';`."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 58,
+          "to": 66,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "",
+          "rule": "Remove the promise declaration, the if/else and the blank line after it."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 320,
+          "to": 328,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "One statement: `createRoot(document.getElementById('root')!).render(<DevApp />);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-8", "AC-4", "AC-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U66",
+      "path": "packages/frontend-dev-utils/src/createDevApp.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "createDevApp always renders through createRoot from react-dom/client.",
+      "rules": [
+        "Import `createRoot` statically; no `ReactDOMPromise`, no `process.env.HAS_REACT_DOM_CLIENT`, no `ReactDOM.render`.",
+        "After `const AppRoot = app.createRoot();` build the same `rootNode` (Fragment with `<Suspense fallback={null}><BuiCss /></Suspense>` then `{AppRoot}`) and call `createRoot(rootElement).render(rootNode);`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 24,
+          "to": 24,
+          "first_line": "import 'react-dom';",
+          "rule": "`import { createRoot } from 'react-dom/client';`."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 43,
+          "to": 51,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "",
+          "rule": "Remove the promise declaration, the if/else and the blank line after it."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 109,
+          "to": 124,
+          "first_line": "ReactDOMPromise.then(ReactDOM => {",
+          "last_line": "});",
+          "rule": "Declare `const rootNode = (...)` exactly as today, then `createRoot(rootElement).render(rootNode);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-9", "AC-4", "AC-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U67",
+      "path": "packages/frontend-dev-utils/src/createDevApp.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Remove the test that exercises the legacy ReactDOM.render fallback; the other three cases stay unchanged.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 149,
+          "to": 192,
+          "first_line": "",
+          "last_line": "});",
+          "rule": "Remove the blank line and the whole 'should fall back to legacy react-dom rendering when createRoot is unavailable' case; line 193 `});` then closes the describe right after the previous case."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should render a dev app with a plugin",
+          "given": "a #root element and a plugin with a page at /",
+          "expect": "'Test Plugin Page' is found in the document"
+        },
+        {
+          "name": "should forward bindRoutes to createApp",
+          "given": "mocked frontend-defaults, plugin-app and react-dom/client createRoot",
+          "expect": "createApp gets bindRoutes and the override plus features, createRoot gets #root, and the rendered node holds the Suspense fallback and the app root"
+        },
+        {
+          "name": "should throw a clear error when the root element is missing",
+          "given": "no #root element",
+          "expect": "createDevApp throws the missing root element error"
+        }
+      ],
+      "depends_on": ["U66"],
+      "covers": ["FR-9", "AC-6"],
+      "checks": ["eslint", "prettier", "jest"]
+    },
+    {
+      "id": "U68",
+      "path": "plugins/techdocs/src/reader/transformers/renderReactElement.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "renderReactElement always renders through createRoot; its exported signature is unchanged.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 35,
+          "first_line": "let ReactDOMPromise: Promise<",
+          "last_line": "}",
+          "rule": "`import { createRoot } from 'react-dom/client';`, a blank line, the unchanged `/** @internal */` comment, then `export function renderReactElement(element: JSX.Element, root: HTMLElement)` whose body is `createRoot(root).render(element);`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-10", "AC-4", "AC-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U69",
+      "path": "packages/cli-module-build/src/lib/bundler/config.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The webpack and rspack DefinePlugin settings stop defining process.env.HAS_REACT_DOM_CLIENT; BUILD_INFO and APP_CONFIG stay.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 37,
+          "to": 37,
+          "first_line": "import { hasReactDomClient } from './hasReactDomClient';",
+          "rule": "Remove the import."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 272,
+          "to": 276,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the comment and the HAS_REACT_DOM_CLIENT entry of the webpack branch."
+        },
+        {
+          "id": "S3",
+          "at": "delete",
+          "from": 281,
+          "to": 285,
+          "first_line": "// This allows for conditional imports of react-dom/client, since there's no way",
+          "last_line": "),",
+          "rule": "Remove the comment and the HAS_REACT_DOM_CLIENT entry of the rspack branch."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-11", "AC-4"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U70",
+      "path": "packages/cli-module-build/src/commands/package/start/startFrontend.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "startFrontend no longer prints the React 17 deprecation warning; the React version check lives in serveBundle.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 26,
+          "to": 26,
+          "first_line": "import { hasReactDomClient } from '../../../lib/bundler/hasReactDomClient';",
+          "rule": "Remove the import."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 45,
+          "to": 50,
+          "first_line": "if (!hasReactDomClient()) {",
+          "last_line": "",
+          "rule": "Remove the if block and the blank line after it, so `const waitForExit` follows the blank line after the readJson call."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-13"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U71",
+      "path": "packages/cli-module-build/src/lib/bundler/server.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "checkReactVersion warns once when the resolved react is older than 18 that Backstage requires React 18 and links the migration guide; React 18 sees nothing.",
+      "rules": [
+        "Lines 269 to 275 (the resolve and require of react/package.json) stay byte-for-byte, so the knip report location server.ts:274:43 stays valid.",
+        "`const reactMajor = Number(reactPkg.version.split('.')[0]);` and warn only when `reactMajor < 18`.",
+        "Print with the existing `console.log(chalk.yellow(` template-string shape; text: `You are using React ${reactPkg.version}, but Backstage requires React 18.` then a line `Follow the migration guide at https://backstage.io/docs/tutorials/react18-migration to upgrade.`; no mention of React 16 or React 17 upgrades.",
+        "The catch block that ignores resolution errors stays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 276,
+          "to": 287,
+          "first_line": "if (reactPkg.version.startsWith('16.')) {",
+          "last_line": "}",
+          "rule": "The React major check and warning described in the rules."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-13"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U72",
+      "path": "packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Delete the react-dom/client probe once no file imports it.",
+      "run": "rm packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts",
+      "depends_on": ["U69", "U70"],
+      "covers": ["FR-11", "AC-4"]
+    },
+    {
+      "id": "U73",
+      "path": "packages/cli-module-test-jest/config/jest.js",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The Jest config no longer probes react-dom/client or sets HAS_REACT_DOM_CLIENT; everything else is unchanged.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 52,
+          "to": 60,
+          "first_line": "try {",
+          "last_line": "",
+          "rule": "Remove the try/catch block and the blank line after it; `paths` stays, other code uses it."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-12", "AC-4"],
+      "checks": ["node-syntax", "prettier"]
+    },
+    {
+      "id": "U74",
+      "path": "packages/test-utils/src/testUtils/testingLibrary.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Remove the LegacyRootOption type; renderWithEffects accepts only the wrapper option.",
+      "exports": [
+        {
+          "name": "renderWithEffects",
+          "kind": "function",
+          "params": [
+            {
+              "name": "nodes",
+              "type": "ReactElement"
+            },
+            {
+              "name": "options",
+              "type": "Pick<RenderOptions, 'wrapper'> | undefined"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "delete",
+          "from": 25,
+          "to": 31,
+          "first_line": "/**",
+          "last_line": "",
+          "rule": "Remove the LegacyRootOption TSDoc, the type and the blank line after it."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 46,
+          "to": 46,
+          "first_line": "options?: Pick<RenderOptions, 'wrapper'> & LegacyRootOption,",
+          "rule": "`options?: Pick<RenderOptions, 'wrapper'>,`."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-14", "AC-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U75",
+      "path": "packages/test-utils/src/testUtils/appWrappers.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "renderInTestApp no longer accepts or forwards legacyRoot.",
+      "exports": [
+        {
+          "name": "renderInTestApp",
+          "kind": "function",
+          "params": [
+            {
+              "name": "Component",
+              "type": "ComponentType<PropsWithChildren<{}>> | ReactNode"
+            },
+            {
+              "name": "options",
+              "type": "TestAppOptions"
+            }
+          ],
+          "returns": "Promise<RenderResult>"
+        }
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "import { LegacyRootOption, renderWithEffects } from './testingLibrary';",
+          "rule": "`import { renderWithEffects } from './testingLibrary';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 257,
+          "to": 257,
+          "first_line": "options: TestAppOptions & LegacyRootOption = {},",
+          "rule": "`options: TestAppOptions = {},`."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 265,
+          "to": 270,
+          "first_line": "const { legacyRoot } = options;",
+          "last_line": "});",
+          "rule": "`return renderWithEffects(wrappedElement, {` then `wrapper: createTestAppWrapper(options),` then `});`."
+        }
+      ],
+      "depends_on": ["U74"],
+      "covers": ["FR-14", "AC-5"],
+      "checks": ["eslint", "prettier"]
+    },
+    {
+      "id": "U76",
+      "path": "packages/cli-module-new/templates/frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New frontend plugins get a React 18 only react range.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 30,
+          "to": 30,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "`\"react\": \"{{versionQuery 'react' '^18.0.0'}}\"` with no trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 41,
+          "to": 41,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "`\"react\": \"{{versionQuery 'react' '^18.0.0'}}\"` with no trailing comma."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-4", "AC-2"],
+      "checks": ["json-parse"]
+    },
+    {
+      "id": "U77",
+      "path": "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New legacy frontend plugins get React 18 only react and react-dom ranges.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 34,
+          "to": 35,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Hints become '^18.0.0' in both lines; keep the trailing commas."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 47,
+          "to": 48,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "last_line": "\"react-dom\": \"{{versionQuery 'react-dom' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\",",
+          "rule": "Hints become '^18.0.0' in both lines; keep the trailing commas."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-4"],
+      "checks": ["json-parse"]
+    },
+    {
+      "id": "U78",
+      "path": "packages/cli-module-new/templates/plugin-web-library/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New web libraries get a React 18 only react range.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 31,
+          "to": 31,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "`\"react\": \"{{versionQuery 'react' '^18.0.0'}}\"` with no trailing comma."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 38,
+          "to": 38,
+          "first_line": "\"react\": \"{{versionQuery 'react' '^16.13.1 || ^17.0.0 || ^18.0.0'}}\"",
+          "rule": "`\"react\": \"{{versionQuery 'react' '^18.0.0'}}\"` with no trailing comma."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-4"],
+      "checks": ["json-parse"]
+    },
+    {
+      "id": "U79",
+      "path": "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "New scaffolder field extension modules get a React 18 only react peer range.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 35,
+          "to": 35,
+          "first_line": "\"react\": \"^17.0.0 || ^18.0.0\"",
+          "rule": "`\"react\": \"^18.0.0\"` with no trailing comma (this template uses no versionQuery here)."
+        }
+      ],
+      "depends_on": [],
+      "covers": ["FR-4"],
+      "checks": ["json-parse"]
+    },
+    {
+      "id": "U80",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "One yarn install from the repo root records the narrowed workspace peer ranges and drops the use-sync-external-store entries the three manifests no longer need.",
+      "run": "yarn install",
+      "depends_on": [
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "U09",
+        "U10",
+        "U11",
+        "U12",
+        "U13",
+        "U14",
+        "U15",
+        "U16",
+        "U17",
+        "U18",
+        "U19",
+        "U20",
+        "U21",
+        "U22",
+        "U23",
+        "U24",
+        "U25",
+        "U26",
+        "U27",
+        "U28",
+        "U29",
+        "U30",
+        "U31",
+        "U32",
+        "U33",
+        "U34",
+        "U35",
+        "U36",
+        "U37",
+        "U38",
+        "U39",
+        "U40",
+        "U41",
+        "U42",
+        "U43",
+        "U44",
+        "U45",
+        "U46",
+        "U47",
+        "U48",
+        "U49",
+        "U50",
+        "U51",
+        "U52",
+        "U53",
+        "U54",
+        "U55",
+        "U56",
+        "U57",
+        "U58"
+      ],
+      "covers": ["FR-6", "NFR-6", "AC-3", "NFR-4", "NFR-5"]
+    },
+    {
+      "id": "U81",
+      "path": "packages/test-utils/report.api.md",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Regenerate the @backstage/test-utils API report with the repo's API report tooling, dropping LegacyRootOption and legacyRoot.",
+      "run": "yarn build:api-reports packages/test-utils",
+      "depends_on": ["U74", "U75", "U80"],
+      "covers": ["FR-15", "AC-8"]
+    },
+    {
+      "id": "U82",
+      "path": "plugins/app/knip-report.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The plugin-app knip report drops the use-sync-external-store finding and follows the line shift of the manifest.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 3,
+          "to": 3,
+          "first_line": "## Unused dependencies (7)",
+          "rule": "`## Unused dependencies (6)`."
+        },
+        {
+          "id": "S2",
+          "at": "delete",
+          "from": 8,
+          "to": 8,
+          "first_line": "| use-sync-external-store      | package.json:78:6 | error    |",
+          "rule": "Remove the row; column widths stay as they are."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 19,
+          "to": 19,
+          "first_line": "| @backstage/dev-utils | package.json:84:6 | error    |",
+          "rule": "`| @backstage/dev-utils | package.json:83:6 | error    |`."
+        }
+      ],
+      "depends_on": ["U22"],
+      "covers": ["FR-17"]
+    },
+    {
+      "id": "U83",
+      "path": "packages/cli-module-build/knip-report.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "The cli-module-build knip report drops the react-dom finding of the deleted probe file.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 11,
+          "to": 16,
+          "first_line": "## Unlisted dependencies (2)",
+          "last_line": "| react     | src/lib/bundler/server.ts:274:43           | error    |",
+          "rule": "Exactly these lines: `## Unlisted dependencies (1)`, a blank line, `| Name  | Location                         | Severity |`, `| :---- | :------------------------------- | :------- |`, `| react | src/lib/bundler/server.ts:274:43 | error    |`."
+        }
+      ],
+      "depends_on": ["U71", "U72"],
+      "covers": ["FR-17"]
+    }
+  ],
+  "hashes": {
+    "packages/frontend-plugin-api/src/routing/useRouteRef.tsx": "bf97a2c70b80b318a982c48fb5aa312dd8987f6f624763fa563dfd6a903de47b",
+    "packages/ui/src/hooks/useBreakpoint.ts": "68a8a42e07baab786d845f20f6052cc90218f9e30ecb98464dff9b490391519f",
+    "packages/ui/src/components/Popover/Popover.tsx": "3f5261401f6bbcb6b49ac37da83a138c01e8606b6b437b00c2b15c80e20a1321",
+    "packages/ui/src/components/Tooltip/Tooltip.tsx": "f4b362cec31f3abb7b0aea4f13f1ed3a78bf6646710d7038a9b685024fcb8ca5",
+    "packages/ui/src/components/Table/components/Table.tsx": "aa1b6e7c770c5a9958df600148ed4599032d88c488798b71fc73133e2ff7b126",
+    "packages/ui/src/components/TablePagination/TablePagination.tsx": "e7912e2b2155d4708c9dd54dc7ad9fd81eabba29d9bc0a2a3517b86976ff73e6",
+    "packages/dev-utils/src/devApp/render.tsx": "4a5b88259566013ada28bf823e30c787eb8e80be92699f1dc8da429032372030",
+    "packages/frontend-dev-utils/src/createDevApp.tsx": "804381e8dac2e21629f84155a24560a789fdf33c00a641cb1f1544c30d3e23e3",
+    "packages/frontend-dev-utils/src/createDevApp.test.tsx": "ef4fcafd83e2fbad7850939805fbf89755627daf70d6fc130850a8e25b22856d",
+    "plugins/techdocs/src/reader/transformers/renderReactElement.ts": "75254f6db81daccc0ca51c554ea74fe7aa61fa85453fae3f353e22019de407f9",
+    "packages/cli-module-build/src/lib/bundler/config.ts": "f74b0b32550ca17f52a804776987d9d990cdcb285ddbca133c1ed1e0ea8eb4d3",
+    "packages/cli-module-build/src/commands/package/start/startFrontend.ts": "791de76149030bd24d1d479d53cc5f6dc4de2d22ab7fc32061e6b7ad022924e1",
+    "packages/cli-module-build/src/lib/bundler/server.ts": "53feca1de3375b3f8c537ce89fbf06d5ac4fbf63783a5b0091c02501d9278cf4",
+    "packages/cli-module-test-jest/config/jest.js": "cf9bea425ca2b53b6cf5e24e0fe3e848007c806675066806a304be304ecdfda9",
+    "packages/test-utils/src/testUtils/testingLibrary.ts": "5738ed926e8371b55176ca0c2dcc212830bc006434b5a4cb31dca495614cf305",
+    "packages/test-utils/src/testUtils/appWrappers.tsx": "94779df6448853da391d2bc8e1410223561b30493e9e24399d55956356131af7",
+    "packages/cli-module-new/templates/frontend-plugin/package.json.hbs": "184339778924bbdc34acdedc66241e50001afbcca5df7af512a6293a24647911",
+    "packages/cli-module-new/templates/legacy-frontend-plugin/package.json.hbs": "2e657320946edc1c95292e3468fa622081741864db636126fa8c5c9859ce861a",
+    "packages/cli-module-new/templates/plugin-web-library/package.json.hbs": "10c2397840cc50b46c8f7a97d5f335f7b60842d6647168d0f9511bcad8ebbacc",
+    "packages/cli-module-new/templates/scaffolder-field-extension-module/package.json.hbs": "bc92d1f1cd0f0b35416d0030daeb6ba57b7bba11f6503f62b0b0795b8e2ffb4e",
+    "plugins/app/knip-report.md": "5e16dbbc2670cb6ab28107f57ac34c839ec0309e64bc8cf413a5f651f195d5a3",
+    "packages/cli-module-build/knip-report.md": "9a6ee7fa7c27fae15a6c88867aeb6cedc8ee725db7e784d1215f0ac0e4b0ab30"
+  }
+}

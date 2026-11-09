@@ -1,0 +1,33 @@
+{
+  "module": "react18-only (refactor, 94 touched files)",
+  "mode": "brownfield",
+  "intent": "refactor",
+  "verdict": "approved",
+  "tool_calls": 13,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": ".changeset/react18-cli-module-new-templates.md",
+      "line": 2,
+      "issue": "@backstage/cli-module-new is at 0.1.9-next.0 and this changeset is not marked breaking, yet it uses a 'minor' bump. CLAUDE.md says a non-breaking change below 1.0.0 gets 'patch', and a breaking change below 1.0.0 gets 'minor' with a '**BREAKING**:' prefix. The plan (U92) asked for minor, so the file matches the plan, but the bump and the message disagree with each other. Confidence: high that they are inconsistent; which side to change is a judgement call.",
+      "fix": "Change the bump to 'patch' (templates only affect newly generated plugins, which is not breaking for existing adopters). Or keep 'minor' and start the paragraph with '**BREAKING**:' if dropping React 17 from generated plugins counts as breaking."
+    }
+  ],
+  "passing_checks": [
+    "Correctness vs change_plan: peer ranges are exactly ^18.0.0 in 56 manifests; the use-sync-external-store and @types/use-sync-external-store deps are removed from ui, frontend-plugin-api and plugins/app; peerDependenciesMeta is untouched; key order is kept",
+    "repo-tools peer-deps: one peerDependencies const; the React 18 allowlist and getExpectedPeerDependencies are removed; every lookup uses the keyof cast; checks, messages and fix paths are unchanged",
+    "Legacy render fallback removed: dev-utils, frontend-dev-utils and techdocs import createRoot from react-dom/client statically; each package declares a react-dom ^18.0.0 peer",
+    "HAS_REACT_DOM_CLIENT is removed from both DefinePlugin branches and from jest.js; hasReactDomClient.ts is deleted with no remaining importers",
+    "CLI warning: checkReactVersion warns on major < 18 and links the migration guide; the startFrontend warning is removed; the server.ts:274 knip location is still valid",
+    "legacyRoot and LegacyRootOption are removed from testingLibrary.ts and appWrappers.tsx, and report.api.md is regenerated to match",
+    "useId: Popover, Tooltip, Table and TablePagination use only DOM ids (svg id with use href, aria-describedby, label id), so switching to React's useId is safe",
+    "Type safety: no new any; all type changes narrow or remove",
+    "Error handling: the checkReactVersion try/catch is unchanged; no new swallowed errors",
+    "Authz, PII, env fixtures: not applicable (refactor, no routes, no config schema)",
+    "Tests: only the obsolete legacy-fallback case was removed (U67); the createRoot path case remains",
+    "Changesets: every published package with a touched manifest is covered; major/minor bumps match the version >= 1.0.0 rule for breaking changes; private packages (app-example-plugin, example-todo-list) are excluded; no internal symbols are named",
+    "Sensitive files: in the manifests, the only removed dependencies are the ones the plan names; no scripts or keys are dropped; the yarn.lock delta covers only the peer ranges and the removed shim",
+    "Docs: react18-migration, migrate-to-mui5, jsx-transform-migration and the no-undeclared-imports example are updated in present tense and the forward-looking statements are removed"
+  ],
+  "refinement_packets": []
+}
