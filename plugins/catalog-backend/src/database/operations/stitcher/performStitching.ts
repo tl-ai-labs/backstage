@@ -20,17 +20,23 @@ import {
   ANNOTATION_VIEW_URL,
   Entity,
   EntityRelation,
+  getEntityFormerRefs,
 } from '@backstage/catalog-model';
 import { AlphaEntity, EntityStatusItem } from '@backstage/catalog-model/alpha';
 import { SerializedError } from '@backstage/errors';
 import { Knex } from 'knex';
 import { createHash } from 'node:crypto';
 import stableStringify from 'fast-json-stable-stringify';
-import { DbFinalEntitiesRow, DbStitchQueueRow } from '../../tables';
+import {
+  DbFinalEntitiesRow,
+  DbFormerEntityRefsRow,
+  DbStitchQueueRow,
+} from '../../tables';
 import { buildEntitySearch } from './buildEntitySearch';
 import { markDeferredStitchCompleted } from './markDeferredStitchCompleted';
 import { markDeferredStitchFailed } from './markDeferredStitchFailed';
 import { syncSearchRows } from './syncSearchRows';
+import { BATCH_SIZE } from './util';
 import { StitchLeaseExpiresAt } from './getDeferredStitchableEntities';
 import { LoggerService } from '@backstage/backend-plugin-api';
 import { retryOnDeadlock } from '../../util';
@@ -205,6 +211,12 @@ export async function performStitching(options: {
     // to write the search index.
     const searchEntries = buildEntitySearch(entityId, entity);
 
+    // Refs longer than the column width are dropped so an oversized annotation
+    // cannot fail the stitch.
+    const formerEntityRefs = getEntityFormerRefs(entity).filter(
+      ref => ref.length <= 255,
+    );
+
     // Guard against concurrent stitchers: if our stitch_ticket no longer
     // matches stitch_queue, another worker has newer data and we should
     // not overwrite it. PostgreSQL guards both insert and merge in the
@@ -305,6 +317,23 @@ export async function performStitching(options: {
           }
 
           await syncSearchRows(tx, entityId, searchEntries);
+
+          // Former refs are replaced together with the published entity.
+          await tx<DbFormerEntityRefsRow>('former_entity_refs')
+            .where({ entity_id: entityId })
+            .delete();
+          if (formerEntityRefs.length > 0) {
+            await tx
+              .batchInsert(
+                'former_entity_refs',
+                formerEntityRefs.map(ref => ({
+                  entity_id: entityId,
+                  former_entity_ref: ref,
+                })),
+                BATCH_SIZE,
+              )
+              .transacting(tx);
+          }
 
           return 'changed' as const;
         }),

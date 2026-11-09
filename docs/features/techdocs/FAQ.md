@@ -52,6 +52,10 @@ entity.
 
 If you navigate to a TechDocs URL in the format `docs/{namespace}/{kind}/{name}` for an entity that has the `backstage.io/techdocs-entity` annotation (instead of the `backstage.io/techdocs-ref` annotation), then Backstage will redirect to the TechDocs page of the entity referenced in the value of that annotation.
 
+#### What happens when you navigate to a TechDocs URL for an entity that was renamed?
+
+When the entity in the URL no longer exists but another entity lists it in its [`backstage.io/former-refs`](../software-catalog/well-known-annotations.md#backstageioformer-refs) annotation, TechDocs redirects to the renamed entity's documentation, keeps the rest of the docs path, query string and hash, and shows a notice that the entity was renamed. Otherwise, the usual not-found page is shown.
+
 #### Is it possible for users to suggest changes or provide feedback on a TechDocs page?
 
 This is supported for TechDocs sites whose source code is hosted in either

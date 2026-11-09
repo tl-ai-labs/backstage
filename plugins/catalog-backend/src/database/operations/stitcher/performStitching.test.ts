@@ -19,6 +19,7 @@ import { Entity } from '@backstage/catalog-model';
 import { applyDatabaseMigrations } from '../../migrations';
 import {
   DbFinalEntitiesRow,
+  DbFormerEntityRefsRow,
   DbRefreshStateReferencesRow,
   DbRefreshStateRow,
   DbRelationsRow,
@@ -1030,6 +1031,142 @@ describe.each(databases.eachSupportedId())(
         ]),
       );
     });
+  },
+);
+
+it.each(databases.eachSupportedId())(
+  'maintains former entity ref rows for %p',
+  async databaseId => {
+    const knex = await databases.init(databaseId);
+    await applyDatabaseMigrations(knex);
+    const logger = mockServices.logger.mock();
+
+    await knex<DbRefreshStateRow>('refresh_state').insert({
+      entity_id: 'my-id',
+      entity_ref: 'k:ns/n',
+      unprocessed_entity: '{}',
+      processed_entity: JSON.stringify({
+        apiVersion: 'a',
+        kind: 'k',
+        metadata: {
+          name: 'n',
+          namespace: 'ns',
+          annotations: {
+            'backstage.io/former-refs':
+              ' old , other/older, k:ns/n, x:ns/foreign, OLD',
+          },
+        },
+      }),
+      errors: '[]',
+      next_update_at: knex.fn.now(),
+      last_discovery_at: knex.fn.now(),
+    });
+    await markForStitching({ knex, entityRefs: ['k:ns/n'] });
+
+    await expect(
+      performStitching({
+        knex,
+        logger,
+        ...(await getStitchClaim(knex, 'k:ns/n')),
+      }),
+    ).resolves.toBe('changed');
+
+    let formerRefs = await knex<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    ).orderBy('former_entity_ref');
+    expect(formerRefs).toEqual([
+      { entity_id: 'my-id', former_entity_ref: 'k:ns/old' },
+      { entity_id: 'my-id', former_entity_ref: 'k:other/older' },
+    ]);
+
+    await knex('refresh_state').update({
+      processed_entity: JSON.stringify({
+        apiVersion: 'a',
+        kind: 'k',
+        metadata: {
+          name: 'n',
+          namespace: 'ns',
+          annotations: {
+            'backstage.io/former-refs': 'renamed',
+          },
+        },
+      }),
+    });
+    await markForStitching({ knex, entityRefs: ['k:ns/n'] });
+    await expect(
+      performStitching({
+        knex,
+        logger,
+        ...(await getStitchClaim(knex, 'k:ns/n')),
+      }),
+    ).resolves.toBe('changed');
+
+    formerRefs = await knex<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    ).orderBy('former_entity_ref');
+    expect(formerRefs).toEqual([
+      { entity_id: 'my-id', former_entity_ref: 'k:ns/renamed' },
+    ]);
+
+    await knex('refresh_state').update({
+      processed_entity: JSON.stringify({
+        apiVersion: 'a',
+        kind: 'k',
+        metadata: {
+          name: 'n',
+          namespace: 'ns',
+        },
+      }),
+    });
+    await markForStitching({ knex, entityRefs: ['k:ns/n'] });
+    await expect(
+      performStitching({
+        knex,
+        logger,
+        ...(await getStitchClaim(knex, 'k:ns/n')),
+      }),
+    ).resolves.toBe('changed');
+
+    formerRefs = await knex<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    ).orderBy('former_entity_ref');
+    expect(formerRefs).toEqual([]);
+
+    await knex('refresh_state').update({
+      processed_entity: JSON.stringify({
+        apiVersion: 'a',
+        kind: 'k',
+        metadata: {
+          name: 'n',
+          namespace: 'ns',
+          annotations: {
+            'backstage.io/former-refs': 'old',
+          },
+        },
+      }),
+    });
+    await markForStitching({ knex, entityRefs: ['k:ns/n'] });
+    await expect(
+      performStitching({
+        knex,
+        logger,
+        ...(await getStitchClaim(knex, 'k:ns/n')),
+      }),
+    ).resolves.toBe('changed');
+
+    formerRefs = await knex<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    ).orderBy('former_entity_ref');
+    expect(formerRefs).toEqual([
+      { entity_id: 'my-id', former_entity_ref: 'k:ns/old' },
+    ]);
+
+    await knex('refresh_state').where('entity_id', 'my-id').delete();
+
+    formerRefs = await knex<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    ).orderBy('former_entity_ref');
+    expect(formerRefs).toEqual([]);
   },
 );
 

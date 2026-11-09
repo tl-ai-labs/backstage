@@ -1023,6 +1023,88 @@ describe('Entity page', () => {
     });
   });
 
+  describe('Entity Page rename redirects', () => {
+    const getEntityByRef = jest.fn((ref: string | CompoundEntityRef) =>
+      Promise.resolve(
+        stringifyEntityRef(parseEntityRef(ref)) ===
+          'component:default/artist-lookup'
+          ? entityMock
+          : undefined,
+      ),
+    );
+
+    it('redirects an old ref to the renamed entity and shows the notice', async () => {
+      const getEntityByFormerRef = jest.fn().mockResolvedValue(entityMock);
+      const tester = createExtensionTester(
+        Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+      ).add(overviewEntityContent);
+
+      await renderInTestApp(tester.reactElement(), {
+        apis: [
+          catalogApiMock.mock({ getEntityByRef, getEntityByFormerRef }),
+          [starredEntitiesApiRef, mockStarredEntitiesApi],
+        ],
+        mountPath: '/catalog/:namespace/:kind/:name',
+        initialRouteEntries: ['/catalog/default/component/old-name/overview'],
+        config: {
+          app: { title: 'Custom app' },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountedRoutes: {
+          '/catalog': convertLegacyRouteRef(rootRouteRef),
+          '/catalog/:namespace/:kind/:name':
+            convertLegacyRouteRef(entityRouteRef),
+        },
+      });
+
+      expect(
+        await screen.findByText('Mock Overview content'),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByText(/This entity was renamed from component:/),
+      ).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+      await act(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      expect(
+        screen.queryByText(/This entity was renamed from/),
+      ).not.toBeInTheDocument();
+    });
+
+    it('still shows Entity not found when no entity claims the ref', async () => {
+      const getEntityByFormerRef = jest.fn().mockResolvedValue(undefined);
+      const tester = createExtensionTester(
+        Object.assign({ namespace: 'catalog' }, catalogEntityPage),
+      ).add(overviewEntityContent);
+
+      await renderInTestApp(tester.reactElement(), {
+        apis: [
+          catalogApiMock.mock({ getEntityByRef, getEntityByFormerRef }),
+          [starredEntitiesApiRef, mockStarredEntitiesApi],
+        ],
+        mountPath: '/catalog/:namespace/:kind/:name',
+        initialRouteEntries: ['/catalog/default/component/unknown'],
+        config: {
+          app: { title: 'Custom app' },
+          backend: { baseUrl: 'http://localhost:7000' },
+        },
+        mountedRoutes: {
+          '/catalog': convertLegacyRouteRef(rootRouteRef),
+          '/catalog/:namespace/:kind/:name':
+            convertLegacyRouteRef(entityRouteRef),
+        },
+      });
+
+      expect(
+        await screen.findByRole('link', { name: /kind, namespace, and name/ }),
+      ).toBeInTheDocument();
+      expect(getEntityByFormerRef).toHaveBeenCalled();
+      expect(
+        screen.queryByText(/This entity was renamed from/),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe('Entity Page Context Menu', () => {
     const onClickMock = jest.fn();
     beforeEach(() => {

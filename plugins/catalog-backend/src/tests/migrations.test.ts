@@ -1699,4 +1699,54 @@ describe.each(databases.eachSupportedId())('migrations, %p', databaseId => {
       { ...newRequest, failure_count: 0 },
     ]);
   });
+
+  it('20261109000000_former_entity_refs.js', async () => {
+    const knex = await databases.init(databaseId);
+    await migrateUntilBefore(knex, '20261109000000_former_entity_refs.js');
+
+    await migrateUpOnce(knex);
+
+    await knex('refresh_state').insert({
+      entity_id: 'i1',
+      entity_ref: 'k:ns/new',
+      unprocessed_entity: '{}',
+      errors: '[]',
+      next_update_at: knex.fn.now(),
+      last_discovery_at: knex.fn.now(),
+    });
+    await knex('final_entities').insert({
+      entity_id: 'i1',
+      entity_ref: 'k:ns/new',
+      hash: 'h',
+      final_entity: '{}',
+    });
+    await knex('former_entity_refs').insert([
+      { entity_id: 'i1', former_entity_ref: 'k:ns/old' },
+      { entity_id: 'i1', former_entity_ref: 'k:other/older' },
+    ]);
+
+    await expect(
+      knex('former_entity_refs').orderBy('former_entity_ref'),
+    ).resolves.toEqual([
+      { entity_id: 'i1', former_entity_ref: 'k:ns/old' },
+      { entity_id: 'i1', former_entity_ref: 'k:other/older' },
+    ]);
+
+    await expect(
+      knex('former_entity_refs').insert({
+        entity_id: 'i1',
+        former_entity_ref: 'k:ns/old',
+      }),
+    ).rejects.toEqual(expect.anything());
+
+    await knex('refresh_state').where({ entity_id: 'i1' }).delete();
+    await expect(knex('former_entity_refs')).resolves.toEqual([]);
+
+    await migrateDownOnce(knex);
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(false);
+
+    await migrateUpOnce(knex);
+    expect(await knex.schema.hasTable('former_entity_refs')).toBe(true);
+    await expect(knex('former_entity_refs')).resolves.toEqual([]);
+  });
 });

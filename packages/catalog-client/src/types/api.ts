@@ -699,6 +699,27 @@ export interface CatalogApi {
   ): Promise<Entity | undefined>;
 
   /**
+   * Gets the entity that currently declares the given ref as a former ref
+   * through the `backstage.io/former-refs` annotation.
+   *
+   * @remarks
+   *
+   * Resolves to undefined when no single readable entity declares it or when an
+   * entity currently holds that ref.
+   *
+   * This method is optional, so other {@link CatalogApi} implementations may
+   * omit it.
+   *
+   * @param entityRef - A complete entity ref, either on string or compound form
+   * @param options - Additional options
+   * @returns The matching entity, or undefined if no entity declares the former ref
+   */
+  getEntityByFormerRef?(
+    entityRef: string | CompoundEntityRef,
+    options?: CatalogRequestOptions,
+  ): Promise<Entity | undefined>;
+
+  /**
    * Removes a single entity from the catalog by entity UID.
    *
    * @param uid - An entity UID

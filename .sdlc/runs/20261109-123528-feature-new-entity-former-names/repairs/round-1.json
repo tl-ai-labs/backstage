@@ -1,0 +1,130 @@
+[
+  {
+    "id": "tp_debug_r1_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261109-123528-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx",
+    "instruction": "Create `plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx` so that these problems are solved, following the conventions in the shared brief:\n1. Unit U27 (tests) did not apply after 3 attempts; the file is unchanged on disk and still needs the planned cases. Failures: (1) eslint: '26:1 error React default imports are deprecated' (do not `import React from 'react'`; import named hooks only). (2) CI=true yarn test 'plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.test.tsx' exit 1: the redirect works (location shows /catalog/default/component/new-name/docs?view=table, entity-name shows new-name) but `screen.getByText('This entity was renamed from component:default/old-name.')` at line 110 throws: not found, although the Alert with its Dismiss button is rendered. Read EntityRenamedNotification.tsx and the translation message 'This entity was renamed from {{formerRef}}.' and assert on the text as the component actually renders it (for example use `await screen.findByText(...)` because the Snackbar opens after the redirect, or a regex/partial matcher on the Alert's message). (3) Last attempt was not a single JSON object in the {path, content} contract.\nReturn JSON {path, content} with the complete file.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123528-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123528-feature-new-entity-former-names/briefs/U27.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/EntityRenamedNotification.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/CatalogEntityPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/translation.ts",
+        "reason": "named beside the failure"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "content",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 600,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r1_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261109-123528-feature-new-entity-former-names",
+    "artifact_path": "plugins/catalog/src/alpha/pages.test.tsx",
+    "instruction": "Fix `plugins/catalog/src/alpha/pages.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Unit U28 (tests) did not apply after 3 attempts; the file is unchanged on disk and still needs the planned new cases. Failure: CI=true yarn test 'plugins/catalog/src/alpha/pages.test.tsx' exit 1 (1 failed, 26 passed): `await screen.findByText('This entity was renamed from component:default/old-name.')` at line 1065 times out, although the notice's Alert with its 'Dismiss' close button is rendered in the DOM. Read EntityRenamedNotification.tsx and the translation message 'This entity was renamed from {{formerRef}}.' and assert on the text exactly as the component renders it in this test's translation setup (check how the formerRef value is interpolated/escaped; a regex or partial matcher on the Alert message is acceptable). Last attempt changed lines outside its planned sites (line 18, and new lines after 1022): change only the planned sites and add the new cases where planned.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/catalog/src/alpha/pages.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/catalog/src/alpha/pages.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123528-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123528-feature-new-entity-former-names/briefs/U28.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog/src/components/CatalogEntityPage/EntityRenamedNotification.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/components/CatalogEntityPage.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/translation.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/catalog/src/alpha/pages.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=true yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 600,
+      "max_retries": 2
+    }
+  }
+]
