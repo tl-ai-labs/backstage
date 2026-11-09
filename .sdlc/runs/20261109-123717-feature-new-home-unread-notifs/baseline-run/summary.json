@@ -1,0 +1,50 @@
+{
+  "taken_at_head": "fe6ace679f3439ba2c5abf188a97dc5641a946f8",
+  "source_tree_clean": true,
+  "docker": "Docker Desktop, server 29.6.2, running",
+  "command": "CI=true yarn test plugins/notifications plugins/home-react && yarn tsc && yarn lint:all",
+  "run_as": "each part run separately so all three exit codes are known",
+  "test": {
+    "exit": 1,
+    "suites": {
+      "total": 16,
+      "passed": 15,
+      "failed": 1
+    },
+    "tests": {
+      "total": 916,
+      "passed": 914,
+      "failed": 2
+    },
+    "failures_by_file": {
+      "plugins/notifications-backend/src/database/DatabaseNotificationsStore.test.ts": [
+        "DatabaseNotificationsStore (POSTGRES_9) > settings > should save and load notification settings",
+        "DatabaseNotificationsStore (POSTGRES_11) > settings > should save and load notification settings"
+      ]
+    },
+    "failure_kind": "assertion: toEqual on settings; same origins returned in a different order ('plugin-test' before 'abcd-origin') on Postgres 9 and 11. Containers start; not a runtime failure.",
+    "log": "test.log"
+  },
+  "tsc": {
+    "exit": 0,
+    "log": "tsc.log"
+  },
+  "lint_all": {
+    "exit": 0,
+    "log": "lint.log"
+  },
+  "note": "plugins/home-react has no test suites at base. The full command as written exits 1 at base because of the two tests above (in plugins/notifications-backend, off-limits for this run).",
+  "api_reports_ci": {
+    "after_plain_yarn_tsc": {
+      "exit": 1,
+      "cause": "translation keys reordered in plugin-notifications report (dist-types from incremental yarn tsc)",
+      "log": "api-reports.log"
+    },
+    "after_tsc_full": {
+      "exit": 0,
+      "log": "api-reports-after-tscfull.log"
+    },
+    "end_of_run_rule": "run yarn tsc:full before yarn build:api-reports:only ... --ci"
+  },
+  "project_checks_base": "tests/typecheck/lint-all as above (same command, unslashed paths); api-reports exit 0 after tsc:full"
+}

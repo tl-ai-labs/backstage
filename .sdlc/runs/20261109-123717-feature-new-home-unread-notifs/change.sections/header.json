@@ -1,0 +1,142 @@
+{
+  "conventions": [
+    "Every new .ts/.tsx file opens with the Apache 2.0 header block copied from a sibling file, with the line 'Copyright 2026 The Backstage Authors'; never change the year in an existing file's header.",
+    "Formatting is Prettier with the Backstage config (2-space indent, single quotes, trailing commas, 80-column wrap); the prettier check's write form runs before the check, so do not hand-align.",
+    "Named exports only, plain function components (no React.FC, no default export); the plugin's default export in src/alpha.tsx is the only exception and already exists.",
+    "plugins/notifications uses @backstage/ui (Flex, Text, ButtonIcon), @remixicon/react icons, @backstage/core-components (InfoCard, Link, Progress, ErrorPanel) and CSS modules wrapped in '@layer components { ... }'; it never imports @material-ui/* and never uses makeStyles.",
+    "Do not write raw <span>, <p> or <button> JSX elements (the repo lint warns on them): use Text from @backstage/ui for text and ButtonIcon for icon buttons.",
+    "In plugins/notifications, useTranslationRef is imported from '@backstage/core-plugin-api/alpha' and every user-facing string comes from notificationsTranslationRef in src/translation.ts via t('<dotted key>').",
+    "Inside plugins/notifications, import siblings by relative path: '../../api' (notificationsApiRef, types), '../../hooks' (useNotificationsApi), '../../routes' (rootRouteRef), '../../translation' (notificationsTranslationRef).",
+    "react-use is imported by deep path ('react-use/esm/<hook>'); react-router-dom hooks are imported from 'react-router-dom' (a peer dependency of both packages).",
+    "Tests are Jest via backstage-cli with describe/it, colocated as X.test.tsx; use screen and findBy* queries, never waitFor, never test ids; prefer a few thorough tests with several assertions each.",
+    "Tests mock Utility APIs with TestApiProvider from @backstage/test-utils (apis={[[ref, impl]]}, impl only needs the methods used) and render with renderInTestApp from @backstage/test-utils unless the test is about having no app context; clicks use fireEvent.click from @testing-library/react, and timer advances or signal deliveries are wrapped in act from @testing-library/react.",
+    "Changesets are hand-written markdown files in .changeset/ with front matter `'<package>': patch`, one package per file, written for adopters in plain language with no internal function, component, hook or variable names.",
+    "Docs follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as 'you', code style for package names, paths, extension IDs and config keys, sentence-case headings."
+  ],
+  "decisions": [
+    {
+      "topic": "How the card is exposed",
+      "choice": "Only as a new frontend system home page widget registered in src/alpha.tsx; the component is not re-exported from src/index.ts or src/components/index.ts, so the package's public API gains no new symbol except the new translation keys and one optional NotificationsTable prop.",
+      "rejected": [
+        "export UnreadNotificationsCard from the package index",
+        "also add a legacy createCardExtension card"
+      ],
+      "reason": "The brief scopes a new frontend system widget only; a public component would need its own API surface review and src/components/index.ts is outside the allowlist."
+    },
+    {
+      "topic": "Card component structure",
+      "choice": "UnreadNotificationsCard.tsx exports UnreadNotificationsCardContent (list, states and the View all link, no card chrome) and UnreadNotificationsCard (an InfoCard titled t('unreadNotificationsCard.title') wrapping the content); the widget registers UnreadNotificationsCardContent as its Content part and passes the static title 'Unread notifications'.",
+      "rejected": [
+        "one component that renders its own InfoCard and is also the widget Content (double card header inside CardExtension)",
+        "widget without a title (FR-10 requires it)"
+      ],
+      "reason": "CardExtension already draws an InfoCard with the widget title, while FR-2 and AC-1 need a translated title when the card renders on its own."
+    },
+    {
+      "topic": "Refresh mechanics in the card",
+      "choice": "useNotificationsApi fetches; a boolean refresh state is set true by a new lastSignal, by each polling tick, and after a successful mark-as-read; an effect calls retry() and resets refresh to false only when refresh is true and loading is false (the NotificationsPage pattern, without throttle).",
+      "rejected": [
+        "calling retry() directly from the signal effect (retry is a no-op while loading and its identity changes every render)",
+        "a custom hook file for polling"
+      ],
+      "reason": "Keeps every refetch path on one well-tested mechanism and needs no new file."
+    },
+    {
+      "topic": "Polling fallback",
+      "choice": "When useSignal reports isSignalsAvailable false, one setInterval with period Math.max(pollingIntervalMs ?? 60000, 10000) sets refresh to true; the effect depends on [isSignalsAvailable, interval] and its cleanup calls clearInterval; when signals are available no interval is created.",
+      "rejected": [
+        "setTimeout chains",
+        "polling even when signals are available"
+      ],
+      "reason": "FR-7, FR-8 and NFR-3: one timer, cleared on unmount, never faster than 10 s."
+    },
+    {
+      "topic": "Deep link and highlighted row",
+      "choice": "NotificationsPage reads useSearchParams().get('id') and passes it as highlightedNotificationId to NotificationsTable; the table puts className styles.highlighted and aria-current=\"true\" on the compact-data column's outer Flex of the matching notification only.",
+      "rejected": [
+        "material-table options.rowStyle (inline style, not a CSS module class)",
+        "overriding the table's Row component",
+        "auto-scrolling or changing filters to find the id"
+      ],
+      "reason": "FR-12 wants a CSS module class plus an accessible marker with no other behavior change; the content cell is the only place the table renders per-row JSX."
+    },
+    {
+      "topic": "CardExtension without an app context",
+      "choice": "A private hook in extensions.tsx calls useApp().getComponents().Progress inside try/catch and returns Progress from @backstage/core-components when useApp throws; CardExtension uses that hook instead of calling useApp directly.",
+      "rejected": [
+        "a hand-written progress element",
+        "a new optional prop on CardExtension"
+      ],
+      "reason": "FR-13 keeps the app's Progress when an app context exists and changes no public signature; @backstage/core-components is already a dependency, and core-plugin-api's useOptionalApiHolder uses the same try/catch hook shape."
+    },
+    {
+      "topic": "Widget extension name",
+      "choice": "HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: { name: 'UnreadNotificationsCard', title: 'Unread notifications', description: 'Shows your latest unread notifications.', components: ... } }), giving extension ID home-page-widget:notifications/unread-notifications.",
+      "reason": "Matches the search plugin's widget naming (name 'search-bar', params.name 'HomePageSearchBar'), and the docs cite the resulting ID."
+    },
+    {
+      "topic": "New translation keys",
+      "choice": "Under messages.unreadNotificationsCard: title 'Unread notifications', emptyMessage 'No unread notifications', markAsRead 'Mark as read', viewAll 'View all notifications', errors.fetchFailed 'Failed to load unread notifications', errors.markAsReadFailed 'Failed to mark notification as read'.",
+      "reason": "One namespace per component, as the file already does for sidebar, table and settings; tests assert these exact English strings."
+    },
+    {
+      "topic": "Mark-as-read failure handling",
+      "choice": "On a rejected updateNotifications the card posts toastApi.post({ title: t('unreadNotificationsCard.errors.markAsReadFailed'), status: 'danger' }) via useApi(toastApiRef) from @backstage/frontend-plugin-api and does not refetch; tests provide [toastApiRef, { post: jest.fn() }].",
+      "rejected": [
+        "alertApi",
+        "swallowing the error"
+      ],
+      "reason": "NotificationsTable and the sidebar item already report notification update failures through the toast API."
+    },
+    {
+      "topic": "Test dependencies",
+      "choice": "No @testing-library/user-event: clicks use fireEvent.click, which react-aria treats as a virtual press; plugins/home-react gains devDependencies @backstage/test-utils, @testing-library/dom, @testing-library/jest-dom and @testing-library/react, and its test imports '@testing-library/jest-dom' itself because src/setupTests.ts is outside the allowlist.",
+      "reason": "Smallest dependency and lockfile change that runs the required jsdom tests."
+    },
+    {
+      "topic": "API report regeneration",
+      "choice": "Run `yarn tsc:full && yarn build:api-reports:only plugins/notifications plugins/home-react` after all source changes, then validate with the same command plus --ci; never use build:api-reports (it adds --tsc) with paths.",
+      "rejected": [
+        "yarn build:api-reports plugins/notifications plugins/home-react"
+      ],
+      "reason": "In this repo, paths plus --tsc reorders translation keys and fails the CI check (intent brief)."
+    }
+  ],
+  "file_checks": [
+    {
+      "id": "eslint",
+      "run": "yarn eslint {path}",
+      "fix": "yarn eslint --fix {path}",
+      "timeout_s": 120
+    },
+    {
+      "id": "prettier",
+      "run": "yarn prettier --check {path}",
+      "fix": "yarn prettier --write {path}",
+      "timeout_s": 60
+    },
+    {
+      "id": "jest",
+      "run": "CI=1 yarn test {path}",
+      "timeout_s": 300
+    }
+  ],
+  "project_checks": [
+    {
+      "id": "typecheck",
+      "run": "yarn tsc"
+    },
+    {
+      "id": "tests",
+      "run": "CI=true yarn test plugins/notifications plugins/home-react"
+    },
+    {
+      "id": "lint-all",
+      "run": "yarn lint:all"
+    },
+    {
+      "id": "api-reports",
+      "run": "yarn build:api-reports:only plugins/notifications plugins/home-react --ci"
+    }
+  ]
+}

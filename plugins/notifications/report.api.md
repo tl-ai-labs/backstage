@@ -195,6 +195,7 @@ export type NotificationsTableProps = Pick<
   'onPageChange' | 'onRowsPerPageChange' | 'page' | 'totalCount' | 'title'
 > & {
   markAsReadOnLinkOpen?: boolean;
+  highlightedNotificationId?: string;
   isLoading?: boolean;
   isUnread: boolean;
   notifications?: Notification_2[];
@@ -266,6 +267,12 @@ export const notificationsTranslationRef: TranslationRef<
     readonly 'notificationsPage.tableTitle.unread_other': 'Unread notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.read_one': 'Read notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.read_other': 'Read notifications ({{count}})';
+    readonly 'unreadNotificationsCard.title': 'Unread notifications';
+    readonly 'unreadNotificationsCard.errors.markAsReadFailed': 'Failed to mark notification as read';
+    readonly 'unreadNotificationsCard.errors.fetchFailed': 'Failed to load unread notifications';
+    readonly 'unreadNotificationsCard.emptyMessage': 'No unread notifications';
+    readonly 'unreadNotificationsCard.markAsRead': 'Mark as read';
+    readonly 'unreadNotificationsCard.viewAll': 'View all notifications';
   }
 >;
 

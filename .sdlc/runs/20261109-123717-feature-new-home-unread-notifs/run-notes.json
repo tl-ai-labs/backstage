@@ -1,0 +1,20 @@
+{
+  "out_of_packet_writes": [
+    {
+      "packet": "tp_debug_r3_001 (fix round 3; artifact_path plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx; typed by gemini-3.8-flash via the Antigravity agent)",
+      "when": "2026-11-09T10:11:10Z (15:41:10 IST), inside the packet's window (dispatch 10:10:58, apply.write 10:11:12)",
+      "files": {
+        "plugins/notifications/package.json": "added devDependency line \"@backstage/types\": \"workspace:^\" (sha d358ac8bdcefc969, provenance sha_after was 460f6c638cf7f137)",
+        "yarn.lock": "one line \"@backstage/types\": \"workspace:^\" added to the plugin-notifications workspace entry (sha 4fecd9316162b820, provenance sha_after was 3e2e3e070072be5b)"
+      },
+      "found_by": "the main (coordinating) session's Gate 3 check: provenance sha_after vs on-disk sha256 of every changed file; the orchestrator did not catch it before Gate 3",
+      "remedy": "Gate 3 revise: fix round 4 packet tp_debug_r4_002 removed the line from package.json (sha back to 460f6c638cf7f137); tooling_U03 re-run (yarn install, under provenance) restored yarn.lock to 3e2e3e070072be5bfac7aba1fc3de68ac61c3e26971d5debc82a56af1518a0ea",
+      "verified_after": "all 22 changed files match their last provenance sha_after; no changed file outside provenance; rounds 4 and 5 changed only their own artifact_path files (hash snapshot before/after each round)"
+    }
+  ],
+  "gate3_revise_rounds": {
+    "round-4": "tp_debug_r4_001 test retype (NotificationSignal, JsonObject import removed) -> yarn tsc still 1 (TS2352 at :263, direct cast rejected); tp_debug_r4_002 package.json revert (the direct cast the Gate 3 revise asked for was rejected by TypeScript: TS2352, convert to unknown first)",
+    "round-5": "tp_debug_r5_001 cast through unknown at the one assignment -> yarn tsc 0"
+  },
+  "endrun-4": "tsc:full 0; api-reports --ci 0; tests 19 suites/927 tests, only the 2 baseline Postgres failures; yarn tsc 0; yarn lint:all 0"
+}

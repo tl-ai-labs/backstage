@@ -56,6 +56,8 @@ export type NotificationsTableProps = Pick<
   'onPageChange' | 'onRowsPerPageChange' | 'page' | 'totalCount' | 'title'
 > & {
   markAsReadOnLinkOpen?: boolean;
+  /** ID of a notification to highlight, for example from a link to the notifications page */
+  highlightedNotificationId?: string;
   isLoading?: boolean;
   isUnread: boolean;
   notifications?: Notification[];
@@ -68,6 +70,7 @@ export type NotificationsTableProps = Pick<
 export const NotificationsTable = ({
   title,
   markAsReadOnLinkOpen,
+  highlightedNotificationId,
   isLoading,
   notifications = [],
   isUnread,
@@ -199,7 +202,20 @@ export const NotificationsTable = ({
         render: (notification: Notification) => {
           // Compact content
           return (
-            <Flex gap="4" align="center">
+            <Flex
+              gap="4"
+              align="center"
+              className={
+                notification.id === highlightedNotificationId
+                  ? styles.highlighted
+                  : undefined
+              }
+              aria-current={
+                notification.id === highlightedNotificationId
+                  ? 'true'
+                  : undefined
+              }
+            >
               <div className={styles.severityItem}>
                 <NotificationIcon notification={notification} />
               </div>
@@ -290,6 +306,7 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    highlightedNotificationId,
   ]);
 
   return (
