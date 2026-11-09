@@ -1,0 +1,577 @@
+{
+  "section": "units",
+  "source": "units-004.json",
+  "value": [
+    {
+      "id": "U29",
+      "path": "plugins/techdocs/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the renamed-entity notice strings to the TechDocs translation ref.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 52,
+          "to": 52,
+          "first_line": "},",
+          "rule": "After the redirectNotification block add renamedNotification: { message: 'This entity was renamed from {{formerRef}}.', dismiss: 'Dismiss' }, at the same indentation."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-15"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U30",
+      "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRenamedNotification.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Internal dismissible Snackbar notice for the TechDocs reader shown when the location carries the rename-redirect marker, plus the helper that reads that marker.",
+      "rules": [
+        "1. Imports: useState from 'react'; useLocation from 'react-router-dom'; Snackbar from '@material-ui/core/Snackbar'; Alert from '@material-ui/lab/Alert'; useTranslationRef from '@backstage/core-plugin-api/alpha'; techdocsTranslationRef from '../../../translation'.",
+        "2. export function getRenamedFromEntityRef(state: unknown): string | undefined returns state.renamedFromEntityRef when state is a non-null object and that property is a non-empty string, otherwise undefined; it never throws.",
+        "3. export const TechDocsRenamedNotification = () => { ... } calls useLocation, useTranslationRef(techdocsTranslationRef) and useState<string | undefined>() for the dismissed marker unconditionally, before any early return.",
+        "4. formerRef = getRenamedFromEntityRef(location.state); when undefined, return null; the notice is open while formerRef differs from the dismissed marker.",
+        "5. Render <Snackbar open={open} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}> without autoHideDuration and without onClose, containing <Alert severity=\"info\" onClose={() => setDismissed(formerRef)} closeText={t('renamedNotification.dismiss')}>{t('renamedNotification.message', { formerRef })}</Alert>.",
+        "6. Do not export it from the folder's index.ts; it is internal to the reader."
+      ],
+      "exports": [
+        {
+          "name": "getRenamedFromEntityRef",
+          "kind": "function",
+          "params": [
+            {
+              "name": "state",
+              "type": "unknown"
+            }
+          ],
+          "returns": "string | undefined"
+        },
+        {
+          "name": "TechDocsRenamedNotification",
+          "kind": "function component",
+          "params": [],
+          "returns": "JSX.Element | null"
+        }
+      ],
+      "import_line": "import { TechDocsRenamedNotification, getRenamedFromEntityRef } from '../TechDocsRedirectNotification/TechDocsRenamedNotification';",
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx",
+        "reason": "Sibling Snackbar notice: header, imports and translation usage."
+      },
+      "depends_on": [
+        "U29"
+      ],
+      "covers": [
+        "FR-15",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U31",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Extends the reader's entity redirect check: when the URL's entity is not found, resolves a former-ref match and replaces the location with the renamed entity's docs URL, keeping the docs sub-path, query string and hash.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 17,
+          "to": 104,
+          "first_line": "import { useEffect, useRef } from 'react';",
+          "last_line": "}",
+          "rule": "Rewrite the imports and useExternalRedirect following rules 1 to 8 of this unit; keep the function name, its parameter, its return shape { loading, shouldShowProgress }, its TSDoc (extend it with one sentence about former refs) and the @internal tag."
+        }
+      ],
+      "rules": [
+        "1. Imports: add useLocation and useParams to the react-router-dom import, and import getRenamedFromEntityRef from '../TechDocsRedirectNotification/TechDocsRenamedNotification'; keep all existing imports.",
+        "2. Read const { '*': docsPath = '' } = useParams(); const location = useLocation(); const renamedFromEntityRef = getRenamedFromEntityRef(location.state); keep entityKey and checkedEntityRef exactly as today.",
+        "3. The useAsync callback now resolves to { to: string; state?: { renamedFromEntityRef: string } } | undefined and keeps the deps [entityKey, catalogApi] and the surrounding try/catch that ignores errors.",
+        "4. External annotation: when catalogEntity has TECHDOCS_EXTERNAL_ANNOTATION, compute to = buildTechDocsURL(catalogEntity, viewTechdocLink) and return to ? { to } : undefined, preserving today's behaviour.",
+        "5. Former ref: when catalogEntity is undefined, renamedFromEntityRef is undefined (loop guard, NFR-6) and catalogApi.getEntityByFormerRef exists, call it with entityRef; when it resolves an entity and buildTechDocsURL(renamedEntity, viewTechdocLink) gives a base, return { to: base without trailing slashes + (docsPath ? `/${docsPath}` : '') + location.search + location.hash, state: { renamedFromEntityRef: entityKey } }.",
+        "6. Otherwise return undefined.",
+        "7. The effect navigates when the value is set: navigate(value.to, { replace: true }) when value.state is undefined, and navigate(value.to, { replace: true, state: value.state }) otherwise; the checkedEntityRef bookkeeping is unchanged.",
+        "8. shouldShowProgress stays (shouldCheckForRedirect && loading) || Boolean(value), so the reader shows progress instead of its not-found state while the redirect happens."
+      ],
+      "depends_on": [
+        "U18",
+        "U30"
+      ],
+      "covers": [
+        "FR-14",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U32",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Renders the renamed notice in both TechDocs reader page configurations.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 43,
+          "to": 43,
+          "first_line": "import { useExternalRedirect } from './useExternalRedirect';",
+          "rule": "Add: import { TechDocsRenamedNotification } from '../TechDocsRedirectNotification/TechDocsRenamedNotification';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 230,
+          "to": 230,
+          "first_line": "<ThemeProvider theme={readerPageTheme}>",
+          "rule": "Add <TechDocsRenamedNotification /> as the first child of this ThemeProvider."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 242,
+          "to": 242,
+          "first_line": "<ThemeProvider theme={readerPageTheme}>",
+          "rule": "Add <TechDocsRenamedNotification /> as the first child of this ThemeProvider."
+        }
+      ],
+      "depends_on": [
+        "U30",
+        "U31"
+      ],
+      "covers": [
+        "FR-15"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U33",
+      "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Wraps the hook tests in a router and adds former-ref redirect tests.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 17,
+          "to": 17,
+          "first_line": "import { renderHook, waitFor } from '@testing-library/react';",
+          "rule": "Add: import { MemoryRouter, Route, Routes } from 'react-router-dom'; (the existing jest.mock of react-router-dom spreads the actual module, so these are real)."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 37,
+          "to": 39,
+          "first_line": "const mockCatalogApi = {",
+          "last_line": "};",
+          "rule": "Make mockCatalogApi { getEntityByRef: jest.fn(), getEntityByFormerRef: jest.fn() }."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 41,
+          "to": 45,
+          "first_line": "const wrapper = ({ children }: { children: React.ReactNode }) => (",
+          "last_line": ");",
+          "rule": "Wrap the existing TestApiProvider in <MemoryRouter> so useLocation works; existing tests keep using this wrapper unchanged."
+        },
+        {
+          "id": "S4",
+          "at": "insert_before",
+          "from": 282,
+          "to": 282,
+          "first_line": "});",
+          "rule": "Add the cases of this unit; the redirect case uses its own wrapper with <MemoryRouter initialEntries={['/docs/default/component/old-name/getting-started/?q=1#install']}> and <Routes><Route path=\"/docs/:namespace/:kind/:name/*\" element={<>{children}</>} /></Routes> inside the TestApiProvider, and uses mockViewTechdocLink.mockReturnValueOnce so the base URL does not leak into other tests."
+        }
+      ],
+      "tests": [
+        {
+          "name": "should redirect a former ref to the renamed entity docs",
+          "given": "getEntityByRef resolves undefined, getEntityByFormerRef resolves { apiVersion: 'backstage.io/v1alpha1', kind: 'Component', metadata: { name: 'new-name', namespace: 'default' } }, mockViewTechdocLink returns '/docs/default/component/new-name' once, hook called with { kind: 'Component', namespace: 'default', name: 'old-name' } at /docs/default/component/old-name/getting-started/?q=1#install",
+          "expect": "getEntityByFormerRef called with that ref; mockNavigate called with ('/docs/default/component/new-name/getting-started/?q=1#install', { replace: true, state: { renamedFromEntityRef: 'component:default/old-name' } }); shouldShowProgress is true"
+        },
+        {
+          "name": "should keep the not-found behaviour when no entity claims the ref",
+          "given": "getEntityByRef and getEntityByFormerRef both resolve undefined",
+          "expect": "after loading, shouldShowProgress is false and mockNavigate is not called"
+        },
+        {
+          "name": "should not look up former refs after a rename redirect",
+          "given": "getEntityByRef resolves undefined and the MemoryRouter initial entry carries state { renamedFromEntityRef: 'component:default/older' }",
+          "expect": "getEntityByFormerRef is not called and mockNavigate is not called"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx",
+        "lines": [
+          79,
+          110
+        ],
+        "reason": "Existing renderHook redirect test shape."
+      },
+      "depends_on": [
+        "U31"
+      ],
+      "covers": [
+        "AC-7",
+        "FR-14",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U34",
+      "path": "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRenamedNotification.test.tsx",
+      "action": "create",
+      "phase": "tests",
+      "behaviour": "jsdom tests for the TechDocs renamed notice and its marker helper.",
+      "rules": [
+        "1. Use renderInTestApp from '@backstage/test-utils', screen from '@testing-library/react' and userEvent from '@testing-library/user-event'.",
+        "2. To set router state, render <Routes><Route path=\"/\" element={<Navigate to=\"/docs/default/component/new-name/getting-started\" replace state={{ renamedFromEntityRef: 'component:default/old-name' }} />} /><Route path=\"/docs/*\" element={<TechDocsRenamedNotification />} /></Routes> with routes from 'react-router-dom'.",
+        "3. One describe('<TechDocsRenamedNotification />') with a few thorough cases and one describe('getRenamedFromEntityRef')."
+      ],
+      "tests": [
+        {
+          "name": "shows a dismissible notice after a rename redirect",
+          "given": "the Navigate setup above",
+          "expect": "findByText('This entity was renamed from component:default/old-name.') resolves; after clicking the button named 'Dismiss' the text is gone"
+        },
+        {
+          "name": "renders nothing without the marker",
+          "given": "renderInTestApp with routeEntries ['/docs/default/component/new-name'] and the /docs/* route only",
+          "expect": "no text matching /was renamed from/"
+        },
+        {
+          "name": "getRenamedFromEntityRef reads only a non-empty string marker",
+          "given": "inputs undefined, null, 'x', {}, { renamedFromEntityRef: 1 }, { renamedFromEntityRef: '' } and { renamedFromEntityRef: 'component:default/old' }",
+          "expect": "undefined for all but the last, which returns 'component:default/old'"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/techdocs/src/reader/components/TechDocsNotFound.test.tsx",
+        "reason": "Reader component test layout with renderInTestApp in this package."
+      },
+      "depends_on": [
+        "U30"
+      ],
+      "covers": [
+        "AC-7",
+        "FR-15",
+        "NFR-4"
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U35",
+      "path": "docs/features/software-catalog/well-known-annotations.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the backstage.io/former-refs annotation, its rules and the frontend redirects.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 83,
+          "to": 83,
+          "first_line": "### backstage.io/techdocs-ref",
+          "rule": "Add a '### backstage.io/former-refs' section followed by a blank line, written per rules 1 to 6 of this unit, in the style of the orphan section above."
+        }
+      ],
+      "rules": [
+        "1. Explain the value is a comma-separated list of entity refs the entity was previously known by; whitespace around items is ignored and empty items are skipped.",
+        "2. Explain defaulting: a bare name uses the entity's own kind and namespace, a namespace/name ref uses the entity's own kind; refs with a different kind than the entity, refs that fail to parse and the entity's own ref are ignored; matching is case-insensitive.",
+        "3. Show a yaml '# Example:' block with metadata.name new-name and annotation backstage.io/former-refs: old-name, legacy/older-name.",
+        "4. Conflict rules: when an entity currently exists with the requested ref, the old ref does not resolve (the live entity wins); when more than one entity declares the same former ref, it resolves to nothing.",
+        "5. Permissions: a former ref only resolves to an entity the caller may read; otherwise it behaves as an unknown ref, so the new name is not revealed. Link to the lookup endpoint in api.md (#get-entitiesby-former-namekindnamespacename).",
+        "6. Frontend: the catalog entity page and the TechDocs reader redirect an old link to the renamed entity, keep the rest of the path, query string and hash, and show a dismissible notice; only one hop is followed, so list every former ref on the current entity; the index updates the next time the catalog processes the entity after its annotation changes."
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U36",
+      "path": "docs/features/software-catalog/api.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Documents the new former-ref lookup endpoint in the catalog REST API reference.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 676,
+          "to": 676,
+          "first_line": "### `POST /entities/by-refs`",
+          "rule": "Add a '### `GET /entities/by-former-name/<kind>/<namespace>/<name>`' section and a blank line: it returns, as a single Entity JSON like by-name, the entity that currently declares the given triplet in its backstage.io/former-refs annotation (link to well-known-annotations.md#backstageioformer-refs); it returns 404 when an entity currently has that ref, when no entity or more than one entity declares it, or when the caller may not read the entity."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-catalog/api.md",
+        "lines": [
+          663,
+          675
+        ],
+        "reason": "The by-name endpoint section directly above."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U37",
+      "path": "docs/features/software-catalog/audit-events.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Lists the new by-former-name queryType of the entity-fetch audit event.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18,
+          "first_line": "- **`by-name`**: Fetching a single entity using its kind, namespace, and name. (GET `/entities/by-name/:kind/:namespace/:name`)",
+          "rule": "Add, at the same indentation, '- **`by-former-name`**: Fetching the current entity that declares the given kind, namespace, and name as a former ref. (GET `/entities/by-former-name/:kind/:namespace/:name`)'"
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-9",
+        "FR-16"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U38",
+      "path": "docs/features/techdocs/FAQ.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds an FAQ entry about TechDocs links to renamed entities.",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 55,
+          "to": 55,
+          "first_line": "#### Is it possible for users to suggest changes or provide feedback on a TechDocs page?",
+          "rule": "Add '#### What happens when you navigate to a TechDocs URL for an entity that was renamed?' and a short paragraph plus a blank line: when the entity in the URL no longer exists but another entity lists it in its backstage.io/former-refs annotation (link ../software-catalog/well-known-annotations.md#backstageioformer-refs), the reader redirects to the renamed entity's documentation, keeps the rest of the docs path, query string and hash, and shows a notice that the entity was renamed; otherwise the usual not-found page is shown."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/techdocs/FAQ.md",
+        "lines": [
+          51,
+          54
+        ],
+        "reason": "The techdocs-entity redirect FAQ entry directly above."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-16",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U39",
+      "path": ".changeset/catalog-model-former-refs.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/catalog-model.",
+      "rules": [
+        "1. Front matter: '@backstage/catalog-model': minor",
+        "2. Body: Added the `backstage.io/former-refs` well-known annotation, which lets an entity list the entity refs it was previously known by, along with the `ANNOTATION_FORMER_REFS` constant and a `getEntityFormerRefs` helper that returns those refs in normalized form."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-toc-alignment.md",
+        "reason": "Changeset front matter and body format in this repo."
+      },
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "FR-17",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U40",
+      "path": ".changeset/catalog-client-former-refs.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/catalog-client.",
+      "rules": [
+        "1. Front matter: '@backstage/catalog-client': minor",
+        "2. Body: Added an optional `getEntityByFormerRef` method to `CatalogApi`, implemented by `CatalogClient`, which returns the entity that currently declares a given ref in its `backstage.io/former-refs` annotation, or `undefined` when there is no match. Custom `CatalogApi` implementations do not need to change."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-toc-alignment.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [
+        "U19"
+      ],
+      "covers": [
+        "FR-17"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U41",
+      "path": ".changeset/catalog-backend-former-refs.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-catalog-backend.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-catalog-backend': minor",
+        "2. Body: The catalog now indexes the entity refs that entities list in the `backstage.io/former-refs` annotation and serves them through a new `GET /entities/by-former-name/:kind/:namespace/:name` endpoint, which returns the entity that currently declares the given former ref. A ref that an existing entity holds, or that more than one entity declares, does not resolve, and callers only receive entities they are allowed to read. This release includes a database migration that adds a table for the index.",
+        "3. Do not edit report.sql.md or any report*.api.md file; they are regenerated before the pull request (NFR-7)."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-toc-alignment.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [
+        "U14"
+      ],
+      "covers": [
+        "FR-17",
+        "NFR-7"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U42",
+      "path": ".changeset/catalog-rename-redirect.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-catalog.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-catalog': minor",
+        "2. Body: The entity page now redirects links that use an entity's old ref to the renamed entity when the renamed entity lists the old ref in its `backstage.io/former-refs` annotation. The redirect keeps the rest of the path and the query string and shows a dismissible notice that the entity was renamed. This works in both the old and the new frontend system."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-toc-alignment.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [
+        "U26"
+      ],
+      "covers": [
+        "FR-17"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U43",
+      "path": ".changeset/catalog-react-former-refs-mock.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-catalog-react.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-catalog-react': patch",
+        "2. Body: The mocked catalog API from `catalogApiMock.mock` now includes `getEntityByFormerRef`, so tests can override it."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-toc-alignment.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [
+        "U21"
+      ],
+      "covers": [
+        "FR-17"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U44",
+      "path": ".changeset/techdocs-rename-redirect.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset for @backstage/plugin-techdocs.",
+      "rules": [
+        "1. Front matter: '@backstage/plugin-techdocs': minor",
+        "2. Body: The TechDocs reader now redirects documentation links that use an entity's old ref to the renamed entity's documentation when the renamed entity lists the old ref in its `backstage.io/former-refs` annotation. The redirect keeps the rest of the documentation path, the query string and the hash, and shows a dismissible notice that the entity was renamed."
+      ],
+      "style_from": {
+        "path": ".changeset/techdocs-toc-alignment.md",
+        "reason": "Changeset format."
+      },
+      "depends_on": [
+        "U32"
+      ],
+      "covers": [
+        "FR-17",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/techdocs/src/translation.ts": "c24dada25e678926c3daa5957dde10534e6e15e29f7f4023f06d7ff7ff70499c",
+    "plugins/techdocs/src/reader/components/TechDocsRedirectNotification/TechDocsRedirectNotification.tsx": "032b837f83cad115ea4dc4ff176456c65a355e74596266f1533e38ef591f7f29",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.ts": "bdc05b9ee057fe5b3efc5e10b7f0a3fc14adcc375137ca24f65d8887fdda8af1",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/TechDocsReaderPage.tsx": "99e696efcf13a98aa446135088dce6048957abb7dfc6d685b5232d47caa5661c",
+    "plugins/techdocs/src/reader/components/TechDocsReaderPage/useExternalRedirect.test.tsx": "5f2227eec2ee7d7263c723bc1a7d43773b186553a951750d810f08b02646da4f",
+    "plugins/techdocs/src/reader/components/TechDocsNotFound.test.tsx": "6754fb8816f853976dbf51472b4da2f9b5bee99db43958c410141ef10b725f65",
+    "docs/features/software-catalog/well-known-annotations.md": "54830e31062a9c54be6be2fa703f61b944f4916fc9579e5ed7190923eda01056",
+    "docs/features/software-catalog/api.md": "ec934fc7bf0d9e7ccfadd9dfe7034e7a7c6f5c77892095f7e7e49404917c0587",
+    "docs/features/software-catalog/audit-events.md": "f7f7c09de587f945aed084b05d8e4036b0697031afcc3cc723add5123c2daa1b",
+    "docs/features/techdocs/FAQ.md": "3f0495de5fb9b2fa6def134d75ac5738834757787e62bf4c011393138d925b52",
+    ".changeset/techdocs-toc-alignment.md": "785dae4939712e06dd7cef476d01574e89f7c4b14cc77968540b8c96bf1058a0"
+  }
+}

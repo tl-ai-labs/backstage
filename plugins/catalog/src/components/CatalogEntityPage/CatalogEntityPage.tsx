@@ -17,11 +17,13 @@
 import { Outlet } from 'react-router-dom';
 import { AsyncEntityProvider } from '@backstage/plugin-catalog-react';
 import { useEntityFromUrl } from './useEntityFromUrl';
+import { EntityRenamedNotification } from './EntityRenamedNotification';
 
 /** @public */
 export function CatalogEntityPage() {
   return (
     <AsyncEntityProvider {...useEntityFromUrl()}>
+      <EntityRenamedNotification />
       <Outlet />
     </AsyncEntityProvider>
   );

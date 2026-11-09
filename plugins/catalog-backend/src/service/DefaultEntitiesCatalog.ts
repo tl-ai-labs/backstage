@@ -26,6 +26,7 @@ import {
   EntitiesRequest,
   EntitiesResponse,
   EntityAncestryResponse,
+  EntityByFormerRefRequest,
   EntityFacetsRequest,
   EntityFacetsResponse,
   EntityOrder,
@@ -36,6 +37,7 @@ import {
 } from '../catalog/types';
 import {
   DbFinalEntitiesRow,
+  DbFormerEntityRefsRow,
   DbPageInfo,
   DbRefreshStateReferencesRow,
   DbRefreshStateRow,
@@ -364,6 +366,48 @@ export class DefaultEntitiesCatalog implements EntitiesCatalog {
     const items = request.entityRefs.map(ref => lookup.get(ref) ?? null);
 
     return { items: await processRawEntitiesResult(items, request.fields) };
+  }
+
+  async entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntitiesBatchResponse> {
+    const liveEntity = await this.database<DbFinalEntitiesRow>('final_entities')
+      .where('final_entities.entity_ref', request.formerRef)
+      .select({ entityId: 'final_entities.entity_id' })
+      .first();
+
+    if (liveEntity) {
+      return { items: { type: 'object', entities: [null] } };
+    }
+
+    const claims = await this.database<DbFormerEntityRefsRow>(
+      'former_entity_refs',
+    )
+      .innerJoin<DbFinalEntitiesRow>(
+        'final_entities',
+        'former_entity_refs.entity_id',
+        'final_entities.entity_id',
+      )
+      .where('former_entity_refs.former_entity_ref', request.formerRef)
+      .select({ entityRef: 'final_entities.entity_ref' })
+      .limit(2);
+
+    if (claims.length === 0) {
+      return { items: { type: 'object', entities: [null] } };
+    }
+
+    if (claims.length > 1) {
+      this.logger.debug(
+        `Refusing to resolve former entity ref ${request.formerRef}, it is claimed by more than one entity`,
+      );
+      return { items: { type: 'object', entities: [null] } };
+    }
+
+    return this.entitiesBatch({
+      entityRefs: [claims[0].entityRef],
+      filter: request.filter,
+      credentials: request.credentials,
+    });
   }
 
   async queryEntities(

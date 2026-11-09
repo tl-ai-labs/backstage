@@ -29,6 +29,7 @@ import {
 import { applyDatabaseMigrations } from '../database/migrations';
 import {
   DbFinalEntitiesRow,
+  DbFormerEntityRefsRow,
   DbRefreshStateReferencesRow,
   DbRefreshStateRow,
   DbSearchRow,
@@ -905,6 +906,159 @@ describe.each(databases.eachSupportedId())(
         expect(items.map(e => e && stringifyEntityRef(e))).toEqual([
           'k:default/two',
           null,
+        ]);
+      });
+    });
+
+    describe('entityByFormerRef', () => {
+      it('resolves a declared former ref to the current entity', async () => {
+        await createDatabase();
+
+        const entityId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'new-name' },
+            spec: {},
+          },
+          [],
+        );
+        await knex<DbFormerEntityRefsRow>('former_entity_refs').insert({
+          entity_id: entityId,
+          former_entity_ref: 'k:default/old-name',
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const res = await catalog.entityByFormerRef({
+          formerRef: 'k:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        const items = entitiesResponseToObjects(res.items);
+        expect(items.map(e => e && stringifyEntityRef(e))).toEqual([
+          'k:default/new-name',
+        ]);
+
+        const missing = await catalog.entityByFormerRef({
+          formerRef: 'k:default/unknown',
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(missing.items)).toEqual([null]);
+      });
+
+      it('returns null when a live entity holds the requested ref', async () => {
+        await createDatabase();
+
+        const entityId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'new-name' },
+            spec: {},
+          },
+          [],
+        );
+        await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'old-name' },
+            spec: {},
+          },
+          [],
+        );
+        await knex<DbFormerEntityRefsRow>('former_entity_refs').insert({
+          entity_id: entityId,
+          former_entity_ref: 'k:default/old-name',
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const res = await catalog.entityByFormerRef({
+          formerRef: 'k:default/old-name',
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(res.items)).toEqual([null]);
+      });
+
+      it('returns null and logs when more than one entity claims the ref', async () => {
+        await createDatabase();
+
+        for (const name of ['a', 'b']) {
+          const entityId = await addEntity(
+            {
+              apiVersion: 'a',
+              kind: 'k',
+              metadata: { name },
+              spec: {},
+            },
+            [],
+          );
+          await knex<DbFormerEntityRefsRow>('former_entity_refs').insert({
+            entity_id: entityId,
+            former_entity_ref: 'k:default/shared',
+          });
+        }
+
+        const logger = mockServices.logger.mock();
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger,
+        });
+
+        const res = await catalog.entityByFormerRef({
+          formerRef: 'k:default/shared',
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(res.items)).toEqual([null]);
+        expect(logger.debug).toHaveBeenCalledWith(
+          expect.stringContaining('k:default/shared'),
+        );
+      });
+
+      it('applies the filter to the resolved entity', async () => {
+        await createDatabase();
+
+        const entityId = await addEntity(
+          {
+            apiVersion: 'a',
+            kind: 'k',
+            metadata: { name: 'new-name' },
+            spec: {},
+          },
+          [],
+        );
+        await knex<DbFormerEntityRefsRow>('former_entity_refs').insert({
+          entity_id: entityId,
+          former_entity_ref: 'k:default/old-name',
+        });
+
+        const catalog = new DefaultEntitiesCatalog({
+          database: knex,
+          logger: mockServices.logger.mock(),
+        });
+
+        const excluded = await catalog.entityByFormerRef({
+          formerRef: 'k:default/old-name',
+          filter: { kind: 'other' },
+          credentials: mockCredentials.none(),
+        });
+        expect(entitiesResponseToObjects(excluded.items)).toEqual([null]);
+
+        const included = await catalog.entityByFormerRef({
+          formerRef: 'k:default/old-name',
+          filter: { kind: 'k' },
+          credentials: mockCredentials.none(),
+        });
+        const items = entitiesResponseToObjects(included.items);
+        expect(items.map(e => e && stringifyEntityRef(e))).toEqual([
+          'k:default/new-name',
         ]);
       });
     });

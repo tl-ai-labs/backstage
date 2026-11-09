@@ -104,6 +104,25 @@ export interface EntitiesBatchResponse {
   items: EntitiesResponseItems;
 }
 
+/**
+ * A request to resolve a former entity ref to the entity that currently declares it.
+ */
+export interface EntityByFormerRefRequest {
+  /**
+   * The former entity ref on lowercase kind:namespace/name form.
+   */
+  formerRef: string;
+  /**
+   * Applied to the resolved entity; a non-matching entity gives a null entry
+   * as if it did not exist.
+   */
+  filter?: FilterPredicate;
+  /**
+   * The credentials that authorize the action.
+   */
+  credentials: BackstageCredentials;
+}
+
 export type EntityAncestryResponse = {
   rootEntityRef: string;
   items: Array<{
@@ -193,6 +212,16 @@ export interface EntitiesCatalog {
    * @param request - Request options
    */
   facets(request: EntityFacetsRequest): Promise<EntityFacetsResponse>;
+
+  /**
+   * Resolves a former entity ref to the entity that declares it through the
+   * backstage.io/former-refs annotation; the response holds exactly one item,
+   * which is null when a live entity holds the ref, when no entity or more
+   * than one entity claims it, or when the resolved entity is filtered out.
+   */
+  entityByFormerRef(
+    request: EntityByFormerRefRequest,
+  ): Promise<EntitiesBatchResponse>;
 }
 
 /**

@@ -15,6 +15,7 @@
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useExternalRedirect } from './useExternalRedirect';
 import { TestApiProvider } from '@backstage/test-utils';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
@@ -36,12 +37,15 @@ jest.mock('@backstage/core-plugin-api', () => ({
 describe('useExternalRedirect', () => {
   const mockCatalogApi = {
     getEntityByRef: jest.fn(),
+    getEntityByFormerRef: jest.fn(),
   };
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TestApiProvider apis={[[catalogApiRef, mockCatalogApi]]}>
-      {children}
-    </TestApiProvider>
+    <MemoryRouter>
+      <TestApiProvider apis={[[catalogApiRef, mockCatalogApi]]}>
+        {children}
+      </TestApiProvider>
+    </MemoryRouter>
   );
 
   beforeEach(() => {
@@ -278,5 +282,116 @@ describe('useExternalRedirect', () => {
     await waitFor(() => {
       expect(mockCatalogApi.getEntityByRef).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('should redirect a former ref to the renamed entity docs', async () => {
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    mockCatalogApi.getEntityByFormerRef.mockResolvedValue({
+      apiVersion: 'backstage.io/v1alpha1',
+      kind: 'Component',
+      metadata: {
+        name: 'new-name',
+        namespace: 'default',
+      },
+    });
+    mockViewTechdocLink.mockReturnValueOnce('/docs/default/component/new-name');
+
+    const redirectWrapper = ({ children }: { children: React.ReactNode }) => (
+      <MemoryRouter
+        initialEntries={[
+          '/docs/default/component/old-name/getting-started/?q=1#install',
+        ]}
+      >
+        <TestApiProvider apis={[[catalogApiRef, mockCatalogApi]]}>
+          <Routes>
+            <Route
+              path="/docs/:namespace/:kind/:name/*"
+              element={<>{children}</>}
+            />
+          </Routes>
+        </TestApiProvider>
+      </MemoryRouter>
+    );
+
+    const entityRef = {
+      kind: 'Component',
+      namespace: 'default',
+      name: 'old-name',
+    };
+
+    const { result } = renderHook(() => useExternalRedirect(entityRef), {
+      wrapper: redirectWrapper,
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/docs/default/component/new-name/getting-started/?q=1#install',
+        {
+          replace: true,
+          state: { renamedFromEntityRef: 'component:default/old-name' },
+        },
+      );
+    });
+
+    expect(mockCatalogApi.getEntityByFormerRef).toHaveBeenCalledWith(entityRef);
+    expect(result.current.shouldShowProgress).toBe(true);
+  });
+
+  it('should keep the not-found behaviour when no entity claims the ref', async () => {
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+    mockCatalogApi.getEntityByFormerRef.mockResolvedValue(undefined);
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect({
+          kind: 'Component',
+          name: 'old-name',
+          namespace: 'default',
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.shouldShowProgress).toBe(false);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('should not look up former refs after a rename redirect', async () => {
+    mockCatalogApi.getEntityByRef.mockResolvedValue(undefined);
+
+    const renamedWrapper = ({ children }: { children: React.ReactNode }) => (
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/docs/default/component/old-name',
+            state: { renamedFromEntityRef: 'component:default/older' },
+          },
+        ]}
+      >
+        <TestApiProvider apis={[[catalogApiRef, mockCatalogApi]]}>
+          {children}
+        </TestApiProvider>
+      </MemoryRouter>
+    );
+
+    const { result } = renderHook(
+      () =>
+        useExternalRedirect({
+          kind: 'Component',
+          name: 'old-name',
+          namespace: 'default',
+        }),
+      { wrapper: renamedWrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(mockCatalogApi.getEntityByFormerRef).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

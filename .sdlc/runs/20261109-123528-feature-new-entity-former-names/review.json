@@ -1,0 +1,33 @@
+{
+  "module": "entity-former-names (catalog-model, catalog-client, catalog-backend, catalog-react, catalog, techdocs)",
+  "mode": "brownfield",
+  "intent": "feature-new",
+  "verdict": "approved",
+  "tool_calls": 10,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "plugins/catalog/src/components/CatalogEntityPage/useEntityFromUrl.ts",
+      "line": 546,
+      "issue": "The useAsyncRetry deps include renamedFromEntityRef. After a rename redirect, the first in-page navigation (for example clicking a tab) drops the router state, so the marker goes from a string to undefined. That re-runs getEntityByRef for the entity that is already loaded and sets loading=true, and EntityLayout shows <Progress /> while it runs. The result is a redundant catalog request and a progress-bar flash. The marker is only needed as a loop guard at the moment kind/namespace/name change, and it changes in the same render as they do.",
+      "fix": "Read the marker through a ref that is updated on every render (const renamedFromRef = useRef(renamedFromEntityRef); renamedFromRef.current = renamedFromEntityRef) and use renamedFromRef.current inside the async callback. Keep the deps at [catalogApi, kind, namespace, name] as before. The loop guard behaves the same because the redirect sets the new params and the state at once."
+    }
+  ],
+  "passing_checks": [
+    "Correctness vs change_plan: U01-U44 implemented as specified. useEntityFromUrl carries formerRef in the async value and adds a guard against re-navigating from a stale value, which is a harmless and slightly stricter deviation.",
+    "Type safety: no any. Location state is narrowed through an unknown-typed reader. The async return types are explicit.",
+    "Error handling: the router audits success and fail and rethrows. A frontend former-ref lookup error falls back to the existing not-found behaviour. getEntityByRef errors still surface as error.",
+    "Authz: AuthorizedEntitiesCatalog.entityByFormerRef mirrors entitiesBatch (DENY gives null, CONDITIONAL adds the permission filter, ALLOW passes through). The live-name-wins check does not depend on credentials. Every miss or deny gives the same 404 message, so nothing leaks.",
+    "PII: none introduced.",
+    "DB: the migration has an FK to final_entities with ON DELETE CASCADE, a unique index on (entity_id, former_entity_ref) and an index on former_entity_ref. Writes happen inside the publication transaction and the 255-character cap prevents varchar overflow. stringifyEntityRef lowercases the name, so stored refs match final_entities.entity_ref.",
+    "Tests: model helper, migration, stitching, DefaultEntitiesCatalog (resolve, live wins, ambiguity, filter), AuthorizedEntitiesCatalog (DENY, CONDITIONAL, ALLOW), router (200 and 404), client (string/compound and 404), both frontend systems' entity pages, the TechDocs hook (redirect, no match, loop guard) and the notice.",
+    "Generated code: only the GetEntityByFormerName additions in router.ts, Api.server.ts and Api.client.ts. The other generated files are byte-identical.",
+    "Sensitive files: no package.json, .env, CLAUDE.md or settings were touched. @material-ui/lab is already a dependency of plugin-catalog and plugin-techdocs.",
+    "Changesets: six per-package changesets with bump levels that match the plan and adopter-facing wording. New source files carry the 2026 Apache header.",
+    "Env fixture check: not applicable, because no validating config schema or new required env vars were added."
+  ],
+  "notes": [
+    "The API reports (report*.api.md for catalog-model and catalog-client, report.sql.md for catalog-backend) are not regenerated. The plan defers this to yarn build:api-reports before the PR, so it is not counted as a finding."
+  ],
+  "refinement_packets": []
+}

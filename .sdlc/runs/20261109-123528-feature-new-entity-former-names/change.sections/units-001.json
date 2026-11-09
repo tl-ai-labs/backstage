@@ -1,0 +1,349 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/catalog-model/src/entity/formerRefs.ts",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Defines the backstage.io/former-refs well-known annotation and a helper that turns an entity's annotation value into normalized former entity refs.",
+    "rules": [
+      "1. Import Entity from './Entity', DEFAULT_NAMESPACE from './constants', and parseEntityRef, stringifyEntityRef from './ref'.",
+      "2. Export const ANNOTATION_FORMER_REFS = 'backstage.io/former-refs' with TSDoc: the value is a comma-separated list of entity refs the entity was previously known by; short refs (name) and namespace/name refs default to the entity's own kind and namespace; tag @public.",
+      "3. Export function getEntityFormerRefs(entity: Entity): string[] with TSDoc describing the normalization rules below and @public, @param and @returns tags.",
+      "4. Read entity.metadata.annotations?.[ANNOTATION_FORMER_REFS]; when it is not a string, return [].",
+      "5. Compute ownNamespace = entity.metadata.namespace || DEFAULT_NAMESPACE and ownRef = stringifyEntityRef({ kind: entity.kind, namespace: ownNamespace, name: entity.metadata.name }).",
+      "6. Split the value on ',', trim each item, and skip empty items.",
+      "7. Parse each item with parseEntityRef(item, { defaultKind: entity.kind, defaultNamespace: ownNamespace }) inside try/catch; skip the item when parsing throws.",
+      "8. Skip the item when parsed.kind.toLowerCase() differs from entity.kind.toLowerCase().",
+      "9. Stringify the parsed ref with stringifyEntityRef; skip it when it equals ownRef or was already collected; otherwise append it, so the result keeps first-seen order without duplicates.",
+      "10. The function never throws and never mutates the entity."
+    ],
+    "exports": [
+      {
+        "name": "ANNOTATION_FORMER_REFS",
+        "kind": "const",
+        "params": [],
+        "returns": "'backstage.io/former-refs'"
+      },
+      {
+        "name": "getEntityFormerRefs",
+        "kind": "function",
+        "params": [
+          {
+            "name": "entity",
+            "type": "Entity"
+          }
+        ],
+        "returns": "string[]"
+      }
+    ],
+    "import_line": "import { ANNOTATION_FORMER_REFS, getEntityFormerRefs } from '@backstage/catalog-model';",
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/ref.ts",
+      "lines": [1, 61],
+      "reason": "Header, import style and TSDoc shape of public helpers in this folder."
+    },
+    "uses": [
+      {
+        "path": "packages/catalog-model/src/entity/ref.ts",
+        "lines": [63, 158],
+        "reason": "parseEntityRef defaulting and error behaviour, stringifyEntityRef lowercase output."
+      },
+      {
+        "path": "packages/catalog-model/src/entity/constants.ts",
+        "lines": [17, 36],
+        "reason": "DEFAULT_NAMESPACE and the TSDoc style of annotation constants."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "FR-2", "NFR-4", "NFR-5"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/catalog-model/src/entity/index.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Re-exports the former-refs annotation constant and helper from the package entry point.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 20,
+        "to": 20,
+        "first_line": "export type { EntityEnvelope } from './EntityEnvelope';",
+        "rule": "Add the line: export * from './formerRefs';"
+      }
+    ],
+    "exports": [
+      {
+        "name": "ANNOTATION_FORMER_REFS",
+        "kind": "const",
+        "params": [],
+        "returns": "'backstage.io/former-refs'"
+      },
+      {
+        "name": "getEntityFormerRefs",
+        "kind": "function",
+        "params": [
+          {
+            "name": "entity",
+            "type": "Entity"
+          }
+        ],
+        "returns": "string[]"
+      }
+    ],
+    "depends_on": ["U01"],
+    "covers": ["FR-1", "FR-2"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/catalog-model/src/entity/formerRefs.test.ts",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "Unit tests for getEntityFormerRefs and the annotation constant.",
+    "rules": [
+      "1. Import ANNOTATION_FORMER_REFS and getEntityFormerRefs from './formerRefs' and Entity from './Entity'.",
+      "2. Build entities inline with apiVersion 'backstage.io/v1alpha1', kind 'Component', metadata.name 'new-name', and the annotation under metadata.annotations[ANNOTATION_FORMER_REFS].",
+      "3. One describe('getEntityFormerRefs') with a few thorough it blocks; assert whole arrays with toEqual."
+    ],
+    "tests": [
+      {
+        "name": "completes, trims and normalizes refs",
+        "given": "an entity in namespace 'team' with annotation ' old-name , Other/Older ,Component:prod/Legacy ,, '",
+        "expect": "['component:team/old-name', 'component:other/older', 'component:prod/legacy']; an entity without namespace and annotation 'old-name' yields ['component:default/old-name']; ANNOTATION_FORMER_REFS equals 'backstage.io/former-refs'"
+      },
+      {
+        "name": "drops unparseable, other-kind, self and duplicate refs",
+        "given": "an entity component:default/new-name with annotation 'old, :bad, api:default/old, new-name, component:default/NEW-NAME, OLD, a:/'",
+        "expect": "['component:default/old']"
+      },
+      {
+        "name": "returns an empty list when the annotation is missing or not a string",
+        "given": "an entity without annotations, one with an empty-string annotation, and one whose annotation value is cast from a number",
+        "expect": "[] for each"
+      }
+    ],
+    "style_from": {
+      "path": "packages/catalog-model/src/entity/ref.test.ts",
+      "lines": [1, 40],
+      "reason": "Header, describe/it layout and assertion style of catalog-model unit tests."
+    },
+    "depends_on": ["U01"],
+    "covers": ["AC-1"],
+    "checks": ["prettier", "eslint", "jest"]
+  },
+  {
+    "id": "U04",
+    "path": "plugins/catalog-backend/migrations/20261109000000_former_entity_refs.js",
+    "action": "create",
+    "phase": "codegen",
+    "behaviour": "Knex migration that creates the former_entity_refs table mapping a normalized former entity ref to the entity that claims it.",
+    "rules": [
+      "1. CommonJS file: Apache header with 2026, blank line, '// @ts-check', then exports.up and exports.down as named async functions with '/** @param {import('knex').Knex} knex */' JSDoc.",
+      "2. up: knex.schema.createTable('former_entity_refs', table => { ... }) with table.comment('Former entity refs that entities declare through the backstage.io/former-refs annotation').",
+      "3. Column entity_id: table.string('entity_id').notNullable().references('entity_id').inTable('final_entities').onDelete('CASCADE').comment('The entity that claims the former ref').",
+      "4. Column former_entity_ref: table.string('former_entity_ref').notNullable().comment('A former entity ref on lowercase kind:namespace/name form').",
+      "5. table.unique(['entity_id', 'former_entity_ref'], { indexName: 'former_entity_refs_entity_id_former_entity_ref_uniq' }) and table.index('former_entity_ref', 'former_entity_refs_former_entity_ref_idx').",
+      "6. down: await knex.schema.dropTable('former_entity_refs').",
+      "7. No raw SQL and no transaction config override; the default migration transaction is used."
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/migrations/20220616202842_refresh_keys.js",
+      "reason": "createTable with FK, comments and named indexes in this package's migration style."
+    },
+    "uses": [
+      {
+        "path": "plugins/catalog-backend/migrations/20261007000000_stitch_failure_count.js",
+        "reason": "Exact header year format and '@param {import('knex').Knex} knex' JSDoc form of the newest migration."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "NFR-2", "NFR-4"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U05",
+    "path": "plugins/catalog-backend/src/tests/migrations.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds a migration test for 20261109000000_former_entity_refs.js covering up, cascade on entity deletion, and down.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 1701,
+        "to": 1701,
+        "first_line": "});",
+        "rule": "Inside the describe.each block, after the 20261007000000_stitch_failure_count.js test, add it('20261109000000_former_entity_refs.js', ...) that uses migrateUntilBefore, migrateUpOnce and migrateDownOnce like the test above it."
+      }
+    ],
+    "tests": [
+      {
+        "name": "20261109000000_former_entity_refs.js",
+        "given": "a database migrated until before the new migration, then migrated up once; a refresh_state row (entity_id 'i1', entity_ref 'k:ns/new') and a final_entities row (entity_id 'i1', entity_ref 'k:ns/new', hash 'h', final_entity '{}') plus former_entity_refs rows for 'k:ns/old' and 'k:other/older'",
+        "expect": "the rows read back from former_entity_refs; inserting the same (entity_id, former_entity_ref) pair twice rejects; deleting the refresh_state row leaves former_entity_refs empty; migrating down once makes knex.schema.hasTable('former_entity_refs') false; migrating up again recreates an empty table"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/tests/migrations.test.ts",
+      "lines": [1655, 1701],
+      "reason": "The per-migration test shape directly above the insertion point."
+    },
+    "uses": [
+      {
+        "path": "plugins/catalog-backend/src/tests/migrations.test.ts",
+        "lines": [17, 50],
+        "reason": "migrateUpOnce, migrateDownOnce and migrateUntilBefore helpers."
+      }
+    ],
+    "depends_on": ["U04"],
+    "covers": ["FR-3", "AC-2"],
+    "checks": ["prettier", "eslint", "jest"]
+  },
+  {
+    "id": "U06",
+    "path": "plugins/catalog-backend/src/database/tables.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Adds the row type for the former_entity_refs table.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 202,
+        "to": 202,
+        "first_line": "};",
+        "rule": "After DbSearchRow, add a blank line and export type DbFormerEntityRefsRow = { entity_id: string; former_entity_ref: string; } with a TSDoc block 'Represents the former_entity_refs table.' and a remarks paragraph saying each row is a former ref (lowercase kind:namespace/name) that the entity declares through the backstage.io/former-refs annotation, replaced on every changed stitch; give each field a one-line TSDoc comment."
+      }
+    ],
+    "exports": [
+      {
+        "name": "DbFormerEntityRefsRow",
+        "kind": "type",
+        "params": [],
+        "returns": "{ entity_id: string; former_entity_ref: string }"
+      }
+    ],
+    "import_line": "import { DbFormerEntityRefsRow } from '../database/tables';",
+    "depends_on": ["U04"],
+    "covers": ["FR-3"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U07",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Replaces an entity's former_entity_refs rows with its current declared former refs inside the stitch publication transaction.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 18,
+        "to": 23,
+        "first_line": "import {",
+        "last_line": "} from '@backstage/catalog-model';",
+        "rule": "Keep the existing names and add getEntityFormerRefs after EntityRelation in this import."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 29,
+        "to": 29,
+        "first_line": "import { DbFinalEntitiesRow, DbStitchQueueRow } from '../../tables';",
+        "rule": "Import DbFinalEntitiesRow, DbFormerEntityRefsRow and DbStitchQueueRow from '../../tables' (Prettier may wrap it)."
+      },
+      {
+        "id": "S3",
+        "at": "insert_after",
+        "from": 33,
+        "to": 33,
+        "first_line": "import { syncSearchRows } from './syncSearchRows';",
+        "rule": "Add: import { BATCH_SIZE } from './util';"
+      },
+      {
+        "id": "S4",
+        "at": "insert_after",
+        "from": 206,
+        "to": 206,
+        "first_line": "const searchEntries = buildEntitySearch(entityId, entity);",
+        "rule": "Add a short comment and const formerEntityRefs = getEntityFormerRefs(entity).filter(ref => ref.length <= 255); the comment says refs longer than the column width are dropped so an oversized annotation cannot fail the stitch."
+      },
+      {
+        "id": "S5",
+        "at": "insert_after",
+        "from": 307,
+        "to": 307,
+        "first_line": "await syncSearchRows(tx, entityId, searchEntries);",
+        "rule": "Add a blank line, a one-line comment that former refs are replaced together with the published entity, then await tx<DbFormerEntityRefsRow>('former_entity_refs').where({ entity_id: entityId }).delete(); and, only when formerEntityRefs.length > 0, await tx.batchInsert('former_entity_refs', formerEntityRefs.map(ref => ({ entity_id: entityId, former_entity_ref: ref })), BATCH_SIZE).transacting(tx); nothing else in the transaction changes."
+      }
+    ],
+    "uses": [
+      {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/syncSearchRows.ts",
+        "lines": [222, 232],
+        "reason": "The delete plus batchInsert(...).transacting(knex) idiom inside a publication transaction."
+      },
+      {
+        "path": "plugins/catalog-backend/src/database/operations/stitcher/util.ts",
+        "reason": "BATCH_SIZE export."
+      }
+    ],
+    "depends_on": ["U02", "U06"],
+    "covers": ["FR-4", "NFR-1", "NFR-2"],
+    "checks": ["prettier", "eslint"]
+  },
+  {
+    "id": "U08",
+    "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+    "action": "edit",
+    "phase": "tests",
+    "behaviour": "Adds stitching tests showing former ref rows are written, replaced, removed and cascaded on delete, on every supported database.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 20,
+        "to": 26,
+        "first_line": "import {",
+        "last_line": "} from '../../tables';",
+        "rule": "Add DbFormerEntityRefsRow to this import, keeping alphabetical order (after DbFinalEntitiesRow)."
+      },
+      {
+        "id": "S2",
+        "at": "insert_before",
+        "from": 1036,
+        "to": 1036,
+        "first_line": "async function getStitchClaim(knex: import('knex').Knex, entityRef: string) {",
+        "rule": "Add a top-level it.each(databases.eachSupportedId())('maintains former entity ref rows for %p', async databaseId => { ... }) followed by a blank line; it inserts refresh_state the way the expired-claim test at the top of the file does, re-stitches by updating processed_entity then markForStitching plus performStitching({ knex, logger, ...(await getStitchClaim(knex, 'k:ns/n')) }), and reads rows with knex<DbFormerEntityRefsRow>('former_entity_refs').orderBy('former_entity_ref')."
+      }
+    ],
+    "tests": [
+      {
+        "name": "writes former refs when the entity declares them",
+        "given": "refresh_state row entity_id 'my-id', entity_ref 'k:ns/n' whose processed entity (kind 'k', namespace 'ns', name 'n') has annotation 'backstage.io/former-refs': ' old , other/older, k:ns/n, x:ns/foreign, OLD', then one stitch",
+        "expect": "performStitching resolves 'changed' and former_entity_refs equals [{ entity_id: 'my-id', former_entity_ref: 'k:ns/old' }, { entity_id: 'my-id', former_entity_ref: 'k:other/older' }]"
+      },
+      {
+        "name": "replaces and removes rows when the annotation changes",
+        "given": "the same entity re-stitched with annotation 'renamed', then re-stitched with no annotations",
+        "expect": "rows become [{ entity_id: 'my-id', former_entity_ref: 'k:ns/renamed' }], then []"
+      },
+      {
+        "name": "removes rows when the entity is deleted",
+        "given": "the entity re-stitched with annotation 'old' and then its refresh_state row deleted",
+        "expect": "former_entity_refs is empty after the delete"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/catalog-backend/src/database/operations/stitcher/performStitching.test.ts",
+      "lines": [45, 102],
+      "reason": "Top-level it.each per database with refresh_state insert, markForStitching and getStitchClaim."
+    },
+    "depends_on": ["U04", "U06", "U07"],
+    "covers": ["AC-2", "FR-4"],
+    "checks": ["prettier", "eslint", "jest"]
+  }
+]

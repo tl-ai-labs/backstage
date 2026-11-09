@@ -80,6 +80,60 @@ metadata:
     backstage.io/orphan: 'true'
 ```
 
+### backstage.io/former-refs
+
+The value of this annotation is a comma-separated list of entity refs that the
+entity was previously known by. Whitespace around items is ignored and empty
+items are skipped.
+
+A bare name defaults to the entity's own kind and namespace, while a
+`namespace/name` ref uses the entity's own kind. Refs with a different kind than
+the entity, refs that fail to parse, and the entity's own current ref are
+ignored. Matching is case-insensitive.
+
+```yaml
+# Example:
+metadata:
+  name: new-name
+  annotations:
+    backstage.io/former-refs: old-name, legacy/older-name
+```
+
+When an entity currently exists with the requested ref, the old ref does not
+resolve (the live entity wins). When more than one entity declares the same
+former ref, it resolves to nothing.
+
+A former ref only resolves to an entity the caller has permission to read.
+Otherwise, it behaves as an unknown ref so the new name is not revealed. See the
+[by-former-name endpoint](api.md#get-entitiesby-former-namekindnamespacename) for
+details.
+
+The catalog entity page and the TechDocs reader redirect an old link to the
+renamed entity, keep the rest of the path, query string, and hash, and show a
+dismissible notice. Only one hop is followed, so list every former ref on the
+current entity. The index updates the next time the catalog processes the
+entity after its annotation changes.
+
+#### Security considerations
+
+Trust assumption: any entity the catalog ingests may claim a former ref of its
+own kind in any namespace; the catalog trusts its ingestion sources (entity
+providers and registered locations) for this, as it does for other metadata. If
+the entity that originally held a name was deleted, or renamed without declaring
+the annotation, an unrelated entity of the same kind can claim that old ref and
+old links will redirect to it (the redirect stays within Backstage and the
+renamed notice is shown). Adopters who allow untrusted users to register
+entities should restrict who can register entities, for example with catalog
+rules or permissions.
+
+Accepted trade-off: to prevent one entity from hijacking another's name, the
+former-name lookup checks for a live entity holding the requested ref and for
+more than one entity claiming it across the whole catalog, including entities the
+caller cannot read. As a result, a user who can register entities could infer
+whether an entity they cannot read holds a given ref (a not-found response
+instead of their own entity). The resolved entity itself is always permission
+checked and every miss or denial returns the same not-found response.
+
 ### backstage.io/techdocs-ref
 
 ```yaml

@@ -50,6 +50,10 @@ export const techdocsTranslationRef = createTranslationRef({
     redirectNotification: {
       redirectNow: 'Redirect now',
     },
+    renamedNotification: {
+      message: 'This entity was renamed from {{formerRef}}.',
+      dismiss: 'Dismiss',
+    },
     search: {
       noResults: 'No results found',
       placeholder: 'Search {{entityTitle}} docs',

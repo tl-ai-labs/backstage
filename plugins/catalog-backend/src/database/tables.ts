@@ -200,3 +200,19 @@ export type DbSearchRow = {
   original_value: string | null;
   value: string | null;
 };
+
+/**
+ * Represents the former_entity_refs table.
+ *
+ * @remarks
+ *
+ * Each row is a former ref (lowercase kind:namespace/name) that the entity
+ * declares through the backstage.io/former-refs annotation, replaced on every
+ * changed stitch.
+ */
+export type DbFormerEntityRefsRow = {
+  /** The entity that claims the former ref */
+  entity_id: string;
+  /** A former entity ref on lowercase kind:namespace/name form */
+  former_entity_ref: string;
+};

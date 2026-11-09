@@ -1,0 +1,50 @@
+[
+  {
+    "id": "tp_debug_r4_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-new",
+    "pass_id": "20261109-123528-feature-new-entity-former-names",
+    "artifact_path": "docs/features/software-catalog/well-known-annotations.md",
+    "instruction": "Fix `docs/features/software-catalog/well-known-annotations.md` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 security review, accepted findings to document (documentation only; do not change any other text of the backstage.io/former-refs section beyond adding this). In the existing `backstage.io/former-refs` section, add a short paragraph (or 'Security considerations' sub-part) in the doc-style-guide voice that states: (1) Trust assumption: any entity the catalog ingests may claim a former ref of its own kind in any namespace; the catalog trusts its ingestion sources (entity providers and registered locations) for this, as it does for other metadata. If the entity that originally held a name was deleted, or renamed without declaring the annotation, an unrelated entity of the same kind can claim that old ref and old links will redirect to it (the redirect stays within Backstage and the renamed notice is shown). Adopters who allow untrusted users to register entities should restrict who can register entities, for example with catalog rules or permissions. (2) Accepted trade-off: to prevent one entity from hijacking another's name, the former-name lookup checks for a live entity holding the requested ref and for more than one entity claiming it across the whole catalog, including entities the caller cannot read. As a result, a user who can register entities could infer whether an entity they cannot read holds a given ref (a not-found response instead of their own entity). The resolved entity itself is always permission checked and every miss or denial returns the same not-found response.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"docs/features/software-catalog/well-known-annotations.md\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"docs/features/software-catalog/well-known-annotations.md\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123528-feature-new-entity-former-names/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123528-feature-new-entity-former-names/briefs/U35.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/catalog-backend/src/service/DefaultEntitiesCatalog.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "docs/features/software-catalog/well-known-annotations.md",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 60,
+      "max_retries": 2
+    }
+  }
+]
