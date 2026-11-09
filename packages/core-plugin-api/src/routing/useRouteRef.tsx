@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { matchRoutes, useLocation } from 'react-router-dom';
 import { useVersionedContext } from '@backstage/version-bridge';
 import {
@@ -106,6 +106,22 @@ export function useRouteRef<Params extends AnyParams>(
 
   const resolver = versionedContext?.atVersion(1);
 
+  const [revision, setRevision] = useState(0);
+  const isPending = routeResolutionApi?.isPending?.();
+
+  useEffect(() => {
+    if (!routeResolutionApi?.subscribe) {
+      return undefined;
+    }
+    const unsubscribe = routeResolutionApi.subscribe(() => {
+      setRevision(r => r + 1);
+    });
+    if (routeResolutionApi?.isPending?.() !== isPending) {
+      setRevision(r => r + 1);
+    }
+    return unsubscribe;
+  }, [routeResolutionApi, isPending]);
+
   const newRouteFunc = useMemo(() => {
     if (!routeResolutionApi) {
       return null;
@@ -118,7 +134,8 @@ export function useRouteRef<Params extends AnyParams>(
     } catch {
       return null;
     }
-  }, [routeResolutionApi, routeRef, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeResolutionApi, routeRef, pathname, revision]);
 
   const legacyRouteFunc = useMemo(
     () => resolver && resolver.resolve(routeRef, { pathname }),
@@ -127,7 +144,7 @@ export function useRouteRef<Params extends AnyParams>(
 
   if (newRouteFunc !== null) {
     const isOptional = 'optional' in routeRef && routeRef.optional;
-    if (!newRouteFunc && !isOptional) {
+    if (!newRouteFunc && !isOptional && !routeResolutionApi?.isPending?.()) {
       throw new Error(`No path for ${routeRef}`);
     }
     return newRouteFunc;

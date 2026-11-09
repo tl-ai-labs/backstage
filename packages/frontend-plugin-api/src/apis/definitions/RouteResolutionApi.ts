@@ -58,6 +58,24 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+
+  /**
+   * Subscribes to changes in route resolution, for example when the app finishes
+   * loading and more routes become known.
+   *
+   * @param listener - A callback invoked when route resolution changes. The
+   *   listener is called without arguments.
+   * @returns An unsubscribe function.
+   */
+  subscribe?(listener: () => void): () => void;
+
+  /**
+   * Returns true while the app has not finished loading and only part of its
+   * routes are known, so a route ref that cannot be resolved yet may become
+   * resolvable later. Implementations that omit this method are treated as never
+   * pending.
+   */
+  isPending?(): boolean;
 }
 
 /**

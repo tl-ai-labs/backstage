@@ -30,6 +30,8 @@ import {
   useApi,
   analyticsApiRef,
   createExtensionDataRef,
+  AppRootElementBlueprint,
+  PageBlueprint,
 } from '@backstage/frontend-plugin-api';
 import { act, render, screen } from '@testing-library/react';
 import { createSpecializedApp } from './createSpecializedApp';
@@ -41,9 +43,11 @@ import {
 import { mockApis, TestApiRegistry } from '@backstage/test-utils';
 import {
   configApiRef,
+  createRouteRef as createLegacyRouteRef,
   featureFlagsApiRef,
   IdentityApi,
   identityApiRef,
+  useRouteRef as useLegacyRouteRef,
 } from '@backstage/core-plugin-api';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiProvider, ConfigReader } from '@backstage/core-app-api';
@@ -1747,6 +1751,114 @@ describe('createSpecializedApp', () => {
       await expect(
         screen.findByText('Deferred Element'),
       ).resolves.toBeInTheDocument();
+    });
+
+    it('should re-resolve route refs in app root elements after finalization', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const pageRouteRef = createLegacyRouteRef({ id: 'test-page' });
+      let newLinkRenders = 0;
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+
+      function NewLink() {
+        newLinkRenders += 1;
+        const link = useRouteRef(pageRouteRef);
+        return <div>link: {link?.() ?? 'none'}</div>;
+      }
+
+      function LegacyLink() {
+        const link = useLegacyRouteRef(pageRouteRef);
+        return <div>legacy link: {link?.() ?? 'none'}</div>;
+      }
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendPlugin({
+            pluginId: 'test',
+            extensions: [
+              PageBlueprint.make({
+                name: 'page',
+                params: {
+                  path: '/test-page',
+                  routeRef: pageRouteRef,
+                  loader: async () => <div>Test Page</div>,
+                },
+              }),
+              AppRootElementBlueprint.make({
+                name: 'new-link',
+                params: { element: <NewLink /> },
+              }),
+              AppRootElementBlueprint.make({
+                name: 'legacy-link',
+                params: { element: <LegacyLink /> },
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const { rerender } = render(preparedApp.getBootstrapApp().element);
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+
+      await expect(
+        screen.findByText('link: none'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('legacy link: none')).toBeInTheDocument();
+      expect(screen.queryByText(/No path for/)).not.toBeInTheDocument();
+
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      const rendersBeforeFinalize = newLinkRenders;
+      act(() => {
+        triggerSignInSuccess(identityApi);
+      });
+
+      const finalizedApp = await finalizedAppPromise;
+      rerender(finalizedApp.element);
+
+      await expect(
+        screen.findByText('link: /test-page'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('legacy link: /test-page')).toBeInTheDocument();
+      expect(screen.queryByText('link: none')).not.toBeInTheDocument();
+
+      const rendersAfterFinalize = newLinkRenders;
+      expect(rendersAfterFinalize - rendersBeforeFinalize).toBeLessThanOrEqual(
+        4,
+      );
+      await act(async () => {});
+      expect(newLinkRenders).toBe(rendersAfterFinalize);
     });
 
     it('should warn when bootstrap extensions access APIs that appear during finalization', async () => {
