@@ -1,0 +1,39 @@
+{
+  "module": "packages/catalog-model (TSDoc, run 20261109-123701-docs-catalog-model-tsdoc)",
+  "verdict": "approved",
+  "tool_calls": 7,
+  "summary": "16/16 units match change_plan.md word for word; source diff is comment-only; claims spot-checked against the implementation (isValid* regexes and isValidPrefixAndOrSuffix, isValidDnsSubdomain/isValidDnsLabel, lodash.merge in DefaultNamespaceEntityPolicy, lower-case stringifyEntityRef and in-place mutation in GroupDefaultParentEntityPolicy, require/optional null handling in FieldFormatEntityPolicy, additionalProperties:false and 'Malformed envelope' in SchemaValidEntityPolicy) and all hold. Changeset is a single correct patch entry with no code symbols. Report diff only drops '(undocumented)' markers; no new API Extractor warnings. Only finding is the plan's 80-column wrap convention, missed on 18 added comment lines; not blocking.",
+  "passing_checks": [
+    "Correctness vs change_plan: pass (all rule sentences present, in order, tag order summary/@remarks/@public/@param/@returns in conditions.ts)",
+    "Technical accuracy vs implementation: pass",
+    "Comment-only / no code, blank-line or release-tag changes: pass",
+    "TSDoc syntax ({@link} targets are public exports; braces/angle brackets in backticks): pass",
+    "Changeset (patch, @backstage/catalog-model, adopter-facing, no symbols): pass",
+    "Type safety, error handling, authz, PII, tests: not applicable (docs-only)",
+    "Env fixtures: skipped (intent docs)"
+  ],
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "packages/catalog-model/src/entity/conditions.ts",
+      "line": 40,
+      "issue": "Comment lines wider than 80 columns, against the plan's wrap convention: the eight '@returns ... {@link XEntityV1alpha1}' lines (40, 57, 74, 90, 107, 124, 141, 157; 99-105 cols) and the isComponentEntity remark line 51 (81 cols).",
+      "fix": "Wrap each @returns line before '{@link ...}' (continuation line indented as ' *   {@link X}' or ' * {@link X}'), and rewrap line 51 so 'so' moves to the next line; keep the wording unchanged."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+      "line": 36,
+      "issue": "Added comment lines 36, 40, 78, 115, 117, 118, 120 and 161 are 81-82 columns wide, over the 80-column wrap convention (lines 25-26 are pre-existing @see URLs and out of scope).",
+      "fix": "Rewrap those remark paragraphs so every line fits in 80 columns, breaking only between words and never inside a backtick span or {@link} tag; do not change the text."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/catalog-model/src/kinds/LocationEntityV1alpha1.ts",
+      "line": 42,
+      "issue": "Remark line 'Declares the optional string fields `type` and `target`, the optional string' is 81 columns, over the 80-column wrap convention.",
+      "fix": "Move the word 'string' to the start of the next line and rewrap the paragraph within 80 columns; do not change the text."
+    }
+  ],
+  "refinement_packets": []
+}

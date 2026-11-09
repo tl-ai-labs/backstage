@@ -1,0 +1,79 @@
+[
+  {
+    "id": "U09",
+    "path": "packages/catalog-model/src/entity/conditions.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Fills the eight bare `/** @public */` comments of the `is<Kind>Entity` type guards with a summary, remarks, `@param` and `@returns`.",
+    "rules": [
+      "1. Every block keeps its existing `/**`, ` * @public` and ` */` lines untouched; text goes in only through the two insert sites per function: summary, a blank ` *` line, `@remarks`, a blank ` *` line, the remark and a blank ` *` line after the `/**` line; the `@param` and `@returns` lines after the ` * @public` line.",
+      "2. Per function, with K the kind name and T the interface: isApiEntity K=`API` T=ApiEntityV1alpha1; isComponentEntity K=`Component` T=ComponentEntityV1alpha1; isDomainEntity K=`Domain` T=DomainEntityV1alpha1; isGroupEntity K=`Group` T=GroupEntityV1alpha1; isLocationEntity K=`Location` T=LocationEntityV1alpha1; isResourceEntity K=`Resource` T=ResourceEntityV1alpha1; isSystemEntity K=`System` T=SystemEntityV1alpha1; isUserEntity K=`User` T=UserEntityV1alpha1.",
+      "3. Summary: Checks whether an entity is of the K kind.",
+      "4. Remark: The comparison of `kind` with K ignores case, so `K` in any letter case matches (write K once in the case shown and once in lower case as the example, e.g. `component` for Component). Only `kind` is checked: `apiVersion` and `spec` are not looked at, so a match does not mean that the entity conforms to {@link T}.",
+      "5. `@param entity - The entity to check`",
+      "6. `@returns True if the kind matches, narrowing the type of the entity to {@link T}`",
+      "7. Write the remark of rule 4 as plain sentences, for example for Component: The comparison of `kind` with `Component` ignores case, so `component` also matches. Only `kind` is checked: `apiVersion` and `spec` are not looked at, so a match does not mean that the entity conforms to {@link ComponentEntityV1alpha1}."
+    ],
+    "sites": [
+      {"id": "S1", "at": "insert_after", "from": 29, "to": 29, "first_line": "/**", "rule": "isApiEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S2", "at": "insert_after", "from": 30, "to": 30, "first_line": "* @public", "rule": "isApiEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S3", "at": "insert_after", "from": 35, "to": 35, "first_line": "/**", "rule": "isComponentEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S4", "at": "insert_after", "from": 36, "to": 36, "first_line": "* @public", "rule": "isComponentEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S5", "at": "insert_after", "from": 41, "to": 41, "first_line": "/**", "rule": "isDomainEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S6", "at": "insert_after", "from": 42, "to": 42, "first_line": "* @public", "rule": "isDomainEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S7", "at": "insert_after", "from": 47, "to": 47, "first_line": "/**", "rule": "isGroupEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S8", "at": "insert_after", "from": 48, "to": 48, "first_line": "* @public", "rule": "isGroupEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S9", "at": "insert_after", "from": 53, "to": 53, "first_line": "/**", "rule": "isLocationEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S10", "at": "insert_after", "from": 54, "to": 54, "first_line": "* @public", "rule": "isLocationEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S11", "at": "insert_after", "from": 59, "to": 59, "first_line": "/**", "rule": "isResourceEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S12", "at": "insert_after", "from": 60, "to": 60, "first_line": "* @public", "rule": "isResourceEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S13", "at": "insert_after", "from": 65, "to": 65, "first_line": "/**", "rule": "isSystemEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S14", "at": "insert_after", "from": 66, "to": 66, "first_line": "* @public", "rule": "isSystemEntity: `@param` and `@returns` of rules 5 and 6."},
+      {"id": "S15", "at": "insert_after", "from": 71, "to": 71, "first_line": "/**", "rule": "isUserEntity: summary and remarks of rules 3, 4 and 7."},
+      {"id": "S16", "at": "insert_after", "from": 72, "to": 72, "first_line": "* @public", "rule": "isUserEntity: `@param` and `@returns` of rules 5 and 6."}
+    ],
+    "style_from": {"path": "packages/catalog-model/src/entity/ref.ts", "lines": [47, 60], "reason": "A documented public function in this package: summary, `@public`, then `@param` and `@returns`."},
+    "uses": [
+      {"path": "packages/catalog-model/src/entity/conditions.test.ts", "lines": [28, 85], "reason": "The tests pass lower-case kinds with an empty apiVersion and no spec, which the remarks describe."}
+    ],
+    "depends_on": [],
+    "covers": ["FR-2", "FR-5", "FR-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-2", "AC-3", "AC-4"],
+    "checks": ["prettier", "eslint", "comment-only"]
+  },
+  {
+    "id": "U10",
+    "path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.ts",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Adds a TSDoc comment above each of the eight static validator methods of `KubernetesValidatorFunctions`, stating the rule it enforces.",
+    "rules": [
+      "1. Each comment: a one-sentence summary, then (where this list gives a remark) a blank ` *` line, `@remarks`, a blank ` *` line and the remark, then a blank ` *` line and `@param value - The value to check`. Indent 2 spaces. No `@returns`, no release tag, no `@see`.",
+      "2. Where a remark says DNS subdomain, write out this rule instead of a helper name: 1 to 253 characters, made of `.`-separated parts that are each 1 to 63 characters of lower-case letters, digits and hyphens, starting and ending with a letter or digit.",
+      "3. isValidApiVersion summary: Checks that the value is a valid entity `apiVersion`, such as `backstage.io/v1alpha1` or `v1`. Remark: The value must be a string that is either a version alone or a prefix and a version separated by a single `/`; a second `/` makes it invalid. The version is 1 to 63 ASCII letters and digits, with no other characters. The prefix, when present, must be a DNS subdomain (rule 2). Non-string values return `false`.",
+      "4. isValidKind summary: Checks that the value is a valid entity `kind`. Remark: The value must be a string of 1 to 63 characters that starts with an ASCII letter and contains only ASCII letters and digits. Non-string values return `false`.",
+      "5. isValidObjectName summary: Checks that the value is a valid entity name. Remark: The value must be a string of 1 to 63 characters that starts and ends with an ASCII letter or digit and contains only ASCII letters, digits, `-`, `_` and `.`; these separators can repeat, as in `a--b` or `a..b`. Non-string values return `false`.",
+      "6. isValidNamespace summary: Checks that the value is a valid entity namespace. Remark: The value must be a string of 1 to 63 characters made of lower-case ASCII letters, digits and hyphens, starting and ending with a letter or digit; consecutive hyphens are allowed. Upper-case letters, `_` and `.` make it invalid. Non-string values return `false`.",
+      "7. isValidLabelKey summary: Checks that the value is a valid label key. Remark: The value must be a string that is either a name alone or a prefix and a name separated by a single `/`; a second `/` makes it invalid. The name follows the same rule as {@link KubernetesValidatorFunctions.isValidObjectName}, and the prefix, when present, must be a DNS subdomain (rule 2). Non-string values return `false`.",
+      "8. isValidLabelValue summary: Checks that the value is a valid label value. Remark: The empty string is valid; any other value must follow the same rule as {@link KubernetesValidatorFunctions.isValidObjectName}. Non-string values return `false`.",
+      "9. isValidAnnotationKey summary: Checks that the value is a valid annotation key. Remark: The rule is the same as for {@link KubernetesValidatorFunctions.isValidLabelKey}: a name alone or a prefix and a name separated by a single `/`, where the name follows the {@link KubernetesValidatorFunctions.isValidObjectName} rule and the prefix must be a DNS subdomain (rule 2). Non-string values return `false`.",
+      "10. isValidAnnotationValue summary: Checks that the value is a valid annotation value, which is any string, including the empty string. Remark: There is no length limit and no restriction on characters. Non-string values return `false`."
+    ],
+    "sites": [
+      {"id": "S1", "at": "insert_before", "from": 29, "to": 29, "first_line": "static isValidApiVersion(value: unknown): boolean {", "rule": "Comment of rules 1, 2 and 3."},
+      {"id": "S2", "at": "insert_before", "from": 38, "to": 38, "first_line": "static isValidKind(value: unknown): boolean {", "rule": "Comment of rules 1 and 4."},
+      {"id": "S3", "at": "insert_before", "from": 47, "to": 47, "first_line": "static isValidObjectName(value: unknown): boolean {", "rule": "Comment of rules 1 and 5."},
+      {"id": "S4", "at": "insert_before", "from": 56, "to": 56, "first_line": "static isValidNamespace(value: unknown): boolean {", "rule": "Comment of rules 1 and 6."},
+      {"id": "S5", "at": "insert_before", "from": 60, "to": 60, "first_line": "static isValidLabelKey(value: unknown): boolean {", "rule": "Comment of rules 1, 2 and 7."},
+      {"id": "S6", "at": "insert_before", "from": 69, "to": 69, "first_line": "static isValidLabelValue(value: unknown): boolean {", "rule": "Comment of rules 1 and 8."},
+      {"id": "S7", "at": "insert_before", "from": 75, "to": 75, "first_line": "static isValidAnnotationKey(value: unknown): boolean {", "rule": "Comment of rules 1, 2 and 9."},
+      {"id": "S8", "at": "insert_before", "from": 84, "to": 84, "first_line": "static isValidAnnotationValue(value: unknown): boolean {", "rule": "Comment of rules 1 and 10."}
+    ],
+    "style_from": {"path": "packages/catalog-model/src/validation/CommonValidatorFunctions.ts", "lines": [66, 95], "reason": "How the sibling validator class documents its static check methods: summary, then `@param value - The value to check`."},
+    "uses": [
+      {"path": "packages/catalog-model/src/validation/KubernetesValidatorFunctions.test.ts", "reason": "The accepted and rejected inputs each rule above was checked against."}
+    ],
+    "depends_on": [],
+    "covers": ["FR-3", "FR-5", "FR-7", "NFR-1", "NFR-2", "NFR-3", "NFR-4", "AC-1", "AC-2", "AC-3", "AC-4"],
+    "checks": ["prettier", "eslint", "comment-only"]
+  }
+]
