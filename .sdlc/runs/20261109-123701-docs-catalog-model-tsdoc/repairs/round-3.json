@@ -1,0 +1,54 @@
+[
+  {
+    "id": "tp_debug_r3_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "docs",
+    "pass_id": "20261109-123701-docs-catalog-model-tsdoc",
+    "artifact_path": "packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts",
+    "instruction": "Fix `packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn build:api-reports fails: \"Error: The API Report for packages/catalog-model is not allowed to have warnings\". report-alpha.api.md line 48: \"Warning: (ae-unresolved-link) The @link reference could not be resolved: The package \"@backstage/catalog-model\" does not have an export \"isApiEntity\"\". ApiEntityV1alpha1 is also exported from the package's alpha entry point, which does not export isApiEntity, so the {@link isApiEntity} in the TSDoc on the `kind` member (lines 38-39: \"The kind of the entity, `API`; {@link isApiEntity} matches it\" / \"case-insensitively.\") cannot resolve there. Replace `{@link isApiEntity}` with the inline-code form `isApiEntity` (backticks), keeping the rest of the sentence word for word: \"The kind of the entity, `API`; `isApiEntity` matches it case-insensitively.\" Wrap so every line is at most 80 columns, continuation lines starting with \"   * \". Change nothing else in the file.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123701-docs-catalog-model-tsdoc/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123701-docs-catalog-model-tsdoc/briefs/U01.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/catalog-model/src/kinds/ApiEntityV1alpha1.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "comment-only",
+          "run": "! git diff -U0 --no-color -- '{path}' | grep -E '^[-+]' | grep -vE '^(\\+\\+\\+|---) ' | grep -vE '^\\+ *(/\\*\\*|\\*)'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 120,
+      "max_retries": 2
+    }
+  }
+]

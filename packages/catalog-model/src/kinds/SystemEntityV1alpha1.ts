@@ -29,8 +29,26 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface SystemEntityV1alpha1 extends Entity {
+  /**
+   * The format version of the entity, either `backstage.io/v1alpha1` or
+   * `backstage.io/v1beta1`.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, `System`; {@link isSystemEntity} matches it
+   * case-insensitively.
+   */
   kind: 'System';
+  /**
+   * The System-specific data of the entity.
+   *
+   * @remarks
+   *
+   * Declares the required string field `owner` and the optional string fields
+   * `domain` and `type`. `owner` is an entity reference to the owner of the
+   * system, and `domain` is an entity reference to the domain that the system
+   * belongs to.
+   */
   spec: {
     owner: string;
     domain?: string;
