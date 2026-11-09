@@ -56,7 +56,7 @@ import {
 } from './createAsyncValidators';
 import { ErrorListTemplate } from './ErrorListTemplate';
 import * as FieldOverrides from './FieldOverrides';
-import { hasErrors } from './utils';
+import { expandCrossStepDependencies, hasErrors } from './utils';
 
 const validator = customizeValidator();
 ajvErrors(validator.ajv);
@@ -295,7 +295,7 @@ export const Stepper = (stepperProps: StepperProps) => {
             extraErrors={errors as unknown as ErrorSchema}
             formData={stepsState}
             formContext={{ ...propFormContext, formData: stepsState }}
-            schema={currentStep.schema}
+            schema={expandCrossStepDependencies(currentStep.schema)}
             uiSchema={mergedUiSchema}
             onSubmit={handleNext}
             fields={fields}

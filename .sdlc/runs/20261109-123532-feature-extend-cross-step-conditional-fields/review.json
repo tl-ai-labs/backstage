@@ -1,0 +1,62 @@
+{
+  "module": "plugins/scaffolder-react (next/lib/schema, Stepper, ReviewState) + docs/changeset",
+  "mode": "brownfield",
+  "intent": "feature-extend",
+  "verdict": "needs_changes",
+  "tool_calls": 5,
+  "findings": [
+    {
+      "severity": "major",
+      "file": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "line": 66,
+      "issue": "The loop adds only the names in getCrossStepConditions(schema).keys, which are the names that fail declaredHere. A mixed cross-step condition also reads a same-step answer, for example `if: { properties: { isMobileSdk: { const: true }, kind: { const: 'lib' } }, required: ['isMobileSdk', 'kind'] }` with `kind` declared in the step. For that condition the same-step name (`kind`) is never put into `data` unless it happens to be a `dependencies` key. json-schema-library then evaluates `if` without `kind`, so `required` fails and the then-fields (for example `sdkName`) are not resolved. ReviewState then drops them because they are in crossStepFields. The Stepper (rjsf, full stepsState) shows the field, requires it and submits its value, but the Review step hides it while the condition holds. Confidence: about 75%, based on the json-schema-library if/required semantics.",
+      "fix": "Have getCrossStepConditions also return every name read by its cross-step conditions (cross-step and same-step), for example a `reads` list, and add those names (except `key`) to `data` in findSchemaForKey. Add a util.test/ReviewState.test case with a mixed condition."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+      "line": 90,
+      "issue": "Each oneOf item whose properties[k] is an object becomes its own `if: {properties: {[k]: item.properties[k]}, required: [k]} then: item-rest` entry in allOf. JSON Schema `dependencies` + `oneOf` needs exactly one branch to match. The added allOf entries instead apply the `then` of EVERY item whose k-subschema matches. When the branches' k-subschemas overlap (for example `{ type: 'string' }` in two branches told apart by another property), rjsf demands the required fields of all matching branches. The form can then reject an answer that the backend (which validates only the original `dependencies`) accepts. This contradicts the plan's stated goal of validation that matches the backend (NFR-2).",
+      "fix": "Produce a per-item if/then only when properties[k] works as a discriminator (it has `const` or `enum`). For other items, leave the dependency to the original `dependencies` keyword, or produce a single `{ if: { required: [k] }, then: { oneOf } }`. Add a utils.test case for the overlapping-branch shape."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "line": 884,
+      "issue": "Both new Stepper cases click Review with SDK name empty, but they do not assert the required-property error that the plan (U10 rule 3) asks for (`screen.findAllByText(/required property/)`). They only check right away that Create is absent, which an async render could satisfy without anything having been validated.",
+      "fix": "After each empty-field Review click, add `expect(await screen.findAllByText(/required property/)).not.toHaveLength(0)` before the Create-absent assertion, in both cases."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "line": 66,
+      "issue": "getCrossStepConditions(schema) runs once per formState key per step inside findSchemaForKey, and declaredHere re-walks the whole schema twice for every name a condition reads. ReviewState also computes it again per step on every render. The cost is quadratic in template size with no caching.",
+      "fix": "Cache the result per mergedSchema object, for example with a module-level `WeakMap<JsonObject, { keys: string[]; fields: string[] }>` in next/lib/schema.ts, or compute it once per step in ReviewState and pass it in."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "line": 287,
+      "issue": "`node.else as JsonObject` is a redundant cast after the `isObject(node.else)` guard. `node.then` on the line above is narrowed without a cast. Also, the hasOwnProperty checks inside `Object.keys` loops are redundant, because Object.keys already returns only own keys.",
+      "fix": "Drop the `as JsonObject` cast (and optionally the redundant hasOwnProperty checks inside Object.keys loops)."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "line": 65,
+      "issue": "The new `//` comment line is about 105 characters long, beyond the 80-column style of the file (Prettier does not wrap comments).",
+      "fix": "Wrap the comment onto two lines."
+    }
+  ],
+  "passing_checks": [
+    "Plan conformance: U01-U13 implemented at the planned sites; createAsyncValidators.ts and plugins/scaffolder untouched as decided.",
+    "Immutability: expandCrossStepDependencies and the schema walkers never mutate input (pinned by the deep-copy test).",
+    "Masking: password-widget field masked in Review while shown; hidden cross-step fields are dropped, so stale secrets do not leak into Review.",
+    "No barrel/API changes: helpers are not exported from index.ts/alpha.ts; no API report needed.",
+    "Changeset: only @backstage/plugin-scaffolder-react, minor (package is 3.0.0-next.0, new feature), adopter-facing, no internal symbol names.",
+    "Docs: section placed after the custom-ordering example, sentence-case heading, yaml example, note on stale values in spec.steps.",
+    "Env-fixture check: not applicable (frontend plugin; no validating config module introduced).",
+    "Authz/PII encryption: not applicable to this change."
+  ],
+  "refinement_packets": []
+}

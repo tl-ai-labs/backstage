@@ -1,0 +1,380 @@
+{
+  "section": "units",
+  "source": "units-002.json",
+  "value": [
+    {
+      "id": "U08",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Pins that ui options of fields inside cross-step conditional branches survive extraction, and covers `getConditionalPropertyNames` and `getCrossStepConditions`.",
+      "rules": [
+        "1. Keep every existing case unchanged.",
+        "2. Assert the name lists order-independently (compare sorted copies)."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { extractSchemaFromStep } from './schema';",
+          "rule": "Replace with an import of `extractSchemaFromStep`, `getConditionalPropertyNames` and `getCrossStepConditions` from './schema' (Prettier may wrap it)."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 600,
+          "to": 600,
+          "first_line": "});",
+          "rule": "Inside `describe('extractSchemaFromStep')`, add a blank line and the first test case below."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 601,
+          "to": 601,
+          "first_line": "});",
+          "rule": "After the last `describe`, add a blank line, `describe('getConditionalPropertyNames', ...)` holding the second test case below, a blank line, and `describe('getCrossStepConditions', ...)` holding the third."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+        "lines": [
+          522,
+          601
+        ],
+        "reason": "Shape of the existing conditional-schema extraction case."
+      },
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-9",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "keeps ui options of fields declared in cross-step conditional branches",
+          "given": "a step schema with property `description`, an `allOf` item whose `if` tests `isMobileSdk` const true (required) and whose `then` declares `sdkName` with `ui:help: 'Package name'`, and `dependencies.isMobileSdk.oneOf` with a branch declaring `isMobileSdk` const true and `sdkPlatform` with `ui:widget: 'radio'` and enum `android`/`ios`",
+          "expect": "uiSchema matches `{ sdkName: { 'ui:help': 'Package name' }, sdkPlatform: { 'ui:widget': 'radio' } }` (toMatchObject), and the returned schema's `then.properties.sdkName` and the oneOf branch's `properties.sdkPlatform` no longer hold any `ui:` key"
+        },
+        {
+          "name": "should list properties declared only inside conditional branches",
+          "given": "a schema with top-level property `description`, `allOf` with one item (`if` on `flag`, `then` declaring `sdkName`, `else` declaring `reason`), `anyOf` with an item declaring `extra`, and `dependencies` with `isMobileSdk` -> oneOf branch declaring `isMobileSdk` and `sdkPlatform` plus `team` -> ['owner']; then a schema with only `properties`",
+          "expect": "the sorted result of the first is ['extra', 'isMobileSdk', 'reason', 'sdkName', 'sdkPlatform'] (no `description`, `flag` or `owner`), and the second returns []"
+        },
+        {
+          "name": "should tell cross-step conditions apart from same-step ones",
+          "given": "a schema with properties `description` and `hasNotes`; `allOf` [item `if` hasNotes const true required ['hasNotes'] `then` declaring `notes`; item `if` isMobileSdk const true required ['isMobileSdk'] `then` declaring `sdkName` `else` declaring `reason`]; `dependencies` with `description` -> `{ properties: { summary } }`, `region` -> oneOf [branch declaring `region` const 'eu' and `zone`], `team` -> ['owner']; then a schema with only the `hasNotes` if/then and the `description` dependency",
+          "expect": "for the first, sorted `keys` equal ['isMobileSdk', 'region'] and sorted `fields` equal ['reason', 'sdkName', 'zone'] (no `notes`, `summary`, `hasNotes`, `team` or `owner`); the second returns `{ keys: [], fields: [] }`"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Unit tests for `expandCrossStepDependencies`: unchanged same-step schemas and the if/then rewrite of cross-step dependencies.",
+      "rules": [
+        "1. Keep the existing `hasErrors` cases unchanged; add a new `describe('expandCrossStepDependencies', ...)`.",
+        "2. Use `toBe` for the same-reference checks and `toEqual` for the rewritten `allOf`."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 16,
+          "to": 16,
+          "first_line": "import { hasErrors } from './utils';",
+          "rule": "Replace with `import { expandCrossStepDependencies, hasErrors } from './utils';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 92,
+          "to": 92,
+          "first_line": "});",
+          "rule": "Add a blank line and the new describe block with the cases below."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts",
+        "reason": "Existing describe/it layout of this file."
+      },
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "should leave schemas without cross-step dependencies unchanged",
+          "given": "four schemas: no `dependencies`; `properties.moreInfo` with `dependencies.moreInfo` (same step); `dependencies.foo` with no `properties`; `properties.a` with `dependencies.a.oneOf` branch declaring `b` and `dependencies.b: ['c']` (same-step chain)",
+          "expect": "each call returns the very same object it was given (toBe)"
+        },
+        {
+          "name": "should rewrite cross-step dependencies into if/then entries",
+          "given": "a schema with `properties.description`, an existing `allOf` item `{ required: ['description'] }`, and `dependencies` with `isMobileSdk` -> oneOf [branch `isMobileSdk` const true + `sdkName` string, required ['sdkName']; branch `isMobileSdk` const false], `team` -> ['owner'], `region` -> `{ properties: { zone: { type: 'string' } } }`; a deep copy is taken before the call",
+          "expect": "`allOf` equals [the existing item, `{ if: { properties: { isMobileSdk: { const: true } }, required: ['isMobileSdk'] }, then: { properties: { sdkName }, required: ['sdkName'] } }`, `{ if: { properties: { isMobileSdk: { const: false } }, required: ['isMobileSdk'] }, then: { properties: {} } }`, `{ if: { required: ['team'] }, then: { required: ['owner'] } }`, `{ if: { required: ['region'] }, then: { properties: { zone } } }`], `dependencies` and `properties` equal the input's, and the input still equals its copy"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "RTL tests on the Stepper showing a step-2 field appears, is required and is reviewed only while a step-1 flag is set, for both `if`/`then` and `dependencies` conditionals, including back-navigation.",
+      "rules": [
+        "1. Keep every existing test unchanged; add the two cases inside the top-level `describe('Stepper')`, before `describe('Scaffolder Layouts')`.",
+        "2. Use the manifest titles `Project type` (step 1, boolean `isMobileSdk` titled `Is this a mobile SDK?`) and `SDK details` (step 2, string `description` titled `Description` plus the conditional `sdkName` titled `SDK name`).",
+        "3. Query with `screen`: checkbox by name `Is this a mobile SDK?`, the field with `screen.queryByRole('textbox', { name: /SDK name/ })` (the label carries a required asterisk), buttons by name `Next`, `Back`, `Review`, `Create`, review rows with `screen.findByRole('row', { name: 'SDK name my-sdk' })`, the required error with `screen.findAllByText(/required property/)`.",
+        "4. Wrap each click/change in `await act(async () => { ... })` as the neighbouring tests do; use `jest.fn()` for `onCreate` and do not assert on the Create payload (stale answers stay in it by design)."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 19,
+          "to": 19,
+          "first_line": "import { act, fireEvent, waitFor } from '@testing-library/react';",
+          "rule": "Replace with `import { act, fireEvent, screen, waitFor } from '@testing-library/react';`."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 792,
+          "to": 792,
+          "first_line": "describe('Scaffolder Layouts', () => {",
+          "rule": "Insert the two test cases below, each followed by a blank line."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "lines": [
+          122,
+          262
+        ],
+        "reason": "Manifest literal, renderInTestApp + SecretsContextProvider wrapper and act/fireEvent flow, including the conditional checkbox example."
+      },
+      "depends_on": [
+        "U03",
+        "U05"
+      ],
+      "covers": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-5",
+        "AC-6",
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "FR-7",
+        "NFR-1",
+        "NFR-4",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "should show, require and review a field that depends on an answer from an earlier step",
+          "given": "step 2 schema `{ properties: { description }, allOf: [{ if: { properties: { isMobileSdk: { const: true } }, required: ['isMobileSdk'] }, then: { properties: { sdkName: { type: 'string', title: 'SDK name' } }, required: ['sdkName'] } }] }`; the user presses Next with the flag unchecked, then Review; goes Back twice, checks the flag, Next, presses Review with SDK name empty, types `my-sdk`, presses Review; then Back twice, unchecks the flag, Next, Review",
+          "expect": "flag unchecked: no SDK name textbox on step 2 and Review reaches the Create button with no SDK name row; flag checked: the SDK name textbox is shown, Review with it empty stays on step 2 (Review button present, no Create button) with a required-property error, after typing Review shows row `SDK name my-sdk`; after unchecking: step 2 has no SDK name textbox, Review reaches Create and neither a row named /SDK name/ nor the text `my-sdk` is present"
+        },
+        {
+          "name": "should show a field from a cross-step dependencies conditional only while the earlier answer matches",
+          "given": "step 2 schema `{ properties: { description }, dependencies: { isMobileSdk: { oneOf: [{ properties: { isMobileSdk: { const: true }, sdkName: { type: 'string', title: 'SDK name' } }, required: ['sdkName'] }, { properties: { isMobileSdk: { const: false } } }] } } }`; the user checks the flag, Next, presses Review with SDK name empty; goes Back, unchecks the flag, Next, presses Review",
+          "expect": "with the flag checked the SDK name textbox is shown and Review stays on step 2 with a required-property error; after unchecking the SDK name textbox is gone and Review reaches the Create button without a row named /SDK name/"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Pins that custom field validators of cross-step conditional fields run only while the earlier-step answer in the full form data satisfies the condition.",
+      "rules": [
+        "1. Keep every existing case unchanged; add one case inside `describe('createAsyncValidators')`.",
+        "2. Create fresh `jest.fn()` validators for each `validate` call, as the dependencies-in-array case does."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 540,
+          "to": 540,
+          "first_line": "});",
+          "rule": "Add a blank line and the test case below."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts",
+        "lines": [
+          465,
+          540
+        ],
+        "reason": "Schema literal, createAsyncValidators call with `apiHolder: { get: jest.fn() }` and called/not-called assertions."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-4",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "should run validators of cross-step conditional fields only while the earlier answer matches",
+          "given": "a step schema with `properties.description`, `allOf: [{ if: { properties: { isMobileSdk: { const: true } }, required: ['isMobileSdk'] }, then: { properties: { sdkName: { type: 'string', 'ui:field': 'SdkNameField' } } } }]` and `dependencies.isMobileSdk.oneOf` [branch `isMobileSdk` const true + `sdkPlatform` with `'ui:field': 'PlatformField'`; branch `isMobileSdk` const false]; validate is called with `{ isMobileSdk: true, sdkName: 'my-sdk', sdkPlatform: 'ios' }` and then, with fresh validators, `{ isMobileSdk: false, sdkName: 'my-sdk', sdkPlatform: 'ios' }`",
+          "expect": "with the flag true both SdkNameField and PlatformField are called (SdkNameField with `'my-sdk'` as first argument); with the flag false neither is called"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U12",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Unit tests showing `findSchemaForKey` places cross-step `if`/`then` and `dependencies` keys on their step only while the condition holds, and that a same-step `dependencies` key resolves as today even when an unrelated earlier-step answer is present.",
+      "rules": [
+        "1. Keep the existing cases unchanged; add the cases inside `describe('findSchemaForKey')` with their own local `schemas` arrays."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 172,
+          "to": 172,
+          "first_line": "});",
+          "rule": "Add a blank line and the three test cases below."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "lines": [
+          83,
+          173
+        ],
+        "reason": "ParsedTemplateSchema literal shape (`mergedSchema`, `schema: {}`, `title`, `uiSchema: {}`) and assertions."
+      },
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "AC-4",
+        "FR-6",
+        "FR-8",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "should resolve a cross-step if/then key only while its condition holds",
+          "given": "step 1 with `properties.isMobileSdk` boolean; step 2 with `properties.description` and `allOf: [{ if: { properties: { isMobileSdk: { const: true } }, required: ['isMobileSdk'] }, then: { properties: { sdkName: { type: 'string' } } } }]`",
+          "expect": "`sdkName` with `{ isMobileSdk: true, sdkName: 'x' }` returns step 2; with `{ isMobileSdk: false, sdkName: 'x' }` and with `{ sdkName: 'x' }` returns null; `isMobileSdk` returns step 1 and `description` returns step 2 for the first state"
+        },
+        {
+          "name": "should resolve a cross-step dependencies key only while its condition holds",
+          "given": "step 1 with `properties.isMobileSdk` boolean; step 2 with `properties.description` and `dependencies.isMobileSdk.oneOf` [branch `isMobileSdk` const true + `sdkName` string; branch `isMobileSdk` const false]",
+          "expect": "`sdkName` with `{ isMobileSdk: true, sdkName: 'x' }` returns step 2 and with `{ isMobileSdk: false, sdkName: 'x' }` returns null"
+        },
+        {
+          "name": "should resolve same-step conditional keys as before",
+          "given": "step 1 with `properties.isMobileSdk` boolean; step 2 with `properties.kind` (string, enum `lib`/`app`) and `dependencies.kind.oneOf` [branch `kind` const 'lib' + `libName` string; branch `kind` const 'app']",
+          "expect": "`libName` with `{ isMobileSdk: true, kind: 'lib', libName: 'x' }` returns step 2; with `{ isMobileSdk: true, kind: 'app', libName: 'x' }` returns null; `kind` returns step 2"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    },
+    {
+      "id": "U13",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+      "action": "edit",
+      "phase": "tests",
+      "behaviour": "Component tests showing the Review step lists a later-step conditional field, masked when secret, only while its earlier-step condition holds, and keeps listing stale same-step conditional answers as today.",
+      "rules": [
+        "1. Keep existing cases unchanged; add two cases inside `describe('ReviewState')`.",
+        "2. Use `render` and its `rerender`, querying with the `getByRole` / `queryByRole` / `queryByText` it returns, as the neighbouring cases do; the import lines stay unchanged."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 615,
+          "to": 615,
+          "first_line": "});",
+          "rule": "Add a blank line and the two test cases below, separated by a blank line, using the queries returned by `render` (no import change)."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx",
+        "lines": [
+          512,
+          616
+        ],
+        "reason": "Multi-schema ParsedTemplateSchema literal and row-name assertions."
+      },
+      "depends_on": [
+        "U05"
+      ],
+      "covers": [
+        "FR-7",
+        "FR-8",
+        "AC-3",
+        "NFR-5"
+      ],
+      "tests": [
+        {
+          "name": "should only list conditional fields from a later step while their earlier-step condition holds",
+          "given": "step 1 with boolean `isMobileSdk`; step 2 with `properties.description` (title `Description`) and an `allOf` if/then on `isMobileSdk` const true (required) whose `then` declares `sdkName` (title `SDK name`) and `sdkToken` (title `SDK token`, `ui:widget: 'password'`); formState `{ isMobileSdk: true, description: 'd', sdkName: 'my-sdk', sdkToken: 'secret', extra: 'kept' }`, then rerendered with `isMobileSdk: false`",
+          "expect": "first render has rows `SDK name my-sdk`, `SDK token ******`, `Description d` and `Extra kept`; after rerender there is no row named /SDK name/ or /SDK token/ and no text `my-sdk`, while rows `Description d` and `Extra kept` remain"
+        },
+        {
+          "name": "should keep listing same-step conditional answers as before",
+          "given": "step 1 with boolean `isMobileSdk`; step 2 with properties `hasNotes` (boolean) and `kind` (string, enum `lib`/`app`), an `allOf` if/then on `hasNotes` const true (required ['hasNotes']) whose `then` declares `notes` (string), and `dependencies.kind.oneOf` [branch `kind` const 'lib' + `libName` (string); branch `kind` const 'app']; formState `{ isMobileSdk: true, hasNotes: false, notes: 'stale-notes', kind: 'app', libName: 'old-lib' }`",
+          "expect": "the texts `stale-notes` and `old-lib` are both shown (stale same-step answers are still listed, as today) and the text `app` is shown"
+        }
+      ],
+      "checks": [
+        "prettier",
+        "eslint",
+        "jest"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.test.ts": "fe2aad12e20f3d68973c4a79be1664107132bacfeb9fac62abc8d998ee76bdd9",
+    "plugins/scaffolder-react/src/next/components/Stepper/utils.test.ts": "2e26aa80bfc420db7264af84d9df6846fa10bc973bccc196abda0ea5ecc2f079",
+    "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx": "f6ac8fab0b1d752dc590c1196ac007bee0e9821a7a561d19d0ba3123b9a4ce38",
+    "plugins/scaffolder-react/src/next/components/Stepper/createAsyncValidators.test.ts": "a61c0516f78f40f368e15c16c537585f4ba6389e391836eee986dc5af2c7e3fe",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts": "2bd23317d56ac650c7f366c3f1c0ed219234369939d1d3b3437d2d273ac9ad02",
+    "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.test.tsx": "37d13aea70b0da5ab4f9145aacebff384a314a5f16772ba4cc2180772fa628b1"
+  }
+}

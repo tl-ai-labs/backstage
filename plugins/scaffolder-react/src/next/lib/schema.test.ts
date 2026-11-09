@@ -15,7 +15,11 @@
  */
 
 import { JsonObject } from '@backstage/types';
-import { extractSchemaFromStep } from './schema';
+import {
+  extractSchemaFromStep,
+  getConditionalPropertyNames,
+  getCrossStepConditions,
+} from './schema';
 
 describe('extractSchemaFromStep', () => {
   it('transforms deep schema', () => {
@@ -597,5 +601,329 @@ describe('extractSchemaFromStep', () => {
       schema: expectedSchema,
       uiSchema: expectedUiSchema,
     });
+  });
+
+  it('keeps ui options of fields declared in cross-step conditional branches', () => {
+    const inputSchema: JsonObject = {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: {
+              isMobileSdk: {
+                const: true,
+              },
+            },
+            required: ['isMobileSdk'],
+          },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+                'ui:help': 'Package name',
+              },
+            },
+          },
+        },
+      ],
+      dependencies: {
+        isMobileSdk: {
+          oneOf: [
+            {
+              properties: {
+                isMobileSdk: {
+                  const: true,
+                },
+                sdkPlatform: {
+                  type: 'string',
+                  enum: ['android', 'ios'],
+                  'ui:widget': 'radio',
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const { schema, uiSchema } = extractSchemaFromStep(inputSchema);
+
+    expect(uiSchema).toMatchObject({
+      sdkName: { 'ui:help': 'Package name' },
+      sdkPlatform: { 'ui:widget': 'radio' },
+    });
+
+    const allOfItem = (schema.allOf as JsonObject[])[0];
+    const thenProps = (allOfItem.then as JsonObject).properties as JsonObject;
+    const sdkNameProp = thenProps.sdkName as JsonObject;
+    const hasThenUi = Object.keys(sdkNameProp).some(k => k.startsWith('ui:'));
+    expect(hasThenUi).toBe(false);
+
+    const depBranch = (
+      (schema.dependencies as JsonObject).isMobileSdk as JsonObject
+    ).oneOf as JsonObject[];
+    const sdkPlatformProp = (depBranch[0].properties as JsonObject)
+      .sdkPlatform as JsonObject;
+    const hasBranchUi = Object.keys(sdkPlatformProp).some(k =>
+      k.startsWith('ui:'),
+    );
+    expect(hasBranchUi).toBe(false);
+  });
+});
+
+describe('getConditionalPropertyNames', () => {
+  it('should list properties declared only inside conditional branches', () => {
+    const schema1: JsonObject = {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: {
+              flag: {
+                const: true,
+              },
+            },
+          },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+              },
+            },
+          },
+          else: {
+            properties: {
+              reason: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      ],
+      anyOf: [
+        {
+          properties: {
+            extra: {
+              type: 'string',
+            },
+          },
+        },
+      ],
+      dependencies: {
+        isMobileSdk: {
+          oneOf: [
+            {
+              properties: {
+                isMobileSdk: {
+                  const: true,
+                },
+                sdkPlatform: {
+                  type: 'string',
+                },
+              },
+            },
+          ],
+        },
+        team: ['owner'],
+      },
+    };
+
+    const schema2: JsonObject = {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+        },
+      },
+    };
+
+    expect([...getConditionalPropertyNames(schema1)].sort()).toEqual([
+      'extra',
+      'isMobileSdk',
+      'reason',
+      'sdkName',
+      'sdkPlatform',
+    ]);
+    expect(getConditionalPropertyNames(schema2)).toEqual([]);
+  });
+});
+
+describe('getCrossStepConditions', () => {
+  it('should tell cross-step conditions apart from same-step ones', () => {
+    const schema1: JsonObject = {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+        },
+        hasNotes: {
+          type: 'boolean',
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: {
+              hasNotes: {
+                const: true,
+              },
+            },
+            required: ['hasNotes'],
+          },
+          then: {
+            properties: {
+              notes: {
+                type: 'string',
+              },
+            },
+          },
+        },
+        {
+          if: {
+            properties: {
+              isMobileSdk: {
+                const: true,
+              },
+            },
+            required: ['isMobileSdk'],
+          },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+              },
+            },
+          },
+          else: {
+            properties: {
+              reason: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      ],
+      dependencies: {
+        description: {
+          properties: {
+            summary: {
+              type: 'string',
+            },
+          },
+        },
+        region: {
+          oneOf: [
+            {
+              properties: {
+                region: {
+                  const: 'eu',
+                },
+                zone: {
+                  type: 'string',
+                },
+              },
+            },
+          ],
+        },
+        team: ['owner'],
+      },
+    };
+
+    const schema2: JsonObject = {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+        },
+        hasNotes: {
+          type: 'boolean',
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: {
+              hasNotes: {
+                const: true,
+              },
+            },
+            required: ['hasNotes'],
+          },
+          then: {
+            properties: {
+              notes: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      ],
+      dependencies: {
+        description: {
+          properties: {
+            summary: {
+              type: 'string',
+            },
+          },
+        },
+      },
+    };
+
+    const res1 = getCrossStepConditions(schema1);
+    expect([...res1.keys].sort()).toEqual(['isMobileSdk', 'region']);
+    expect([...res1.fields].sort()).toEqual(['reason', 'sdkName', 'zone']);
+    expect([...res1.reads].sort()).toEqual(['isMobileSdk', 'region', 'zone']);
+
+    const res2 = getCrossStepConditions(schema2);
+    expect(res2).toEqual({ keys: [], fields: [], reads: [] });
+  });
+
+  it('should list same-step names read by a mixed cross-step condition', () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        kind: {
+          type: 'string',
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: {
+              isMobileSdk: {
+                const: true,
+              },
+              kind: {
+                const: 'library',
+              },
+            },
+            required: ['isMobileSdk', 'kind'],
+          },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    const res = getCrossStepConditions(schema);
+    expect(res.keys).toEqual(['isMobileSdk']);
+    expect(res.reads).toContain('isMobileSdk');
+    expect(res.reads).toContain('kind');
+    expect(res.fields).toEqual(['sdkName']);
   });
 });

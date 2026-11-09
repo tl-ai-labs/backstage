@@ -18,6 +18,7 @@ import { JsonObject, JsonValue } from '@backstage/types';
 import { startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { Draft07 as JSONSchema } from 'json-schema-library';
+import { getCrossStepConditions } from '../../lib/schema';
 
 export function isJsonObject(value?: JsonValue): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -58,6 +59,15 @@ export function findSchemaForKey(
         if (formState.hasOwnProperty(dep)) {
           data[dep] = formState[dep]; // Add each dependency key from formState
         }
+      }
+    }
+
+    // Conditions reading earlier-step answers need those answers; same-step
+    // conditions keep today's data.
+    const crossStep = getCrossStepConditions(schema);
+    for (const name of crossStep.reads) {
+      if (name !== key && formState.hasOwnProperty(name)) {
+        data[name] = formState[name];
       }
     }
 

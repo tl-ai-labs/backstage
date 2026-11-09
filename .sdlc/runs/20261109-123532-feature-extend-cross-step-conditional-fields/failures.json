@@ -1,0 +1,31 @@
+[
+  {
+    "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+    "problem": "Gate 3 accepted fix for senior-review finding 1 (major, correctness): when a cross-step condition also tests a field of the current step (e.g. if: { properties: { isMobileSdk: { const: true }, kind: { const: 'lib' } }, required: ['isMobileSdk', 'kind'] } where isMobileSdk is from an earlier step and kind is declared on this step), the Review step hides the dependent field's answer while the condition holds, because ReviewState/util.ts only feeds the earlier-step names (`keys`) to json-schema-library. Contract for this file: change getCrossStepConditions to return `{ keys: string[]; fields: string[]; reads: string[] }`. `keys` and `fields` stay exactly as today. `reads` lists, de-duplicated in first-seen order, every property name read by any cross-step condition (only conditions that already count as cross-step): for a cross-step `if` (top level or inside allOf), every key of `if.properties` and every name in `if.required`; for a cross-step object-valued `dependencies` entry, the dependency key itself plus the property names its oneOf/anyOf branches test. `reads` includes same-step names those conditions test; it is [] when there is no cross-step condition. Update the TSDoc/return type accordingly.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/ReviewState/util.ts"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/lib/schema.test.ts",
+    "problem": "getCrossStepConditions in lib/schema.ts now returns `{ keys, fields, reads }` (reads: every property name tested by its cross-step conditions, including same-step names, de-duplicated in first-seen order; [] when there is no cross-step condition). The existing assertion at line ~887 `expect(res2).toEqual({ keys: [], fields: [] })` must become `{ keys: [], fields: [], reads: [] }`, and the mixed-schema case (res1) must also assert its `reads`. Add one case for a mixed cross-step `if` (properties isMobileSdk from an earlier step and kind declared on the step, required ['isMobileSdk','kind']): keys is ['isMobileSdk'] and reads contains both 'isMobileSdk' and 'kind'.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/lib/schema.ts"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "problem": "Gate 3 accepted fix for senior-review finding 1 (major, correctness): findSchemaForKey only adds `getCrossStepConditions(schema).keys` (earlier-step names) to `data`. A mixed cross-step condition (e.g. if: { properties: { isMobileSdk: { const: true }, kind: { const: 'lib' } }, required: ['isMobileSdk', 'kind'] }) also reads the same-step `kind`, which never reaches `data`, so the dependent field (e.g. sdkName) is unresolved and ReviewState drops it while the condition holds. Fix: getCrossStepConditions (lib/schema.ts) now returns `{ keys, fields, reads }`, where `reads` is every property name its cross-step conditions test, same-step names included. Iterate `crossStep.reads` instead of `crossStep.keys`, still skipping `name === key` and names absent from formState. A step with no cross-step condition has reads = [] and keeps exactly today's data, so same-step behaviour is unchanged.",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts"
+    ]
+  },
+  {
+    "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+    "problem": "Missing test for senior-review finding 1 (accepted at Gate 3): add one findSchemaForKey case with two steps where step 1 declares boolean isMobileSdk and step 2 declares kind (string) plus allOf: [{ if: { properties: { isMobileSdk: { const: true }, kind: { const: 'lib' } }, required: ['isMobileSdk', 'kind'] }, then: { properties: { sdkName: { type: 'string' } }, required: ['sdkName'] } }]. Assert: with formState { isMobileSdk: true, kind: 'lib', sdkName: 'x' }, findSchemaForKey('sdkName', ...) returns step 2; with { isMobileSdk: true, kind: 'app', sdkName: 'x' } and with { isMobileSdk: false, kind: 'lib', sdkName: 'x' } it returns null. Match the file's existing test style (fewer thorough tests, several assertions).",
+    "context_paths": [
+      "plugins/scaffolder-react/src/next/components/ReviewState/util.ts"
+    ]
+  }
+]

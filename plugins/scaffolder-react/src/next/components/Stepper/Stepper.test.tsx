@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -787,6 +787,254 @@ describe('Stepper', () => {
     windowScrollSpy.mockRestore();
     document.body.removeChild(main);
     unmount();
+  });
+
+  it('should show, require and review a field that depends on an answer from an earlier step', async () => {
+    const manifest: TemplateParameterSchema = {
+      title: 'Cross-step conditional',
+      steps: [
+        {
+          title: 'Project type',
+          schema: {
+            properties: {
+              isMobileSdk: {
+                type: 'boolean',
+                title: 'Is this a mobile SDK?',
+              },
+            },
+          },
+        },
+        {
+          title: 'SDK details',
+          schema: {
+            properties: {
+              description: {
+                type: 'string',
+                title: 'Description',
+              },
+            },
+            allOf: [
+              {
+                if: {
+                  properties: { isMobileSdk: { const: true } },
+                  required: ['isMobileSdk'],
+                },
+                then: {
+                  properties: {
+                    sdkName: { type: 'string', title: 'SDK name' },
+                  },
+                  required: ['sdkName'],
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    await renderInTestApp(
+      <SecretsContextProvider>
+        <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
+      </SecretsContextProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+
+    expect(
+      screen.queryByRole('textbox', { name: /SDK name/ }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Create' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: /SDK name/ }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+
+    expect(
+      screen.getByRole('textbox', { name: /SDK name/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    });
+
+    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /SDK name/ })).toBeRequired();
+    expect(screen.getByRole('textbox', { name: /SDK name/ })).toBeInvalid();
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole('textbox', { name: /SDK name/ }), {
+        target: { value: 'my-sdk' },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    });
+
+    expect(
+      await screen.findByRole('row', { name: 'SDK name my-sdk' }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+
+    expect(
+      screen.queryByRole('textbox', { name: /SDK name/ }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Create' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: /SDK name/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('my-sdk')).not.toBeInTheDocument();
+  });
+
+  it('should show a field from a cross-step dependencies conditional only while the earlier answer matches', async () => {
+    const manifest: TemplateParameterSchema = {
+      title: 'Cross-step dependencies',
+      steps: [
+        {
+          title: 'Project type',
+          schema: {
+            properties: {
+              isMobileSdk: {
+                type: 'boolean',
+                title: 'Is this a mobile SDK?',
+              },
+            },
+          },
+        },
+        {
+          title: 'SDK details',
+          schema: {
+            properties: {
+              description: {
+                type: 'string',
+                title: 'Description',
+              },
+            },
+            dependencies: {
+              isMobileSdk: {
+                oneOf: [
+                  {
+                    properties: {
+                      isMobileSdk: { const: true },
+                      sdkName: { type: 'string', title: 'SDK name' },
+                    },
+                    required: ['sdkName'],
+                  },
+                  {
+                    properties: {
+                      isMobileSdk: { const: false },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    await renderInTestApp(
+      <SecretsContextProvider>
+        <Stepper manifest={manifest} extensions={[]} onCreate={jest.fn()} />
+      </SecretsContextProvider>,
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+
+    expect(
+      screen.getByRole('textbox', { name: /SDK name/ }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    });
+
+    expect(screen.getByRole('button', { name: 'Review' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Create' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /SDK name/ })).toBeRequired();
+    expect(screen.getByRole('textbox', { name: /SDK name/ })).toBeInvalid();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    });
+
+    expect(
+      screen.queryByRole('textbox', { name: /SDK name/ }),
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Create' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: /SDK name/ }),
+    ).not.toBeInTheDocument();
   });
 
   describe('Scaffolder Layouts', () => {
