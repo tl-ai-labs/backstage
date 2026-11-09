@@ -1,0 +1,55 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "bugfix",
+    "pass_id": "20261109-123500-bugfix-routeref-app-root",
+    "artifact_path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+    "instruction": "Fix `packages/core-plugin-api/src/routing/useRouteRef.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Gate 3 revise (person): fix the missed-update window in the legacy useRouteRef, as already done in packages/frontend-plugin-api/src/routing/useRouteRef.tsx. The hook subscribes to routeResolutionApi in useEffect after render (around lines 109-115); if the proxy's initialize() runs between this render and the effect commit, the notification is missed and the memoized route function stays at its bootstrap value. Fix: capture routeResolutionApi?.isPending?.() at render, and inside the effect, after subscribing, bump the revision once (setRevision(r => r + 1)) when the current isPending?.() differs from the value seen at render; then return the unsubscribe function. Keep the public overload signatures, the hook order, and the existing eslint-disable convention unchanged.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"packages/core-plugin-api/src/routing/useRouteRef.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"packages/core-plugin-api/src/routing/useRouteRef.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123500-bugfix-routeref-app-root/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123500-bugfix-routeref-app-root/briefs/U05.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'",
+          "fix": "yarn eslint --fix '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 240,
+      "max_retries": 2
+    }
+  }
+]

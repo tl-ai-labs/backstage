@@ -1,0 +1,9 @@
+[
+  {
+    "path": "packages/core-plugin-api/src/routing/useRouteRef.tsx",
+    "problem": "Gate 3 revise (person): fix the missed-update window in the legacy useRouteRef, as already done in packages/frontend-plugin-api/src/routing/useRouteRef.tsx. The hook subscribes to routeResolutionApi in useEffect after render (around lines 109-115); if the proxy's initialize() runs between this render and the effect commit, the notification is missed and the memoized route function stays at its bootstrap value. Fix: capture routeResolutionApi?.isPending?.() at render, and inside the effect, after subscribing, bump the revision once (setRevision(r => r + 1)) when the current isPending?.() differs from the value seen at render; then return the unsubscribe function. Keep the public overload signatures, the hook order, and the existing eslint-disable convention unchanged.",
+    "context_paths": [
+      "packages/frontend-plugin-api/src/routing/useRouteRef.tsx"
+    ]
+  }
+]

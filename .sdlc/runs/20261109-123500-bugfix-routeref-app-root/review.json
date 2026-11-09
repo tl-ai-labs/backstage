@@ -1,0 +1,48 @@
+{
+  "module": "routeref-app-root (frontend-app-api, frontend-plugin-api, core-plugin-api)",
+  "mode": "brownfield",
+  "intent": "bugfix",
+  "verdict": "approved",
+  "tool_calls": 8,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "packages/frontend-plugin-api/src/routing/useRouteRef.tsx",
+      "line": 49,
+      "issue": "The hook subscribes in useEffect after render. If the proxy's initialize() runs between this render and the effect commit (possible under concurrent rendering), the notification is missed and the memoized route function stays at the bootstrap value until some other dependency changes. The same applies to packages/core-plugin-api/src/routing/useRouteRef.tsx:109. Confidence: medium. In practice the window is narrow, because bootstrap components commit long before sign-in completes.",
+      "fix": "After subscribing in the effect, check whether resolution changed since render. For example, capture `routeResolutionApi.isPending?.()` at render and compare it inside the effect, or call `setRevision(r => r + 1)` once when that value differs. Then return the unsubscribe function."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/phaseApis.tsx",
+      "line": 163,
+      "issue": "initialize() calls listeners synchronously with no isolation. `subscribe` is now a public RouteResolutionApi member, so a throwing third-party listener would stop the remaining listeners and make finalization throw.",
+      "fix": "Wrap each `listener()` call in try/catch and report the error, for example with console.error, so that one bad subscriber cannot abort initialize or block the other listeners."
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-plugin-api/src/apis/definitions/RouteResolutionApi.ts",
+      "line": 60,
+      "issue": "The TSDoc leaves out two points that change_plan U02 rules 2-3 require. `subscribe` does not say that the listener receives no arguments. `isPending` does not say that implementations without this method are treated as never pending, which is the contract that core-plugin-api relies on.",
+      "fix": "Add one sentence to each TSDoc block: 'The listener is called without arguments.' and 'Implementations that omit this method are treated as never pending.'"
+    },
+    {
+      "severity": "minor",
+      "file": "packages/frontend-app-api/src/wiring/createSpecializedApp.test.tsx",
+      "line": 1756,
+      "issue": "The new test covers the bootstrap-then-finalize path. No test covers FR-5: that the legacy useRouteRef still throws `No path for` for a non-optional, unresolvable ref once the proxy is no longer pending. Nothing tests the proxy's subscribe/isPending/unsubscribe directly either.",
+      "fix": "In the new case, or in a phaseApis unit test, assert that `isPending()` is true after the bootstrap initialize and false after finalization, and that an unsubscribed listener is not called. Optionally, add a core-plugin-api useRouteRef assertion that a mock API with `isPending: () => false` still throws."
+    }
+  ],
+  "passing": [
+    "Correctness vs change_plan U01-U08: all sites implemented as specified; bootstrap error-path finalization also re-initializes with pending=false via instantiateAndInitializePhaseTree.",
+    "Type safety: optional members keep custom RouteResolutionApi implementations compiling; no any introduced.",
+    "Hooks order: all hooks stay above the throw/return in the legacy hook; eslint-disable placement matches the convention.",
+    "API report: only the two optional members were added to report.api.md.",
+    "Changesets: patch bumps are correct for 0.x new API and 1.x bugfix; the prose is adopter-facing and names no internal symbols.",
+    "Docs paragraph added in the app root section, as U06 specifies.",
+    "Env-fixture check: skipped (intent=bugfix).",
+    "No sensitive manifests or config files were touched."
+  ],
+  "refinement_packets": []
+}
