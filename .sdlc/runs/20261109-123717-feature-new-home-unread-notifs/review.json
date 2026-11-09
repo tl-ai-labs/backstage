@@ -1,0 +1,40 @@
+{
+  "module": "notifications unread home card (plugins/notifications, plugins/home-react)",
+  "mode": "brownfield",
+  "intent": "feature-new",
+  "verdict": "approved",
+  "tool_calls": 5,
+  "findings": [
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "line": 126,
+      "issue": "The component's two error paths have no tests. Nothing checks that a rejected updateNotifications posts the 'Failed to mark notification as read' danger toast without refetching (UnreadNotificationsCard.tsx:105-110). Nothing checks that a rejected getNotifications renders the 'Failed to load unread notifications' ErrorPanel (lines 114-120). change_plan.md's U12 test list leaves both out, so this is a gap in coverage, not a departure from the spec.",
+      "fix": "Add one test where updateNotifications rejects: assert that toast post was called with the markAsReadFailed title and status 'danger', and that getNotifications was called only once. Add a second test, or extend an existing one, where getNotifications rejects and findByText('Failed to load unread notifications') resolves."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/home-react/src/extensions.test.tsx",
+      "line": 44,
+      "issue": "The test is named 'shows the loading fallback and then lazy content', but it never checks that a fallback appeared. It only checks the title and the lazy content. Because of that, the fallback branch of the new hook (the core-components Progress returned when there is no app context) is never observed.",
+      "fix": "Rename the test to something like 'renders lazy content without an app context'. Asserting the delayed Progress would need a test id or fake timers, so a rename is enough."
+    },
+    {
+      "severity": "minor",
+      "file": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+      "line": 181,
+      "issue": "The signal mock types its callback parameters as `any` ((message: any) => void at lines 181 and 184) when a precise type exists.",
+      "fix": "Type the message parameter as NotificationSignal from '@backstage/plugin-notifications-common', or as JsonObject, instead of any."
+    }
+  ],
+  "passing_checks": [
+    "Correctness: all 19 units match change_plan.md, covering widget registration, the refresh, polling, clamp and cleanup logic, the deep link with encodeURIComponent, the highlight class plus aria-current, and the useApp fallback hook. useApp is still called unconditionally inside try, so hook order holds.",
+    "Type safety: the only `any` is in test code, plus the Content cast in extensions.test.tsx, which mirrors the existing `(props?: any) => JSX.Element` prop type.",
+    "Error handling: mark-as-read failure goes to a toast and is not swallowed. Fetch failure renders an ErrorPanel. Nothing throws from render, and notification contents are never logged.",
+    "Authz and PII: no new routes or backend surface. The id search parameter is only compared and is never used for fetching.",
+    "Sensitive files: both package.json diffs only add the dependency lines the plan names. The yarn.lock diff only records those. No script or dependency was removed or rewritten.",
+    "Changesets: one per package, both patch (both packages are below 1.0), with no internal symbol names. Docs (README, usage.md) were added as the plan requires.",
+    "Env fixtures: not applicable, because a frontend plugin has no validating config module."
+  ],
+  "refinement_packets": []
+}

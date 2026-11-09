@@ -1,0 +1,587 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/notifications/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds @backstage/plugin-home-react as a runtime dependency of the notifications plugin so src/alpha.tsx can use HomePageWidgetBlueprint.",
+      "rules": [
+        "Add exactly one line to dependencies, keeping alphabetical order: \"@backstage/plugin-home-react\": \"workspace:^\",",
+        "Change nothing else in the file."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 58,
+          "to": 58,
+          "first_line": "\"@backstage/plugin-notifications-common\": \"workspace:^\",",
+          "rule": "Insert the line \"@backstage/plugin-home-react\": \"workspace:^\", with the same 4-space indentation."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-10"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/home-react/package.json",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the jsdom test dev dependencies @backstage/plugin-home-react needs for its first test file.",
+      "rules": [
+        "Add four devDependencies lines right after \"@backstage/cli\", in this order: \"@backstage/test-utils\": \"workspace:^\", \"@testing-library/dom\": \"^10.0.0\", \"@testing-library/jest-dom\": \"^6.0.0\", \"@testing-library/react\": \"^16.0.0\",",
+        "These are the same version ranges plugins/notifications/package.json already uses; change nothing else."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 67,
+          "to": 67,
+          "first_line": "\"@backstage/cli\": \"workspace:^\",",
+          "rule": "Insert the four devDependencies lines, each with 4-space indentation and a trailing comma."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/notifications/package.json",
+          "lines": [
+            69,
+            82
+          ],
+          "reason": "The version ranges to copy for the testing libraries."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "AC-6"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "yarn.lock",
+      "action": "tooling",
+      "phase": "codegen",
+      "behaviour": "Runs the package manager so yarn.lock records the new workspace dependency of the notifications plugin and the new dev dependencies of home-react.",
+      "run": "yarn install",
+      "depends_on": [
+        "U01",
+        "U02"
+      ],
+      "covers": [
+        "FR-10"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/notifications/src/translation.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the unreadNotificationsCard message namespace with every user-facing string of the new card.",
+      "rules": [
+        "Add a new key unreadNotificationsCard to messages, after settings, with exactly: title: 'Unread notifications', emptyMessage: 'No unread notifications', markAsRead: 'Mark as read', viewAll: 'View all notifications', errors: { fetchFailed: 'Failed to load unread notifications', markAsReadFailed: 'Failed to mark notification as read' }.",
+        "Do not change or reorder any existing key."
+      ],
+      "exports": [
+        {
+          "name": "notificationsTranslationRef",
+          "kind": "const (changed)",
+          "params": [],
+          "returns": "TranslationRef with new keys unreadNotificationsCard.title, .emptyMessage, .markAsRead, .viewAll, .errors.fetchFailed, .errors.markAsReadFailed"
+        }
+      ],
+      "import_line": "import { notificationsTranslationRef } from '../../translation';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 119,
+          "to": 119,
+          "first_line": "},",
+          "rule": "This line closes the settings block; insert the unreadNotificationsCard block after it at the same 4-space indentation, ending with '},'."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "NFR-5",
+        "FR-2",
+        "FR-4",
+        "FR-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds the highlighted class used for the notification row the page deep-links to.",
+      "rules": [
+        "Add a .highlighted rule inside the existing @layer components block, after .notificationInfoRow:not(:first-child).",
+        "Its declarations, in order: background-color: var(--bui-bg-neutral-2); outline: 2px solid var(--bui-border-2); outline-offset: var(--bui-space-1); border-radius: var(--bui-radius-2);",
+        "Use only these theme-neutral --bui-* variables; no hard-coded colors."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_before",
+          "from": 36,
+          "to": 36,
+          "first_line": "}",
+          "rule": "This line closes @layer components; insert a blank line and the .highlighted rule (2-space indented) before it."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-12"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds an optional highlightedNotificationId prop and marks the matching notification's row content with the highlighted CSS module class and aria-current.",
+      "rules": [
+        "Add highlightedNotificationId?: string to NotificationsTableProps with the TSDoc line '/** ID of a notification to highlight, for example from a link to the notifications page */' right above it.",
+        "Destructure highlightedNotificationId in the component's parameter list.",
+        "In the compact-data column, the outer Flex gets className={notification.id === highlightedNotificationId ? styles.highlighted : undefined} and aria-current={notification.id === highlightedNotificationId ? 'true' : undefined}; keep gap=\"4\" and align=\"center\".",
+        "Add highlightedNotificationId to the compactColumns useMemo dependency array.",
+        "Rows whose id does not match render exactly as before; without the prop nothing changes."
+      ],
+      "exports": [
+        {
+          "name": "NotificationsTableProps.highlightedNotificationId",
+          "kind": "optional type field",
+          "params": [],
+          "returns": "string | undefined"
+        }
+      ],
+      "import_line": "import { NotificationsTable } from '../NotificationsTable';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 58,
+          "to": 58,
+          "first_line": "markAsReadOnLinkOpen?: boolean;",
+          "rule": "Insert the TSDoc line and highlightedNotificationId?: string; at the same indentation."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 70,
+          "to": 70,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Insert highlightedNotificationId, in the destructured props."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 202,
+          "to": 202,
+          "first_line": "<Flex gap=\"4\" align=\"center\">",
+          "rule": "Replace with the opening Flex tag carrying gap, align, the conditional className and the conditional aria-current (Prettier puts each prop on its own line)."
+        },
+        {
+          "id": "S4",
+          "at": "insert_after",
+          "from": 292,
+          "to": 292,
+          "first_line": "markAsReadOnLinkOpen,",
+          "rule": "Insert highlightedNotificationId, in the useMemo dependency array."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css",
+          "reason": "styles.highlighted is the class U05 adds."
+        }
+      ],
+      "depends_on": [
+        "U05"
+      ],
+      "covers": [
+        "FR-12",
+        "FR-16"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Reads the id search parameter of the current location and passes it to NotificationsTable as the highlighted notification id.",
+      "rules": [
+        "Import useSearchParams from 'react-router-dom'.",
+        "In NotificationsPageContent, after the useSignal line: const [searchParams] = useSearchParams(); const highlightedNotificationId = searchParams.get('id') ?? undefined;",
+        "Pass highlightedNotificationId={highlightedNotificationId} to NotificationsTable, right after notifications={notifications}.",
+        "Filters, paging, fetching and the signal refresh stay unchanged; the id is never used to fetch anything."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18,
+          "first_line": "import throttle from 'lodash/throttle';",
+          "rule": "Insert import { useSearchParams } from 'react-router-dom';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 84,
+          "to": 84,
+          "first_line": "const { lastSignal } = useSignal('notifications');",
+          "rule": "Insert the two lines that read the id search parameter."
+        },
+        {
+          "id": "S3",
+          "at": "insert_after",
+          "from": 217,
+          "to": 217,
+          "first_line": "notifications={notifications}",
+          "rule": "Insert highlightedNotificationId={highlightedNotificationId} at the same indentation."
+        }
+      ],
+      "depends_on": [
+        "U06"
+      ],
+      "covers": [
+        "FR-11"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U08",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.tsx",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "The unread notifications card: lists the signed-in user's latest unread notifications with deep links and mark-as-read, refreshing on notifications signals or by polling when signals are unavailable.",
+      "rules": [
+        "Imports: useEffect, useState from 'react'; // @ts-ignore then import RelativeTime from 'react-relative-time' exactly as NotificationsTable.tsx does; useApi, useRouteRef from '@backstage/core-plugin-api'; toastApiRef from '@backstage/frontend-plugin-api'; useTranslationRef from '@backstage/core-plugin-api/alpha'; ErrorPanel, InfoCard, Link, Progress from '@backstage/core-components'; ButtonIcon, Flex, Text from '@backstage/ui'; RiCheckLine from '@remixicon/react'; useSignal from '@backstage/plugin-signals-react'; NotificationSignal from '@backstage/plugin-notifications-common'; notificationsApiRef from '../../api'; useNotificationsApi from '../../hooks'; rootRouteRef from '../../routes'; notificationsTranslationRef from '../../translation'.",
+        "Declare const DEFAULT_LIMIT = 5, DEFAULT_POLLING_INTERVAL_MS = 60000 and MIN_POLLING_INTERVAL_MS = 10000 at module level.",
+        "UnreadNotificationsCardContent: const { limit = DEFAULT_LIMIT, pollingIntervalMs = DEFAULT_POLLING_INTERVAL_MS } = props; const interval = Math.max(pollingIntervalMs, MIN_POLLING_INTERVAL_MS).",
+        "Fetch with useNotificationsApi(api => api.getNotifications({ read: false, limit, sort: 'created', sortOrder: 'desc' }), [limit]) and keep { loading, error, value, retry }.",
+        "const { lastSignal, isSignalsAvailable } = useSignal<NotificationSignal>('notifications'); const [refresh, setRefresh] = useState(false).",
+        "Effect on [lastSignal]: if lastSignal is truthy, setRefresh(true).",
+        "Effect on [isSignalsAvailable, interval]: if isSignalsAvailable return with no timer; otherwise const handle = setInterval(() => setRefresh(true), interval) and return () => clearInterval(handle).",
+        "Effect on [refresh, loading, retry]: if refresh && !loading then retry() and setRefresh(false).",
+        "Mark as read: notificationsApi.updateNotifications({ ids: [id], read: true }) then setRefresh(true); on rejection toastApi.post({ title: t('unreadNotificationsCard.errors.markAsReadFailed'), status: 'danger' }) and no refresh.",
+        "const notificationsLink = useRouteRef(rootRouteRef)(); each item's link target is `${notificationsLink}?id=${encodeURIComponent(notification.id)}`.",
+        "Render order: if error, <ErrorPanel error={error} title={t('unreadNotificationsCard.errors.fetchFailed')} />; else if loading and no value yet, <Progress />; else if value.notifications is empty, <Text variant=\"body-medium\" color=\"secondary\">{t('unreadNotificationsCard.emptyMessage')}</Text>; else the list. During a refetch keep showing the current list (no progress indicator).",
+        "Each list item is a Flex (align=\"center\", justify=\"between\") holding a Flex direction=\"column\" gap=\"1\" with: Text variant=\"body-medium\" wrapping <Link to={itemLink}>{notification.payload.title}</Link>; when payload.description is set, Text variant=\"body-small\" color=\"secondary\" truncate with the description; Text variant=\"body-small\" color=\"secondary\" wrapping <RelativeTime value={notification.created} />. Then a ButtonIcon aria-label={t('unreadNotificationsCard.markAsRead')} icon={<RiCheckLine size={16} />} variant=\"tertiary\" onPress marks that id as read. Key items by notification.id.",
+        "Below the list, empty state or error, always render <Link to={notificationsLink}>{t('unreadNotificationsCard.viewAll')}</Link> inside a Text variant=\"body-small\".",
+        "Wrap the whole content in Flex direction=\"column\" gap=\"3\". Never throw from render; never log notification contents.",
+        "UnreadNotificationsCard(props) returns <InfoCard title={t('unreadNotificationsCard.title')}><UnreadNotificationsCardContent {...props} /></InfoCard>.",
+        "UnreadNotificationsCardProps is { limit?: number; pollingIntervalMs?: number } with a TSDoc line on each field stating its default (5, and 60000 ms with a 10000 ms minimum)."
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCardProps",
+          "kind": "type",
+          "params": [],
+          "returns": "{ limit?: number; pollingIntervalMs?: number }"
+        },
+        {
+          "name": "UnreadNotificationsCardContent",
+          "kind": "function component",
+          "params": [
+            {
+              "name": "props",
+              "type": "UnreadNotificationsCardProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        },
+        {
+          "name": "UnreadNotificationsCard",
+          "kind": "function component",
+          "params": [
+            {
+              "name": "props",
+              "type": "UnreadNotificationsCardProps"
+            }
+          ],
+          "returns": "JSX.Element"
+        }
+      ],
+      "import_line": "import { UnreadNotificationsCard, UnreadNotificationsCardContent } from './UnreadNotificationsCard';",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx",
+        "lines": [
+          1,
+          245
+        ],
+        "reason": "Header, import style, useNotificationsApi plus useSignal plus refresh-state pattern, ButtonIcon mark-as-read with toast on failure."
+      },
+      "uses": [
+        {
+          "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+          "lines": [
+            83,
+            159
+          ],
+          "reason": "The refresh effect guarded by loading that this card copies."
+        },
+        {
+          "path": "plugins/notifications/src/api/NotificationsApi.ts",
+          "reason": "getNotifications and updateNotifications option and response types."
+        },
+        {
+          "path": "plugins/notifications/src/hooks/useNotificationsApi.ts",
+          "reason": "The fetch hook and its deps argument."
+        },
+        {
+          "path": "plugins/signals-react/src/hooks/useSignal.ts",
+          "reason": "useSignal returns lastSignal and isSignalsAvailable and releases its subscription itself."
+        }
+      ],
+      "depends_on": [
+        "U04"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8",
+        "FR-9",
+        "NFR-1",
+        "NFR-2",
+        "NFR-3",
+        "NFR-5"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U09",
+      "path": "plugins/notifications/src/components/UnreadNotificationsCard/index.ts",
+      "action": "create",
+      "phase": "codegen",
+      "behaviour": "Barrel for the card folder, used by the lazy import in src/alpha.tsx.",
+      "rules": [
+        "Apache header with 2026, then: export { UnreadNotificationsCard, UnreadNotificationsCardContent } from './UnreadNotificationsCard'; and export type { UnreadNotificationsCardProps } from './UnreadNotificationsCard';",
+        "Nothing else; do not add it to src/components/index.ts."
+      ],
+      "exports": [
+        {
+          "name": "UnreadNotificationsCard",
+          "kind": "re-export",
+          "params": [],
+          "returns": "function component"
+        },
+        {
+          "name": "UnreadNotificationsCardContent",
+          "kind": "re-export",
+          "params": [],
+          "returns": "function component"
+        },
+        {
+          "name": "UnreadNotificationsCardProps",
+          "kind": "type re-export",
+          "params": [],
+          "returns": "type"
+        }
+      ],
+      "import_line": "import('./components/UnreadNotificationsCard')",
+      "style_from": {
+        "path": "plugins/notifications/src/components/NotificationsSideBarItem/index.ts",
+        "reason": "Barrel file shape."
+      },
+      "depends_on": [
+        "U08"
+      ],
+      "covers": [
+        "NFR-1"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U10",
+      "path": "plugins/notifications/src/alpha.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Registers the unread notifications card as a new frontend system home page widget and adds it to the plugin's extensions.",
+      "rules": [
+        "Import HomePageWidgetBlueprint from '@backstage/plugin-home-react/alpha'.",
+        "After the api blueprint, declare const unreadNotificationsWidget = HomePageWidgetBlueprint.make({ name: 'unread-notifications', params: { name: 'UnreadNotificationsCard', title: 'Unread notifications', description: 'Shows your latest unread notifications.', components: () => import('./components/UnreadNotificationsCard').then(m => ({ Content: m.UnreadNotificationsCardContent })) } });",
+        "Change the extensions list to [page, api, unreadNotificationsWidget]; keep the TODO comment above it.",
+        "Do not export the widget constant."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 24,
+          "to": 24,
+          "first_line": "import { RiNotification3Line } from '@remixicon/react';",
+          "rule": "Insert import { HomePageWidgetBlueprint } from '@backstage/plugin-home-react/alpha';"
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 47,
+          "to": 47,
+          "first_line": "});",
+          "rule": "This line closes the api blueprint; insert a blank line and the unreadNotificationsWidget declaration."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "extensions: [page, api],",
+          "rule": "Replace with extensions: [page, api, unreadNotificationsWidget],"
+        }
+      ],
+      "style_from": {
+        "path": "plugins/search/src/alpha.tsx",
+        "lines": [
+          96,
+          105
+        ],
+        "reason": "How a plugin makes a HomePageWidgetBlueprint widget with a lazy Content part."
+      },
+      "uses": [
+        {
+          "path": "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx",
+          "lines": [
+            32,
+            67
+          ],
+          "reason": "The widget params."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U03",
+        "U09"
+      ],
+      "covers": [
+        "FR-10"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    },
+    {
+      "id": "U11",
+      "path": "plugins/home-react/src/extensions.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "CardExtension gets its Suspense fallback from a hook that falls back to the core-components Progress when no app context is available.",
+      "rules": [
+        "Import Progress as DefaultProgress from '@backstage/core-components' alongside InfoCard, and the AppComponents type from '@backstage/core-plugin-api' alongside createReactExtension and useApp.",
+        "Add a non-exported function useProgressComponent(): AppComponents['Progress'] right above CardExtension: try { return useApp().getComponents().Progress; } catch { return DefaultProgress; } with a one-line comment that card extensions can render outside an app context, for example in tests.",
+        "In CardExtension replace the two lines that call useApp() and destructure Progress with const Progress = useProgressComponent();",
+        "No other change: createCardExtension, the exported types and CardExtension's signature stay as they are."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { InfoCard } from '@backstage/core-components';",
+          "rule": "Replace with import { InfoCard, Progress as DefaultProgress } from '@backstage/core-components';"
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 22,
+          "to": 22,
+          "first_line": "import { createReactExtension, useApp } from '@backstage/core-plugin-api';",
+          "rule": "Replace with an import that also brings in the AppComponents type (Prettier may wrap it)."
+        },
+        {
+          "id": "S3",
+          "at": "insert_before",
+          "from": 124,
+          "to": 124,
+          "first_line": "export function CardExtension<T>(props: CardExtensionComponentProps<T>) {",
+          "rule": "Insert the useProgressComponent hook and a blank line before CardExtension."
+        },
+        {
+          "id": "S4",
+          "at": "replace",
+          "from": 135,
+          "to": 136,
+          "first_line": "const app = useApp();",
+          "last_line": "const { Progress } = app.getComponents();",
+          "rule": "Replace both lines with const Progress = useProgressComponent();"
+        }
+      ],
+      "uses": [
+        {
+          "path": "packages/core-plugin-api/src/app/useApp.tsx",
+          "lines": [
+            79,
+            92
+          ],
+          "reason": "useApp throws 'App context is not available' without an app; the try/catch hook shape of useOptionalApiHolder to copy."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-13"
+      ],
+      "checks": [
+        "eslint",
+        "prettier"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/notifications/package.json": "e8133c1f0084eaeea3136ac5b2487465e9488c1e2b5801d4c400b0c4503aef37",
+    "plugins/home-react/package.json": "ab334f2597af369c8664f58e1b46be257b6cc5d0887e102b8e9616416f5754ce",
+    "plugins/notifications/src/translation.ts": "8ac1ee9920c2d73124cfff7826ee11deadcc9eaf1b09f92494f927f4fadf1f4a",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.module.css": "6a76ba9b1b187732c563ddae568a12b3522f0eef5615f464d28e4c5640bcc344",
+    "plugins/notifications/src/components/NotificationsTable/NotificationsTable.tsx": "e5c70ee41407f8f1a66ff2bf61c697523e094df60b47c4cb6785daec1fda4584",
+    "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx": "5c82ffcf77e140195480bdc27eca15e49994f5b749d5b856fef28d4a8714d247",
+    "plugins/notifications/src/components/NotificationsSideBarItem/NotificationsSideBarItem.tsx": "850880333b4f0f1c4021d0b66e441461a45a73ef3a4e147510f7cb5c33a55873",
+    "plugins/notifications/src/api/NotificationsApi.ts": "a6e26256a031f43baae212207ee06ad5700c1155a59b43ea1073ce393872ea6b",
+    "plugins/notifications/src/hooks/useNotificationsApi.ts": "f58467546631bb60d841ce8039dac550e95a5aef28fa06ce925c2c56e2cf8b6e",
+    "plugins/signals-react/src/hooks/useSignal.ts": "a3e3d7fd65a4e6230bbd8177646e578ebd66a10298b2ac8831dbafeb0fdef6c7",
+    "plugins/notifications/src/components/NotificationsSideBarItem/index.ts": "217597dc0900b66e3edd7af7188b5b499f904bbfc0d79cc80001c264a811fb12",
+    "plugins/notifications/src/alpha.tsx": "e4a38d69ca6209bf2f1625ca9681591341f07652f87fe29c19eb2d621e2b314c",
+    "plugins/search/src/alpha.tsx": "788e5924557108e8ae1458edf32e2e2847388b6680aa9ba63055bd78e8badc6d",
+    "plugins/home-react/src/alpha/blueprints/HomePageWidgetBlueprint.tsx": "004e033f9cd975b49f3949eb54fd74c8d18cef2fab610c61f2737a244452ea15",
+    "plugins/home-react/src/extensions.tsx": "1db19509d660bad4dc6e3b5a2186e7a85b6a438bc693e166231452c28fc60ff2",
+    "packages/core-plugin-api/src/app/useApp.tsx": "891c1a56cc162014fabf2a632cad7742fd3cfc61bd089e96450ae49f5d5ce554"
+  }
+}

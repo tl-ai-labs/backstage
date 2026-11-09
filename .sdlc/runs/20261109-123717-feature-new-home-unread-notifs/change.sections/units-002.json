@@ -1,0 +1,264 @@
+[
+  {
+    "id": "U12",
+    "path": "plugins/notifications/src/components/UnreadNotificationsCard/UnreadNotificationsCard.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "jsdom tests for the unread notifications card: rendering and links, empty state, mark-as-read, signal-triggered refresh, and the polling fallback with its cleanup.",
+    "rules": [
+      "Apache header with 2026. Imports: act, fireEvent, screen from '@testing-library/react'; renderInTestApp, TestApiProvider from '@backstage/test-utils'; toastApiRef from '@backstage/frontend-plugin-api'; signalApiRef from '@backstage/plugin-signals-react'; Notification from '@backstage/plugin-notifications-common'; notificationsApiRef from '../../api'; rootRouteRef from '../../routes'; UnreadNotificationsCard from './UnreadNotificationsCard'.",
+      "A helper makeNotification(id, title) returns a Notification with user 'user:default/guest', origin 'test', created new Date(), payload { title, severity: 'normal' }.",
+      "Mock the notifications API as { getNotifications: jest.fn(), updateNotifications: jest.fn() } using mockResolvedValueOnce chains of { notifications, totalCount } so each refetch can return a different list; updateNotifications resolves [].",
+      "Every render wraps UnreadNotificationsCard in TestApiProvider with at least [notificationsApiRef, api] and [toastApiRef, { post: jest.fn() }], and passes renderInTestApp the option mountedRoutes: { '/notifications': rootRouteRef }.",
+      "Wait for content with screen.findByText or findByRole only; no waitFor, no test ids; signal deliveries and timer advances run inside act.",
+      "The polling test calls jest.useFakeTimers() before rendering and jest.useRealTimers() at its end; an afterEach also calls jest.useRealTimers() and jest.clearAllMocks()."
+    ],
+    "tests": [
+      {
+        "name": "renders the title, unread items with deep links and the view all link",
+        "given": "getNotifications resolves two notifications with ids 'n1' and 'n2' and titles 'First alert' and 'Second alert'",
+        "expect": "findByText('Unread notifications') is present; getNotifications was called with an object containing read false and limit 5; 'First alert' is inside a link whose href ends with '/notifications?id=n1' and 'Second alert' inside one ending with '/notifications?id=n2'; a link named 'View all notifications' has href '/notifications'; two buttons are named 'Mark as read'"
+      },
+      {
+        "name": "shows the empty state when there are no unread notifications",
+        "given": "getNotifications resolves an empty list",
+        "expect": "findByText('No unread notifications') is present and no 'Mark as read' button exists"
+      },
+      {
+        "name": "marks an item as read and refetches the list",
+        "given": "getNotifications first resolves 'n1' and 'n2', then resolves only 'n2'",
+        "expect": "after fireEvent.click on the first 'Mark as read' button, updateNotifications was called with { ids: ['n1'], read: true }; findByText('Second alert') resolves after the refetch, queryByText('First alert') is null, and getNotifications was called twice"
+      },
+      {
+        "name": "refetches when a notifications signal arrives and unsubscribes on unmount",
+        "given": "a signal API whose subscribe is a jest.fn storing the callback and returning { unsubscribe: jest.fn() }; getNotifications first resolves 'n1', then resolves 'n1' and 'n3' titled 'Third alert'",
+        "expect": "subscribe was called with 'notifications'; after act calls the stored callback with { action: 'new_notification', notification_id: 'n3' }, findByText('Third alert') resolves and getNotifications was called twice; after unmount the unsubscribe mock was called once"
+      },
+      {
+        "name": "polls when signals are unavailable and stops polling after unmount",
+        "given": "no signal API, fake timers, pollingIntervalMs 1000 (below the 10 s minimum), getNotifications resolving 'n1' every time",
+        "expect": "after the first render getNotifications was called once; advancing timers by 9000 ms inside act adds no call; advancing by another 1000 ms makes it called twice; after unmount, advancing by 60000 ms leaves it at two calls"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "reason": "Header, renderInTestApp and screen usage in this package."
+    },
+    "uses": [
+      {
+        "path": "plugins/home/src/homePageComponents/StarredEntities/Content.test.tsx",
+        "lines": [16, 90],
+        "reason": "TestApiProvider plus mountedRoutes pattern and href assertions."
+      },
+      {
+        "path": "plugins/search-react/src/components/SearchBar/SearchBar.test.tsx",
+        "lines": [140, 182],
+        "reason": "Fake timers with renderInTestApp and act around jest.advanceTimersByTime."
+      },
+      {
+        "path": "plugins/signals-react/src/api/SignalApi.ts",
+        "reason": "SignalApi.subscribe signature to mock."
+      }
+    ],
+    "depends_on": ["U08"],
+    "covers": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-7", "FR-8", "NFR-4"],
+    "checks": ["eslint", "prettier", "jest"]
+  },
+  {
+    "id": "U13",
+    "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "jsdom test that the notifications page highlights the notification named by the id search parameter.",
+    "rules": [
+      "Apache header with 2026. Imports: screen from '@testing-library/react'; renderInTestApp, TestApiProvider from '@backstage/test-utils'; toastApiRef from '@backstage/frontend-plugin-api'; Notification from '@backstage/plugin-notifications-common'; notificationsApiRef from '../../api'; NotificationsPage from './NotificationsPage'.",
+      "Mock the notifications API with getNotifications resolving { notifications: [n1 'First alert', n2 'Second alert'], totalCount: 2 }, getStatus resolving { unread: 2, read: 0 }, getTopics resolving { topics: [] }, updateNotifications resolving []; also provide [toastApiRef, { post: jest.fn() }].",
+      "Render <NotificationsPage /> inside TestApiProvider with renderInTestApp and the option routeEntries: ['/notifications?id=n2'] (or ['/notifications'] for the second case).",
+      "The highlighted marker is found with closest('[aria-current=\"true\"]') from the title text; CSS modules map class names to themselves under jest, so the marked element has class 'highlighted'.",
+      "Use screen.findByText to wait for rows; no waitFor, no test ids."
+    ],
+    "tests": [
+      {
+        "name": "highlights the notification named in the id search parameter",
+        "given": "the page opened at '/notifications?id=n2' with two notifications n1 and n2",
+        "expect": "the element around 'Second alert' with aria-current 'true' exists and has class 'highlighted'; 'First alert' has no ancestor with aria-current, and only one element on the page has aria-current"
+      },
+      {
+        "name": "highlights nothing without an id search parameter",
+        "given": "the page opened at '/notifications' with the same two notifications",
+        "expect": "both titles render and no element has aria-current"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/notifications/src/components/UserNotificationSettingsCard/UserNotificationSettingsPanel.test.tsx",
+      "reason": "Header, renderInTestApp and screen usage in this package."
+    },
+    "uses": [
+      {
+        "path": "plugins/notifications/src/components/NotificationsPage/NotificationsPage.tsx",
+        "lines": [95, 141],
+        "reason": "Which NotificationsApi methods the page calls on load."
+      }
+    ],
+    "depends_on": ["U07"],
+    "covers": ["AC-5", "FR-11", "FR-12", "NFR-4"],
+    "checks": ["eslint", "prettier", "jest"]
+  },
+  {
+    "id": "U14",
+    "path": "plugins/home-react/src/extensions.test.tsx",
+    "action": "create",
+    "phase": "tests",
+    "behaviour": "jsdom test that a home-react card extension renders its title and content when no app context exists.",
+    "rules": [
+      "Apache header with 2026. First import is '@testing-library/jest-dom'; (the package has no setupTests file). Then: lazy from 'react'; render, screen from '@testing-library/react'; TestApiProvider, MockErrorApi, mockApis from '@backstage/test-utils'; errorApiRef from '@backstage/core-plugin-api'; translationApiRef from '@backstage/core-plugin-api/alpha'; CardExtension from './extensions'.",
+      "Render with plain render from @testing-library/react, never renderInTestApp or wrapInTestApp, so there is no app context; wrap in TestApiProvider apis={[[translationApiRef, mockApis.translation()], [errorApiRef, new MockErrorApi()]]} because the card's translations need those two APIs.",
+      "Use screen.findByText; no waitFor, no test ids."
+    ],
+    "tests": [
+      {
+        "name": "renders a card extension without an app context",
+        "given": "CardExtension with title 'My card' and a Content component returning the text 'Card content'",
+        "expect": "findByText('My card') and findByText('Card content') both resolve and nothing throws"
+      },
+      {
+        "name": "shows the loading fallback and then lazy content without an app context",
+        "given": "CardExtension with title 'Lazy card' and Content made with React.lazy resolving a component that returns 'Lazy content'",
+        "expect": "findByText('Lazy content') resolves and findByText('Lazy card') resolves"
+      }
+    ],
+    "style_from": {
+      "path": "plugins/home/src/homePageComponents/StarredEntities/Content.test.tsx",
+      "reason": "Home plugin family test shape with TestApiProvider."
+    },
+    "uses": [
+      {
+        "path": "plugins/home-react/src/extensions.tsx",
+        "lines": [118, 140],
+        "reason": "CardExtension's props and the hooks it calls."
+      }
+    ],
+    "depends_on": ["U02", "U03", "U11"],
+    "covers": ["AC-6", "FR-13", "NFR-4"],
+    "checks": ["eslint", "prettier", "jest"]
+  },
+  {
+    "id": "U15",
+    "path": "plugins/notifications/report.api.md",
+    "action": "tooling",
+    "phase": "codegen",
+    "behaviour": "Regenerates the API reports of both packages after every source change: plugins/notifications/report.api.md and report-alpha.api.md change (translation keys, the new table prop, the new widget extension); plugins/home-react reports are rewritten only if their content changes.",
+    "run": "yarn tsc:full && yarn build:api-reports:only plugins/notifications plugins/home-react",
+    "depends_on": ["U04", "U06", "U07", "U10", "U11"],
+    "covers": ["FR-16", "AC-8", "NFR-6"]
+  },
+  {
+    "id": "U16",
+    "path": "plugins/notifications/README.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Documents the unread notifications home page card and the notifications page deep link.",
+    "rules": [
+      "Add a section '## Home page card' saying that, in apps using the new frontend system with `@backstage/plugin-home` installed, the plugin adds an **Unread notifications** card to the home page widget list (extension ID `home-page-widget:notifications/unread-notifications`); it shows your five latest unread notifications, lets you mark each as read, refreshes live when `@backstage/plugin-signals` is installed and otherwise refreshes every 60 seconds; link to [the usage guide](https://backstage.io/docs/notifications/usage).",
+      "Add a section '## Link to a notification' saying that `/notifications?id=<notification-id>` opens the notifications page with that notification highlighted when it is in the current list, and that the home page card uses these links.",
+      "Follow docs/contribute/doc-style-guide.md; leave existing text unchanged."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 14,
+        "to": 14,
+        "first_line": "add `@backstage/plugin-signals` package to your installation.",
+        "rule": "Insert a blank line and the two new sections."
+      }
+    ],
+    "uses": [
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [14, 120],
+        "reason": "Language, tone and formatting rules."
+      }
+    ],
+    "depends_on": ["U10"],
+    "covers": ["FR-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U17",
+    "path": "docs/notifications/usage.md",
+    "action": "edit",
+    "phase": "docs",
+    "behaviour": "Documents adding the unread notifications card to the home page in the new frontend system and the notifications page deep link.",
+    "rules": [
+      "Add a subsection '### Unread notifications home page card' under '## Notifications Frontend', after the sidebar item paragraph.",
+      "Say the card is a home page widget from `@backstage/plugin-notifications` with extension ID `home-page-widget:notifications/unread-notifications`, that it needs `@backstage/plugin-home` and appears in the **Add Widget** dialog, and that it lists your five latest unread notifications, each linking to `/notifications?id=<notification-id>` where the page highlights it.",
+      "Say it refreshes when a message arrives on the `notifications` signal channel and polls every 60 seconds when `@backstage/plugin-signals` is not installed.",
+      "Show a yaml code block titled app-config.yaml that disables it: app: extensions: - home-page-widget:notifications/unread-notifications: false; link to [the homepage guide](../getting-started/homepage.md) for placing widgets.",
+      "Follow docs/contribute/doc-style-guide.md; leave existing text unchanged."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "insert_after",
+        "from": 32,
+        "to": 32,
+        "first_line": "You can customize the sidebar item using its [properties](https://backstage.io/api/stable/functions/_backstage_plugin-notifications.index.NotificationsSidebarItem.html) to fit your specific needs.",
+        "rule": "Insert a blank line and the new subsection."
+      }
+    ],
+    "uses": [
+      {
+        "path": "docs/getting-started/homepage.md",
+        "lines": [85, 140],
+        "reason": "How widget extension IDs and app-config examples are documented."
+      },
+      {
+        "path": "docs/contribute/doc-style-guide.md",
+        "lines": [14, 120],
+        "reason": "Language, tone and formatting rules."
+      }
+    ],
+    "depends_on": ["U10"],
+    "covers": ["FR-14"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U18",
+    "path": ".changeset/notifications-unread-home-card.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for @backstage/plugin-notifications.",
+    "rules": [
+      "Front matter exactly: ---, '@backstage/plugin-notifications': patch, ---.",
+      "Body, for adopters: the plugin now provides an Unread notifications home page widget for the new frontend system that lists your latest unread notifications, lets you mark them as read, and refreshes live with signals or by polling; and the notifications page now highlights the notification given in the `id` URL parameter.",
+      "No internal function, component, hook, prop or variable names."
+    ],
+    "style_from": {
+      "path": ".changeset/add-logviewer-copy-button.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": ["U10"],
+    "covers": ["FR-15", "AC-8"],
+    "checks": ["prettier"]
+  },
+  {
+    "id": "U19",
+    "path": ".changeset/home-react-card-without-app-context.md",
+    "action": "create",
+    "phase": "docs",
+    "behaviour": "Changeset for @backstage/plugin-home-react.",
+    "rules": [
+      "Front matter exactly: ---, '@backstage/plugin-home-react': patch, ---.",
+      "Body, for adopters: home page cards now render when no app context is available, for example in tests, by falling back to the default loading indicator; apps keep their own loading indicator.",
+      "No internal function, component, hook or variable names."
+    ],
+    "style_from": {
+      "path": ".changeset/add-logviewer-copy-button.md",
+      "reason": "Changeset shape."
+    },
+    "depends_on": ["U11"],
+    "covers": ["FR-15", "AC-8"],
+    "checks": ["prettier"]
+  }
+]
