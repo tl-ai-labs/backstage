@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { hasErrors } from './utils';
+import { expandCrossStepDependencies, hasErrors } from './utils';
 
 describe('hasErrors', () => {
   it('should return false for empty _errors', () => {
@@ -88,5 +88,138 @@ describe('hasErrors', () => {
     };
 
     expect(hasErrors(errors)).toBe(true);
+  });
+});
+
+describe('expandCrossStepDependencies', () => {
+  it('should leave schemas without cross-step dependencies unchanged', () => {
+    const schemaWithoutDependencies = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+      },
+    };
+    expect(expandCrossStepDependencies(schemaWithoutDependencies)).toBe(
+      schemaWithoutDependencies,
+    );
+
+    const schemaWithSameStepDependency = {
+      type: 'object',
+      properties: {
+        moreInfo: { type: 'boolean' },
+      },
+      dependencies: {
+        moreInfo: ['details'],
+      },
+    };
+    expect(expandCrossStepDependencies(schemaWithSameStepDependency)).toBe(
+      schemaWithSameStepDependency,
+    );
+
+    const schemaWithNoProperties = {
+      type: 'object',
+      dependencies: {
+        foo: ['bar'],
+      },
+    };
+    expect(expandCrossStepDependencies(schemaWithNoProperties)).toBe(
+      schemaWithNoProperties,
+    );
+
+    const schemaWithSameStepChain = {
+      type: 'object',
+      properties: {
+        a: { type: 'boolean' },
+      },
+      dependencies: {
+        a: {
+          oneOf: [
+            {
+              properties: {
+                a: { const: true },
+                b: { type: 'string' },
+              },
+            },
+          ],
+        },
+        b: ['c'],
+      },
+    };
+    expect(expandCrossStepDependencies(schemaWithSameStepChain)).toBe(
+      schemaWithSameStepChain,
+    );
+  });
+
+  it('should rewrite cross-step dependencies into if/then entries', () => {
+    const sdkName = { type: 'string' };
+    const zone = { type: 'string' };
+    const schema = {
+      type: 'object',
+      properties: {
+        description: { type: 'string' },
+      },
+      allOf: [{ required: ['description'] }],
+      dependencies: {
+        isMobileSdk: {
+          oneOf: [
+            {
+              properties: {
+                isMobileSdk: { const: true },
+                sdkName,
+              },
+              required: ['sdkName'],
+            },
+            {
+              properties: {
+                isMobileSdk: { const: false },
+              },
+            },
+          ],
+        },
+        team: ['owner'],
+        region: {
+          properties: {
+            zone: { type: 'string' },
+          },
+        },
+      },
+    };
+
+    const copy = JSON.parse(JSON.stringify(schema));
+    const result = expandCrossStepDependencies(schema);
+
+    expect(result.allOf).toEqual([
+      { required: ['description'] },
+      {
+        if: {
+          properties: { isMobileSdk: { const: true } },
+          required: ['isMobileSdk'],
+        },
+        then: {
+          properties: { sdkName },
+          required: ['sdkName'],
+        },
+      },
+      {
+        if: {
+          properties: { isMobileSdk: { const: false } },
+          required: ['isMobileSdk'],
+        },
+        then: {
+          properties: {},
+        },
+      },
+      {
+        if: { required: ['team'] },
+        then: { required: ['owner'] },
+      },
+      {
+        if: { required: ['region'] },
+        then: { properties: { zone } },
+      },
+    ]);
+    expect(result.dependencies).toEqual(schema.dependencies);
+    expect(result.properties).toEqual(schema.properties);
+    expect(schema).toEqual(copy);
   });
 });

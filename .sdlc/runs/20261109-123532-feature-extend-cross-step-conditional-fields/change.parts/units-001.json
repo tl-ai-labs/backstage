@@ -1,0 +1,421 @@
+{
+  "section": "units",
+  "source": "units-001.json",
+  "value": [
+    {
+      "id": "U01",
+      "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds two internal helpers: one lists the property names a step schema declares inside conditional branches, the other tells the step's cross-step conditions (reading a property the step does not declare) apart from same-step ones.",
+      "rules": [
+        "1. `getConditionalPropertyNames(schema)` walks from `schema` into: each object item of `allOf`, `anyOf` and `oneOf` arrays; the `then` and `else` objects; and each object value of the `dependencies` object (array values are skipped); it recurses into the reached subschemas through those same keywords only.",
+        "2. For every reached subschema (never the top-level `schema` itself) whose `properties` is an object, collect its own keys (use `hasOwnProperty`, like `extractUiSchema`).",
+        "3. Never walk into `if`, `not`, `items` or any `properties` value; ignore non-object nodes.",
+        "4. Return the names in first-seen order without duplicates as `string[]`; never mutate `schema`.",
+        "5. Reuse the file's existing `isObject` guard; add a short `//` comment above each new function saying what it is used for; no TSDoc release tag and do not touch next/lib/index.ts.",
+        "6. `getCrossStepConditions(schema)` uses an inner test `declaredHere(name)`: true when `name` is an own key of `schema.properties`, or when `getConditionalPropertyNames` of `{ ...schema, dependencies: <schema.dependencies without name> }` includes `name` (use `schema` as is when `schema.dependencies` is not an object).",
+        "7. It inspects only two kinds of condition: (a) `if` nodes, meaning `schema` itself and each object item of `schema.allOf` whose `if` is an object; the condition reads the own keys of `if.properties` plus the string items of `if.required`, and its branches are `then` and `else` (objects only); (b) each own key `k` of `schema.dependencies` whose value is an object; the condition reads `k`, and its branch is that value. Array-valued dependencies and any other nesting are ignored.",
+        "8. A condition is cross-step when at least one name it reads fails `declaredHere`; those names go into `keys`. The names a branch declares are the own keys of its `properties` plus `getConditionalPropertyNames(branch)`.",
+        "9. `fields` = names declared by the branches of cross-step conditions, minus the names declared by the branches of same-step conditions, minus `keys`, minus the own keys of `schema.properties`.",
+        "10. Return `{ keys, fields }`, each in first-seen order without duplicates; a schema with only same-step conditions (or none) returns `{ keys: [], fields: [] }`; never mutate `schema`."
+      ],
+      "exports": [
+        {
+          "name": "getConditionalPropertyNames",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "string[]"
+        },
+        {
+          "name": "getCrossStepConditions",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "{ keys: string[]; fields: string[] }"
+        }
+      ],
+      "import_line": "import { getConditionalPropertyNames, getCrossStepConditions } from '../../lib/schema';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 149,
+          "to": 149,
+          "first_line": "};",
+          "rule": "Append `export function getConditionalPropertyNames(schema: JsonObject): string[]` (rules 1-5) and then `export function getCrossStepConditions(schema: JsonObject): { keys: string[]; fields: string[] }` (rules 5-10) after `createFieldValidation`, each preceded by one blank line."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "lines": [
+          20,
+          121
+        ],
+        "reason": "Recursive walker shape: isObject guard, destructured keywords, hasOwnProperty loops."
+      },
+      "depends_on": [],
+      "covers": [
+        "FR-1",
+        "FR-6",
+        "FR-7"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U02",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "Adds `expandCrossStepDependencies`, which rewrites `dependencies` keyed on an answer from another step into equivalent `allOf` if/then entries that rjsf evaluates against the full form data.",
+      "rules": [
+        "1. If `schema.dependencies` or `schema.properties` is not an object (use `isObject`), return `schema` itself (same reference).",
+        "2. Visit the own keys `k` of `schema.dependencies` in `Object.keys` order; skip `k` when it is an own key of `schema.properties` (same-step dependency, rjsf already handles it).",
+        "3. Also skip `k` when `getConditionalPropertyNames({ ...schema, dependencies: <schema.dependencies without k> })` includes `k` (a field introduced by another branch of the same step, which rjsf resolves through its dependency chain).",
+        "4. For an array value `v`: produce `{ if: { required: [k] }, then: { required: v } }`.",
+        "5. For an object value: split it into `oneOf` and the remaining keywords `rest`; when `rest` has at least one key produce `{ if: { required: [k] }, then: rest }`; when `oneOf` is an array, for each item that is an object whose `properties` is an object holding an object at `properties[k]`, produce `{ if: { properties: { [k]: item.properties[k] }, required: [k] }, then: { ...item, properties: <item.properties without k> } }`; skip other items.",
+        "6. Any other value produces nothing.",
+        "7. If nothing was produced return `schema` itself; otherwise return `{ ...schema, allOf: [...(Array.isArray(schema.allOf) ? schema.allOf : []), ...produced] }`, keeping `dependencies` unchanged so ajv validation still matches the backend.",
+        "8. Never mutate `schema` or its nested objects; build the copies with spread and Object.fromEntries/filter.",
+        "9. Add a short `//` comment above the function explaining that rjsf skips a dependency whose key is not a property of the step, so cross-step dependencies are re-expressed as if/then."
+      ],
+      "exports": [
+        {
+          "name": "expandCrossStepDependencies",
+          "kind": "function",
+          "params": [
+            {
+              "name": "schema",
+              "type": "JsonObject"
+            }
+          ],
+          "returns": "JsonObject"
+        }
+      ],
+      "import_line": "import { expandCrossStepDependencies } from './utils';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 18,
+          "to": 18,
+          "first_line": "import { FormValidation } from './createAsyncValidators';",
+          "rule": "Add `import { getConditionalPropertyNames } from '../../lib/schema';` on its own line."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 48,
+          "to": 48,
+          "first_line": "}",
+          "rule": "After `isObject`, add one blank line and `export function expandCrossStepDependencies(schema: JsonObject): JsonObject` implementing rules 1-9."
+        }
+      ],
+      "style_from": {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "reason": "Plain exported function style and the existing `isObject` guard of this file."
+      },
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            16,
+            40
+          ],
+          "reason": "Imports and isObject style of the module that exports getConditionalPropertyNames."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-5",
+        "NFR-2",
+        "NFR-6"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U03",
+      "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The per-step rjsf Form receives the step schema with cross-step dependencies expanded, so dependent fields render and validate against all earlier answers in both the wizard and the editor preview.",
+      "rules": [
+        "1. Only the `schema` prop of the step `<Form>` changes; `formData={stepsState}`, `handleNext`, `handleChange`, `handleCreate`, the async validation (still built from `mergedSchema`) and the Review branches stay exactly as they are.",
+        "2. Call the helper inline in the JSX (the Form branch only renders while `currentStep` is defined), with no new hook, state or prop."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "replace",
+          "from": 59,
+          "to": 59,
+          "first_line": "import { hasErrors } from './utils';",
+          "rule": "Replace with `import { expandCrossStepDependencies, hasErrors } from './utils';`."
+        },
+        {
+          "id": "S2",
+          "at": "replace",
+          "from": 298,
+          "to": 298,
+          "first_line": "schema={currentStep.schema}",
+          "rule": "Replace with `schema={expandCrossStepDependencies(currentStep.schema)}`."
+        }
+      ],
+      "depends_on": [
+        "U02"
+      ],
+      "covers": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-10",
+        "NFR-3"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U04",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "`findSchemaForKey` keeps today's per-step data and adds only the earlier-step answers that the step's cross-step conditions read, so a step with only same-step conditions resolves exactly as today.",
+      "rules": [
+        "1. Keep the signature `findSchemaForKey(key, schemas, formState): ParsedTemplateSchema | null`, the loop, the existing block comment, today's `dependencies` data block, the `getSchema` call and the truthiness test unchanged.",
+        "2. After today's `dependencies` block, for each name in `getCrossStepConditions(schema).keys` that is not `key` and is an own key of `formState`, set `data[name] = formState[name]`; the looked-up key is never added this way, so json-schema-library cannot derive a schema from its own value.",
+        "3. A step whose `keys` is empty gets exactly today's `data`, so same-step `dependencies` and same-step `if`/`then`/`else` resolve as they do today.",
+        "4. Add a short `//` comment above the new loop: conditions that read answers from an earlier step need those answers; same-step conditions keep today's data.",
+        "5. Leave `isJsonObject` and `formatKey` unchanged and exported."
+      ],
+      "exports": [
+        {
+          "name": "findSchemaForKey",
+          "kind": "function",
+          "params": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "schemas",
+              "type": "ParsedTemplateSchema[]"
+            },
+            {
+              "name": "formState",
+              "type": "Partial<{ [key: string]: JsonValue }>"
+            }
+          ],
+          "returns": "ParsedTemplateSchema | null"
+        }
+      ],
+      "import_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { Draft07 as JSONSchema } from 'json-schema-library';",
+          "rule": "Add `import { getCrossStepConditions } from '../../lib/schema';` on its own line."
+        },
+        {
+          "id": "S2",
+          "at": "insert_after",
+          "from": 62,
+          "to": 62,
+          "first_line": "}",
+          "rule": "After the closing brace of the `schema.dependencies` block, add one blank line and the comment and loop of rules 2 and 4."
+        }
+      ],
+      "uses": [
+        {
+          "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+          "lines": [
+            16,
+            22
+          ],
+          "reason": "Module that exports getCrossStepConditions (added by U01)."
+        }
+      ],
+      "depends_on": [
+        "U01"
+      ],
+      "covers": [
+        "FR-6",
+        "FR-8",
+        "NFR-2"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U05",
+      "path": "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx",
+      "action": "edit",
+      "phase": "codegen",
+      "behaviour": "The default Review step leaves out an answer only when no step resolves it and its field is declared inside a branch of a cross-step condition; same-step conditional answers and every other answer are listed exactly as today.",
+      "rules": [
+        "1. Before building `reviewData`, compute `const crossStepFields = new Set(props.schemas.flatMap(schema => getCrossStepConditions(schema.mergedSchema).fields));`.",
+        "2. In the `flatMap` callback: when `findSchemaForKey` returns a step, return `processSchema(...)` as today; otherwise return `[]` if `crossStepFields.has(key)`, else `[[formatKey(key), value]]` as today (this fallback still lists stale same-step conditional answers).",
+        "3. Do not change `processSchema`, `ReviewStateProps` or the `.filter(prop => prop.length > 0)` step; masking, `ui:backstage.review` options, enumNames and nested explode stay untouched."
+      ],
+      "exports": [],
+      "import_line": "",
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 20,
+          "to": 20,
+          "first_line": "import { isJsonObject, formatKey, findSchemaForKey } from './util';",
+          "rule": "Add `import { getCrossStepConditions } from '../../lib/schema';` on its own line."
+        },
+        {
+          "id": "S2",
+          "at": "insert_before",
+          "from": 93,
+          "to": 93,
+          "first_line": "const reviewData = Object.fromEntries(",
+          "rule": "Insert the `crossStepFields` constant of rule 1."
+        },
+        {
+          "id": "S3",
+          "at": "replace",
+          "from": 97,
+          "to": 99,
+          "first_line": "return schema",
+          "last_line": ": [[formatKey(key), value]];",
+          "rule": "Replace the ternary with the three-way choice of rule 2 (if statements or a nested ternary with an eslint-disable comment for no-nested-ternary are both fine; prefer if statements)."
+        }
+      ],
+      "depends_on": [
+        "U01",
+        "U04"
+      ],
+      "covers": [
+        "FR-6",
+        "FR-7",
+        "FR-8"
+      ],
+      "checks": [
+        "prettier",
+        "eslint"
+      ]
+    },
+    {
+      "id": "U06",
+      "path": "docs/features/software-templates/input-examples.md",
+      "action": "edit",
+      "phase": "docs",
+      "behaviour": "Adds a template-author section showing a two-step template where step 2 shows and requires SDK fields only when step 1 answered that the project is a mobile SDK.",
+      "rules": [
+        "1. Heading `### Conditional fields based on an earlier step`, placed after the `Multiple conditional fields with custom ordering` example and before `## Conditionally set parameters`.",
+        "2. Opening paragraph: a condition in a later step can read a property answered in an earlier step; write it in the later step with `allOf` and `if`/`then` (or `dependencies`) that name the earlier step's property.",
+        "3. One complete `yaml` example under `parameters:` with two steps: step `Project type` with boolean `isMobileSdk` (title `Is this a mobile SDK?`); step `SDK details` with a plain `description` string property and `allOf` holding one item whose `if` has `properties: { isMobileSdk: { const: true } }` and `required: [isMobileSdk]`, and whose `then` adds `sdkName` (title `SDK name`, string) and `sdkPlatform` (title `Platform`, string, enum `android`, `ios`) and requires both.",
+        "4. After the example, a short bullet list: list the earlier property under `required` in the `if` block, otherwise an unanswered property counts as matching; the fields appear and are required only while the condition holds; the Review step lists them only while the earlier-step condition holds, also after going back and changing the earlier answer; a `dependencies` entry keyed on the earlier step's property works the same way. Do not describe any change to conditions within a single step: they behave as before, including in the Review step.",
+        "5. A closing `:::note` admonition: a value typed into a field that is hidden later is still passed to the template, so guard its use in `spec.steps` with the same condition, for example `if: ${{ parameters.isMobileSdk }}`.",
+        "6. Follow docs/contribute/doc-style-guide.md; do not change any other section."
+      ],
+      "sites": [
+        {
+          "id": "S1",
+          "at": "insert_after",
+          "from": 341,
+          "to": 341,
+          "first_line": "```",
+          "rule": "Insert a blank line and the new section of rules 1-5, ending without a trailing blank line beyond the one before `## Conditionally set parameters`."
+        }
+      ],
+      "style_from": {
+        "path": "docs/features/software-templates/input-examples.md",
+        "lines": [
+          262,
+          341
+        ],
+        "reason": "Tone, heading level and YAML layout of the neighbouring conditional field examples."
+      },
+      "uses": [
+        {
+          "path": "docs/contribute/doc-style-guide.md",
+          "reason": "Documentation style rules."
+        }
+      ],
+      "depends_on": [],
+      "covers": [
+        "FR-11",
+        "AC-7"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    },
+    {
+      "id": "U07",
+      "path": ".changeset/scaffolder-cross-step-conditional-fields.md",
+      "action": "create",
+      "phase": "docs",
+      "behaviour": "Changeset announcing cross-step conditional fields for `@backstage/plugin-scaffolder-react` as a minor bump.",
+      "rules": [
+        "1. Front matter lists only `'@backstage/plugin-scaffolder-react': minor`.",
+        "2. One paragraph: fields in a later step of the template form can now be shown, required and listed on the Review step based on an answer given in an earlier step, using `if`/`then`/`else` or `dependencies` in the step schema.",
+        "3. Second sentence: when the earlier answer no longer satisfies the condition, for example after going back and changing it, the Review step leaves out such a later-step field; conditional fields that depend on answers in the same step are shown in the Review step as before.",
+        "4. No internal function, file or variable names."
+      ],
+      "exports": [],
+      "import_line": "",
+      "style_from": {
+        "path": ".changeset/four-dingos-filter.md",
+        "reason": "Changeset front matter and message layout."
+      },
+      "depends_on": [
+        "U03",
+        "U05"
+      ],
+      "covers": [
+        "FR-12",
+        "AC-8"
+      ],
+      "checks": [
+        "prettier"
+      ]
+    }
+  ],
+  "hashes": {
+    "plugins/scaffolder-react/src/next/lib/schema.ts": "1dd5faea67e4b4b4fba22f446ff8765efcac6c7bb60529ca1868f1c38be82d88",
+    "plugins/scaffolder-react/src/next/components/Stepper/utils.ts": "290f8ded6cbb0679ac16e8acd1e266e6d58022e899fc7502b959217d9f335ede",
+    "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx": "fb817544e4b8d1307bf96b87bc5685cc814aa0fab47caced9594a27ebc555a4a",
+    "plugins/scaffolder-react/src/next/components/ReviewState/util.ts": "f189db9a2fe73997bc229936fccca5e15dd296098f624c17cf2ecaa6218384aa",
+    "plugins/scaffolder-react/src/next/components/ReviewState/ReviewState.tsx": "e5fc61cbd0724835ab12912a10cba89446923eb0467feb83ba70aa7575943343",
+    "docs/features/software-templates/input-examples.md": "1df6aad39f5be4af5fcfe76ab451a3e7476230539f11ab74ec4627bcb7695a42",
+    "docs/contribute/doc-style-guide.md": "0830fe7fb20a44013be17325a3d14a5564917e4cbf5375b00c2aa4b871dcd892",
+    ".changeset/four-dingos-filter.md": "8f1bbe88512474bb40969303a7a6b604d96c238e16348a98a8fb5a6d5b2d6b62"
+  }
+}

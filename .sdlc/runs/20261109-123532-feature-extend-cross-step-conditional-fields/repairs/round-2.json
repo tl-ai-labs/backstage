@@ -1,0 +1,118 @@
+[
+  {
+    "id": "tp_debug_r2_001",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261109-123532-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/ReviewState/util.ts` for these problems, changing only what they need, following the conventions in the shared brief:\n1. yarn tsc: plugins/scaffolder-react/src/next/components/ReviewState/util.ts:68:37 - error TS2339: Property 'reads' does not exist on type '{ keys: string[]; fields: string[]; }'. (getCrossStepConditions in next/lib/schema.ts returns only { keys, fields }.) This line implements senior-review finding 1: a mixed cross-step condition (e.g. if: { properties: { isMobileSdk: { const: true }, kind: { const: 'lib' } }, required: ['isMobileSdk', 'kind'] }) also reads a same-step name, which must be added to `data` (never `key` itself) or the dependent field is wrongly dropped from Review. Keep that behaviour without using a field getCrossStepConditions does not return.\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/ReviewState/util.ts\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123532-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123532-feature-extend-cross-step-conditional-fields/briefs/U04.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/lib/schema.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.test.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/ReviewState/util.ts",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 240,
+      "max_retries": 2
+    }
+  },
+  {
+    "id": "tp_debug_r2_002",
+    "phase": "debug",
+    "task_type": "",
+    "module": "spec",
+    "intent": "feature-extend",
+    "pass_id": "20261109-123532-feature-extend-cross-step-conditional-fields",
+    "artifact_path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+    "instruction": "Fix `plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx` for these problems, changing only what they need, following the conventions in the shared brief:\n1. Senior-review finding 3 (minor): both new cross-step Stepper cases omit the required-property error assertion (`findAllByText(/required property/)`) that U10 rule 3 asks for, so the 'Create button absent' check could pass without validation. Previous fix attempt failed: an edit's search text appeared 2 times (must be unique); then with the assertion added, CI=1 yarn test 'plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx' failed at `expect(await screen.findAllByText(/required property/)).not.toHaveLength(0);` (line ~1004): no such text was found while the form stayed on step 2 with the Review button shown. Use search texts unique in the file, and assert the error text the form actually renders for the missing required field (check existing required-error assertions in this file).\n\nThe file's current text is under Inputs, marked \"current text\"; your edits apply to exactly that text.\n\n## Answer\nReturn ONLY a JSON object {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"edits\": [{\"search\": \"<text copied exactly from the current text>\", \"replace\": \"<its replacement>\"}]} with no other text. Each search must appear exactly once in the current text; the edits apply in order.\nIf the file does not exist yet, or the change rewrites most of it, return {\"path\": \"plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx\", \"content\": \"<the complete file>\"} instead.",
+    "inputs": [
+      {
+        "path": ".sdlc/runs/20261109-123532-feature-extend-cross-step-conditional-fields/briefs/shared.md",
+        "reason": "shared brief: conventions, decisions, the files of this change (stable run record)"
+      },
+      {
+        "path": ".sdlc/runs/20261109-123532-feature-extend-cross-step-conditional-fields/briefs/U10.md",
+        "reason": "this file's brief and the files it depends on"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.tsx",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/utils.ts",
+        "reason": "named beside the failure"
+      },
+      {
+        "path": "plugins/scaffolder-react/src/next/components/Stepper/Stepper.test.tsx",
+        "reason": "current text"
+      }
+    ],
+    "acceptance": [],
+    "budget": {
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 8192
+    },
+    "retry_count": 0,
+    "apply": {
+      "write": true,
+      "mode": "edits",
+      "checks": [
+        {
+          "id": "prettier",
+          "run": "yarn prettier --check '{path}'",
+          "fix": "yarn prettier --write '{path}'"
+        },
+        {
+          "id": "eslint",
+          "run": "yarn eslint '{path}'"
+        },
+        {
+          "id": "jest",
+          "run": "CI=1 yarn test '{path}'"
+        }
+      ],
+      "baseline": false,
+      "verify_timeout_sec": 480,
+      "max_retries": 2
+    }
+  }
+]

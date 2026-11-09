@@ -340,6 +340,54 @@ parameters:
                 - address
 ```
 
+### Conditional fields based on an earlier step
+
+A condition in a later step can read a property answered in an earlier step. Write it in the later step with `allOf` and `if`/`then` (or `dependencies`) that name the earlier step's property.
+
+```yaml
+parameters:
+  - title: Project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+  - title: SDK details
+    properties:
+      description:
+        title: Description
+        type: string
+    allOf:
+      - if:
+          properties:
+            isMobileSdk:
+              const: true
+          required:
+            - isMobileSdk
+        then:
+          properties:
+            sdkName:
+              title: SDK name
+              type: string
+            sdkPlatform:
+              title: Platform
+              type: string
+              enum:
+                - android
+                - ios
+          required:
+            - sdkName
+            - sdkPlatform
+```
+
+- List the earlier property under `required` in the `if` block, otherwise an unanswered property counts as matching.
+- The fields appear and are required only while the condition holds.
+- The Review step lists them only while the earlier-step condition holds, also after going back and changing the earlier answer.
+- A `dependencies` entry keyed on the earlier step's property works the same way.
+
+:::note
+A value typed into a field that is hidden later is still passed to the template, so guard its use in `spec.steps` with the same condition, for example `if: ${{ parameters.isMobileSdk }}`.
+:::
+
 ## Conditionally set parameters
 
 The inline `if` expression uses

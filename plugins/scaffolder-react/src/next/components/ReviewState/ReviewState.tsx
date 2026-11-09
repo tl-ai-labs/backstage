@@ -18,6 +18,7 @@ import { JsonObject, JsonValue } from '@backstage/types';
 import { Draft07 as JSONSchema } from 'json-schema-library';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { isJsonObject, formatKey, findSchemaForKey } from './util';
+import { getCrossStepConditions } from '../../lib/schema';
 
 /**
  * The props for the {@link ReviewState} component.
@@ -90,13 +91,22 @@ function processSchema(
  * @alpha
  */
 export const ReviewState = (props: ReviewStateProps) => {
+  const crossStepFields = new Set(
+    props.schemas.flatMap(
+      schema => getCrossStepConditions(schema.mergedSchema).fields,
+    ),
+  );
   const reviewData = Object.fromEntries(
     Object.entries(props.formState)
       .flatMap(([key, value]) => {
         const schema = findSchemaForKey(key, props.schemas, props.formState);
-        return schema
-          ? processSchema(key, value, schema, props.formState)
-          : [[formatKey(key), value]];
+        if (schema) {
+          return processSchema(key, value, schema, props.formState);
+        }
+        if (crossStepFields.has(key)) {
+          return [];
+        }
+        return [[formatKey(key), value]];
       })
       .filter(prop => prop.length > 0),
   );

@@ -170,4 +170,304 @@ describe('findSchemaForKey', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
   });
+
+  it('should resolve a cross-step if/then key only while its condition holds', () => {
+    const crossStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            description: {
+              type: 'string',
+            },
+          },
+          allOf: [
+            {
+              if: {
+                properties: {
+                  isMobileSdk: {
+                    const: true,
+                  },
+                },
+                required: ['isMobileSdk'],
+              },
+              then: {
+                properties: {
+                  sdkName: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        isMobileSdk: true,
+        sdkName: 'x',
+      }),
+    ).toBe(crossStepSchemas[1]);
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        isMobileSdk: false,
+        sdkName: 'x',
+      }),
+    ).toBeNull();
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        sdkName: 'x',
+      }),
+    ).toBeNull();
+    expect(
+      findSchemaForKey('isMobileSdk', crossStepSchemas, {
+        isMobileSdk: true,
+        sdkName: 'x',
+      }),
+    ).toBe(crossStepSchemas[0]);
+    expect(
+      findSchemaForKey('description', crossStepSchemas, {
+        isMobileSdk: true,
+        sdkName: 'x',
+      }),
+    ).toBe(crossStepSchemas[1]);
+  });
+
+  it('should resolve a cross-step dependencies key only while its condition holds', () => {
+    const crossStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            description: {
+              type: 'string',
+            },
+          },
+          dependencies: {
+            isMobileSdk: {
+              oneOf: [
+                {
+                  properties: {
+                    isMobileSdk: {
+                      const: true,
+                    },
+                    sdkName: {
+                      type: 'string',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    isMobileSdk: {
+                      const: false,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        isMobileSdk: true,
+        sdkName: 'x',
+      }),
+    ).toBe(crossStepSchemas[1]);
+    expect(
+      findSchemaForKey('sdkName', crossStepSchemas, {
+        isMobileSdk: false,
+        sdkName: 'x',
+      }),
+    ).toBeNull();
+  });
+
+  it('should resolve same-step conditional keys as before', () => {
+    const sameStepSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            kind: {
+              type: 'string',
+              enum: ['lib', 'app'],
+            },
+          },
+          dependencies: {
+            kind: {
+              oneOf: [
+                {
+                  properties: {
+                    kind: {
+                      const: 'lib',
+                    },
+                    libName: {
+                      type: 'string',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    kind: {
+                      const: 'app',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('libName', sameStepSchemas, {
+        isMobileSdk: true,
+        kind: 'lib',
+        libName: 'x',
+      }),
+    ).toBe(sameStepSchemas[1]);
+    expect(
+      findSchemaForKey('libName', sameStepSchemas, {
+        isMobileSdk: true,
+        kind: 'app',
+        libName: 'x',
+      }),
+    ).toBeNull();
+    expect(
+      findSchemaForKey('kind', sameStepSchemas, {
+        isMobileSdk: true,
+        kind: 'lib',
+        libName: 'x',
+      }),
+    ).toBe(sameStepSchemas[1]);
+  });
+
+  it('should resolve a key depending on both earlier-step and same-step answers only when both hold', () => {
+    const combinedSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            kind: {
+              type: 'string',
+            },
+          },
+          allOf: [
+            {
+              if: {
+                properties: {
+                  isMobileSdk: {
+                    const: true,
+                  },
+                  kind: {
+                    const: 'lib',
+                  },
+                },
+                required: ['isMobileSdk', 'kind'],
+              },
+              then: {
+                properties: {
+                  sdkName: {
+                    type: 'string',
+                  },
+                },
+                required: ['sdkName'],
+              },
+            },
+          ],
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('sdkName', combinedSchemas, {
+        isMobileSdk: true,
+        kind: 'lib',
+        sdkName: 'x',
+      }),
+    ).toBe(combinedSchemas[1]);
+    expect(
+      findSchemaForKey('sdkName', combinedSchemas, {
+        isMobileSdk: true,
+        kind: 'app',
+        sdkName: 'x',
+      }),
+    ).toBeNull();
+    expect(
+      findSchemaForKey('sdkName', combinedSchemas, {
+        isMobileSdk: false,
+        kind: 'lib',
+        sdkName: 'x',
+      }),
+    ).toBeNull();
+  });
 });

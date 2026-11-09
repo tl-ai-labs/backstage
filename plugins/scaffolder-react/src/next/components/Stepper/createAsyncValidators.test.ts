@@ -538,4 +538,101 @@ describe('createAsyncValidators', () => {
 
     expect(validatorsForChoice2.ValidateKebabCase).toHaveBeenCalled();
   });
+
+  it('should run validators of cross-step conditional fields only while the earlier answer matches', async () => {
+    const schema: JsonObject = {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: {
+              isMobileSdk: { const: true },
+            },
+            required: ['isMobileSdk'],
+          },
+          then: {
+            properties: {
+              sdkName: {
+                type: 'string',
+                'ui:field': 'SdkNameField',
+              },
+            },
+          },
+        },
+      ],
+      dependencies: {
+        isMobileSdk: {
+          oneOf: [
+            {
+              properties: {
+                isMobileSdk: { const: true },
+                sdkPlatform: {
+                  type: 'string',
+                  'ui:field': 'PlatformField',
+                },
+              },
+            },
+            {
+              properties: {
+                isMobileSdk: { const: false },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const validatorsWhenMatching = {
+      SdkNameField: jest.fn(),
+      PlatformField: jest.fn(),
+    };
+
+    const validateWhenMatching = createAsyncValidators(
+      schema,
+      validatorsWhenMatching,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenMatching({
+      isMobileSdk: true,
+      sdkName: 'my-sdk',
+      sdkPlatform: 'ios',
+    });
+
+    expect(validatorsWhenMatching.SdkNameField).toHaveBeenCalledWith(
+      'my-sdk',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(validatorsWhenMatching.PlatformField).toHaveBeenCalled();
+
+    const validatorsWhenNotMatching = {
+      SdkNameField: jest.fn(),
+      PlatformField: jest.fn(),
+    };
+
+    const validateWhenNotMatching = createAsyncValidators(
+      schema,
+      validatorsWhenNotMatching,
+      {
+        apiHolder: { get: jest.fn() },
+      },
+    );
+
+    await validateWhenNotMatching({
+      isMobileSdk: false,
+      sdkName: 'my-sdk',
+      sdkPlatform: 'ios',
+    });
+
+    expect(validatorsWhenNotMatching.SdkNameField).not.toHaveBeenCalled();
+    expect(validatorsWhenNotMatching.PlatformField).not.toHaveBeenCalled();
+  });
 });

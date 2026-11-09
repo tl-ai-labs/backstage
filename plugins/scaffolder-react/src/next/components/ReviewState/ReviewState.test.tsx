@@ -613,4 +613,184 @@ describe('ReviewState', () => {
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
   });
+
+  it('should only list conditional fields from a later step while their earlier-step condition holds', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            description: {
+              type: 'string',
+              title: 'Description',
+            },
+          },
+          allOf: [
+            {
+              if: {
+                properties: {
+                  isMobileSdk: {
+                    const: true,
+                  },
+                },
+                required: ['isMobileSdk'],
+              },
+              then: {
+                properties: {
+                  sdkName: {
+                    type: 'string',
+                    title: 'SDK name',
+                  },
+                  sdkToken: {
+                    type: 'string',
+                    title: 'SDK token',
+                    'ui:widget': 'password',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const formState = {
+      isMobileSdk: true,
+      description: 'd',
+      sdkName: 'my-sdk',
+      sdkToken: 'secret',
+      extra: 'kept',
+    };
+
+    const { getByRole, queryByRole, queryByText, rerender } = render(
+      <ReviewState formState={formState} schemas={schemas} />,
+    );
+
+    expect(getByRole('row', { name: 'SDK name my-sdk' })).toBeInTheDocument();
+    expect(getByRole('row', { name: 'SDK token ******' })).toBeInTheDocument();
+    expect(getByRole('row', { name: 'Description d' })).toBeInTheDocument();
+    expect(getByRole('row', { name: 'Extra kept' })).toBeInTheDocument();
+
+    rerender(
+      <ReviewState
+        formState={{ ...formState, isMobileSdk: false }}
+        schemas={schemas}
+      />,
+    );
+
+    expect(queryByRole('row', { name: /SDK name/ })).not.toBeInTheDocument();
+    expect(queryByRole('row', { name: /SDK token/ })).not.toBeInTheDocument();
+    expect(queryByText('my-sdk')).not.toBeInTheDocument();
+    expect(getByRole('row', { name: 'Description d' })).toBeInTheDocument();
+    expect(getByRole('row', { name: 'Extra kept' })).toBeInTheDocument();
+  });
+
+  it('should keep listing same-step conditional answers as before', () => {
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            hasNotes: {
+              type: 'boolean',
+            },
+            kind: {
+              type: 'string',
+              enum: ['lib', 'app'],
+            },
+          },
+          allOf: [
+            {
+              if: {
+                properties: {
+                  hasNotes: {
+                    const: true,
+                  },
+                },
+                required: ['hasNotes'],
+              },
+              then: {
+                properties: {
+                  notes: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          ],
+          dependencies: {
+            kind: {
+              oneOf: [
+                {
+                  properties: {
+                    kind: {
+                      enum: ['lib'],
+                    },
+                    libName: {
+                      type: 'string',
+                    },
+                  },
+                },
+                {
+                  properties: {
+                    kind: {
+                      enum: ['app'],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const formState = {
+      isMobileSdk: true,
+      hasNotes: false,
+      notes: 'stale-notes',
+      kind: 'app',
+      libName: 'old-lib',
+    };
+
+    const { queryByText } = render(
+      <ReviewState formState={formState} schemas={schemas} />,
+    );
+
+    expect(queryByText('stale-notes')).toBeInTheDocument();
+    expect(queryByText('old-lib')).toBeInTheDocument();
+    expect(queryByText('app')).toBeInTheDocument();
+  });
 });
