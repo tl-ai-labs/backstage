@@ -1,0 +1,132 @@
+{
+  "section": "header",
+  "source": "header.json",
+  "value": {
+    "conventions": [
+      "Formatter is Prettier with @backstage/cli/config/prettier: 80 columns, 2-space indent, single quotes, trailing commas everywhere, arrow parens avoided; the plan runs `yarn prettier --write` on each changed file only.",
+      "Match the style of the file being edited; change only the lines a site names and keep every other line byte-for-byte, including the existing Apache 2.0 header year.",
+      "This change creates no new .ts/.tsx/.js source file; if one were needed it would start with the Apache 2.0 header `Copyright 2026 The Backstage Authors`.",
+      "React APIs are taken as named imports (`import { useMemo, useSyncExternalStore } from 'react';`, `import { createRoot } from 'react-dom/client';`), never through a `React.` namespace or a default `ReactDOM` import.",
+      "package.json files: 2-space JSON, key order unchanged, no trailing comma after the last entry of an object; the React peer range is exactly `^18.0.0`; `peerDependenciesMeta` is never touched.",
+      "Tests use Jest `describe`/`it` with @testing-library/react; prefer fewer thorough tests, `screen`/`findBy*` over `waitFor`, and no test IDs.",
+      "Changesets are hand-written `.changeset/<slug>.md` files: YAML front matter of `'<package name>': <bump>` lines in single quotes, a blank line, then one adopter-facing paragraph; a breaking change starts with `**BREAKING**:`; never name an internal (non-public) code symbol.",
+      "Docs follow docs/contribute/doc-style-guide.md: present tense, active voice, address the reader as you, no statements about the future, code style for package names, file names and version ranges.",
+      "Never run `yarn build`, `yarn changesets version`, `yarn release`, any changeset CLI, or bare `git stash`; never edit ESLint, Prettier or TypeScript config files."
+    ],
+    "decisions": [
+      {
+        "topic": "React peer range",
+        "choice": "Every workspace package with React peers declares `\"@types/react\": \"^18.0.0\"`, `\"react\": \"^18.0.0\"`, `\"react-dom\": \"^18.0.0\"`; repo-tools peer-deps holds one `peerDependencies` const with those values and no per-package exception set.",
+        "rejected": [
+          "^18.0.2 peers (the local devDependency version)",
+          "keeping a React 18 only allowlist"
+        ],
+        "reason": "Matches the existing React 18 only shape of @backstage/ui, so the check collapses to one expected map."
+      },
+      {
+        "topic": "Legacy render fallback removal",
+        "choice": "dev-utils, frontend-dev-utils and techdocs import `createRoot` statically from 'react-dom/client' and call `createRoot(element).render(node)` directly; the dynamic-import promise, the `HAS_REACT_DOM_CLIENT` branch and the side-effect `import 'react-dom';` lines are removed.",
+        "rejected": [
+          "keep a dynamic import('react-dom/client') promise",
+          "keep HAS_REACT_DOM_CLIENT defined as true for third-party readers"
+        ],
+        "reason": "Gate 1 requires the flag gone (FR-11, AC-4); a React 18 root already schedules rendering, and createDevApp tests that mock react-dom/client keep working with a static import inside jest.isolateModules."
+      },
+      {
+        "topic": "legacyRoot option",
+        "choice": "Remove `LegacyRootOption` and the `legacyRoot` option outright from @backstage/test-utils, with a major changeset.",
+        "rejected": ["mark it @deprecated and keep it"],
+        "reason": "Gate 0 chose the breaking removal (FR-14, AC-5, AC-8)."
+      },
+      {
+        "topic": "CLI React version warning",
+        "choice": "Keep the single check in `checkReactVersion()` of packages/cli-module-build/src/lib/bundler/server.ts (called once from serveBundle); it warns when the resolved react major is below 18 and links https://backstage.io/docs/tutorials/react18-migration; the startFrontend.ts warning is deleted.",
+        "rejected": ["fail the start command", "a new helper module"],
+        "reason": "Gate 1 kept a warning; server.ts already resolves react/package.json, and keeping its lines 269-275 unchanged keeps the knip report location `server.ts:274:43` valid."
+      },
+      {
+        "topic": "react-aria useId",
+        "choice": "Popover, Tooltip, Table and TablePagination take `useId` from 'react'; none passes the id into a react-aria API that needs react-aria's own id (they feed SVG `id`/`use href`, `aria-describedby` and a live region `id`), so all four switch.",
+        "reason": "FR-7; React 18's useId gives the same per-instance uniqueness."
+      },
+      {
+        "topic": "Lockfile",
+        "choice": "One `yarn install` from the repo root after every manifest edit (the lockfile records workspace peerDependencies as well as the removed use-sync-external-store deps).",
+        "rejected": ["install right after the three shim manifests only"],
+        "reason": "A single install after all manifest edits leaves yarn.lock consistent for `yarn install --immutable`."
+      },
+      {
+        "topic": "Generated reports",
+        "choice": "packages/test-utils/report.api.md is regenerated by `yarn build:api-reports packages/test-utils`; knip reports are edited by hand only where a removed finding exists (plugins/app use-sync-external-store, cli-module-build hasReactDomClient.ts); the frontend-plugin-api and ui knip reports never list the removed deps and are left alone.",
+        "rejected": [
+          "running build:knip-reports (writes a temporary root knip.json outside the allowlist and rewrites already-drifted line numbers)"
+        ],
+        "reason": "Gate 0 wants API reports from tooling; the knip deltas are fully determined and small."
+      },
+      {
+        "topic": "Changesets",
+        "choice": "Seven new files: react18-required-peer-ranges.md (54 published peer-range packages), react18-test-utils-legacy-root.md, react18-cli-module-build.md, react18-cli-module-test-jest.md, react18-cli-module-new-templates.md, react18-repo-tools-peer-deps.md, react18-ui-builtin-hooks.md; breaking changes are major for version >= 1.0.0 and minor below; the non-breaking @backstage/ui changeset is patch (ui is below 1.0.0); private packages and @backstage/eslint-plugin (doc example only) get none.",
+        "reason": "Gate 0 release policy; packages needing different text get separate files."
+      }
+    ],
+    "file_checks": [
+      {
+        "id": "prettier",
+        "run": "yarn prettier --check {path}",
+        "fix": "yarn prettier --write {path}",
+        "timeout_s": 60
+      },
+      {
+        "id": "eslint",
+        "run": "yarn eslint {path}",
+        "timeout_s": 120
+      },
+      {
+        "id": "json-parse",
+        "run": "node -e \"JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))\" {path}",
+        "timeout_s": 30
+      },
+      {
+        "id": "node-syntax",
+        "run": "node --check {path}",
+        "timeout_s": 30
+      },
+      {
+        "id": "jest",
+        "run": "CI=1 yarn test {path}",
+        "timeout_s": 300
+      }
+    ],
+    "project_checks": [
+      {
+        "id": "tsc",
+        "run": "yarn tsc"
+      },
+      {
+        "id": "lint-all",
+        "run": "yarn lint:all"
+      },
+      {
+        "id": "peer-deps",
+        "run": "yarn lint:peer-deps"
+      },
+      {
+        "id": "gate-tests",
+        "run": "CI=true yarn test packages/core-app-api packages/test-utils packages/frontend-test-utils"
+      },
+      {
+        "id": "ac6-tests",
+        "run": "CI=true yarn test packages/frontend-dev-utils packages/frontend-plugin-api/src/routing packages/repo-tools/src/commands/peer-deps packages/cli-module-new/src/lib packages/ui/src/hooks"
+      },
+      {
+        "id": "touched-tests",
+        "run": "CI=true yarn test packages/ui/src/components/Table packages/ui/src/components/TablePagination packages/dev-utils/src/devApp plugins/techdocs/src/reader packages/cli-module-build/src"
+      },
+      {
+        "id": "acceptance-greps",
+        "run": "! git grep -nE '\\^17\\.0\\.0 \\|\\| \\^18\\.0\\.0' -- 'packages/*/package.json' 'plugins/*/package.json' 'packages/cli-module-new/templates' && ! git grep -nE 'use-sync-external-store|HAS_REACT_DOM_CLIENT|ReactDOM\\.render\\(|legacyRoot|LegacyRootOption' -- 'packages/*/src' 'plugins/*/src' 'packages/*/config' 'packages/*/package.json' 'plugins/*/package.json' 'packages/*/report*.api.md' 'plugins/*/knip-report.md' 'packages/*/knip-report.md' && test ! -e packages/cli-module-build/src/lib/bundler/hasReactDomClient.ts"
+      }
+    ]
+  },
+  "hashes": {}
+}

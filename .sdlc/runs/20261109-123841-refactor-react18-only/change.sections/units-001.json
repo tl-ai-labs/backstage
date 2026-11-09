@@ -1,0 +1,1311 @@
+[
+  {
+    "id": "U01",
+    "path": "packages/repo-tools/src/commands/peer-deps/peer-deps.ts",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "The peer-deps check expects one React 18 only peer map for every package and drops the React 18 only exception list.",
+    "rules": [
+      "The single `peerDependencies` const is `{ '@types/react': '^18.0.0', react: '^18.0.0', 'react-dom': '^18.0.0', 'react-router-dom': '^6.30.2' }`; no other const replaces it.",
+      "`peerDependenciesReact18Only`, `react18OnlyPackages`, its comment and `getExpectedPeerDependencies` are gone; every former `expectedPeerDeps[...]`/`expected[...]` lookup reads `peerDependencies[dep as keyof typeof peerDependencies]` (or `groupDep`).",
+      "All checks, messages, fix behaviour and the exit code stay as they are."
+    ],
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 35,
+        "to": 50,
+        "first_line": "const peerDependencies = {",
+        "last_line": "const react18OnlyPackages = new Set(['@backstage/ui']);",
+        "rule": "One `peerDependencies` const with the three React entries at '^18.0.0' and 'react-router-dom': '^6.30.2'."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 92,
+        "to": 97,
+        "first_line": "const getExpectedPeerDependencies = (packageJson: ExtendedPackageJSON) => {",
+        "last_line": "};",
+        "rule": "Remove the function."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 99,
+        "to": 108,
+        "first_line": "const matchesPeerDependency = (",
+        "last_line": "};",
+        "rule": "Keep the signature `(dep: string, packageJson: ExtendedPackageJSON)`; compare `packageJson.peerDependencies[dep]` with `peerDependencies[dep as keyof typeof peerDependencies]`."
+      },
+      {
+        "id": "S4",
+        "at": "delete",
+        "from": 145,
+        "to": 145,
+        "first_line": "const expectedPeerDeps = getExpectedPeerDependencies(packageJson);",
+        "rule": "Remove the line."
+      },
+      {
+        "id": "S5",
+        "at": "replace",
+        "from": 217,
+        "to": 218,
+        "first_line": "packageJson.peerDependencies[groupDep] =",
+        "last_line": "expectedPeerDeps[groupDep as keyof typeof expectedPeerDeps];",
+        "rule": "Assign `peerDependencies[groupDep as keyof typeof peerDependencies]`."
+      },
+      {
+        "id": "S6",
+        "at": "replace",
+        "from": 244,
+        "to": 245,
+        "first_line": "packageJson.peerDependencies[dep] =",
+        "last_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+        "rule": "Assign `peerDependencies[dep as keyof typeof peerDependencies]`."
+      },
+      {
+        "id": "S7",
+        "at": "replace",
+        "from": 254,
+        "to": 255,
+        "first_line": "packageJson.peerDependencies[dep] =",
+        "last_line": "expectedPeerDeps[dep as keyof typeof expectedPeerDeps];",
+        "rule": "Assign `peerDependencies[dep as keyof typeof peerDependencies]`."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-2", "FR-3", "AC-1", "NFR-1", "NFR-2"],
+    "checks": ["eslint", "prettier"]
+  },
+  {
+    "id": "U02",
+    "path": "packages/app-defaults/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 60,
+        "to": 62,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "AC-2"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U03",
+    "path": "packages/app-example-plugin/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 57,
+        "to": 59,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U04",
+    "path": "packages/core-app-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 83,
+        "to": 85,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U05",
+    "path": "packages/core-compat-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 61,
+        "to": 63,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U06",
+    "path": "packages/core-components/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 131,
+        "to": 133,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U07",
+    "path": "packages/core-plugin-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 74,
+        "to": 76,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U08",
+    "path": "packages/dev-utils/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 66,
+        "to": 68,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U09",
+    "path": "packages/frontend-app-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 62,
+        "to": 64,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U10",
+    "path": "packages/frontend-defaults/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 60,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U11",
+    "path": "packages/frontend-dev-utils/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 56,
+        "to": 58,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U12",
+    "path": "packages/frontend-dynamic-feature-loader/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 60,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U13",
+    "path": "packages/frontend-plugin-api/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Drop the use-sync-external-store dependency and its types, and narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 52,
+        "to": 53,
+        "first_line": "\"@standard-schema/spec\": \"^1.1.0\",",
+        "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+        "rule": "Keep only `\"@standard-schema/spec\": \"^1.1.0\"` with no trailing comma (it becomes the last dependency)."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 64,
+        "to": 64,
+        "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+        "rule": "Remove the devDependency."
+      },
+      {
+        "id": "S3",
+        "at": "replace",
+        "from": 72,
+        "to": 74,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "FR-6", "AC-3"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U14",
+    "path": "packages/frontend-test-utils/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 68,
+        "to": 70,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U15",
+    "path": "packages/integration-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 55,
+        "to": 57,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U16",
+    "path": "packages/module-federation-common/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 57,
+        "to": 59,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U17",
+    "path": "packages/test-utils/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 79,
+        "to": 81,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U18",
+    "path": "packages/theme/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 56,
+        "to": 58,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U19",
+    "path": "packages/version-bridge/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 49,
+        "to": 51,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U20",
+    "path": "plugins/api-docs/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 96,
+        "to": 98,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U21",
+    "path": "plugins/api-docs-module-protoc-gen-doc/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 51,
+        "to": 53,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U22",
+    "path": "plugins/app/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Drop the unused use-sync-external-store dependency and narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "delete",
+        "from": 78,
+        "to": 78,
+        "first_line": "\"use-sync-external-store\": \"^1.4.0\",",
+        "rule": "Remove the dependency."
+      },
+      {
+        "id": "S2",
+        "at": "replace",
+        "from": 98,
+        "to": 100,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1", "FR-6"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U23",
+    "path": "plugins/app-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 60,
+        "to": 62,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U24",
+    "path": "plugins/app-visualizer/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 53,
+        "to": 55,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U25",
+    "path": "plugins/auth/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 72,
+        "to": 74,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U26",
+    "path": "plugins/auth-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 61,
+        "to": 63,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U27",
+    "path": "plugins/catalog/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 115,
+        "to": 117,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U28",
+    "path": "plugins/catalog-graph/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 87,
+        "to": 89,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U29",
+    "path": "plugins/catalog-import/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 98,
+        "to": 100,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U30",
+    "path": "plugins/catalog-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 115,
+        "to": 117,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U31",
+    "path": "plugins/catalog-unprocessed-entities/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 81,
+        "to": 83,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U32",
+    "path": "plugins/config-schema/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 63,
+        "to": 65,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U33",
+    "path": "plugins/devtools/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 83,
+        "to": 85,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U34",
+    "path": "plugins/devtools-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 60,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U35",
+    "path": "plugins/example-todo-list/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 59,
+        "to": 61,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U36",
+    "path": "plugins/home/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 101,
+        "to": 103,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U37",
+    "path": "plugins/home-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 78,
+        "to": 80,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U38",
+    "path": "plugins/kubernetes/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 84,
+        "to": 86,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U39",
+    "path": "plugins/kubernetes-cluster/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 83,
+        "to": 85,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U40",
+    "path": "plugins/kubernetes-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 94,
+        "to": 96,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U41",
+    "path": "plugins/mui-to-bui/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 60,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U42",
+    "path": "plugins/notifications/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 86,
+        "to": 88,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U43",
+    "path": "plugins/org/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 93,
+        "to": 95,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U44",
+    "path": "plugins/org-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 67,
+        "to": 69,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U45",
+    "path": "plugins/permission-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 62,
+        "to": 64,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\"",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys and order; `react-dom` stays the last entry with no trailing comma."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U46",
+    "path": "plugins/scaffolder/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 136,
+        "to": 138,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U47",
+    "path": "plugins/scaffolder-node-test-utils/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 60,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U48",
+    "path": "plugins/scaffolder-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 125,
+        "to": 127,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U49",
+    "path": "plugins/search/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 95,
+        "to": 97,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U50",
+    "path": "plugins/search-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 90,
+        "to": 92,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U51",
+    "path": "plugins/signals/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 78,
+        "to": 80,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U52",
+    "path": "plugins/signals-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 60,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U53",
+    "path": "plugins/techdocs/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 111,
+        "to": 113,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U54",
+    "path": "plugins/techdocs-addons-test-utils/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 66,
+        "to": 68,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U55",
+    "path": "plugins/techdocs-module-addons-contrib/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 82,
+        "to": 84,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U56",
+    "path": "plugins/techdocs-react/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 87,
+        "to": 89,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U57",
+    "path": "plugins/user-settings/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Narrow the React peer ranges to React 18 only.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 93,
+        "to": 95,
+        "first_line": "\"@types/react\": \"^17.0.0 || ^18.0.0\",",
+        "last_line": "\"react-dom\": \"^17.0.0 || ^18.0.0\",",
+        "rule": "Set the three values to \"^18.0.0\"; keep keys, order and commas."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-1"],
+    "checks": ["json-parse", "prettier"]
+  },
+  {
+    "id": "U58",
+    "path": "packages/ui/package.json",
+    "action": "edit",
+    "phase": "codegen",
+    "behaviour": "Drop the use-sync-external-store dependency and its types; the React 18 only peers stay as they are.",
+    "sites": [
+      {
+        "id": "S1",
+        "at": "replace",
+        "from": 58,
+        "to": 59,
+        "first_line": "\"react-stately\": \"~3.51.0\",",
+        "last_line": "\"use-sync-external-store\": \"^1.4.0\"",
+        "rule": "Keep only `\"react-stately\": \"~3.51.0\"` with no trailing comma (it becomes the last dependency)."
+      },
+      {
+        "id": "S2",
+        "at": "delete",
+        "from": 70,
+        "to": 70,
+        "first_line": "\"@types/use-sync-external-store\": \"^1.0.0\",",
+        "rule": "Remove the devDependency."
+      }
+    ],
+    "depends_on": [],
+    "covers": ["FR-6"],
+    "checks": ["json-parse", "prettier"]
+  }
+]

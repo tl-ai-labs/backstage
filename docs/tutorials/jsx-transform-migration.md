@@ -58,8 +58,6 @@ Update the `compilerOptions.jsx` setting in `tsconfig.json` to `react-jsx`. This
 }
 ```
 
-In the future, this setting will change to `preserve` once React 17 is fully deprecated.
-
 ##### Explanation of `compilerOptions.jsx` Values
 
 - The `react` mode: This mode converts JSX into `React.createElement` calls, making it directly usable by React. The code doesn't require a separate JSX transformation step, and the output files will use the `.js` extension.

@@ -1,11 +1,10 @@
 # Knip report
 
-## Unused dependencies (7)
+## Unused dependencies (6)
 
 | Name                         | Location          | Severity |
 | :--------------------------- | :---------------- | :------- |
 | @backstage/filter-predicates | package.json:57:6 | error    |
-| use-sync-external-store      | package.json:78:6 | error    |
 | @backstage/config            | package.json:54:6 | error    |
 | @material-ui/lab             | package.json:68:6 | error    |
 | prop-types                   | package.json:74:6 | error    |
@@ -16,5 +15,5 @@
 
 | Name                 | Location          | Severity |
 | :------------------- | :---------------- | :------- |
-| @backstage/dev-utils | package.json:84:6 | error    |
+| @backstage/dev-utils | package.json:83:6 | error    |
 
