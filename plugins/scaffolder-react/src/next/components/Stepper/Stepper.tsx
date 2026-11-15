@@ -46,6 +46,10 @@ import {
 
 import { scaffolderReactTranslationRef } from '../../../translation';
 import { useFormDataFromQuery, useTemplateSchema } from '../../hooks';
+import {
+  omitInactiveConditionalValues,
+  resolveStepDependencies,
+} from '../../lib/conditionalSchema';
 import { useTransformSchemaToProps } from '../../hooks/useTransformSchemaToProps';
 import { Form } from '../Form';
 import { PasswordWidget } from '../PasswordWidget/PasswordWidget';
@@ -126,13 +130,36 @@ export const Stepper = (stepperProps: StepperProps) => {
     reviewButtonText = t('stepper.reviewButtonText'),
   } = components;
   const analytics = useAnalytics();
-  const { presentation, steps } = useTemplateSchema(props.manifest);
+  const { presentation, steps: templateSteps } = useTemplateSchema(
+    props.manifest,
+  );
   const apiHolder = useApiHolder();
   const [activeStep, setActiveStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
   const [initialState] = useFormDataFromQuery(props.initialState);
   const [stepsState, setStepsState] =
     useState<Record<string, JsonValue>>(initialState);
+
+  // Conditions in a step can depend on answers given in other steps, so they
+  // are resolved against the form data collected so far.
+  const steps = useMemo(
+    () =>
+      templateSteps.map(step =>
+        resolveStepDependencies(step, stepsState, validator),
+      ),
+    [templateSteps, stepsState],
+  );
+
+  // The values of conditional fields whose condition no longer holds are
+  // kept while filling in the form, in case the user changes their answer
+  // again, but are left out of the review and the submitted values.
+  const reviewState = useMemo(
+    () =>
+      activeStep < steps.length
+        ? stepsState
+        : omitInactiveConditionalValues(templateSteps, stepsState, validator),
+    [activeStep, steps.length, templateSteps, stepsState],
+  );
 
   const [errors, setErrors] = useState<undefined | FormValidation>();
   const styles = useStyles();
@@ -251,11 +278,11 @@ export const Stepper = (stepperProps: StepperProps) => {
     setIsCreating(true);
     analytics.captureEvent('click', `${createLabel}`);
     try {
-      await onCreate(stepsState);
+      await onCreate(reviewState);
     } finally {
       setIsCreating(false);
     }
-  }, [analytics, createLabel, onCreate, stepsState]);
+  }, [analytics, createLabel, onCreate, reviewState]);
 
   return (
     <>
@@ -328,7 +355,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         ReviewStepComponent ? (
           <ReviewStepComponent
             disableButtons={isValidating}
-            formData={stepsState}
+            formData={reviewState}
             handleBack={handleBack}
             handleReset={() => {}}
             steps={steps}
@@ -336,7 +363,7 @@ export const Stepper = (stepperProps: StepperProps) => {
           />
         ) : (
           <>
-            <ReviewStateComponent formState={stepsState} schemas={steps} />
+            <ReviewStateComponent formState={reviewState} schemas={steps} />
             <div className={styles.footer}>
               <Button
                 variant="tertiary"

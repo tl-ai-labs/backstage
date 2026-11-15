@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -168,9 +168,7 @@ describe('Stepper', () => {
     );
   });
 
-  // This test is currently broken, and needs rethinking how we fix this.
-  // eslint-disable-next-line jest/no-disabled-tests
-  it.skip('should omit properties that are no longer pertinent to the current step', async () => {
+  it('should omit properties that are no longer pertinent to the current step', async () => {
     const manifest: TemplateParameterSchema = {
       title: 'Conditional Input Form',
       steps: [
@@ -259,6 +257,180 @@ describe('Stepper', () => {
     });
 
     expect(onCreate).toHaveBeenCalledWith({ moreInfo: false });
+  });
+
+  describe('conditions on answers from earlier steps', () => {
+    const mobileStep = {
+      title: 'Step 1',
+      schema: {
+        properties: {
+          name: { type: 'string', title: 'Name' },
+          isMobile: { type: 'boolean', title: 'Is this a mobile SDK?' },
+        },
+      },
+    };
+
+    const sdkVersion = {
+      type: 'string',
+      title: 'SDK version',
+      'ui:backstage': { review: { name: 'Minimum SDK version' } },
+    };
+
+    it.each([
+      [
+        'if/then',
+        {
+          title: 'Step 2',
+          schema: {
+            properties: { owner: { type: 'string', title: 'Owner' } },
+            if: {
+              properties: { isMobile: { const: true } },
+              required: ['isMobile'],
+            },
+            then: {
+              properties: { sdkVersion },
+              required: ['sdkVersion'],
+            },
+          },
+        },
+      ],
+      [
+        'dependencies',
+        {
+          title: 'Step 2',
+          schema: {
+            properties: { owner: { type: 'string', title: 'Owner' } },
+            dependencies: {
+              isMobile: {
+                oneOf: [
+                  {
+                    properties: { isMobile: { const: true }, sdkVersion },
+                    required: ['sdkVersion'],
+                  },
+                  { properties: { isMobile: { const: false } } },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      [
+        'dependencies with if/then',
+        {
+          title: 'Step 2',
+          schema: {
+            properties: { owner: { type: 'string', title: 'Owner' } },
+            dependencies: {
+              isMobile: {
+                allOf: [
+                  {
+                    if: { properties: { isMobile: { const: true } } },
+                    then: {
+                      properties: { sdkVersion },
+                      required: ['sdkVersion'],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    ])(
+      'should only show and require a field when an earlier answer matches, using %s',
+      async (_name, secondStep) => {
+        const manifest: TemplateParameterSchema = {
+          title: 'Conditional Input Form',
+          steps: [mobileStep, secondStep],
+        };
+        const onCreate = jest.fn();
+
+        await renderInTestApp(
+          <SecretsContextProvider>
+            <Stepper
+              manifest={manifest}
+              extensions={[]}
+              onCreate={onCreate}
+              formProps={{ noHtml5Validate: true }}
+            />
+          </SecretsContextProvider>,
+        );
+
+        // Without the flag, the field is neither shown nor required
+        fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+          target: { value: 'my-sdk' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        expect(
+          await screen.findByRole('textbox', { name: 'Owner' }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByRole('textbox', { name: /SDK version/ }),
+        ).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        expect(
+          await screen.findByRole('button', { name: 'Create' }),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText('Minimum SDK version'),
+        ).not.toBeInTheDocument();
+
+        // With the flag set in step 1, the field is shown and required in step 2
+        fireEvent.click(screen.getByLabelText('Step 1'));
+        fireEvent.click(
+          await screen.findByRole('checkbox', {
+            name: 'Is this a mobile SDK?',
+          }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        const sdkField = await screen.findByRole('textbox', {
+          name: /SDK version/,
+        });
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        expect(
+          await screen.findAllByText(
+            /must have required property 'SDK version'/,
+          ),
+        ).not.toHaveLength(0);
+        expect(
+          screen.queryByRole('button', { name: 'Create' }),
+        ).not.toBeInTheDocument();
+
+        fireEvent.change(sdkField, { target: { value: '21' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        expect(
+          await screen.findByRole('button', { name: 'Create' }),
+        ).toBeInTheDocument();
+        expect(screen.getByText('Minimum SDK version')).toBeInTheDocument();
+        expect(screen.getByText('21')).toBeInTheDocument();
+
+        // Going back and clearing the flag removes the field from the review
+        fireEvent.click(screen.getByLabelText('Step 1'));
+        fireEvent.click(
+          await screen.findByRole('checkbox', {
+            name: 'Is this a mobile SDK?',
+          }),
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        await screen.findByRole('textbox', { name: 'Owner' });
+        expect(
+          screen.queryByRole('textbox', { name: /SDK version/ }),
+        ).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Create' }));
+        expect(
+          screen.queryByText('Minimum SDK version'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('21')).not.toBeInTheDocument();
+
+        await waitFor(() =>
+          expect(onCreate).toHaveBeenCalledWith({
+            name: 'my-sdk',
+            isMobile: false,
+          }),
+        );
+      },
+    );
   });
 
   it('should merge and overwrite nested formData correctly', async () => {
