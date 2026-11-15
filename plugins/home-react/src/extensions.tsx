@@ -17,7 +17,10 @@
 import { useState, Suspense } from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import SettingsIcon from '@material-ui/icons/Settings';
-import { InfoCard } from '@backstage/core-components';
+import {
+  InfoCard,
+  Progress as DefaultProgress,
+} from '@backstage/core-components';
 import { SettingsModal } from './components';
 import { createReactExtension, useApp } from '@backstage/core-plugin-api';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
@@ -121,6 +124,16 @@ type CardExtensionComponentProps<T> = CardExtensionProps<T> &
     overrideTitle?: string;
   };
 
+function FallbackProgress() {
+  try {
+    const app = useApp();
+    const { Progress } = app.getComponents();
+    return <Progress />;
+  } catch {
+    return <DefaultProgress />;
+  }
+}
+
 export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
   const {
     Renderer,
@@ -132,14 +145,12 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
     title,
     ...childProps
   } = props;
-  const app = useApp();
-  const { Progress } = app.getComponents();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { t } = useTranslationRef(homeReactTranslationRef);
 
   if (Renderer) {
     return (
-      <Suspense fallback={<Progress />}>
+      <Suspense fallback={<FallbackProgress />}>
         <Renderer
           {...(title && { title })}
           {...{
@@ -191,7 +202,7 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
   );
 
   return (
-    <Suspense fallback={<Progress />}>
+    <Suspense fallback={<FallbackProgress />}>
       {ContextProvider ? (
         <ContextProvider {...childProps}>{innerContent}</ContextProvider>
       ) : (

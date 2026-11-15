@@ -117,5 +117,14 @@ export const notificationsTranslationRef = createTranslationRef({
           'useNotificationFormat must be used within a NotificationFormatProvider',
       },
     },
+    homePageCard: {
+      title: 'Unread notifications',
+      emptyMessage: 'No unread notifications',
+      markAsRead: 'Mark as read',
+      viewAll: 'View all notifications',
+      errors: {
+        markAsReadFailed: 'Failed to mark notification as read',
+      },
+    },
   },
 });

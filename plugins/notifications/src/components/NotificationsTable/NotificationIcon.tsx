@@ -17,14 +17,22 @@ import { Notification } from '@backstage/plugin-notifications-common';
 import { useApp } from '@backstage/core-plugin-api';
 import { SeverityIcon } from './SeverityIcon';
 
+function useOptionalApp() {
+  try {
+    return useApp();
+  } catch {
+    return undefined;
+  }
+}
+
 export const NotificationIcon = ({
   notification,
 }: {
   notification: Notification;
 }) => {
-  const app = useApp();
+  const app = useOptionalApp();
 
-  if (notification.payload.icon) {
+  if (notification.payload.icon && app) {
     const Icon = app.getSystemIcon(notification.payload.icon);
     if (Icon) {
       return <Icon />;

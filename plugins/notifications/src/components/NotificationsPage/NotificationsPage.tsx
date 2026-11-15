@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 import {
   Content,
@@ -81,6 +82,8 @@ function NotificationsPageContent(
   } = props;
 
   const [refresh, setRefresh] = useState(false);
+  const [searchParams] = useSearchParams();
+  const highlightedNotificationId = searchParams.get('id') ?? undefined;
   const { lastSignal } = useSignal('notifications');
   const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(true);
   const [saved, setSaved] = useState<boolean | undefined>(undefined);
@@ -222,6 +225,7 @@ function NotificationsPageContent(
             page={pageNumber}
             pageSize={pageSize}
             totalCount={totalCount}
+            highlightedNotificationId={highlightedNotificationId}
           />
         </Grid.Item>
       </Grid.Root>
