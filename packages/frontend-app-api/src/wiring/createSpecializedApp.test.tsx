@@ -15,6 +15,7 @@
  */
 
 import {
+  appLifecycleApiRef,
   AppTreeApi,
   appTreeApiRef,
   coreExtensionData,
@@ -24,6 +25,8 @@ import {
   ApiBlueprint,
   createApiRef,
   createRouteRef,
+  createSubRouteRef,
+  PageBlueprint,
   createExternalRouteRef,
   createExtensionInput,
   useRouteRef,
@@ -1747,6 +1750,122 @@ describe('createSpecializedApp', () => {
       await expect(
         screen.findByText('Deferred Element'),
       ).resolves.toBeInTheDocument();
+    });
+
+    it('should resolve route refs in app root elements once finalized', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const pageRouteRef = createRouteRef();
+      const subRouteRef = createSubRouteRef({
+        parent: pageRouteRef,
+        path: '/sub',
+      });
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+      const renderCount = jest.fn();
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: { root: pageRouteRef },
+            extensions: [
+              PageBlueprint.make({
+                params: {
+                  path: '/my-page',
+                  routeRef: pageRouteRef,
+                  loader: async () => <div>My Page</div>,
+                },
+              }),
+              createExtension({
+                name: 'banner',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => {
+                  function Banner() {
+                    renderCount();
+                    const pageLink = useRouteRef(pageRouteRef);
+                    const subLink = useRouteRef(subRouteRef);
+                    return (
+                      <div>
+                        Banner: {pageLink?.() ?? 'pending'}{' '}
+                        {subLink?.() ?? 'pending'}
+                      </div>
+                    );
+                  }
+                  return [coreExtensionData.reactElement(<Banner />)];
+                },
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      // Mirrors how createApp swaps the bootstrap element for the finalized one
+      function PreparedAppRoot() {
+        const [finalizedApp, setFinalizedApp] =
+          useState<FinalizedSpecializedApp>();
+        useEffect(() => preparedApp.onFinalized(setFinalizedApp), []);
+        return finalizedApp?.element ?? preparedApp.getBootstrapApp().element;
+      }
+
+      render(<PreparedAppRoot />);
+      const lifecycleApi = preparedApp
+        .getBootstrapApp()
+        .apis.get(appLifecycleApiRef)!;
+
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('Banner: pending pending')).toBeInTheDocument();
+      expect(lifecycleApi.isFinalized()).toBe(false);
+
+      act(() => {
+        onSignInSuccess!(identityApi);
+      });
+
+      await expect(
+        screen.findByText('Banner: /my-page /my-page/sub'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.queryByText(/pending/)).not.toBeInTheDocument();
+      expect(renderCount.mock.calls.length).toBeLessThan(10);
+      expect(lifecycleApi.isFinalized()).toBe(true);
+
+      // The direct finalize() path should mark the app as finalized too
+      const directApp = prepareSpecializedApp({
+        features: [makeAppPlugin()],
+      });
+      const directLifecycleApi = directApp
+        .getBootstrapApp()
+        .apis.get(appLifecycleApiRef)!;
+      expect(directLifecycleApi.isFinalized()).toBe(false);
+      directApp.finalize();
+      expect(directLifecycleApi.isFinalized()).toBe(true);
     });
 
     it('should warn when bootstrap extensions access APIs that appear during finalization', async () => {

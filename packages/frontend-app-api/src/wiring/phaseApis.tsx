@@ -17,6 +17,8 @@
 import {
   AnyApiFactory,
   ApiHolder,
+  AppLifecycleApi,
+  appLifecycleApiRef,
   AppTree,
   AppTreeApi,
   appTreeApiRef,
@@ -164,6 +166,34 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
   }
 }
 
+// Tracks whether the prepared app has been finalized, letting elements that
+// render during bootstrap react to the transition
+export class DefaultAppLifecycleApi implements AppLifecycleApi {
+  #finalized = false;
+  readonly #listeners = new Set<() => void>();
+
+  isFinalized = () => this.#finalized;
+
+  subscribe = (listener: () => void) => {
+    this.#listeners.add(listener);
+
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  };
+
+  markFinalized() {
+    if (this.#finalized) {
+      return;
+    }
+    this.#finalized = true;
+
+    for (const listener of this.#listeners) {
+      listener();
+    }
+  }
+}
+
 export class PreparedAppIdentityProxy extends AppIdentityProxy {
   #onTargetSet?:
     | ((identityApi: Parameters<AppIdentityProxy['setTarget']>[0]) => void)
@@ -213,6 +243,7 @@ export function createPhaseApis(options: {
     options.appBasePath,
   );
   const identityProxy = new PreparedAppIdentityProxy();
+  const appLifecycleApi = new DefaultAppLifecycleApi();
   const phaseApiRegistry = new FrontendApiRegistry();
   phaseApiRegistry.registerAll([
     createApiFactory(appTreeApiRef, appTreeApi),
@@ -221,6 +252,7 @@ export function createPhaseApis(options: {
       : []),
     createApiFactory(routeResolutionApiRef, routeResolutionApi),
     createApiFactory(identityApiRef, identityProxy),
+    createApiFactory(appLifecycleApiRef, appLifecycleApi),
     ...options.staticFactories,
   ]);
 
@@ -235,6 +267,7 @@ export function createPhaseApis(options: {
     routeResolutionApi,
     appTreeApi,
     identityApiProxy: identityProxy,
+    appLifecycleApi,
   };
 }
 
