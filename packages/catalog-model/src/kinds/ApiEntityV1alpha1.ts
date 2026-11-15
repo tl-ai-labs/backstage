@@ -29,13 +29,45 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ApiEntityV1alpha1 extends Entity {
+  /**
+   * The version of the entity format. Both versions are accepted and have
+   * the same shape.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `API`.
+   */
   kind: 'API';
+  /**
+   * The API-specific part of the entity.
+   */
   spec: {
+    /**
+     * The format of the API definition, for example `openapi`, `asyncapi`,
+     * `graphql` or `grpc`. Any non-empty string is accepted.
+     */
     type: string;
+    /**
+     * The lifecycle state of the API, for example `experimental`,
+     * `production` or `deprecated`. Any non-empty string is accepted.
+     */
     lifecycle: string;
+    /**
+     * An entity reference to the owner of the API, for example
+     * `group:default/team-a`. The kind defaults to `Group` and the
+     * namespace to that of this entity. The catalog creates an `ownedBy`
+     * relation from this field.
+     */
     owner: string;
+    /**
+     * The definition of the API, in the format given by `type`.
+     */
     definition: string;
+    /**
+     * An entity reference to the system that the API belongs to. The kind
+     * defaults to `System` and the namespace to that of this entity. The
+     * catalog creates a `partOf` relation from this field.
+     */
     system?: string;
   };
 }

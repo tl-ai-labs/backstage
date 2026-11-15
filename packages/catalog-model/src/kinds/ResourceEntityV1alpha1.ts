@@ -29,13 +29,49 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ResourceEntityV1alpha1 extends Entity {
+  /**
+   * The version of the entity format. Both versions are accepted and have
+   * the same shape.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `Resource`.
+   */
   kind: 'Resource';
+  /**
+   * The Resource-specific part of the entity.
+   */
   spec: {
+    /**
+     * The type of resource, for example `database` or `s3-bucket`. Any
+     * non-empty string is accepted.
+     */
     type: string;
+    /**
+     * An entity reference to the owner of the resource, for example
+     * `group:default/team-a`. The kind defaults to `Group` and the
+     * namespace to that of this entity. The catalog creates an `ownedBy`
+     * relation from this field.
+     */
     owner: string;
+    /**
+     * Entity references to other entities that the resource depends on to
+     * function. There is no default kind, so each reference must include its
+     * kind, for example `resource:default/database`. The catalog creates
+     * `dependsOn` relations from this field.
+     */
     dependsOn?: string[];
+    /**
+     * Entity references to other entities that depend on the resource. There
+     * is no default kind, so each reference must include its kind. The
+     * catalog creates `dependencyOf` relations from this field.
+     */
     dependencyOf?: string[];
+    /**
+     * An entity reference to the system that the resource belongs to. The kind
+     * defaults to `System` and the namespace to that of this entity. The
+     * catalog creates a `partOf` relation from this field.
+     */
     system?: string;
   };
 }

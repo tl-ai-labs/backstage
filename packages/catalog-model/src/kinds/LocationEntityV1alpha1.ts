@@ -25,12 +25,40 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface LocationEntityV1alpha1 extends Entity {
+  /**
+   * The version of the entity format. Both versions are accepted and have
+   * the same shape.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `Location`.
+   */
   kind: 'Location';
+  /**
+   * The Location-specific part of the entity.
+   */
   spec: {
+    /**
+     * The location type shared by all targets, for example `url` or `file`.
+     * If omitted, the type of the location that this entity was read from is
+     * used.
+     */
     type?: string;
+    /**
+     * A single target. Either an absolute path or URL, depending on `type`,
+     * or a relative path such as `./details/catalog-info.yaml` that is
+     * resolved relative to this entity's own location.
+     */
     target?: string;
+    /**
+     * A list of targets, with the same format as `target`.
+     */
     targets?: string[];
+    /**
+     * Whether the targets must exist. When `required`, a missing target is
+     * treated as an error; when `optional`, it is skipped. The catalog
+     * treats an omitted value as `required`.
+     */
     presence?: 'required' | 'optional';
   };
 }

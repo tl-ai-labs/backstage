@@ -29,11 +29,36 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface DomainEntityV1alpha1 extends Entity {
+  /**
+   * The version of the entity format. Both versions are accepted and have
+   * the same shape.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `Domain`.
+   */
   kind: 'Domain';
+  /**
+   * The Domain-specific part of the entity.
+   */
   spec: {
+    /**
+     * An entity reference to the owner of the domain, for example
+     * `group:default/team-a`. The kind defaults to `Group` and the
+     * namespace to that of this entity. The catalog creates an `ownedBy`
+     * relation from this field.
+     */
     owner: string;
+    /**
+     * An entity reference to a parent domain that this domain is a part of.
+     * The kind defaults to `Domain` and the namespace to that of this
+     * entity. The catalog creates a `partOf` relation from this field.
+     */
     subdomainOf?: string;
+    /**
+     * The type of domain. There is no enforced set of values; each
+     * organization chooses its own.
+     */
     type?: string;
   };
 }

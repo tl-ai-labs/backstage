@@ -31,6 +31,15 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
     this.knownFields = knownFields;
   }
 
+  /**
+   * Rejects the entity if it has a root field that is not in the list given
+   * to the constructor. By default, only `apiVersion`, `kind`, `metadata`
+   * and `spec` are allowed.
+   *
+   * @param entity - The entity to check
+   * @returns The same entity, unmodified
+   * @throws An error naming the first unknown field
+   */
   async enforce(entity: Entity): Promise<Entity> {
     for (const field of Object.keys(entity)) {
       if (!this.knownFields.includes(field)) {

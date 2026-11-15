@@ -29,11 +29,36 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface SystemEntityV1alpha1 extends Entity {
+  /**
+   * The version of the entity format. Both versions are accepted and have
+   * the same shape.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `System`.
+   */
   kind: 'System';
+  /**
+   * The System-specific part of the entity.
+   */
   spec: {
+    /**
+     * An entity reference to the owner of the system, for example
+     * `group:default/team-a`. The kind defaults to `Group` and the
+     * namespace to that of this entity. The catalog creates an `ownedBy`
+     * relation from this field.
+     */
     owner: string;
+    /**
+     * An entity reference to the domain that the system belongs to. The kind
+     * defaults to `Domain` and the namespace to that of this entity. The
+     * catalog creates a `partOf` relation from this field.
+     */
     domain?: string;
+    /**
+     * The type of system. There is no enforced set of values; each
+     * organization chooses its own.
+     */
     type?: string;
   };
 }

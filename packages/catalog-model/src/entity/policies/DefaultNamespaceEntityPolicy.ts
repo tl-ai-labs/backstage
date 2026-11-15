@@ -31,6 +31,14 @@ export class DefaultNamespaceEntityPolicy implements EntityPolicy {
     this.namespace = namespace;
   }
 
+  /**
+   * Returns the entity unchanged if `metadata.namespace` is set. Otherwise
+   * returns a copy of the entity with `metadata.namespace` set to the
+   * namespace given to the constructor, which defaults to `default`. The
+   * input entity is not modified.
+   *
+   * @param entity - The entity to apply the policy to
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.metadata.namespace) {
       return entity;
