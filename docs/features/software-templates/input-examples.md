@@ -340,6 +340,72 @@ parameters:
                 - address
 ```
 
+### Conditional fields based on an earlier step
+
+A condition can also depend on an answer given in an earlier step of the form. Reference the parameter from the earlier step in the condition, just as you would a parameter from the same step. You don't need to repeat its definition.
+
+In the example below, the second step shows the `sdkVersion` field and makes it required only if the user selects **Is this a mobile SDK?** in the first step:
+
+```yaml
+parameters:
+  - title: Basic information
+    properties:
+      name:
+        title: Name
+        type: string
+      isMobile:
+        title: Is this a mobile SDK?
+        type: boolean
+        default: false
+
+  - title: SDK details
+    properties:
+      owner:
+        title: Owner
+        type: string
+    dependencies:
+      isMobile:
+        allOf:
+          - if:
+              properties:
+                isMobile:
+                  const: true
+            then:
+              properties:
+                sdkVersion:
+                  title: Minimum SDK version
+                  type: string
+              required:
+                - sdkVersion
+```
+
+You can also write the condition with a top-level `if`/`then` in the second step. Add the earlier parameter to `required` in the `if` so the condition only matches once the user has answered it:
+
+```yaml
+- title: SDK details
+  properties:
+    owner:
+      title: Owner
+      type: string
+  if:
+    properties:
+      isMobile:
+        const: true
+    required:
+      - isMobile
+  then:
+    properties:
+      sdkVersion:
+        title: Minimum SDK version
+        type: string
+    required:
+      - sdkVersion
+```
+
+The form evaluates the condition against the answers given so far, so it can only depend on parameters from the same or an earlier step.
+
+If the user goes back and changes an answer so that a condition no longer matches, the fields that depend on it are hidden. Their values are left out of the review step and aren't passed to the template. If the user changes the answer back before creating, the form restores the values they entered.
+
 ## Conditionally set parameters
 
 The inline `if` expression uses
