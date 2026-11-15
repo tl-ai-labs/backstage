@@ -94,6 +94,8 @@ When using phased app preparation, `app/root.children` acts as the main session 
 
 Utility APIs that are first materialized during bootstrap are frozen for the lifetime of that app instance. Finalization may still add new APIs and may override existing API refs that were not materialized during bootstrap, but any deferred override of an already materialized bootstrap API is ignored and reported as an app error.
 
+Because `app/root.children` is deferred until finalization, page routes are not yet available when bootstrap-visible `app/root.elements` render. Calling `useRouteRef` from `@backstage/frontend-plugin-api` returns `undefined` during bootstrap and automatically re-resolves once finalization completes. Components that need to observe the bootstrap-to-finalized transition directly can also use `appLifecycleApiRef`.
+
 ## Plugin Info Resolution
 
 When a plugin is installed in an app it may provide sources of information about the plugin that can be useful to end users and admins. This includes things like what version of a plugin is running, what team owns the plugin, and who to contact for support. You can read more about how the plugins provide this information in the [plugins `info` option section](./15-plugins.md#info-option).

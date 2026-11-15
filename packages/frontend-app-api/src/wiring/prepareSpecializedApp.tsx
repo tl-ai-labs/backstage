@@ -696,6 +696,7 @@ function finalizeFromSessionState(options: {
     routeRefsById: options.routeRefsById,
     predicateContext: sessionStateData.predicateContext,
   });
+  options.phase.appLifecycleApi.setFinalized();
 
   const element = options.tree.root.instance?.getData(
     coreExtensionData.reactElement,
@@ -764,6 +765,7 @@ function finalizeFromBootstrapError(options: {
     appTreeApi: options.phase.appTreeApi,
     routeRefsById: options.routeRefsById,
   });
+  options.phase.appLifecycleApi.setFinalized();
 
   const element = options.tree.root.instance?.getData(
     coreExtensionData.reactElement,

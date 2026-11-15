@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -23,7 +23,13 @@ import { createRouteRef } from './RouteRef';
 import { createSubRouteRef } from './SubRouteRef';
 import { createBrowserHistory } from 'history';
 import { TestApiProvider } from '@backstage/test-utils';
-import { routeResolutionApiRef } from '../apis';
+import {
+  AppLifecycleApi,
+  appLifecycleApiRef,
+  AppLifecyclePhase,
+  routeResolutionApiRef,
+} from '../apis';
+import { Observer } from '@backstage/types';
 
 describe('v1 consumer', () => {
   const context = createVersionedContextForTesting('routing-context');
@@ -205,5 +211,71 @@ describe('v1 consumer', () => {
     rerender();
 
     expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-resolves the routeFunc when the app lifecycle transitions to finalized', () => {
+    let phase: AppLifecyclePhase = 'bootstrap';
+    const subscribers = new Set<Observer<AppLifecyclePhase>>();
+    const appLifecycleApi: AppLifecycleApi = {
+      getPhase: () => phase,
+      phase$: () => {
+        const observable = {
+          [Symbol.observable]: () => observable,
+          subscribe: (
+            observerOrNext?:
+              | Observer<AppLifecyclePhase>
+              | ((value: AppLifecyclePhase) => void),
+          ) => {
+            const observer: Observer<AppLifecyclePhase> =
+              typeof observerOrNext === 'function'
+                ? { next: observerOrNext }
+                : observerOrNext ?? {};
+            subscribers.add(observer);
+            let closed = false;
+            return {
+              unsubscribe: () => {
+                closed = true;
+                subscribers.delete(observer);
+              },
+              get closed() {
+                return closed;
+              },
+            };
+          },
+        };
+        return observable;
+      },
+    };
+
+    const resolve = jest.fn(() =>
+      phase === 'finalized' ? () => '/finalized-route' : undefined,
+    );
+    const routeRef = createRouteRef();
+
+    const { result } = renderHook(() => useRouteRef(routeRef), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider
+          apis={[
+            [routeResolutionApiRef, { resolve }],
+            [appLifecycleApiRef, appLifecycleApi],
+          ]}
+        >
+          <MemoryRouter initialEntries={['/']} children={children} />
+        </TestApiProvider>
+      ),
+    });
+
+    expect(result.current).toBeUndefined();
+    expect(resolve).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      phase = 'finalized';
+      for (const subscriber of subscribers) {
+        subscriber.next?.(phase);
+      }
+    });
+
+    expect(result.current?.()).toBe('/finalized-route');
+    expect(resolve).toHaveBeenCalledTimes(2);
   });
 });
