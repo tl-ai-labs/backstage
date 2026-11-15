@@ -24,6 +24,15 @@ import {
 import { rootRouteRef } from './routes';
 import { notificationsApiRef } from './api/NotificationsApi';
 import { NotificationsClient } from './api';
+import { createCardExtension } from '@backstage/plugin-home-react';
+import type { UnreadNotificationsCardProps } from './components/UnreadNotificationsCard';
+import {
+  unreadNotificationsCardDescription,
+  unreadNotificationsCardLayout,
+  unreadNotificationsCardName,
+  unreadNotificationsCardSettings,
+  unreadNotificationsCardTitle,
+} from './components/UnreadNotificationsCard/cardConfig';
 
 /** @public */
 export const notificationsPlugin = createPlugin({
@@ -48,5 +57,25 @@ export const NotificationsPage = notificationsPlugin.provide(
     component: () =>
       import('./components/NotificationsPage').then(m => m.NotificationsPage),
     mountPoint: rootRouteRef,
+  }),
+);
+
+/**
+ * A home page card that lists the signed-in user's latest unread
+ * notifications, updating live as notifications arrive or are read.
+ *
+ * @public
+ */
+export const UnreadNotificationsCard = notificationsPlugin.provide(
+  createCardExtension<UnreadNotificationsCardProps>({
+    name: unreadNotificationsCardName,
+    title: unreadNotificationsCardTitle,
+    description: unreadNotificationsCardDescription,
+    layout: unreadNotificationsCardLayout,
+    settings: unreadNotificationsCardSettings,
+    components: () =>
+      import('./components/UnreadNotificationsCard').then(m => ({
+        Content: m.UnreadNotificationsCardContent,
+      })),
   }),
 );

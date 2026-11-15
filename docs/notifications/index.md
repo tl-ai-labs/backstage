@@ -122,6 +122,22 @@ yarn --cwd packages/app add @backstage/plugin-signals
 
 Once installed, the signals plugin is automatically available in your app through the default feature discovery. No additional configuration is required. If the signals plugin is properly configured, it will be automatically discovered by the notifications plugin and used.
 
+### Optional: Add the unread notifications home page card
+
+If you use the [home plugin](../getting-started/homepage.md), the notifications plugin provides an **Unread notifications** card for the home page. The card lists the signed-in user's latest unread notifications and lets them mark each one as read. Selecting a notification opens the notifications page with that notification highlighted at the top.
+
+The card is installed automatically as the `home-page-widget:notifications/unread-notifications` extension, and is available alongside other widgets on your home page. If you've installed the signals plugin, the card updates as soon as notifications arrive or are read. Otherwise, it reloads the list once a minute.
+
+To hide the card, disable the extension in your app configuration:
+
+```yaml title="app-config.yaml"
+app:
+  extensions:
+    - home-page-widget:notifications/unread-notifications: false
+```
+
+When users customize their home page, they can change how many notifications the card shows in the card settings.
+
 ### User-specific notification settings
 
 The notifications plugin provides a way for users to manage their notification settings. To enable this, you can create a frontend module that adds a settings tab to the user-settings plugin using the `SubPageBlueprint`:

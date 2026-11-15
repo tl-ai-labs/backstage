@@ -32,6 +32,14 @@ export const notificationsTranslationRef = createTranslationRef({
         read_one: 'Read notifications ({{count}})',
         read_other: 'Read notifications ({{count}})',
       },
+      highlighted: {
+        label: 'Selected notification',
+        markAsRead: 'Mark as read',
+        markAsUnread: 'Mark as unread',
+        dismiss: 'Dismiss',
+        notFound: 'The selected notification could not be found.',
+        updateFailed: 'Failed to update notification',
+      },
     },
     filters: {
       title: 'Filters',
@@ -101,6 +109,15 @@ export const notificationsTranslationRef = createTranslationRef({
       errors: {
         markAsReadFailed: 'Failed to mark notification as read',
         fetchNotificationFailed: 'Failed to fetch notification',
+      },
+    },
+    unreadNotificationsCard: {
+      emptyMessage: 'You have no unread notifications.',
+      markAsRead: 'Mark as read',
+      viewAll_one: 'View all unread notifications ({{count}})',
+      viewAll_other: 'View all unread notifications ({{count}})',
+      errors: {
+        markAsReadFailed: 'Failed to mark notification as read',
       },
     },
     settings: {

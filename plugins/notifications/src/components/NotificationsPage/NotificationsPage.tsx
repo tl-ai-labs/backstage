@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 import {
   Content,
@@ -34,6 +35,7 @@ const TableTitleKeys = {
 } as const;
 
 import { NotificationsTable } from '../NotificationsTable';
+import { HighlightedNotification } from './HighlightedNotification';
 import { useNotificationsApi } from '../../hooks';
 import {
   CreatedAfterOptions,
@@ -50,6 +52,8 @@ import {
   NotificationSeverity,
   NotificationStatus,
 } from '@backstage/plugin-notifications-common';
+
+import styles from './NotificationsPage.module.css';
 
 const ThrottleDelayMs = 2000;
 
@@ -80,6 +84,8 @@ function NotificationsPageContent(
     headerVariant,
   } = props;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightedId = searchParams.get('id');
   const [refresh, setRefresh] = useState(false);
   const { lastSignal } = useSignal('notifications');
   const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(true);
@@ -162,6 +168,17 @@ function NotificationsPageContent(
     throttledSetRefresh(true);
   };
 
+  const onDismissHighlighted = () => {
+    setSearchParams(
+      params => {
+        const next = new URLSearchParams(params);
+        next.delete('id');
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
   if (error) {
     return <ResponseErrorPanel error={error} />;
   }
@@ -209,6 +226,16 @@ function NotificationsPageContent(
           />
         </Grid.Item>
         <Grid.Item colSpan="10">
+          {highlightedId && (
+            <div className={styles.highlightedContainer}>
+              <HighlightedNotification
+                id={highlightedId}
+                markAsReadOnLinkOpen={markAsReadOnLinkOpen}
+                onUpdate={onUpdate}
+                onDismiss={onDismissHighlighted}
+              />
+            </div>
+          )}
           <NotificationsTable
             title={tableTitle}
             isLoading={loading}
