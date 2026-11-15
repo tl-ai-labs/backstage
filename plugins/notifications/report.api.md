@@ -5,6 +5,7 @@
 ```ts
 import { ApiRef } from '@backstage/frontend-plugin-api';
 import { BackstagePlugin } from '@backstage/core-plugin-api';
+import { CardExtensionProps } from '@backstage/plugin-home-react';
 import { DiscoveryApi } from '@backstage/core-plugin-api';
 import { FetchApi } from '@backstage/core-plugin-api';
 import { IconComponent } from '@backstage/core-plugin-api';
@@ -49,6 +50,11 @@ export type GetTopicsOptions = GetNotificationsCommonOptions;
 export type GetTopicsResponse = {
   topics: string[];
 };
+
+// @public (undocumented)
+export const HomePageUnreadNotifications: (
+  props: CardExtensionProps<UnreadNotificationsCardProps>,
+) => JSX_2.Element;
 
 // @public
 export const NotificationDescription: {
@@ -201,6 +207,7 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  highlightedNotificationId?: string;
 };
 
 // @public (undocumented)
@@ -220,20 +227,20 @@ export const notificationsTranslationRef: TranslationRef<
     readonly 'table.bulkActions.returnSelectedAmongUnread': 'Return selected among unread';
     readonly 'table.bulkActions.saveSelectedForLater': 'Save selected for later';
     readonly 'table.bulkActions.undoSaveForSelected': 'Undo save for selected';
-    readonly 'table.confirmDialog.cancel': 'Cancel';
     readonly 'table.confirmDialog.title': 'Are you sure?';
+    readonly 'table.confirmDialog.cancel': 'Cancel';
     readonly 'table.confirmDialog.markAllReadDescription': 'Mark all notifications as read.';
     readonly 'table.confirmDialog.markAllReadConfirmation': 'Mark All';
+    readonly 'filters.title': 'Filters';
     readonly 'filters.view.all': 'All';
     readonly 'filters.view.label': 'View';
     readonly 'filters.view.read': 'Read notifications';
     readonly 'filters.view.saved': 'Saved';
     readonly 'filters.view.unread': 'Unread notifications';
-    readonly 'filters.title': 'Filters';
     readonly 'filters.severity.normal': 'Normal';
+    readonly 'filters.severity.label': 'Min severity';
     readonly 'filters.severity.high': 'High';
     readonly 'filters.severity.low': 'Low';
-    readonly 'filters.severity.label': 'Min severity';
     readonly 'filters.severity.critical': 'Critical';
     readonly 'filters.topic.label': 'Topic';
     readonly 'filters.topic.anyTopic': 'Any topic';
@@ -245,18 +252,18 @@ export const notificationsTranslationRef: TranslationRef<
     readonly 'filters.sortBy.origin': 'Origin';
     readonly 'filters.sortBy.label': 'Sort by';
     readonly 'filters.sortBy.placeholder': 'Field to sort by';
+    readonly 'filters.sortBy.topic': 'Topic';
     readonly 'filters.sortBy.newest': 'Newest on top';
     readonly 'filters.sortBy.oldest': 'Oldest on top';
-    readonly 'filters.sortBy.topic': 'Topic';
+    readonly 'settings.errors.useNotificationFormat': 'useNotificationFormat must be used within a NotificationFormatProvider';
+    readonly 'settings.title': 'Notification settings';
     readonly 'settings.table.origin': 'Origin';
     readonly 'settings.table.topic': 'Topic';
-    readonly 'settings.title': 'Notification settings';
-    readonly 'settings.errors.useNotificationFormat': 'useNotificationFormat must be used within a NotificationFormatProvider';
     readonly 'settings.errorTitle': 'Failed to load settings';
     readonly 'settings.noSettingsAvailable': 'No notification settings available, check back later';
-    readonly 'sidebar.title': 'Notifications';
     readonly 'sidebar.errors.markAsReadFailed': 'Failed to mark notification as read';
     readonly 'sidebar.errors.fetchNotificationFailed': 'Failed to fetch notification';
+    readonly 'sidebar.title': 'Notifications';
     readonly 'notificationsPage.title': 'Notifications';
     readonly 'notificationsPage.tableTitle.all_one': 'All notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.all_other': 'All notifications ({{count}})';
@@ -266,8 +273,30 @@ export const notificationsTranslationRef: TranslationRef<
     readonly 'notificationsPage.tableTitle.unread_other': 'Unread notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.read_one': 'Read notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.read_other': 'Read notifications ({{count}})';
+    readonly 'homePageCard.errors.markAsReadFailed': 'Failed to mark notification as read';
+    readonly 'homePageCard.title': 'Unread notifications';
+    readonly 'homePageCard.emptyMessage': 'No unread notifications';
+    readonly 'homePageCard.markAsRead': 'Mark as read';
+    readonly 'homePageCard.viewAll': 'View all notifications';
   }
 >;
+
+// @public
+export const UnreadNotificationsCard: (
+  props: UnreadNotificationsCardProps,
+) => JSX_2.Element;
+
+// @public (undocumented)
+export type UnreadNotificationsCardProps = {
+  maxItems?: number;
+  pollIntervalMs?: number;
+  title?: string;
+};
+
+// @public
+export const UnreadNotificationsContent: (
+  props: UnreadNotificationsCardProps,
+) => JSX_2.Element;
 
 // @public (undocumented)
 export type UpdateNotificationsOptions = {

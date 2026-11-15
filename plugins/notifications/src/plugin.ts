@@ -20,10 +20,12 @@ import {
   discoveryApiRef,
   fetchApiRef,
 } from '@backstage/core-plugin-api';
+import { createCardExtension } from '@backstage/plugin-home-react';
 
 import { rootRouteRef } from './routes';
 import { notificationsApiRef } from './api/NotificationsApi';
 import { NotificationsClient } from './api';
+import type { UnreadNotificationsCardProps } from './components/UnreadNotificationsCard';
 
 /** @public */
 export const notificationsPlugin = createPlugin({
@@ -48,5 +50,17 @@ export const NotificationsPage = notificationsPlugin.provide(
     component: () =>
       import('./components/NotificationsPage').then(m => m.NotificationsPage),
     mountPoint: rootRouteRef,
+  }),
+);
+
+/** @public */
+export const HomePageUnreadNotifications = notificationsPlugin.provide(
+  createCardExtension<UnreadNotificationsCardProps>({
+    name: 'HomePageUnreadNotifications',
+    title: 'Unread notifications',
+    components: () =>
+      import('./components/UnreadNotificationsCard').then(m => ({
+        Content: m.UnreadNotificationsContent,
+      })),
   }),
 );

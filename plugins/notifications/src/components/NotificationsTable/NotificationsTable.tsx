@@ -62,6 +62,7 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  highlightedNotificationId?: string;
 };
 
 /** @public */
@@ -78,6 +79,7 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedNotificationId,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const notificationsApi = useApi(notificationsApiRef);
@@ -197,9 +199,14 @@ export const NotificationsTable = ({
           true /* Keep sorting&filtering on backend due to pagination. */,
         cellStyle: { paddingLeft: 0 },
         render: (notification: Notification) => {
+          const isHighlighted = notification.id === highlightedNotificationId;
           // Compact content
           return (
-            <Flex gap="4" align="center">
+            <Flex
+              gap="4"
+              align="center"
+              aria-current={isHighlighted ? 'true' : undefined}
+            >
               <div className={styles.severityItem}>
                 <NotificationIcon notification={notification} />
               </div>
@@ -290,6 +297,7 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    highlightedNotificationId,
   ]);
 
   return (
@@ -303,6 +311,14 @@ export const NotificationsTable = ({
           pageSize,
           header: true,
           sorting: false,
+          rowStyle: (rowData: Notification) =>
+            rowData.id === highlightedNotificationId
+              ? {
+                  backgroundColor:
+                    'var(--bui-bg-neutral-2, rgba(0, 0, 0, 0.04))',
+                  boxShadow: 'inset 3px 0 0 var(--bui-border-brand, #1976d2)',
+                }
+              : {},
         }}
         title={title}
         onPageChange={onPageChange}
