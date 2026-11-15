@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
 import { SubRouteRef } from './SubRouteRef';
 import { ExternalRouteRef } from './ExternalRouteRef';
-import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
+import {
+  appLifecycleApiRef,
+  RouteFunc,
+  routeResolutionApiRef,
+  useApi,
+  useApiHolder,
+} from '../apis';
 
 /**
  * React hook for constructing URLs to routes.
@@ -41,10 +47,41 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const apiHolder = useApiHolder();
+  const appLifecycleApi = apiHolder.get(appLifecycleApiRef);
+
+  const [lifecyclePhase, setLifecyclePhase] = useState(() =>
+    appLifecycleApi?.getPhase(),
+  );
+
+  useEffect(() => {
+    if (!appLifecycleApi) {
+      return undefined;
+    }
+
+    const currentPhase = appLifecycleApi.getPhase();
+    if (currentPhase !== lifecyclePhase) {
+      setLifecyclePhase(currentPhase);
+    }
+
+    if (currentPhase === 'finalized') {
+      return undefined;
+    }
+
+    const subscription = appLifecycleApi.phase$().subscribe(phase => {
+      setLifecyclePhase(phase);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [appLifecycleApi, lifecyclePhase]);
 
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // lifecyclePhase is included so route resolution re-runs once the app finalizes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, lifecyclePhase],
   );
 
   return routeFunc;

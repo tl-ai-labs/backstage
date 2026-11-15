@@ -1911,5 +1911,109 @@ describe('createSpecializedApp', () => {
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
     });
+
+    it('should resolve useRouteRef in app root elements after finalization without render loops', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const pageRouteRef = createRouteRef();
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+      let renderCount = 0;
+
+      function RootBanner() {
+        renderCount += 1;
+        const link = useRouteRef(pageRouteRef);
+        return <div>Banner: {link ? link() : 'unresolved'}</div>;
+      }
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: {
+              page: pageRouteRef,
+            },
+            extensions: [
+              createExtension({
+                name: 'banner',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => [coreExtensionData.reactElement(<RootBanner />)],
+              }),
+              createExtension({
+                name: 'page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.reactElement,
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                ],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Test Page</div>),
+                  coreExtensionData.routePath('/test-page'),
+                  coreExtensionData.routeRef(pageRouteRef),
+                ],
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      function PreparedAppHarness() {
+        const bootstrapApp = preparedApp.getBootstrapApp();
+        const [finalizedApp, setFinalizedApp] =
+          useState<FinalizedSpecializedApp>();
+
+        useEffect(() => preparedApp.onFinalized(setFinalizedApp), []);
+
+        return finalizedApp ? finalizedApp.element : bootstrapApp.element;
+      }
+
+      render(<PreparedAppHarness />);
+
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('Banner: unresolved')).toBeInTheDocument();
+      const bootstrapRenderCount = renderCount;
+
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      act(() => {
+        triggerSignInSuccess(identityApi);
+      });
+
+      await expect(
+        screen.findByText('Banner: /test-page'),
+      ).resolves.toBeInTheDocument();
+      expect(renderCount).toBeLessThanOrEqual(bootstrapRenderCount + 3);
+    });
   });
 });

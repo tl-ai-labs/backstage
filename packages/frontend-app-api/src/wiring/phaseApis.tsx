@@ -17,6 +17,9 @@
 import {
   AnyApiFactory,
   ApiHolder,
+  AppLifecycleApi,
+  appLifecycleApiRef,
+  AppLifecyclePhase,
   AppTree,
   AppTreeApi,
   appTreeApiRef,
@@ -35,6 +38,7 @@ import {
   type ExtensionFactoryMiddleware,
   type IdentityApi,
 } from '@backstage/frontend-plugin-api';
+import { Observable, Observer } from '@backstage/types';
 import { matchRoutes } from 'react-router-dom';
 // eslint-disable-next-line @backstage/no-relative-monorepo-imports
 import { AppIdentityProxy } from '../../../core-app-api/src/apis/implementations/IdentityApi/AppIdentityProxy';
@@ -197,6 +201,53 @@ export class PreparedAppIdentityProxy extends AppIdentityProxy {
   }
 }
 
+export class AppLifecycleApiImpl implements AppLifecycleApi {
+  #phase: AppLifecyclePhase = 'bootstrap';
+  readonly #subscribers = new Set<Observer<AppLifecyclePhase>>();
+
+  getPhase(): AppLifecyclePhase {
+    return this.#phase;
+  }
+
+  phase$(): Observable<AppLifecyclePhase> {
+    const observable: Observable<AppLifecyclePhase> = {
+      [Symbol.observable]: () => observable,
+      subscribe: (
+        observerOrNext?:
+          | Observer<AppLifecyclePhase>
+          | ((value: AppLifecyclePhase) => void),
+      ) => {
+        const observer: Observer<AppLifecyclePhase> =
+          typeof observerOrNext === 'function'
+            ? { next: observerOrNext }
+            : observerOrNext ?? {};
+        this.#subscribers.add(observer);
+        let closed = false;
+        return {
+          unsubscribe: () => {
+            closed = true;
+            this.#subscribers.delete(observer);
+          },
+          get closed() {
+            return closed;
+          },
+        };
+      },
+    };
+    return observable;
+  }
+
+  setFinalized() {
+    if (this.#phase === 'finalized') {
+      return;
+    }
+    this.#phase = 'finalized';
+    for (const subscriber of this.#subscribers) {
+      subscriber.next?.(this.#phase);
+    }
+  }
+}
+
 export function createPhaseApis(options: {
   tree: AppTree;
   config: ConfigApi;
@@ -207,6 +258,7 @@ export function createPhaseApis(options: {
   routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   staticFactories: AnyApiFactory[];
 }) {
+  const appLifecycleApi = new AppLifecycleApiImpl();
   const appTreeApi = new AppTreeApiProxy(options.tree, options.appBasePath);
   const routeResolutionApi = new RouteResolutionApiProxy(
     options.routeBindings,
@@ -215,6 +267,7 @@ export function createPhaseApis(options: {
   const identityProxy = new PreparedAppIdentityProxy();
   const phaseApiRegistry = new FrontendApiRegistry();
   phaseApiRegistry.registerAll([
+    createApiFactory(appLifecycleApiRef, appLifecycleApi),
     createApiFactory(appTreeApiRef, appTreeApi),
     ...(options.includeConfigApi
       ? [createApiFactory(configApiRef, options.config)]
@@ -232,6 +285,7 @@ export function createPhaseApis(options: {
 
   return {
     apis,
+    appLifecycleApi,
     routeResolutionApi,
     appTreeApi,
     identityApiProxy: identityProxy,
