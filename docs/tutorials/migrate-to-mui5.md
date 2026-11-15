@@ -40,13 +40,13 @@ Before making specific changes to your Backstage instance, it might be helpful t
 
 It is worth noting that we are still using `@mui/styles` & `jss`. You may stumble upon documentation for migrating to `emotion` when using `makeStyles` or `withStyles`. It is not necessary to switch to `emotion`.
 
-Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. This means if you intend to use the Material UI v5 components in your plugins, you have to enforce React Version to be at least 17 for these plugins:
+Important to keep in mind is that Material UI v5 is meant to be used with React Version 17 or higher. Backstage requires React 18, so your plugins should declare React 18 as their peer dependency:
 
 ```json
 ...
   "peerDependencies": {
-    "react": "^17.0.0 || ^18.0.0",
-    "react-dom": "^17.0.0 || ^18.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
     "react-router-dom": "6.0.0-beta.0 || ^6.3.0"
   },
 ...

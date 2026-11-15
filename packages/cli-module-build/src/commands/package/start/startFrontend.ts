@@ -44,7 +44,7 @@ export async function startFrontend(options: StartAppOptions) {
 
   if (!hasReactDomClient()) {
     console.warn(
-      'React 17 is now deprecated! Please follow the Backstage migration guide to update to React 18: https://backstage.io/docs/tutorials/react18-migration/',
+      'React 17 is no longer supported! Please follow the Backstage migration guide to update to React 18: https://backstage.io/docs/tutorials/react18-migration/',
     );
   }
 

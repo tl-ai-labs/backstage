@@ -16,8 +16,7 @@
 
 import { entityRouteRef } from '@backstage/plugin-catalog-react';
 import { renderInTestApp } from '@backstage/test-utils';
-import { fireEvent } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
+import { act, fireEvent } from '@testing-library/react';
 import { DefaultTemplateOutputs } from '.';
 
 describe('<DefaultTemplateOutputs />', () => {

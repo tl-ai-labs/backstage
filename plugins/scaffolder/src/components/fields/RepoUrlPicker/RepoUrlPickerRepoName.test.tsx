@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 import { renderInTestApp } from '@backstage/test-utils';
-import { fireEvent } from '@testing-library/react';
+import { act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { act } from 'react-dom/test-utils';
 import { useScaffolderTheme } from '@backstage/plugin-scaffolder-react/alpha';
 import { RepoUrlPickerRepoName } from './RepoUrlPickerRepoName';
 
