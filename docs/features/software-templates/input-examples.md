@@ -340,6 +340,39 @@ parameters:
                 - address
 ```
 
+### Conditional fields across steps
+
+You can also show, hide, or require fields in a later step based on answers given in an earlier step. In the example below, step 1 asks whether the project is a mobile SDK (`isMobileSdk`), and step 2 displays and requires `sdkPlatform` only when `isMobileSdk` is `true`.
+
+```yaml
+parameters:
+  - title: Project type
+    properties:
+      isMobileSdk:
+        title: Is this a mobile SDK?
+        type: boolean
+        default: false
+  - title: Project details
+    properties:
+      appName:
+        title: App Name
+        type: string
+    dependencies:
+      isMobileSdk:
+        allOf:
+          - if:
+              properties:
+                isMobileSdk:
+                  const: true
+            then:
+              properties:
+                sdkPlatform:
+                  title: SDK Platform
+                  type: string
+              required:
+                - sdkPlatform
+```
+
 ## Conditionally set parameters
 
 The inline `if` expression uses
