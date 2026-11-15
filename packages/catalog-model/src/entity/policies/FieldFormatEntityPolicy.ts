@@ -40,6 +40,15 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * Validates the format of `apiVersion`, `kind`, `metadata.name`,
+   * `metadata.namespace`, `metadata.labels`, `metadata.annotations`,
+   * `metadata.tags`, and `metadata.links` on the entity.
+   *
+   * @param entity - The entity to validate
+   * @returns The validated entity
+   * @throws An error if any required field is missing or any validated field has an invalid format
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,
