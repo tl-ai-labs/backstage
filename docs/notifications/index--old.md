@@ -146,6 +146,20 @@ export default app.createRoot(
 
 If the signals plugin is properly configured, it will be automatically discovered by the notifications plugin and used.
 
+### Optional: Add the unread notifications home page card
+
+If you use the [home plugin](../getting-started/homepage--old.md), you can add the `UnreadNotificationsCard` to your home page. The card lists the signed-in user's latest unread notifications and lets them mark each one as read. Selecting a notification opens the notifications page with that notification highlighted at the top. This requires the notifications page to be mounted at a route in your app.
+
+```tsx title="packages/app/src/components/home/HomePage.tsx"
+import { UnreadNotificationsCard } from '@backstage/plugin-notifications';
+
+<Grid item xs={12} md={6}>
+  <UnreadNotificationsCard limit={5} />
+</Grid>;
+```
+
+If you've installed the signals plugin, the card updates as soon as notifications arrive or are read. Otherwise, it reloads the list on an interval, which you can change with the `pollingIntervalMs` prop. The default interval is one minute.
+
 ### User-specific notification settings
 
 The notifications plugin provides a way for users to manage their notification settings. To enable this, you must

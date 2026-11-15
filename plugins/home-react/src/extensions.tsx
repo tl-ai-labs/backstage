@@ -17,9 +17,16 @@
 import { useState, Suspense } from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import SettingsIcon from '@material-ui/icons/Settings';
-import { InfoCard } from '@backstage/core-components';
+import {
+  InfoCard,
+  Progress as DefaultProgress,
+} from '@backstage/core-components';
 import { SettingsModal } from './components';
-import { createReactExtension, useApp } from '@backstage/core-plugin-api';
+import {
+  AppComponents,
+  createReactExtension,
+  useApp,
+} from '@backstage/core-plugin-api';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { useTranslationRef } from '@backstage/frontend-plugin-api';
 import { homeReactTranslationRef } from './translation';
@@ -115,6 +122,21 @@ export function createCardExtension<T>(options: {
   });
 }
 
+/**
+ * Returns the app's Progress component, falling back to the default one when
+ * no app context is available, for example when a card is rendered in
+ * isolation in tests or in a context that doesn't provide the legacy app.
+ */
+function useProgressComponent(): AppComponents['Progress'] {
+  try {
+    // useApp always calls the same hooks before it throws, so catching the
+    // error here does not break the rules of hooks.
+    return useApp().getComponents().Progress;
+  } catch {
+    return DefaultProgress;
+  }
+}
+
 type CardExtensionComponentProps<T> = CardExtensionProps<T> &
   ComponentParts & {
     isCustomizable?: boolean;
@@ -132,8 +154,7 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
     title,
     ...childProps
   } = props;
-  const app = useApp();
-  const { Progress } = app.getComponents();
+  const Progress = useProgressComponent();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { t } = useTranslationRef(homeReactTranslationRef);
 
