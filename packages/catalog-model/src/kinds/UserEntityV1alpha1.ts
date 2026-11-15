@@ -25,14 +25,50 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface UserEntityV1alpha1 extends Entity {
+  /**
+   * The version of the entity format. Both versions are accepted and have
+   * the same shape.
+   */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /**
+   * The kind of the entity, always `User`.
+   */
   kind: 'User';
+  /**
+   * The User-specific part of the entity.
+   */
   spec: {
+    /**
+     * Optional profile information about the user, mainly for display
+     * purposes.
+     */
     profile?: {
+      /**
+       * A display name to present to users.
+       */
       displayName?: string;
+      /**
+       * An email address where the user can be reached.
+       */
       email?: string;
+      /**
+       * The URL of an image that represents the user, suitable for showing
+       * on a profile page.
+       */
       picture?: string;
     };
+    /**
+     * Entity references to the groups that the user is a direct member of;
+     * transitive memberships are not listed. The order is not significant.
+     * The kind defaults to `Group` and the namespace to that of this entity.
+     * The catalog creates `memberOf` relations from this field.
+     *
+     * @remarks
+     *
+     * Although optional in this type, the User kind schema requires the field
+     * to be present, so entities without it fail kind validation. It may be
+     * empty.
+     */
     memberOf?: string[];
   };
 }

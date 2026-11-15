@@ -35,6 +35,17 @@ import { EntityPolicy } from './types';
 export class SchemaValidEntityPolicy implements EntityPolicy {
   private validate: ValidateFunction<Entity> | undefined;
 
+  /**
+   * Validates the entity against the JSON schema for the common entity
+   * envelope and metadata. Kind-specific `spec` fields are not validated;
+   * the schema only requires `spec`, if present, to be an object. Root
+   * fields other than `apiVersion`, `kind`, `metadata`, `spec`,
+   * `relations` and `status` are rejected.
+   *
+   * @param entity - The entity to check
+   * @returns The same entity, unmodified
+   * @throws An error describing the first schema violation
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (!this.validate) {
       const ajv = new Ajv({ allowUnionTypes: true });
