@@ -13,7 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { hasErrors } from './utils';
+import { customizeValidator } from '@rjsf/validator-ajv8';
+import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
+import {
+  hasErrors,
+  pruneExtraData,
+  resolveCrossStepDependencies,
+} from './utils';
 
 describe('hasErrors', () => {
   it('should return false for empty _errors', () => {
@@ -88,5 +94,154 @@ describe('hasErrors', () => {
     };
 
     expect(hasErrors(errors)).toBe(true);
+  });
+});
+
+describe('resolveCrossStepDependencies', () => {
+  it('injects hidden properties from earlier steps for cross-step dependencies and preserves ui:order', () => {
+    const steps: ParsedTemplateSchema[] = [
+      {
+        title: 'Step 1',
+        mergedSchema: {},
+        uiSchema: {},
+        schema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: { type: 'boolean', title: 'Is this a mobile SDK?' },
+          },
+        },
+      },
+      {
+        title: 'Step 2',
+        mergedSchema: {},
+        uiSchema: { 'ui:order': ['appName', 'sdkPlatform'] },
+        schema: {
+          type: 'object',
+          properties: {
+            appName: { type: 'string' },
+          },
+          dependencies: {
+            isMobileSdk: {
+              allOf: [
+                {
+                  if: { properties: { isMobileSdk: { const: true } } },
+                  then: {
+                    properties: { sdkPlatform: { type: 'string' } },
+                    required: ['sdkPlatform'],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ];
+
+    const resolved = resolveCrossStepDependencies(steps);
+
+    expect(resolved[0]).toBe(steps[0]);
+    expect(resolved[1].schema.properties).toEqual({
+      appName: { type: 'string' },
+      isMobileSdk: { type: 'boolean', title: 'Is this a mobile SDK?' },
+    });
+    expect(resolved[1].uiSchema).toEqual({
+      'ui:order': ['appName', 'sdkPlatform', 'isMobileSdk'],
+      isMobileSdk: { 'ui:widget': 'hidden' },
+    });
+  });
+
+  it('leaves same-step dependencies untouched', () => {
+    const steps: ParsedTemplateSchema[] = [
+      {
+        title: 'Step 1',
+        mergedSchema: {},
+        uiSchema: {},
+        schema: {
+          type: 'object',
+          properties: {
+            flag: { type: 'boolean' },
+          },
+          dependencies: {
+            flag: {
+              properties: { extra: { type: 'string' } },
+            },
+          },
+        },
+      },
+    ];
+
+    const resolved = resolveCrossStepDependencies(steps);
+    expect(resolved[0]).toBe(steps[0]);
+  });
+});
+
+describe('pruneExtraData', () => {
+  const validator = customizeValidator();
+
+  it('removes conditional fields whose condition is no longer satisfied while keeping active fields', () => {
+    const steps = resolveCrossStepDependencies([
+      {
+        title: 'Step 1',
+        mergedSchema: {},
+        uiSchema: {},
+        schema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: { type: 'boolean' },
+          },
+        },
+      },
+      {
+        title: 'Step 2',
+        mergedSchema: {},
+        uiSchema: {},
+        schema: {
+          type: 'object',
+          properties: {
+            appName: { type: 'string' },
+            customObj: { type: 'object' },
+          },
+          dependencies: {
+            isMobileSdk: {
+              allOf: [
+                {
+                  if: { properties: { isMobileSdk: { const: true } } },
+                  then: {
+                    properties: { sdkPlatform: { type: 'string' } },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    expect(
+      pruneExtraData(steps, validator, {
+        isMobileSdk: true,
+        appName: 'my-app',
+        sdkPlatform: 'iOS',
+        customObj: { nested: 'kept' },
+      }),
+    ).toEqual({
+      isMobileSdk: true,
+      appName: 'my-app',
+      sdkPlatform: 'iOS',
+      customObj: { nested: 'kept' },
+    });
+
+    expect(
+      pruneExtraData(steps, validator, {
+        isMobileSdk: false,
+        appName: 'my-app',
+        sdkPlatform: 'iOS',
+        customObj: { nested: 'kept' },
+      }),
+    ).toEqual({
+      isMobileSdk: false,
+      appName: 'my-app',
+      customObj: { nested: 'kept' },
+    });
   });
 });

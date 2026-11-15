@@ -921,4 +921,270 @@ describe('Stepper', () => {
       );
     });
   });
+
+  describe('cross-step conditional fields', () => {
+    const mobileSdkManifest: TemplateParameterSchema = {
+      title: 'Cross-step Conditional Form',
+      steps: [
+        {
+          title: 'Step 1',
+          schema: {
+            type: 'object',
+            properties: {
+              isMobileSdk: {
+                title: 'Is this a mobile SDK?',
+                type: 'boolean',
+              },
+            },
+          },
+        },
+        {
+          title: 'Step 2',
+          schema: {
+            type: 'object',
+            properties: {
+              appName: {
+                title: 'App Name',
+                type: 'string',
+              },
+            },
+            dependencies: {
+              isMobileSdk: {
+                allOf: [
+                  {
+                    if: {
+                      properties: {
+                        isMobileSdk: {
+                          const: true,
+                        },
+                      },
+                    },
+                    then: {
+                      properties: {
+                        sdkPlatform: {
+                          title: 'SDK Platform',
+                          type: 'string',
+                        },
+                      },
+                      required: ['sdkPlatform'],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    it('should show step-2 field and apply required validation only when step-1 flag is set, and remove it from review when changed back', async () => {
+      const onCreate = jest.fn();
+
+      const { getByRole, queryByRole, getAllByText } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={mobileSdkManifest}
+            extensions={[]}
+            onCreate={onCreate}
+          />
+        </SecretsContextProvider>,
+      );
+
+      // Leave step-1 flag unset and proceed to step 2
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      expect(getByRole('textbox', { name: 'App Name' })).toBeInTheDocument();
+      expect(
+        queryByRole('textbox', { name: 'SDK Platform' }),
+      ).not.toBeInTheDocument();
+
+      // Required validation on SDK Platform should not block Review when flag is unset
+      await act(async () => {
+        fireEvent.change(getByRole('textbox', { name: 'App Name' }), {
+          target: { value: 'my-app' },
+        });
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(getByRole('cell', { name: 'my-app' })).toBeInTheDocument();
+
+      // Go back to step 1 and enable the flag
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      // Step-2 conditional field now appears and is required
+      const sdkPlatformInput = getByRole('textbox', { name: 'SDK Platform' });
+      expect(sdkPlatformInput).toBeInTheDocument();
+      expect(sdkPlatformInput).toBeRequired();
+
+      await act(async () => {
+        fireEvent.submit(sdkPlatformInput.closest('form')!);
+      });
+
+      expect(
+        getAllByText(/must have required property 'SDK Platform'/).length,
+      ).toBeGreaterThan(0);
+      expect(queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+
+      // Fill required field and proceed to Review
+      await act(async () => {
+        fireEvent.change(getByRole('textbox', { name: 'SDK Platform' }), {
+          target: { value: 'iOS' },
+        });
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(getByRole('cell', { name: 'iOS' })).toBeInTheDocument();
+
+      // Go back to step 1, uncheck the flag, and return to Review
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        queryByRole('textbox', { name: 'SDK Platform' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(queryByRole('cell', { name: 'iOS' })).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({
+        isMobileSdk: false,
+        appName: 'my-app',
+      });
+    });
+
+    it('should support top-level if/then in step 2 referencing a step-1 field', async () => {
+      const ifThenManifest: TemplateParameterSchema = {
+        title: 'Cross-step if/then Form',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                isMobileSdk: {
+                  title: 'Is this a mobile SDK?',
+                  type: 'boolean',
+                  default: false,
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                appName: {
+                  title: 'App Name',
+                  type: 'string',
+                },
+              },
+              if: {
+                properties: {
+                  isMobileSdk: {
+                    const: true,
+                  },
+                },
+                required: ['isMobileSdk'],
+              },
+              then: {
+                properties: {
+                  sdkPlatform: {
+                    title: 'SDK Platform',
+                    type: 'string',
+                  },
+                },
+                required: ['sdkPlatform'],
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn();
+
+      const { getByRole, queryByRole } = await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={ifThenManifest}
+            extensions={[]}
+            onCreate={onCreate}
+          />
+        </SecretsContextProvider>,
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        getByRole('textbox', { name: 'SDK Platform' }),
+      ).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(getByRole('textbox', { name: 'SDK Platform' }), {
+          target: { value: 'Android' },
+        });
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(getByRole('cell', { name: 'Android' })).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+        fireEvent.click(getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        queryByRole('textbox', { name: 'SDK Platform' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(getByRole('button', { name: 'Review' }));
+      });
+
+      expect(queryByRole('cell', { name: 'Android' })).not.toBeInTheDocument();
+    });
+  });
 });

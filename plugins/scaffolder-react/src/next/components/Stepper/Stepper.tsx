@@ -56,7 +56,11 @@ import {
 } from './createAsyncValidators';
 import { ErrorListTemplate } from './ErrorListTemplate';
 import * as FieldOverrides from './FieldOverrides';
-import { hasErrors } from './utils';
+import {
+  hasErrors,
+  pruneExtraData,
+  resolveCrossStepDependencies,
+} from './utils';
 
 const validator = customizeValidator();
 ajvErrors(validator.ajv);
@@ -127,6 +131,10 @@ export const Stepper = (stepperProps: StepperProps) => {
   } = components;
   const analytics = useAnalytics();
   const { presentation, steps } = useTemplateSchema(props.manifest);
+  const resolvedSteps = useMemo(
+    () => resolveCrossStepDependencies(steps),
+    [steps],
+  );
   const apiHolder = useApiHolder();
   const [activeStep, setActiveStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
@@ -163,16 +171,22 @@ export const Stepper = (stepperProps: StepperProps) => {
   }, [props.extensions]);
 
   const validation = useMemo(() => {
-    return createAsyncValidators(steps[activeStep]?.mergedSchema, validators, {
-      apiHolder,
-    });
-  }, [steps, activeStep, validators, apiHolder]);
+    return createAsyncValidators(
+      resolvedSteps[activeStep]?.mergedSchema,
+      validators,
+      {
+        apiHolder,
+      },
+    );
+  }, [resolvedSteps, activeStep, validators, apiHolder]);
 
   const handleBack = useCallback(() => {
     setActiveStep(prevActiveStep => prevActiveStep - 1);
   }, [setActiveStep]);
 
-  const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
+  const currentStep = useTransformSchemaToProps(resolvedSteps[activeStep], {
+    layouts,
+  });
 
   const {
     formContext: propFormContext,
@@ -200,10 +214,12 @@ export const Stepper = (stepperProps: StepperProps) => {
 
       const returnedValidation = await validation(formData);
 
-      setStepsState(current => ({
-        ...current,
-        ...formData,
-      }));
+      setStepsState(current =>
+        pruneExtraData(resolvedSteps, validator, {
+          ...current,
+          ...formData,
+        }),
+      );
 
       setIsValidating(false);
 
@@ -218,7 +234,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         });
       }
     },
-    [validation, analytics],
+    [validation, analytics, resolvedSteps],
   );
 
   useEffect(() => {

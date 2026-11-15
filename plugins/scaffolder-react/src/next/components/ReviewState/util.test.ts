@@ -170,4 +170,53 @@ describe('findSchemaForKey', () => {
     const result = findSchemaForKey('hello', schemas, formState);
     expect(result).toBe(schemas[1]);
   });
+
+  it('should evaluate if/then conditions using formState', () => {
+    const ifThenSchemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: { type: 'boolean' },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: {
+              isMobileSdk: { const: true },
+            },
+            required: ['isMobileSdk'],
+          },
+          then: {
+            properties: {
+              sdkPlatform: { type: 'string' },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    expect(
+      findSchemaForKey('sdkPlatform', ifThenSchemas, {
+        isMobileSdk: true,
+        sdkPlatform: 'iOS',
+      }),
+    ).toBe(ifThenSchemas[1]);
+
+    expect(
+      findSchemaForKey('sdkPlatform', ifThenSchemas, {
+        isMobileSdk: false,
+        sdkPlatform: 'iOS',
+      }),
+    ).toBeNull();
+  });
 });

@@ -15,7 +15,7 @@
  */
 
 import { JsonObject, JsonValue } from '@backstage/types';
-import { startCase } from 'lodash';
+import { omit, startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { Draft07 as JSONSchema } from 'json-schema-library';
 
@@ -50,16 +50,10 @@ export function findSchemaForKey(
 
     const schema = step.mergedSchema;
 
-    // Declare data to be a subset of formState
-    const data: typeof formState = {};
-
-    if (schema.dependencies && isJsonObject(schema.dependencies)) {
-      for (const dep in schema.dependencies) {
-        if (formState.hasOwnProperty(dep)) {
-          data[dep] = formState[dep]; // Add each dependency key from formState
-        }
-      }
-    }
+    // Exclude the target key from data so json-schema-library does not
+    // synthesize a fallback schema for unknown keys, while keeping all other
+    // formState values so dependencies and if/then/else conditions evaluate.
+    const data = omit(formState, key.replace(/\//g, '.'));
 
     const draft = new JSONSchema(schema);
     const res = draft.getSchema({
