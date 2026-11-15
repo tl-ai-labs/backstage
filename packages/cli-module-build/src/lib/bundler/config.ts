@@ -269,8 +269,8 @@ export async function createConfig(
             () => JSON.stringify(options.getFrontendAppConfigs()),
             true,
           ),
-          // This allows for conditional imports of react-dom/client, since there's no way
-          // to check for presence of it in source code without module resolution errors.
+          // Older versions of Backstage packages use this to conditionally import
+          // react-dom/client. Kept so those versions don't fall back to legacy rendering.
           'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(
             hasReactDomClient(),
           ),
@@ -278,8 +278,8 @@ export async function createConfig(
       : new bundler.DefinePlugin({
           'process.env.BUILD_INFO': JSON.stringify(buildInfo),
           'process.env.APP_CONFIG': JSON.stringify([]), // Inject via index.html instead
-          // This allows for conditional imports of react-dom/client, since there's no way
-          // to check for presence of it in source code without module resolution errors.
+          // Older versions of Backstage packages use this to conditionally import
+          // react-dom/client. Kept so those versions don't fall back to legacy rendering.
           'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(
             hasReactDomClient(),
           ),
