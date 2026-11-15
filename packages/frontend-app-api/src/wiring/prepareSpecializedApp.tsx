@@ -485,13 +485,18 @@ export function prepareSpecializedApp(
     });
   }
 
+  function setFinalized(finalizedApp: FinalizedSpecializedApp) {
+    finalized = finalizedApp;
+    // Notifies elements rendered during bootstrap, e.g. so that useRouteRef
+    // can resolve routes that only become available in the finalized tree.
+    phase.appLifecycleApi.markFinalized();
+  }
+
   const finalization = createFinalizationController({
     getFinalized() {
       return finalized;
     },
-    setFinalized(finalizedApp) {
-      finalized = finalizedApp;
-    },
+    setFinalized,
     finalizeFromSessionState: finalizeWithSessionState,
     finalizeFromBootstrapError: finalizeWithBootstrapError,
   });
@@ -620,8 +625,9 @@ export function prepareSpecializedApp(
         );
       }
 
-      finalized = finalizeWithSessionState(finalizedSessionState);
-      return finalized;
+      const finalizedApp = finalizeWithSessionState(finalizedSessionState);
+      setFinalized(finalizedApp);
+      return finalizedApp;
     },
   };
 }
