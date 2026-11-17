@@ -29,8 +29,11 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface ComponentEntityV1alpha1 extends Entity {
+  /** The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`. */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /** The kind of the entity, always `Component`. */
   kind: 'Component';
+  /** The component specification: its type, lifecycle and owner (an entity reference), plus optional references to a parent component, provided and consumed APIs, dependencies and dependents, and the system it belongs to. */
   spec: {
     type: string;
     lifecycle: string;

@@ -25,8 +25,11 @@ import { ajvCompiledJsonSchemaValidator } from './util';
  * @public
  */
 export interface LocationEntityV1alpha1 extends Entity {
+  /** The API version of the entity, either `backstage.io/v1alpha1` or `backstage.io/v1beta1`. */
   apiVersion: 'backstage.io/v1alpha1' | 'backstage.io/v1beta1';
+  /** The kind of the entity, always `Location`. */
   kind: 'Location';
+  /** The location specification: an optional type, a single target and/or a list of targets, and whether the location is `required` or `optional` to be present. */
   spec: {
     type?: string;
     target?: string;

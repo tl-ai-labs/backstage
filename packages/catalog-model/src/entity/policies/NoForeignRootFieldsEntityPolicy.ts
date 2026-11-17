@@ -27,10 +27,21 @@ const defaultKnownFields = ['apiVersion', 'kind', 'metadata', 'spec'];
 export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
   private readonly knownFields: string[];
 
+  /**
+   * @param knownFields - The root field names that are allowed, defaults to
+   * `apiVersion`, `kind`, `metadata` and `spec`
+   */
   constructor(knownFields: string[] = defaultKnownFields) {
     this.knownFields = knownFields;
   }
 
+  /**
+   * Checks the root-level keys of the entity against the known fields.
+   *
+   * @returns The same entity instance, which is never modified
+   * @throws An error naming the first root field that is not in the list of
+   * known fields
+   */
   async enforce(entity: Entity): Promise<Entity> {
     for (const field of Object.keys(entity)) {
       if (!this.knownFields.includes(field)) {

@@ -36,10 +36,24 @@ import { Entity } from '../Entity';
 export class FieldFormatEntityPolicy implements EntityPolicy {
   private readonly validators: Validators;
 
+  /**
+   * @param validators - The validators used to check each field, defaults to
+   * the ones created by `makeValidator()` with no overrides
+   */
   constructor(validators: Validators = makeValidator()) {
     this.validators = validators;
   }
 
+  /**
+   * Validates the format of `apiVersion`, `kind`, `metadata.name`,
+   * `metadata.namespace` (if present), label keys and values, annotation keys
+   * and values, tags, and the `url`, `title` and `icon` of links (`title` and
+   * `icon` only if present).
+   *
+   * @returns The same entity instance, which is never modified
+   * @throws An error naming the first field that is missing or does not pass
+   * validation
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,
