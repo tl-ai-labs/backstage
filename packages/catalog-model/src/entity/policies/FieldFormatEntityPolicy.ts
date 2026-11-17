@@ -40,6 +40,18 @@ export class FieldFormatEntityPolicy implements EntityPolicy {
     this.validators = validators;
   }
 
+  /**
+   * Validates the format of `apiVersion`, `kind`, `metadata.name`, optional
+   * `metadata.namespace`, `metadata.labels`, `metadata.annotations`,
+   * `metadata.tags`, and `metadata.links` (`url`, optional `title`, and
+   * optional `icon`) on the entity. All fields except the link fields are
+   * checked with the validators passed to the constructor; the link fields
+   * always use the built-in URL and non-empty string checks.
+   *
+   * @param entity - The entity to validate
+   * @returns The original entity unchanged if all checked fields are valid
+   * @throws An `Error` if a required field is missing or any checked field fails validation
+   */
   async enforce(entity: Entity): Promise<Entity> {
     function require(
       field: string,

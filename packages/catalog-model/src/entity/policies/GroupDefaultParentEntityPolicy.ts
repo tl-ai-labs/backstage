@@ -48,6 +48,15 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * For entities whose kind is exactly `Group` (case-sensitive) that do not already have
+   * `spec.parent` set, mutates `spec.parent` in place to the configured
+   * default parent group entity ref (unless the entity is that parent group
+   * itself). Non-Group entities are returned unchanged.
+   *
+   * @param entity - The entity to inspect and potentially update
+   * @returns The entity, with `spec.parent` populated if applicable
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;
