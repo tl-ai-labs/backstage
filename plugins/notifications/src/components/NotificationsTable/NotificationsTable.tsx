@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import throttle from 'lodash/throttle';
 // @ts-ignore
 import RelativeTime from 'react-relative-time';
@@ -62,6 +62,7 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  highlightedNotificationId?: string;
 };
 
 /** @public */
@@ -78,11 +79,30 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedNotificationId,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const notificationsApi = useApi(notificationsApiRef);
   const toastApi = useApi(toastApiRef);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const scrolledIdRef = useRef<string>();
+
+  const setHighlightedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (
+        node &&
+        highlightedNotificationId &&
+        scrolledIdRef.current !== highlightedNotificationId
+      ) {
+        scrolledIdRef.current = highlightedNotificationId;
+        node.scrollIntoView?.({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+    },
+    [highlightedNotificationId],
+  );
 
   const [selectedNotifications, setSelectedNotifications] = useState(
     new Set<Notification['id']>(),
@@ -198,8 +218,14 @@ export const NotificationsTable = ({
         cellStyle: { paddingLeft: 0 },
         render: (notification: Notification) => {
           // Compact content
+          const isHighlighted =
+            highlightedNotificationId === notification.id;
           return (
-            <Flex gap="4" align="center">
+            <div
+              ref={isHighlighted ? setHighlightedRef : undefined}
+              aria-current={isHighlighted ? 'true' : undefined}
+            >
+              <Flex gap="4" align="center">
               <div className={styles.severityItem}>
                 <NotificationIcon notification={notification} />
               </div>
@@ -255,6 +281,7 @@ export const NotificationsTable = ({
                 </Text>
               </Flex>
             </Flex>
+            </div>
           );
         },
       },
@@ -290,6 +317,8 @@ export const NotificationsTable = ({
     onMarkAllRead,
     onNotificationsSelectChange,
     markAsReadOnLinkOpen,
+    highlightedNotificationId,
+    setHighlightedRef,
   ]);
 
   return (
@@ -303,6 +332,14 @@ export const NotificationsTable = ({
           pageSize,
           header: true,
           sorting: false,
+          rowStyle: (rowData: Notification) =>
+            highlightedNotificationId &&
+            rowData.id === highlightedNotificationId
+              ? {
+                  backgroundColor:
+                    'var(--bui-bg-surface-hover, rgba(0, 0, 0, 0.08))',
+                }
+              : {},
         }}
         title={title}
         onPageChange={onPageChange}

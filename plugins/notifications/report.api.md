@@ -201,6 +201,7 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  highlightedNotificationId?: string;
 };
 
 // @public (undocumented)
@@ -266,8 +267,24 @@ export const notificationsTranslationRef: TranslationRef<
     readonly 'notificationsPage.tableTitle.unread_other': 'Unread notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.read_one': 'Read notifications ({{count}})';
     readonly 'notificationsPage.tableTitle.read_other': 'Read notifications ({{count}})';
+    readonly 'unreadNotificationsCard.title': 'Unread notifications';
+    readonly 'unreadNotificationsCard.errors.markAsReadFailed': 'Failed to mark notification as read';
+    readonly 'unreadNotificationsCard.emptyMessage': 'No unread notifications';
+    readonly 'unreadNotificationsCard.viewAll': 'View all';
+    readonly 'unreadNotificationsCard.markAsRead': 'Mark as read';
   }
 >;
+
+// @public (undocumented)
+export const UnreadNotificationsCard: (
+  props: UnreadNotificationsCardProps,
+) => JSX_2.Element;
+
+// @public (undocumented)
+export type UnreadNotificationsCardProps = {
+  limit?: number;
+  pollingIntervalMs?: number;
+};
 
 // @public (undocumented)
 export type UpdateNotificationsOptions = {
