@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -24,6 +24,7 @@ import { createSubRouteRef } from './SubRouteRef';
 import { createBrowserHistory } from 'history';
 import { TestApiProvider } from '@backstage/test-utils';
 import { routeResolutionApiRef } from '../apis';
+import { routeResolutionSubscriptionSymbol } from '@internal/frontend';
 
 describe('v1 consumer', () => {
   const context = createVersionedContextForTesting('routing-context');
@@ -205,5 +206,51 @@ describe('v1 consumer', () => {
     rerender();
 
     expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-resolves the routeFunc when a subscribable routeResolutionApi notifies', () => {
+    const routeRef = createRouteRef();
+    let version = 0;
+    let resolved: (() => string) | undefined = undefined;
+    const listeners = new Set<() => void>();
+
+    const api = {
+      resolve: jest.fn(() => resolved),
+      [routeResolutionSubscriptionSymbol]: {
+        subscribe: (listener: () => void) => {
+          listeners.add(listener);
+          return () => {
+            listeners.delete(listener);
+          };
+        },
+        getSnapshot: () => version,
+      },
+    };
+
+    const { result, unmount } = renderHook(() => useRouteRef(routeRef), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider apis={[[routeResolutionApiRef, api]]}>
+          <MemoryRouter initialEntries={['/my-page']} children={children} />
+        </TestApiProvider>
+      ),
+    });
+
+    expect(result.current).toBeUndefined();
+    expect(api.resolve).toHaveBeenCalledTimes(1);
+    expect(listeners.size).toBe(1);
+
+    act(() => {
+      resolved = () => '/finalized-route';
+      version += 1;
+      for (const listener of listeners) {
+        listener();
+      }
+    });
+
+    expect(result.current?.()).toBe('/finalized-route');
+    expect(api.resolve).toHaveBeenCalledTimes(2);
+
+    unmount();
+    expect(listeners.size).toBe(0);
   });
 });
