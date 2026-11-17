@@ -62,6 +62,8 @@ export type NotificationsTableProps = Pick<
   onUpdate: () => void;
   setContainsText: (search: string) => void;
   pageSize: number;
+  /** Id of a notification to visually highlight */
+  highlightedId?: string;
 };
 
 /** @public */
@@ -78,6 +80,7 @@ export const NotificationsTable = ({
   page,
   pageSize,
   totalCount,
+  highlightedId,
 }: NotificationsTableProps) => {
   const { t } = useTranslationRef(notificationsTranslationRef);
   const notificationsApi = useApi(notificationsApiRef);
@@ -303,6 +306,10 @@ export const NotificationsTable = ({
           pageSize,
           header: true,
           sorting: false,
+          rowStyle: (row: Notification) =>
+            highlightedId && row.id === highlightedId
+              ? { backgroundColor: 'var(--bui-bg-neutral-2, #8080802e)' }
+              : {},
         }}
         title={title}
         onPageChange={onPageChange}

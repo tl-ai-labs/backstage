@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 import {
   Content,
@@ -82,7 +83,13 @@ function NotificationsPageContent(
 
   const [refresh, setRefresh] = useState(false);
   const { lastSignal } = useSignal('notifications');
-  const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(true);
+  const [searchParams] = useSearchParams();
+  const highlightedId = searchParams.get('id') ?? undefined;
+  // When deep linking to a notification, it may already be read, so don't
+  // restrict the initial view to unread notifications.
+  const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(
+    highlightedId ? undefined : true,
+  );
   const [saved, setSaved] = useState<boolean | undefined>(undefined);
   const [pageNumber, setPageNumber] = useState(0);
   const [pageSize, setPageSize] = useState(5);
@@ -140,6 +147,12 @@ function NotificationsPageContent(
     ],
   );
 
+  const { value: highlighted } = useNotificationsApi(
+    async api =>
+      highlightedId ? await api.getNotification(highlightedId) : undefined,
+    [highlightedId],
+  );
+
   const throttledSetRefresh = useMemo(
     () => throttle(setRefresh, ThrottleDelayMs),
     [setRefresh],
@@ -166,7 +179,16 @@ function NotificationsPageContent(
     return <ResponseErrorPanel error={error} />;
   }
 
-  const notifications = value?.[0]?.notifications;
+  let notifications = value?.[0]?.notifications;
+  // Make sure the deep linked notification is shown even if it is not on the
+  // current page of results.
+  if (
+    highlighted &&
+    notifications &&
+    !notifications.some(n => n.id === highlighted.id)
+  ) {
+    notifications = [highlighted, ...notifications];
+  }
   const totalCount = value?.[0]?.totalCount;
   const isUnread = !!value?.[1]?.unread;
   const allTopics = value?.[2]?.topics;
@@ -221,6 +243,7 @@ function NotificationsPageContent(
             onRowsPerPageChange={setPageSize}
             page={pageNumber}
             pageSize={pageSize}
+            highlightedId={highlightedId}
             totalCount={totalCount}
           />
         </Grid.Item>
