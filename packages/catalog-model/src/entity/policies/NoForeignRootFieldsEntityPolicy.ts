@@ -31,6 +31,14 @@ export class NoForeignRootFieldsEntityPolicy implements EntityPolicy {
     this.knownFields = knownFields;
   }
 
+  /**
+   * Checks that all root-level keys of the entity are included in the
+   * configured `knownFields` list (defaulting to `['apiVersion', 'kind', 'metadata', 'spec']`).
+   *
+   * @param entity - The entity to validate
+   * @returns The original entity unchanged if no unknown root fields are present
+   * @throws An `Error` if any root field is not in `knownFields`
+   */
   async enforce(entity: Entity): Promise<Entity> {
     for (const field of Object.keys(entity)) {
       if (!this.knownFields.includes(field)) {
