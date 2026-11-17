@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -831,6 +831,202 @@ describe('Stepper', () => {
 
       expect(getByText('A Scaffolder Layout')).toBeInTheDocument();
       expect(getByRole('textbox', { name: 'field1' })).toBeInTheDocument();
+    });
+  });
+
+  describe('conditions that depend on earlier steps', () => {
+    const step1 = {
+      title: 'Step 1',
+      schema: {
+        properties: {
+          isMobileSdk: { type: 'boolean', title: 'Is this a mobile SDK?' },
+        },
+      },
+    };
+
+    const ifThenManifest: TemplateParameterSchema = {
+      title: 'Cross step if/then',
+      steps: [
+        step1,
+        {
+          title: 'Step 2',
+          schema: {
+            properties: {
+              projectName: { type: 'string', title: 'Project name' },
+            },
+            if: {
+              properties: { isMobileSdk: { const: true } },
+              required: ['isMobileSdk'],
+            },
+            then: {
+              properties: {
+                sdkPlatform: { type: 'string', title: 'SDK platform' },
+              },
+              required: ['sdkPlatform'],
+            },
+          },
+        },
+      ],
+    };
+
+    const click = async (name: string) => {
+      await act(async () => {
+        fireEvent.click(await screen.findByRole('button', { name }));
+      });
+    };
+
+    it('should only show, require and review step 2 fields when the step 1 flag is set', async () => {
+      const onCreate = jest.fn(async () => {});
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={ifThenManifest}
+            extensions={[]}
+            formProps={{ noHtml5Validate: true }}
+            onCreate={onCreate}
+          />
+        </SecretsContextProvider>,
+      );
+
+      // Flag not set: the conditional field is hidden and not required
+      await click('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'Project name' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'SDK platform' }),
+      ).not.toBeInTheDocument();
+      // Step 1 values are not rendered as fields in step 2
+      expect(
+        screen.queryByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      ).not.toBeInTheDocument();
+      await click('Review');
+      expect(await screen.findByText('Create')).toBeInTheDocument();
+      expect(screen.queryByText('SDK platform')).not.toBeInTheDocument();
+
+      // Set the flag: the field appears and is required
+      await click('Back');
+      await click('Back');
+      fireEvent.click(
+        await screen.findByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+      await click('Next');
+      expect(
+        await screen.findByRole('textbox', { name: 'SDK platform' }),
+      ).toBeInTheDocument();
+      await click('Review');
+      expect(
+        await screen.findByText("must have required property 'SDK platform'"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Create')).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(
+          screen.getByRole('textbox', { name: 'SDK platform' }),
+          {
+            target: { value: 'ios' },
+          },
+        );
+      });
+      await click('Review');
+      expect(await screen.findByText('SDK platform')).toBeInTheDocument();
+      expect(screen.getByText('ios')).toBeInTheDocument();
+
+      // Go back and clear the flag: the answer is dropped from review and create
+      await click('Back');
+      await click('Back');
+      fireEvent.click(
+        await screen.findByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+      await click('Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'SDK platform' }),
+      ).not.toBeInTheDocument();
+      await click('Review');
+      expect(await screen.findByText('Create')).toBeInTheDocument();
+      expect(screen.queryByText('SDK platform')).not.toBeInTheDocument();
+      expect(screen.queryByText('ios')).not.toBeInTheDocument();
+
+      await click('Create');
+      expect(onCreate).toHaveBeenCalledTimes(1);
+      const values = (onCreate.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        JsonValue
+      >;
+      expect(values).toEqual(expect.objectContaining({ isMobileSdk: false }));
+      expect(values).not.toHaveProperty('sdkPlatform');
+    });
+
+    it('should support dependencies on a property from an earlier step', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross step dependencies',
+        steps: [
+          step1,
+          {
+            title: 'Step 2',
+            schema: {
+              properties: {
+                projectName: { type: 'string', title: 'Project name' },
+              },
+              dependencies: {
+                isMobileSdk: {
+                  oneOf: [
+                    {
+                      properties: {
+                        isMobileSdk: { enum: [true] },
+                        sdkPlatform: { type: 'string', title: 'SDK platform' },
+                      },
+                      required: ['sdkPlatform'],
+                    },
+                    {
+                      properties: { isMobileSdk: { enum: [false] } },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn(async () => {});
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={onCreate} />
+        </SecretsContextProvider>,
+      );
+
+      fireEvent.click(
+        await screen.findByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+      await click('Next');
+      await act(async () => {
+        fireEvent.change(
+          await screen.findByRole('textbox', { name: 'SDK platform' }),
+          { target: { value: 'android' } },
+        );
+      });
+      await click('Review');
+      expect(await screen.findByText('SDK platform')).toBeInTheDocument();
+      expect(screen.getByText('android')).toBeInTheDocument();
+
+      await click('Back');
+      await click('Back');
+      fireEvent.click(
+        await screen.findByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      );
+      await click('Next');
+      expect(
+        screen.queryByRole('textbox', { name: 'SDK platform' }),
+      ).not.toBeInTheDocument();
+      await click('Review');
+      expect(await screen.findByText('Create')).toBeInTheDocument();
+      expect(screen.queryByText('SDK platform')).not.toBeInTheDocument();
+      await click('Create');
+      expect(onCreate.mock.calls[0]).toEqual([
+        expect.not.objectContaining({ sdkPlatform: expect.anything() }),
+      ]);
     });
   });
 
