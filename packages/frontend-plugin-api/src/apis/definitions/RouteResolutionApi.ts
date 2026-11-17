@@ -58,6 +58,14 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+
+  /**
+   * Subscribes to changes in the available route information, for example when
+   * the app is finalized and all page routes become known.
+   *
+   * @returns A function that removes the subscription.
+   */
+  subscribe?(listener: () => void): () => void;
 }
 
 /**

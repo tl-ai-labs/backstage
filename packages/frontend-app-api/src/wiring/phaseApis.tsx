@@ -113,6 +113,10 @@ export class AppTreeApiProxy implements AppTreeApi {
 export class RouteResolutionApiProxy implements RouteResolutionApi {
   #delegate: RouteResolutionApi | undefined;
   #routeObjects: BackstageRouteObject[] | undefined;
+  // True while only the bootstrap tree has been initialized, in which case
+  // page routes are not yet known and resolution failures are not errors.
+  #partial = false;
+  readonly #listeners = new Set<() => void>();
 
   private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   private readonly appBasePath: string;
@@ -138,12 +142,29 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       );
     }
 
+    if (this.#partial) {
+      try {
+        return this.#delegate.resolve(anyRouteRef, options);
+      } catch {
+        // Route information is incomplete until the app has been finalized
+        return undefined;
+      }
+    }
+
     return this.#delegate.resolve(anyRouteRef, options);
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   initialize(
     routeInfo: RouteInfo,
     routeRefsById: Map<string, RouteRef | SubRouteRef>,
+    options?: { partial?: boolean },
   ) {
     this.#delegate = new RouteResolver(
       routeInfo.routePaths,
@@ -155,6 +176,11 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       routeRefsById,
     );
     this.#routeObjects = routeInfo.routeObjects;
+    this.#partial = Boolean(options?.partial);
+
+    for (const listener of Array.from(this.#listeners)) {
+      listener();
+    }
 
     return routeInfo;
   }
@@ -274,6 +300,7 @@ export function instantiateAndInitializePhaseTree(options: {
   options.routeResolutionApi.initialize(
     routeInfo,
     options.routeRefsById.routes,
+    { partial: Boolean(options.stopAtAttachment) },
   );
   options.appTreeApi.initialize(routeInfo);
 }
