@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,317 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditional fields', () => {
+    let scrollToSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/');
+      scrollToSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      scrollToSpy.mockRestore();
+    });
+
+    it('supports if/then across steps, applies required validation only when active, and prunes stale values from review and onCreate', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross-step if/then',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                isMobileSdk: {
+                  type: 'boolean',
+                  title: 'Is this a mobile SDK?',
+                  default: false,
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                appName: {
+                  type: 'string',
+                  title: 'App name',
+                },
+              },
+              if: {
+                properties: {
+                  isMobileSdk: { const: true },
+                },
+                required: ['isMobileSdk'],
+              },
+              then: {
+                properties: {
+                  sdkBundleId: {
+                    type: 'string',
+                    title: 'SDK Bundle ID',
+                  },
+                },
+                required: ['sdkBundleId'],
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={onCreate} />
+        </SecretsContextProvider>,
+      );
+
+      // Flag is initially false -> step 2 field is hidden and not required
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        screen.getByRole('textbox', { name: 'App name' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /SDK Bundle ID/ }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+
+      // Go back to step 1 and enable the flag
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      const sdkInput = await screen.findByRole('textbox', {
+        name: /SDK Bundle ID/,
+      });
+      expect(sdkInput).toBeInTheDocument();
+
+      // Required validation applies when flag is set
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(sdkInput, { target: { value: 'com.example.sdk' } });
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('cell', { name: 'com.example.sdk' }),
+      ).toBeInTheDocument();
+
+      // Go back, turn flag off, and verify stale value is omitted from review and onCreate
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.queryByRole('cell', { name: 'com.example.sdk' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({ isMobileSdk: false });
+    });
+
+    it('supports dependencies across steps, applies required validation only when active, and prunes stale values from review and onCreate', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Cross-step dependencies',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                isMobileSdk: {
+                  type: 'boolean',
+                  title: 'Is this a mobile SDK?',
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                appName: {
+                  type: 'string',
+                  title: 'App name',
+                },
+              },
+              dependencies: {
+                isMobileSdk: {
+                  oneOf: [
+                    {
+                      properties: {
+                        isMobileSdk: { const: true },
+                        sdkBundleId: {
+                          type: 'string',
+                          title: 'SDK Bundle ID',
+                        },
+                      },
+                      required: ['sdkBundleId'],
+                    },
+                    {
+                      properties: {
+                        isMobileSdk: { not: { const: true } },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = jest.fn();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper manifest={manifest} extensions={[]} onCreate={onCreate} />
+        </SecretsContextProvider>,
+      );
+
+      // Flag unset -> step 2 field and hidden trigger are not visibly rendered, and Review succeeds
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      expect(
+        screen.getByRole('textbox', { name: 'App name' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /SDK Bundle ID/ }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('button', { name: 'Create' }),
+      ).toBeInTheDocument();
+
+      // Go back to step 1 and enable the flag
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+
+      const sdkInput = await screen.findByRole('textbox', {
+        name: /SDK Bundle ID/,
+      });
+      expect(sdkInput).toBeInTheDocument();
+
+      // Required validation applies when flag is set
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.change(sdkInput, { target: { value: 'com.example.sdk' } });
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.getByRole('cell', { name: 'com.example.sdk' }),
+      ).toBeInTheDocument();
+
+      // Go back, turn flag off, and verify stale value is omitted from review and onCreate
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+      });
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('checkbox', { name: 'Is this a mobile SDK?' }),
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      });
+
+      expect(
+        screen.queryByRole('cell', { name: 'com.example.sdk' }),
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+      });
+
+      expect(onCreate).toHaveBeenCalledWith({ isMobileSdk: false });
     });
   });
 });
