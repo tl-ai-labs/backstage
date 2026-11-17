@@ -14,13 +14,38 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
 import { SubRouteRef } from './SubRouteRef';
 import { ExternalRouteRef } from './ExternalRouteRef';
-import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
+import {
+  RouteFunc,
+  RouteResolutionApi,
+  routeResolutionApiRef,
+  useApi,
+} from '../apis';
+
+const noopUnsubscribe = () => {};
+
+// Tracks how many times the route information of each API instance has
+// changed. A single tracking subscription is registered per API instance on
+// first use, so that changes between render and subscription are not missed.
+const versions = new WeakMap<RouteResolutionApi, { current: number }>();
+
+function getVersionTracker(api: RouteResolutionApi): { current: number } {
+  let tracker = versions.get(api);
+  if (!tracker) {
+    const newTracker = { current: 0 };
+    api.subscribe?.(() => {
+      newTracker.current += 1;
+    });
+    versions.set(api, newTracker);
+    tracker = newTracker;
+  }
+  return tracker;
+}
 
 /**
  * React hook for constructing URLs to routes.
@@ -31,6 +56,8 @@ import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`, or `undefined` if the route is not available.
+ * The result may be `undefined` before the app has been finalized, for example
+ * in app root elements, and is updated once the app is finalized.
  * @public
  */
 export function useRouteRef<TParams extends AnyRouteRefParams>(
@@ -42,9 +69,24 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
 
+  const tracker = getVersionTracker(routeResolutionApi);
+  const subscribe = useCallback(
+    (onChange: () => void) =>
+      routeResolutionApi.subscribe?.(onChange) ?? noopUnsubscribe,
+    [routeResolutionApi],
+  );
+  // The version only changes when route information changes, which forces the
+  // memoized resolution below to be recomputed without re-rendering otherwise.
+  const version = useSyncExternalStore(
+    subscribe,
+    () => tracker.current,
+    () => tracker.current,
+  );
+
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, version],
   );
 
   return routeFunc;

@@ -31,7 +31,7 @@ import {
   analyticsApiRef,
   createExtensionDataRef,
 } from '@backstage/frontend-plugin-api';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { createSpecializedApp } from './createSpecializedApp';
 import {
   FinalizedSpecializedApp,
@@ -1655,6 +1655,103 @@ describe('createSpecializedApp', () => {
       );
 
       expect(screen.getByText('Flagged Layout')).toBeInTheDocument();
+    });
+
+    it('should let app root elements use route refs before and after finalization', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const pageRouteRef = createRouteRef();
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+      let renderCount = 0;
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: { page: pageRouteRef },
+            extensions: [
+              createExtension({
+                name: 'banner',
+                attachTo: { id: 'app/root', input: 'elements' },
+                output: [coreExtensionData.reactElement],
+                factory: () => {
+                  function Banner() {
+                    renderCount += 1;
+                    const link = useRouteRef(pageRouteRef);
+                    return <div>Banner link: {link?.() ?? 'none'}</div>;
+                  }
+                  return [coreExtensionData.reactElement(<Banner />)];
+                },
+              }),
+              createExtension({
+                name: 'page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.reactElement,
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                ],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Page</div>),
+                  coreExtensionData.routePath('/test-page'),
+                  coreExtensionData.routeRef(pageRouteRef),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const bootstrapElement = preparedApp.getBootstrapApp().element;
+      const { container } = render(bootstrapElement);
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('Banner link: none')).toBeInTheDocument();
+      expect(screen.queryByText(/No path for/)).not.toBeInTheDocument();
+
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      act(() => {
+        triggerSignInSuccess(identityApi);
+      });
+
+      await finalizedAppPromise;
+
+      // The banner mounted during bootstrap picks up the link once finalized
+      await expect(
+        within(container).findByText('Banner link: /test-page'),
+      ).resolves.toBeInTheDocument();
+      expect(renderCount).toBeLessThan(20);
     });
 
     it('should defer conditional app root elements until finalize', async () => {
