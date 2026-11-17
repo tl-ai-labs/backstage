@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import throttle from 'lodash/throttle';
 import {
   Content,
@@ -23,6 +24,7 @@ import {
 } from '@backstage/core-components';
 import { Grid } from '@backstage/ui';
 import { useSignal } from '@backstage/plugin-signals-react';
+import { useApi } from '@backstage/core-plugin-api';
 import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 import { notificationsTranslationRef } from '../../translation';
 
@@ -45,8 +47,10 @@ import {
   GetNotificationsOptions,
   GetNotificationsResponse,
   GetTopicsResponse,
+  notificationsApiRef,
 } from '../../api';
 import {
+  Notification,
   NotificationSeverity,
   NotificationStatus,
 } from '@backstage/plugin-notifications-common';
@@ -82,6 +86,10 @@ function NotificationsPageContent(
 
   const [refresh, setRefresh] = useState(false);
   const { lastSignal } = useSignal('notifications');
+  const notificationsApi = useApi(notificationsApiRef);
+  const [searchParams] = useSearchParams();
+  const highlightedId = searchParams.get('id') ?? undefined;
+  const [pinnedNotification, setPinnedNotification] = useState<Notification>();
   const [unreadOnly, setUnreadOnly] = useState<boolean | undefined>(true);
   const [saved, setSaved] = useState<boolean | undefined>(undefined);
   const [pageNumber, setPageNumber] = useState(0);
@@ -162,11 +170,52 @@ function NotificationsPageContent(
     throttledSetRefresh(true);
   };
 
+  const notifications = value?.[0]?.notifications;
+
+  useEffect(() => {
+    if (!highlightedId || loading || !notifications) {
+      setPinnedNotification(undefined);
+      return undefined;
+    }
+    if (notifications.some(n => n.id === highlightedId)) {
+      setPinnedNotification(undefined);
+      return undefined;
+    }
+    let cancelled = false;
+    notificationsApi
+      .getNotification(highlightedId)
+      .then(notification => {
+        if (!cancelled && notification) {
+          setPinnedNotification(notification);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPinnedNotification(undefined);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [highlightedId, loading, notifications, notificationsApi]);
+
+  const displayedNotifications = useMemo(() => {
+    if (!notifications) {
+      return notifications;
+    }
+    if (
+      pinnedNotification &&
+      !notifications.some(n => n.id === pinnedNotification.id)
+    ) {
+      return [pinnedNotification, ...notifications];
+    }
+    return notifications;
+  }, [notifications, pinnedNotification]);
+
   if (error) {
     return <ResponseErrorPanel error={error} />;
   }
 
-  const notifications = value?.[0]?.notifications;
   const totalCount = value?.[0]?.totalCount;
   const isUnread = !!value?.[1]?.unread;
   const allTopics = value?.[2]?.topics;
@@ -214,7 +263,8 @@ function NotificationsPageContent(
             isLoading={loading}
             isUnread={isUnread}
             markAsReadOnLinkOpen={markAsReadOnLinkOpen}
-            notifications={notifications}
+            notifications={displayedNotifications}
+            highlightedNotificationId={highlightedId}
             onUpdate={onUpdate}
             setContainsText={setContainsText}
             onPageChange={setPageNumber}
