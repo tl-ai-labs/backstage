@@ -51,6 +51,10 @@ import { Form } from '../Form';
 import { PasswordWidget } from '../PasswordWidget/PasswordWidget';
 import { ReviewState, type ReviewStateProps } from '../ReviewState';
 import {
+  injectCrossStepDependencies,
+  pruneConditionalFormData,
+} from './conditionalSchema';
+import {
   createAsyncValidators,
   type FormValidation,
 } from './createAsyncValidators';
@@ -127,6 +131,10 @@ export const Stepper = (stepperProps: StepperProps) => {
   } = components;
   const analytics = useAnalytics();
   const { presentation, steps } = useTemplateSchema(props.manifest);
+  const { steps: renderSteps, injectedKeysByStep } = useMemo(
+    () => injectCrossStepDependencies(steps),
+    [steps],
+  );
   const apiHolder = useApiHolder();
   const [activeStep, setActiveStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
@@ -172,7 +180,9 @@ export const Stepper = (stepperProps: StepperProps) => {
     setActiveStep(prevActiveStep => prevActiveStep - 1);
   }, [setActiveStep]);
 
-  const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
+  const currentStep = useTransformSchemaToProps(renderSteps[activeStep], {
+    layouts,
+  });
 
   const {
     formContext: propFormContext,
@@ -247,15 +257,28 @@ export const Stepper = (stepperProps: StepperProps) => {
 
   const [isCreating, setIsCreating] = useState(false);
 
+  const prunedStepsState = useMemo(
+    () =>
+      activeStep < renderSteps.length
+        ? stepsState
+        : pruneConditionalFormData(
+            stepsState,
+            renderSteps,
+            validator,
+            injectedKeysByStep,
+          ),
+    [activeStep, renderSteps, stepsState, injectedKeysByStep],
+  );
+
   const handleCreate = useCallback(async () => {
     setIsCreating(true);
     analytics.captureEvent('click', `${createLabel}`);
     try {
-      await onCreate(stepsState);
+      await onCreate(prunedStepsState);
     } finally {
       setIsCreating(false);
     }
-  }, [analytics, createLabel, onCreate, stepsState]);
+  }, [analytics, createLabel, onCreate, prunedStepsState]);
 
   return (
     <>
@@ -328,7 +351,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         ReviewStepComponent ? (
           <ReviewStepComponent
             disableButtons={isValidating}
-            formData={stepsState}
+            formData={prunedStepsState}
             handleBack={handleBack}
             handleReset={() => {}}
             steps={steps}
@@ -336,7 +359,10 @@ export const Stepper = (stepperProps: StepperProps) => {
           />
         ) : (
           <>
-            <ReviewStateComponent formState={stepsState} schemas={steps} />
+            <ReviewStateComponent
+              formState={prunedStepsState}
+              schemas={steps}
+            />
             <div className={styles.footer}>
               <Button
                 variant="tertiary"

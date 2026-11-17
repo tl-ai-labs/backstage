@@ -465,6 +465,79 @@ spec:
         ...
 ```
 
+### Conditional fields based on earlier steps
+
+You can show, hide, or require fields in a later step based on answers given in an earlier step using either JSON Schema `if`/`then`/`else` or `dependencies` at the top level of the step schema.
+
+Using `if`/`then`/`else`:
+
+```yaml
+spec:
+  parameters:
+    - title: Project Type
+      properties:
+        isMobileSdk:
+          title: Is this a mobile SDK?
+          type: boolean
+          default: false
+    - title: Configuration
+      properties:
+        appName:
+          title: App name
+          type: string
+      if:
+        properties:
+          isMobileSdk:
+            const: true
+        required:
+          - isMobileSdk
+      then:
+        properties:
+          sdkBundleId:
+            title: SDK Bundle ID
+            type: string
+        required:
+          - sdkBundleId
+```
+
+Using `dependencies`:
+
+```yaml
+spec:
+  parameters:
+    - title: Project Type
+      properties:
+        isMobileSdk:
+          title: Is this a mobile SDK?
+          type: boolean
+    - title: Configuration
+      properties:
+        appName:
+          title: App name
+          type: string
+      dependencies:
+        isMobileSdk:
+          oneOf:
+            - properties:
+                isMobileSdk:
+                  const: true
+                sdkBundleId:
+                  title: SDK Bundle ID
+                  type: string
+              required:
+                - sdkBundleId
+            - properties:
+                isMobileSdk:
+                  not:
+                    const: true
+```
+
+:::note
+
+If a user fills in a conditional field and then goes back to change the earlier answer so that the branch is hidden, the hidden-branch value is left out of the **Review** step and the submitted `parameters` values.
+
+:::
+
 ### The Repository Picker
 
 In order to make working with repository providers easier, we've built a custom
