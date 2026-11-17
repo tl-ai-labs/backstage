@@ -18,6 +18,7 @@ import { JsonObject, JsonValue } from '@backstage/types';
 import { startCase } from 'lodash';
 import { ParsedTemplateSchema } from '../../hooks/useTemplateSchema';
 import { Draft07 as JSONSchema } from 'json-schema-library';
+import { collectConditionKeys } from '../../lib/conditions';
 
 export function isJsonObject(value?: JsonValue): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -43,9 +44,10 @@ export function findSchemaForKey(
       with an empty form state. Otherwise, it will never return undefined as it
       will fallback to a default schema based on the form state. 
 
-      An exception to this is when your schema is dynamic i.e. using dependencies 
-      because the form state is required for generating the schema. In this case,
-      we add only the dependencies data to the getSchema call.
+      An exception to this is when your schema is dynamic i.e. using
+      dependencies or if/then/else, because the form state is required for
+      generating the schema. In this case, we add only the data for the
+      properties that the conditions refer to, and never the key itself.
     */
 
     const schema = step.mergedSchema;
@@ -53,11 +55,9 @@ export function findSchemaForKey(
     // Declare data to be a subset of formState
     const data: typeof formState = {};
 
-    if (schema.dependencies && isJsonObject(schema.dependencies)) {
-      for (const dep in schema.dependencies) {
-        if (formState.hasOwnProperty(dep)) {
-          data[dep] = formState[dep]; // Add each dependency key from formState
-        }
+    for (const dep of collectConditionKeys(schema)) {
+      if (dep !== key && formState.hasOwnProperty(dep)) {
+        data[dep] = formState[dep];
       }
     }
 

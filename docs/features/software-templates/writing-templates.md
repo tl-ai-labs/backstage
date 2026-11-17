@@ -401,6 +401,72 @@ When a task is created without the required secrets, the API returns a `400` err
 
 If you find that the default layout of the form used in a particular step does not meet your needs then you can supply your own [custom step layout](./writing-custom-step-layouts.md).
 
+### Show fields based on answers from earlier steps
+
+You can use JSON Schema conditions (`if`/`then`/`else` or `dependencies`) to show fields in one step depending on an answer given in an earlier step. Name the property from the earlier step in the condition, exactly as you would for a property in the same step. No extra syntax is needed.
+
+The following template asks whether the project is a mobile SDK in the first step. The second step only shows the SDK fields when the answer is yes.
+
+```yaml
+spec:
+  parameters:
+    - title: Project type
+      properties:
+        isMobileSdk:
+          title: Is this a mobile SDK?
+          type: boolean
+    - title: Project details
+      properties:
+        projectName:
+          title: Project name
+          type: string
+      # Evaluated against the answers from all steps
+      if:
+        properties:
+          isMobileSdk:
+            const: true
+        required:
+          - isMobileSdk
+      then:
+        properties:
+          sdkPlatform:
+            title: SDK platform
+            type: string
+            enum:
+              - ios
+              - android
+        required:
+          - sdkPlatform
+```
+
+You can write the same condition with `dependencies`:
+
+```yaml
+dependencies:
+  isMobileSdk:
+    oneOf:
+      - properties:
+          isMobileSdk:
+            enum:
+              - true
+          sdkPlatform:
+            title: SDK platform
+            type: string
+        required:
+          - sdkPlatform
+      - properties:
+          isMobileSdk:
+            enum:
+              - false
+```
+
+The following rules apply:
+
+- Each step only renders and validates its own fields. Answers from earlier steps are not shown again, and are kept when the later step is submitted.
+- Add `required` to the `if` condition, as in the example. Without it, the condition also matches when the earlier question has not been answered.
+- When you go back and change an answer, the fields that no longer apply are removed. Their values are not shown on the review step and are not passed to the template when you create it.
+- Dependencies on an earlier step must refer to a property of type `string`, `number`, `integer`, or `boolean`. Conditions using `if` work with any value.
+
 ### Remove sections or fields based on feature flags
 
 Based on feature flags you can hide sections or even only fields of your

@@ -45,6 +45,10 @@ import {
 } from 'react';
 
 import { scaffolderReactTranslationRef } from '../../../translation';
+import {
+  pruneInactiveAnswers,
+  withCrossStepDependencies,
+} from '../../lib/conditions';
 import { useFormDataFromQuery, useTemplateSchema } from '../../hooks';
 import { useTransformSchemaToProps } from '../../hooks/useTransformSchemaToProps';
 import { Form } from '../Form';
@@ -198,7 +202,15 @@ export const Stepper = (stepperProps: StepperProps) => {
       setErrors(undefined);
       setIsValidating(true);
 
-      const returnedValidation = await validation(formData);
+      // Conditions are evaluated against the answers of all steps, but answers
+      // for inactive conditional branches should not be validated.
+      const returnedValidation = await validation(
+        pruneInactiveAnswers(
+          formData,
+          steps.map(step => step.schema),
+          validator,
+        ),
+      );
 
       setStepsState(current => ({
         ...current,
@@ -218,7 +230,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         });
       }
     },
-    [validation, analytics],
+    [validation, analytics, steps],
   );
 
   useEffect(() => {
@@ -243,7 +255,23 @@ export const Stepper = (stepperProps: StepperProps) => {
     }
   }, [activeStep]);
 
-  const mergedUiSchema = merge({}, propUiSchema, currentStep?.uiSchema);
+  const { schema: stepSchema, uiSchema: stepUiSchema } = currentStep
+    ? withCrossStepDependencies(
+        currentStep.schema,
+        currentStep.uiSchema,
+        steps.slice(0, activeStep).map(step => step.schema),
+      )
+    : { schema: undefined, uiSchema: undefined };
+  const mergedUiSchema = merge({}, propUiSchema, stepUiSchema);
+
+  // The answers as they should be reviewed and submitted, without answers that
+  // belong to conditional branches that are no longer active.
+  const getActiveAnswers = () =>
+    pruneInactiveAnswers(
+      stepsState,
+      steps.map(step => step.schema),
+      validator,
+    );
 
   const [isCreating, setIsCreating] = useState(false);
 
@@ -251,11 +279,17 @@ export const Stepper = (stepperProps: StepperProps) => {
     setIsCreating(true);
     analytics.captureEvent('click', `${createLabel}`);
     try {
-      await onCreate(stepsState);
+      await onCreate(
+        pruneInactiveAnswers(
+          stepsState,
+          steps.map(step => step.schema),
+          validator,
+        ),
+      );
     } finally {
       setIsCreating(false);
     }
-  }, [analytics, createLabel, onCreate, stepsState]);
+  }, [analytics, createLabel, onCreate, stepsState, steps]);
 
   return (
     <>
@@ -295,7 +329,7 @@ export const Stepper = (stepperProps: StepperProps) => {
             extraErrors={errors as unknown as ErrorSchema}
             formData={stepsState}
             formContext={{ ...propFormContext, formData: stepsState }}
-            schema={currentStep.schema}
+            schema={stepSchema!}
             uiSchema={mergedUiSchema}
             onSubmit={handleNext}
             fields={fields}
@@ -328,7 +362,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         ReviewStepComponent ? (
           <ReviewStepComponent
             disableButtons={isValidating}
-            formData={stepsState}
+            formData={getActiveAnswers()}
             handleBack={handleBack}
             handleReset={() => {}}
             steps={steps}
@@ -336,7 +370,10 @@ export const Stepper = (stepperProps: StepperProps) => {
           />
         ) : (
           <>
-            <ReviewStateComponent formState={stepsState} schemas={steps} />
+            <ReviewStateComponent
+              formState={getActiveAnswers()}
+              schemas={steps}
+            />
             <div className={styles.footer}>
               <Button
                 variant="tertiary"
