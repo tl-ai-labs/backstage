@@ -27,10 +27,20 @@ import { Entity } from '../Entity';
 export class DefaultNamespaceEntityPolicy implements EntityPolicy {
   private readonly namespace: string;
 
+  /**
+   * @param namespace - The namespace to apply, defaults to `default`
+   */
   constructor(namespace: string = DEFAULT_NAMESPACE) {
     this.namespace = namespace;
   }
 
+  /**
+   * Returns the entity unchanged if `metadata.namespace` is set to a non-empty
+   * value. If it is not set, returns a deep copy of the entity with the
+   * configured namespace filled in. If it is an empty string, the returned
+   * copy keeps the empty string. The input entity is never mutated, and this
+   * policy never throws.
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.metadata.namespace) {
       return entity;

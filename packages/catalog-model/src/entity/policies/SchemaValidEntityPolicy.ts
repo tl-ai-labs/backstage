@@ -35,6 +35,14 @@ import { EntityPolicy } from './types';
 export class SchemaValidEntityPolicy implements EntityPolicy {
   private validate: ValidateFunction<Entity> | undefined;
 
+  /**
+   * Validates the entity envelope against the entity JSON schema. The schema
+   * is compiled lazily on the first call.
+   *
+   * @returns The same entity instance, which is never modified
+   * @throws An error starting with `Malformed envelope` that describes the
+   * first schema violation found
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (!this.validate) {
       const ajv = new Ajv({ allowUnionTypes: true });

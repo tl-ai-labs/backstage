@@ -31,6 +31,13 @@ import { parseEntityRef, stringifyEntityRef } from '../ref';
 export class GroupDefaultParentEntityPolicy implements EntityPolicy {
   private readonly parentRef: string;
 
+  /**
+   * @param parentEntityRef - The entity reference of the group to use as the
+   * default parent. Missing parts default to kind `Group` and namespace
+   * `default`.
+   * @throws TypeError if the reference resolves to a kind other than Group
+   * (compared case-insensitively)
+   */
   constructor(parentEntityRef: string) {
     const { kind, namespace, name } = parseEntityRef(parentEntityRef, {
       defaultKind: 'Group',
@@ -48,6 +55,18 @@ export class GroupDefaultParentEntityPolicy implements EntityPolicy {
     });
   }
 
+  /**
+   * Sets `spec.parent` to the configured parent reference on Group entities
+   * that do not already have a parent. Entities of other kinds (compared
+   * case-sensitively with `Group`) and groups that already have a parent are
+   * left as they are. The group that is itself the configured parent does not
+   * get a parent.
+   *
+   * @remarks
+   *
+   * Unlike some other policies, this mutates the given group entity in place
+   * and returns that same instance.
+   */
   async enforce(entity: Entity): Promise<Entity> {
     if (entity.kind !== 'Group') {
       return entity;
