@@ -40,14 +40,7 @@ const appPluginOverride = (
 
 const BuiCss = lazy(() => import('./BuiCss'));
 
-let ReactDOMPromise: Promise<
-  typeof import('react-dom') | typeof import('react-dom/client')
->;
-if (process.env.HAS_REACT_DOM_CLIENT) {
-  ReactDOMPromise = import('react-dom/client');
-} else {
-  ReactDOMPromise = import('react-dom');
-}
+const ReactDOMPromise = import('react-dom/client');
 
 /**
  * Options for {@link createDevApp}.
@@ -116,10 +109,6 @@ export function createDevApp(options: CreateDevAppOptions): void {
       </>
     );
 
-    if ('createRoot' in ReactDOM) {
-      ReactDOM.createRoot(rootElement).render(rootNode);
-    } else {
-      ReactDOM.render(rootNode, rootElement);
-    }
+    ReactDOM.createRoot(rootElement).render(rootNode);
   });
 }
