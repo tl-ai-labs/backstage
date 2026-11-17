@@ -15,6 +15,7 @@
  */
 
 import {
+  AppRootElementBlueprint,
   AppTreeApi,
   appTreeApiRef,
   coreExtensionData,
@@ -26,6 +27,7 @@ import {
   createRouteRef,
   createExternalRouteRef,
   createExtensionInput,
+  PageBlueprint,
   useRouteRef,
   useApi,
   analyticsApiRef,
@@ -1910,6 +1912,107 @@ describe('createSpecializedApp', () => {
       expect(() => preparedApp.finalize()).toThrow(
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
+    });
+
+    it('should update useRouteRef in app root elements after finalization', async () => {
+      const pageRouteRef = createRouteRef();
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+
+      function RootBanner() {
+        const link = useRouteRef(pageRouteRef);
+        return (
+          <div>
+            <span>Root Banner</span>
+            {link ? <span>Link: {link()}</span> : <span>No Link</span>}
+          </div>
+        );
+      }
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: {
+              page: pageRouteRef,
+            },
+            extensions: [
+              AppRootElementBlueprint.make({
+                name: 'banner',
+                params: {
+                  element: <RootBanner />,
+                },
+              }),
+              PageBlueprint.make({
+                name: 'page',
+                params: {
+                  path: '/my-page',
+                  routeRef: pageRouteRef,
+                  loader: async () => <div>My Page</div>,
+                },
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      renderPreparedBootstrap(preparedApp);
+      await expect(
+        screen.findByText('Custom Sign In'),
+      ).resolves.toBeInTheDocument();
+      await expect(
+        screen.findByText('Root Banner'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.getByText('No Link')).toBeInTheDocument();
+      expect(screen.queryByText(/Link:/)).not.toBeInTheDocument();
+
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      act(() => {
+        triggerSignInSuccess(identityApi);
+      });
+
+      const finalizedApp = await finalizedAppPromise;
+      render(
+        finalizedApp.tree.root.instance!.getData(
+          coreExtensionData.reactElement,
+        ),
+      );
+
+      await expect(
+        screen.findByText('Link: /my-page'),
+      ).resolves.toBeInTheDocument();
+      expect(screen.queryByText('No Link')).not.toBeInTheDocument();
     });
   });
 });

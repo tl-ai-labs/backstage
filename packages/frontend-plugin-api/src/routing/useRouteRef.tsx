@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
+import { getRouteResolutionSubscription } from '@internal/frontend';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
 import { SubRouteRef } from './SubRouteRef';
 import { ExternalRouteRef } from './ExternalRouteRef';
 import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
+
+const noopSubscribe = () => () => {};
+const noopGetSnapshot = () => 0;
 
 /**
  * React hook for constructing URLs to routes.
@@ -28,6 +32,10 @@ import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
  * @remarks
  *
  * See {@link https://backstage.io/docs/plugins/composability#routing-system}
+ *
+ * May return `undefined` until the app is finalized (for example in app root
+ * elements rendered before sign-in completes), and updates automatically once
+ * finalization completes.
  *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`, or `undefined` if the route is not available.
@@ -41,10 +49,24 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const subscription = getRouteResolutionSubscription(routeResolutionApi);
+
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      subscription ? subscription.subscribe(listener) : noopSubscribe(),
+    [subscription],
+  );
+  const getSnapshot = useCallback(
+    () => (subscription ? subscription.getSnapshot() : noopGetSnapshot()),
+    [subscription],
+  );
+
+  const version = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, version],
   );
 
   return routeFunc;

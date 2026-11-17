@@ -51,6 +51,10 @@ import {
   FrontendApiRegistry,
   FrontendApiResolver,
 } from './FrontendApiRegistry';
+import {
+  routeResolutionSubscriptionSymbol,
+  type RouteResolutionSubscription,
+} from '@internal/frontend';
 import { type ExtensionPredicateContext } from './predicates';
 import { type ErrorCollector } from './createErrorCollector';
 
@@ -113,9 +117,22 @@ export class AppTreeApiProxy implements AppTreeApi {
 export class RouteResolutionApiProxy implements RouteResolutionApi {
   #delegate: RouteResolutionApi | undefined;
   #routeObjects: BackstageRouteObject[] | undefined;
+  #isBootstrap = false;
+  #version = 0;
+  #listeners = new Set<() => void>();
 
   private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   private readonly appBasePath: string;
+
+  readonly [routeResolutionSubscriptionSymbol]: RouteResolutionSubscription = {
+    subscribe: (listener: () => void) => {
+      this.#listeners.add(listener);
+      return () => {
+        this.#listeners.delete(listener);
+      };
+    },
+    getSnapshot: () => this.#version,
+  };
 
   constructor(
     routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>,
@@ -138,12 +155,21 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       );
     }
 
+    if (this.#isBootstrap) {
+      try {
+        return this.#delegate.resolve(anyRouteRef, options);
+      } catch {
+        return undefined;
+      }
+    }
+
     return this.#delegate.resolve(anyRouteRef, options);
   }
 
   initialize(
     routeInfo: RouteInfo,
     routeRefsById: Map<string, RouteRef | SubRouteRef>,
+    options?: { isBootstrap?: boolean },
   ) {
     this.#delegate = new RouteResolver(
       routeInfo.routePaths,
@@ -155,6 +181,11 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       routeRefsById,
     );
     this.#routeObjects = routeInfo.routeObjects;
+    this.#isBootstrap = Boolean(options?.isBootstrap);
+    this.#version += 1;
+    for (const listener of this.#listeners) {
+      listener();
+    }
 
     return routeInfo;
   }
@@ -250,6 +281,7 @@ export function instantiateAndInitializePhaseTree(options: {
   onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
   predicateContext?: ExtensionPredicateContext;
   stopAtAttachment?(ctx: { node: AppNode; input: string }): boolean;
+  isBootstrap?: boolean;
 }) {
   instantiateAppNodeTree(
     options.tree.root,
@@ -274,6 +306,7 @@ export function instantiateAndInitializePhaseTree(options: {
   options.routeResolutionApi.initialize(
     routeInfo,
     options.routeRefsById.routes,
+    { isBootstrap: options.isBootstrap },
   );
   options.appTreeApi.initialize(routeInfo);
 }
