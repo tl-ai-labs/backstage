@@ -113,6 +113,8 @@ export class AppTreeApiProxy implements AppTreeApi {
 export class RouteResolutionApiProxy implements RouteResolutionApi {
   #delegate: RouteResolutionApi | undefined;
   #routeObjects: BackstageRouteObject[] | undefined;
+  #finalized = false;
+  #listeners = new Set<() => void>();
 
   private readonly routeBindings: Map<ExternalRouteRef, RouteRef | SubRouteRef>;
   private readonly appBasePath: string;
@@ -138,12 +140,28 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       );
     }
 
+    if (!this.#finalized) {
+      try {
+        return this.#delegate.resolve(anyRouteRef, options);
+      } catch {
+        return undefined;
+      }
+    }
+
     return this.#delegate.resolve(anyRouteRef, options);
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   initialize(
     routeInfo: RouteInfo,
     routeRefsById: Map<string, RouteRef | SubRouteRef>,
+    options?: { finalized?: boolean },
   ) {
     this.#delegate = new RouteResolver(
       routeInfo.routePaths,
@@ -155,6 +173,13 @@ export class RouteResolutionApiProxy implements RouteResolutionApi {
       routeRefsById,
     );
     this.#routeObjects = routeInfo.routeObjects;
+    if (options?.finalized) {
+      this.#finalized = true;
+    }
+
+    for (const listener of Array.from(this.#listeners)) {
+      listener();
+    }
 
     return routeInfo;
   }
@@ -250,6 +275,7 @@ export function instantiateAndInitializePhaseTree(options: {
   onMissingApi?(ctx: { node: AppNode; apiRefId: string }): void;
   predicateContext?: ExtensionPredicateContext;
   stopAtAttachment?(ctx: { node: AppNode; input: string }): boolean;
+  finalized?: boolean;
 }) {
   instantiateAppNodeTree(
     options.tree.root,
@@ -274,6 +300,7 @@ export function instantiateAndInitializePhaseTree(options: {
   options.routeResolutionApi.initialize(
     routeInfo,
     options.routeRefsById.routes,
+    { finalized: options.finalized },
   );
   options.appTreeApi.initialize(routeInfo);
 }

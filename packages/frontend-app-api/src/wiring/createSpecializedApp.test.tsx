@@ -1911,5 +1911,131 @@ describe('createSpecializedApp', () => {
         'prepareSpecializedApp requires waiting for the bootstrap app to be ready before calling finalize()',
       );
     });
+
+    it('should resolve page routes in app root elements after finalization', async () => {
+      const identityApi = {
+        getProfileInfo: async () => ({ displayName: 'Test User' }),
+        getBackstageIdentity: async () => ({
+          type: 'user' as const,
+          userEntityRef: 'user:default/test-user',
+          ownershipEntityRefs: ['user:default/test-user'],
+        }),
+        getCredentials: async () => ({ token: 'token' }),
+        signOut: async () => {},
+      };
+      const parentRouteRef = createRouteRef();
+      const childRouteRef = createRouteRef();
+      let onSignInSuccess: ((identity: IdentityApi) => void) | undefined;
+
+      const preparedApp = prepareSpecializedApp({
+        features: [
+          appPluginOriginal,
+          createFrontendPlugin({
+            pluginId: 'test',
+            routes: {
+              parent: parentRouteRef,
+              child: childRouteRef,
+            },
+            extensions: [
+              createExtension({
+                name: 'banner',
+                attachTo: { id: 'app/root', input: 'elements' },
+                inputs: {
+                  child: createExtensionInput(
+                    [coreExtensionData.routePath, coreExtensionData.routeRef],
+                    { singleton: true },
+                  ),
+                },
+                output: [
+                  coreExtensionData.reactElement,
+                  coreExtensionData.routeRef,
+                ],
+                factory: () => {
+                  function Banner() {
+                    const getChildPath = useRouteRef(childRouteRef);
+                    return getChildPath ? (
+                      <a href={getChildPath()}>Go to test page</a>
+                    ) : (
+                      <div>Banner: route pending</div>
+                    );
+                  }
+
+                  return [
+                    coreExtensionData.reactElement(<Banner />),
+                    coreExtensionData.routeRef(parentRouteRef),
+                  ];
+                },
+              }),
+              createExtension({
+                name: 'banner-child-route',
+                attachTo: { id: 'test/banner', input: 'child' },
+                output: [
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                ],
+                factory: () => [
+                  coreExtensionData.routePath('/child'),
+                  coreExtensionData.routeRef(childRouteRef),
+                ],
+              }),
+              createExtension({
+                name: 'page',
+                attachTo: { id: 'app/routes', input: 'routes' },
+                output: [
+                  coreExtensionData.reactElement,
+                  coreExtensionData.routePath,
+                  coreExtensionData.routeRef,
+                ],
+                factory: () => [
+                  coreExtensionData.reactElement(<div>Test Page</div>),
+                  coreExtensionData.routePath('/parent'),
+                  coreExtensionData.routeRef(parentRouteRef),
+                ],
+              }),
+            ],
+          }),
+          createFrontendModule({
+            pluginId: 'app',
+            extensions: [
+              appPluginOriginal.getExtension('sign-in-page:app').override({
+                factory: () => {
+                  function SignInPage(props: {
+                    onSignInSuccess(identity: IdentityApi): void;
+                  }) {
+                    onSignInSuccess = props.onSignInSuccess;
+                    return <div>Custom Sign In</div>;
+                  }
+
+                  return [signInPageComponentDataRef(SignInPage)];
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const { rerender } = render(preparedApp.getBootstrapApp().element);
+      await expect(
+        screen.findByText('Banner: route pending'),
+      ).resolves.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Go to test page' }),
+      ).not.toBeInTheDocument();
+
+      const finalizedAppPromise = waitForFinalizedApp(preparedApp);
+      if (!onSignInSuccess) {
+        throw new Error('Expected sign-in success callback to be captured');
+      }
+      const triggerSignInSuccess = onSignInSuccess;
+      act(() => {
+        triggerSignInSuccess(identityApi);
+      });
+
+      const finalizedApp = await finalizedAppPromise;
+      rerender(finalizedApp.element);
+
+      const link = await screen.findByRole('link', { name: 'Go to test page' });
+      expect(link).toHaveAttribute('href', '/parent/child');
+    });
   });
 });

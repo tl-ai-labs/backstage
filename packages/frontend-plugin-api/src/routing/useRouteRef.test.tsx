@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { PropsWithChildren } from 'react';
 import { MemoryRouter, Router } from 'react-router-dom';
 import { createVersionedContextForTesting } from '@backstage/version-bridge';
@@ -205,5 +205,46 @@ describe('v1 consumer', () => {
     rerender();
 
     expect(resolve).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-resolves the routeFunc when RouteResolutionApi notifies subscribers', () => {
+    const listeners = new Set<() => void>();
+    let resolved: (() => string) | undefined = undefined;
+    const resolve = jest.fn(() => resolved);
+    const subscribe = jest.fn((listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    });
+    const api = { resolve, subscribe };
+
+    const routeRef = createRouteRef();
+
+    const { result, unmount } = renderHook(() => useRouteRef(routeRef), {
+      wrapper: ({ children }: PropsWithChildren<{}>) => (
+        <TestApiProvider apis={[[routeResolutionApiRef, api]]}>
+          <MemoryRouter initialEntries={['/my-page']} children={children} />
+        </TestApiProvider>
+      ),
+    });
+
+    expect(result.current).toBeUndefined();
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(listeners.size).toBe(1);
+
+    resolved = () => '/finalized-page';
+    act(() => {
+      for (const listener of listeners) {
+        listener();
+      }
+    });
+
+    expect(result.current?.()).toBe('/finalized-page');
+    expect(resolve).toHaveBeenCalledTimes(2);
+
+    unmount();
+    expect(listeners.size).toBe(0);
   });
 });

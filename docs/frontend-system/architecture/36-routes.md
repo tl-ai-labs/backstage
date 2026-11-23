@@ -115,7 +115,7 @@ export const IndexPage = () => {
 };
 ```
 
-We use the `useRouteRef` hook to create a link generator function that returns the details page path. First we need to check whether the route is available, the link generator function will be `undefined` if it isn't. We then call the link generator, passing it an object with the kind, namespace, and name. These parameters are used to construct a concrete path to the "Foo" details page.
+We use the `useRouteRef` hook to create a link generator function that returns the details page path. First we need to check whether the route is available, the link generator function will be `undefined` if it isn't. This can also happen in app root elements rendered before the app is finalized, in which case `useRouteRef` returns `undefined` initially and updates automatically once the app finishes finalizing. We then call the link generator, passing it an object with the kind, namespace, and name. These parameters are used to construct a concrete path to the "Foo" details page.
 
 Let's see how the details page can get the parameters from the URL:
 
