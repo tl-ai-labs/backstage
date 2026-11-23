@@ -613,4 +613,58 @@ describe('ReviewState', () => {
     // handles options for property in dependencies in third schema
     expect(queryByRole('row', { name: 'Test 5 bar5' })).toBeInTheDocument();
   });
+
+  it('should resolve review options for cross-step if/then schemas', () => {
+    const formState = {
+      isMobileSdk: true,
+      sdkPlatform: 'iOS',
+    };
+
+    const schemas: ParsedTemplateSchema[] = [
+      {
+        mergedSchema: {
+          type: 'object',
+          properties: {
+            isMobileSdk: {
+              type: 'boolean',
+              title: 'Is this a mobile SDK?',
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 1',
+        uiSchema: {},
+      },
+      {
+        mergedSchema: {
+          type: 'object',
+          if: {
+            properties: {
+              isMobileSdk: { const: true },
+            },
+            required: ['isMobileSdk'],
+          },
+          then: {
+            properties: {
+              sdkPlatform: {
+                type: 'string',
+                title: 'SDK Platform',
+              },
+            },
+          },
+        },
+        schema: {},
+        title: 'Step 2',
+        uiSchema: {},
+      },
+    ];
+
+    const { getByRole } = render(
+      <ReviewState formState={formState} schemas={schemas} />,
+    );
+
+    expect(
+      getByRole('row', { name: 'SDK Platform iOS' }),
+    ).toBeInTheDocument();
+  });
 });

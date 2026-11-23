@@ -40,26 +40,17 @@ export function findSchemaForKey(
   for (const step of schemas) {
     /*
       To determine if a key is defined in a schema we need to call getSchema
-      with an empty form state. Otherwise, it will never return undefined as it
-      will fallback to a default schema based on the form state. 
+      without the target key in the data. Otherwise, json-schema-library will
+      never return undefined as it falls back to a default schema inferred from
+      the target key's value.
 
-      An exception to this is when your schema is dynamic i.e. using dependencies 
-      because the form state is required for generating the schema. In this case,
-      we add only the dependencies data to the getSchema call.
+      Other keys from formState are kept so dynamic schemas using dependencies
+      or if/then/else (including cross-step conditions) can be evaluated.
     */
 
     const schema = step.mergedSchema;
 
-    // Declare data to be a subset of formState
-    const data: typeof formState = {};
-
-    if (schema.dependencies && isJsonObject(schema.dependencies)) {
-      for (const dep in schema.dependencies) {
-        if (formState.hasOwnProperty(dep)) {
-          data[dep] = formState[dep]; // Add each dependency key from formState
-        }
-      }
-    }
+    const { [key]: _omit, ...data } = formState;
 
     const draft = new JSONSchema(schema);
     const res = draft.getSchema({

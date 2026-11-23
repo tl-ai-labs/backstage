@@ -717,6 +717,95 @@ catalogFilter:
 You may specify custom JSON Schema validation messages as supported by the
 [ajv-errors](https://github.com/ajv-validator/ajv-errors) plugin library to [ajv](https://github.com/ajv-validator/ajv).
 
+### Conditional fields across steps
+
+A parameter step can show, hide, or require fields based on answers given in an
+earlier step. Use standard JSON Schema `if`/`then`/`else` or `dependencies` and
+reference the earlier step's field by its plain property name. Conditions are
+evaluated against all answers collected so far (earlier steps plus the current
+step), and earlier-step fields are neither re-rendered nor re-validated on later
+steps.
+
+If a user navigates back to an earlier step and changes an answer so that a
+later-step conditional field is no longer active, that field is hidden and
+omitted from both the **Review** step and the submitted parameter values.
+
+The following example uses `if`/`then` to ask for mobile SDK details in step 2
+only when the user enables `isMobileSdk` in step 1:
+
+```yaml
+spec:
+  parameters:
+    - title: Project basics
+      required:
+        - name
+      properties:
+        name:
+          title: Name
+          type: string
+        isMobileSdk:
+          title: Is this a mobile SDK?
+          type: boolean
+          default: false
+    - title: Configuration
+      properties:
+        description:
+          title: Description
+          type: string
+      if:
+        properties:
+          isMobileSdk:
+            const: true
+        required:
+          - isMobileSdk
+      then:
+        properties:
+          sdkPlatform:
+            title: SDK Platform
+            type: string
+            enum:
+              - iOS
+              - Android
+              - Cross-platform
+        required:
+          - sdkPlatform
+```
+
+You can also use JSON Schema `dependencies` referencing an earlier step's
+property name:
+
+```yaml
+spec:
+  parameters:
+    - title: Project basics
+      properties:
+        isMobileSdk:
+          title: Is this a mobile SDK?
+          type: boolean
+          default: false
+    - title: Configuration
+      dependencies:
+        isMobileSdk:
+          oneOf:
+            - properties:
+                isMobileSdk:
+                  const: true
+                sdkPlatform:
+                  title: SDK Platform
+                  type: string
+              required:
+                - sdkPlatform
+            - properties:
+                isMobileSdk:
+                  const: false
+```
+
+:::note
+In JSON Schema, an `if` block with `properties` matches when the referenced
+property is absent. Set `default: false` on boolean flags or include `required`
+in the `if` block so the condition only matches when the flag is explicitly set.
+:::
+
 ## `spec.steps` - `Action[]`
 
 The `steps` is an array of the things that you want to happen part of this
