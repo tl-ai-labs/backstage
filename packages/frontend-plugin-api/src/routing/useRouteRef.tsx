@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
-import { useSyncExternalStore } from 'use-sync-external-store/shim';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';

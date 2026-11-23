@@ -35,7 +35,7 @@ import {
   RouteRef,
 } from '@backstage/core-plugin-api';
 import { MatcherFunction, RenderResult } from '@testing-library/react';
-import { LegacyRootOption, renderWithEffects } from './testingLibrary';
+import { renderWithEffects } from './testingLibrary';
 import { defaultApis } from './defaultApis';
 import { mockApis } from './mockApis';
 
@@ -254,7 +254,7 @@ export function wrapInTestApp(
  */
 export async function renderInTestApp(
   Component: ComponentType<PropsWithChildren<{}>> | ReactNode,
-  options: TestAppOptions & LegacyRootOption = {},
+  options: TestAppOptions = {},
 ): Promise<RenderResult> {
   let wrappedElement: ReactElement;
   if (Component instanceof Function) {
@@ -262,11 +262,9 @@ export async function renderInTestApp(
   } else {
     wrappedElement = Component as ReactElement;
   }
-  const { legacyRoot } = options;
 
   return renderWithEffects(wrappedElement, {
     wrapper: createTestAppWrapper(options),
-    legacyRoot,
   });
 }
 
