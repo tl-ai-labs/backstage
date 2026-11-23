@@ -56,6 +56,11 @@ import {
 } from './createAsyncValidators';
 import { ErrorListTemplate } from './ErrorListTemplate';
 import * as FieldOverrides from './FieldOverrides';
+import {
+  collectSchemaPropertyKeys,
+  pruneInactiveFormData,
+  resolveCrossStepSchema,
+} from './resolveStepSchema';
 import { hasErrors } from './utils';
 
 const validator = customizeValidator();
@@ -174,6 +179,26 @@ export const Stepper = (stepperProps: StepperProps) => {
 
   const currentStep = useTransformSchemaToProps(steps[activeStep], { layouts });
 
+  const earlierStepKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (let i = 0; i < activeStep; i++) {
+      collectSchemaPropertyKeys(steps[i]?.schema, keys);
+    }
+    return keys;
+  }, [steps, activeStep]);
+
+  const resolvedStepSchema = useMemo(() => {
+    if (!currentStep?.schema) {
+      return undefined;
+    }
+    return resolveCrossStepSchema(
+      currentStep.schema,
+      stepsState,
+      earlierStepKeys,
+      validator,
+    );
+  }, [currentStep?.schema, stepsState, earlierStepKeys]);
+
   const {
     formContext: propFormContext,
     uiSchema: propUiSchema,
@@ -198,12 +223,17 @@ export const Stepper = (stepperProps: StepperProps) => {
       setErrors(undefined);
       setIsValidating(true);
 
-      const returnedValidation = await validation(formData);
+      const nextState = pruneInactiveFormData(
+        steps,
+        { ...stepsState, ...formData },
+        validator,
+      );
 
-      setStepsState(current => ({
-        ...current,
-        ...formData,
-      }));
+      const returnedValidation = await validation(nextState);
+
+      setStepsState(current =>
+        pruneInactiveFormData(steps, { ...current, ...formData }, validator),
+      );
 
       setIsValidating(false);
 
@@ -218,7 +248,7 @@ export const Stepper = (stepperProps: StepperProps) => {
         });
       }
     },
-    [validation, analytics],
+    [validation, analytics, steps, stepsState],
   );
 
   useEffect(() => {
@@ -295,7 +325,7 @@ export const Stepper = (stepperProps: StepperProps) => {
             extraErrors={errors as unknown as ErrorSchema}
             formData={stepsState}
             formContext={{ ...propFormContext, formData: stepsState }}
-            schema={currentStep.schema}
+            schema={resolvedStepSchema ?? currentStep.schema}
             uiSchema={mergedUiSchema}
             onSubmit={handleNext}
             fields={fields}

@@ -16,7 +16,7 @@
 import { renderInTestApp } from '@backstage/test-utils';
 import { JsonValue } from '@backstage/types';
 import type { RJSFValidationError } from '@rjsf/utils';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import { FieldExtensionComponentProps } from '../../../extensions';
@@ -919,6 +919,243 @@ describe('Stepper', () => {
           thing: { repoOrg: 'backstage' },
         }),
       );
+    });
+  });
+
+  describe('cross-step conditional fields', () => {
+    beforeEach(() => {
+      window.history.replaceState({}, '', '/');
+    });
+
+    const assertCrossStepFlow = async (manifest: TemplateParameterSchema) => {
+      const onCreate = jest.fn();
+
+      await renderInTestApp(
+        <SecretsContextProvider>
+          <Stepper
+            manifest={manifest}
+            extensions={[]}
+            onCreate={onCreate}
+            formProps={{ noHtml5Validate: true }}
+          />
+        </SecretsContextProvider>,
+      );
+
+      // Step 1: leave isMobileSdk unchecked (default false) and advance
+      fireEvent.change(
+        await screen.findByRole('textbox', { name: 'Component Name' }),
+        { target: { value: 'my-service' } },
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      // Step 2: SDK Platform should not appear and should not block Review
+      await screen.findByRole('textbox', { name: 'General Note' });
+      expect(
+        screen.queryByRole('textbox', { name: /SDK Platform/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: /Is this a mobile SDK/ }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByRole('textbox', { name: 'General Note' }), {
+        target: { value: 'keep me' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      await screen.findByRole('button', { name: 'Create' });
+
+      // Go back to Step 1 and enable isMobileSdk
+      fireEvent.click(screen.getByLabelText('Step 1'));
+      const sdkCheckbox = await screen.findByRole('checkbox', {
+        name: 'Is this a mobile SDK?',
+      });
+      fireEvent.click(sdkCheckbox);
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      // Step 2: SDK Platform appears, Step 1 field is not re-rendered, and required validation applies
+      const sdkPlatformInput = await screen.findByRole('textbox', {
+        name: /SDK Platform/,
+      });
+      expect(sdkPlatformInput).toBeRequired();
+      expect(
+        screen.queryByRole('checkbox', { name: /Is this a mobile SDK/ }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      expect(
+        await screen.findByText("must have required property 'SDK Platform'"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Create' }),
+      ).not.toBeInTheDocument();
+
+      // Fill SDK Platform and proceed to Review
+      fireEvent.change(sdkPlatformInput, { target: { value: 'iOS' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+
+      expect(
+        await screen.findByRole('row', { name: 'SDK Platform iOS' }),
+      ).toBeInTheDocument();
+
+      // Go back to Step 1, unset isMobileSdk, and proceed to Review
+      fireEvent.click(screen.getByLabelText('Step 1'));
+      fireEvent.click(
+        await screen.findByRole('checkbox', {
+          name: 'Is this a mobile SDK?',
+        }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      await screen.findByRole('textbox', { name: 'General Note' });
+      expect(
+        screen.queryByRole('textbox', { name: /SDK Platform/ }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+      const createButton = await screen.findByRole('button', {
+        name: 'Create',
+      });
+
+      expect(
+        screen.queryByRole('row', { name: /SDK Platform/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('cell', { name: 'iOS' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('row', { name: 'Component Name my-service' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('row', { name: 'General Note keep me' }),
+      ).toBeInTheDocument();
+
+      fireEvent.click(createButton);
+      await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+
+      return onCreate;
+    };
+
+    it('should evaluate if/then conditions against earlier-step answers and prune hidden fields', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Mobile SDK Template (if/then)',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string',
+                  title: 'Component Name',
+                },
+                isMobileSdk: {
+                  type: 'boolean',
+                  title: 'Is this a mobile SDK?',
+                  default: false,
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                generalNote: {
+                  type: 'string',
+                  title: 'General Note',
+                },
+              },
+              if: {
+                properties: {
+                  isMobileSdk: { const: true },
+                },
+                required: ['isMobileSdk'],
+              },
+              then: {
+                properties: {
+                  sdkPlatform: {
+                    type: 'string',
+                    title: 'SDK Platform',
+                  },
+                },
+                required: ['sdkPlatform'],
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = await assertCrossStepFlow(manifest);
+      expect(onCreate).toHaveBeenCalledWith({
+        name: 'my-service',
+        isMobileSdk: false,
+        generalNote: 'keep me',
+      });
+    });
+
+    it('should evaluate dependencies against earlier-step answers and prune hidden fields', async () => {
+      const manifest: TemplateParameterSchema = {
+        title: 'Mobile SDK Template (dependencies)',
+        steps: [
+          {
+            title: 'Step 1',
+            schema: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string',
+                  title: 'Component Name',
+                },
+                isMobileSdk: {
+                  type: 'boolean',
+                  title: 'Is this a mobile SDK?',
+                  default: false,
+                },
+              },
+            },
+          },
+          {
+            title: 'Step 2',
+            schema: {
+              type: 'object',
+              properties: {
+                generalNote: {
+                  type: 'string',
+                  title: 'General Note',
+                },
+              },
+              dependencies: {
+                isMobileSdk: {
+                  oneOf: [
+                    {
+                      properties: {
+                        isMobileSdk: { const: true },
+                        sdkPlatform: {
+                          type: 'string',
+                          title: 'SDK Platform',
+                        },
+                      },
+                      required: ['sdkPlatform'],
+                    },
+                    {
+                      properties: {
+                        isMobileSdk: { const: false },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      const onCreate = await assertCrossStepFlow(manifest);
+      expect(onCreate).toHaveBeenCalledWith({
+        name: 'my-service',
+        isMobileSdk: false,
+        generalNote: 'keep me',
+      });
     });
   });
 });
