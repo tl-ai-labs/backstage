@@ -20,10 +20,12 @@ import {
   discoveryApiRef,
   fetchApiRef,
 } from '@backstage/core-plugin-api';
+import { createCardExtension } from '@backstage/plugin-home-react';
 
 import { rootRouteRef } from './routes';
 import { notificationsApiRef } from './api/NotificationsApi';
 import { NotificationsClient } from './api';
+import type { HomePageUnreadNotificationsProps } from './components/HomePageUnreadNotifications';
 
 /** @public */
 export const notificationsPlugin = createPlugin({
@@ -48,5 +50,23 @@ export const NotificationsPage = notificationsPlugin.provide(
     component: () =>
       import('./components/NotificationsPage').then(m => m.NotificationsPage),
     mountPoint: rootRouteRef,
+  }),
+);
+
+/**
+ * A home page card that lists the signed-in user's latest unread notifications.
+ *
+ * @public
+ */
+export const HomePageUnreadNotifications = notificationsPlugin.provide(
+  createCardExtension<HomePageUnreadNotificationsProps>({
+    name: 'HomePageUnreadNotifications',
+    title: 'Unread notifications',
+    description: 'Shows your latest unread notifications',
+    components: () => import('./components/HomePageUnreadNotifications'),
+    layout: {
+      height: { minRows: 3 },
+      width: { minColumns: 3 },
+    },
   }),
 );

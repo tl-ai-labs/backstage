@@ -17,11 +17,22 @@
 import { useState, Suspense } from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import SettingsIcon from '@material-ui/icons/Settings';
-import { InfoCard } from '@backstage/core-components';
+import {
+  InfoCard,
+  Progress as DefaultProgress,
+} from '@backstage/core-components';
 import { SettingsModal } from './components';
-import { createReactExtension, useApp } from '@backstage/core-plugin-api';
+import {
+  createReactExtension,
+  useApiHolder,
+  useApp,
+} from '@backstage/core-plugin-api';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
-import { useTranslationRef } from '@backstage/frontend-plugin-api';
+import {
+  errorApiRef,
+  translationApiRef,
+  useTranslationRef,
+} from '@backstage/frontend-plugin-api';
 import { homeReactTranslationRef } from './translation';
 
 /**
@@ -121,6 +132,35 @@ type CardExtensionComponentProps<T> = CardExtensionProps<T> &
     overrideTitle?: string;
   };
 
+function useProgressComponent() {
+  try {
+    return useApp().getComponents().Progress;
+  } catch {
+    return DefaultProgress;
+  }
+}
+
+function useOptionalApiHolder() {
+  try {
+    return useApiHolder();
+  } catch {
+    return undefined;
+  }
+}
+
+function TranslatedSettingsButtonLabel() {
+  const { t } = useTranslationRef(homeReactTranslationRef);
+  return <>{t('cardExtension.settingsButtonTitle')}</>;
+}
+
+function SettingsButtonLabel() {
+  const apiHolder = useOptionalApiHolder();
+  if (apiHolder?.get(translationApiRef) && apiHolder?.get(errorApiRef)) {
+    return <TranslatedSettingsButtonLabel />;
+  }
+  return <>Settings</>;
+}
+
 export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
   const {
     Renderer,
@@ -132,10 +172,8 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
     title,
     ...childProps
   } = props;
-  const app = useApp();
-  const { Progress } = app.getComponents();
+  const Progress = useProgressComponent();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { t } = useTranslationRef(homeReactTranslationRef);
 
   if (Renderer) {
     return (
@@ -162,7 +200,7 @@ export function CardExtension<T>(props: CardExtensionComponentProps<T>) {
           action: (
             <IconButton onClick={() => setSettingsOpen(true)}>
               <SettingsIcon>
-                {t('cardExtension.settingsButtonTitle')}
+                <SettingsButtonLabel />
               </SettingsIcon>
             </IconButton>
           ),
