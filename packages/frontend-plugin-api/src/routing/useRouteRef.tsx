@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnyRouteRefParams } from './types';
 import { RouteRef } from './RouteRef';
@@ -29,6 +29,10 @@ import { RouteFunc, routeResolutionApiRef, useApi } from '../apis';
  *
  * See {@link https://backstage.io/docs/plugins/composability#routing-system}
  *
+ * May return `undefined` before the app is finalized (for example in app root
+ * elements rendered during bootstrap), and will automatically re-resolve once
+ * the app is finalized and routes become available.
+ *
  * @param routeRef - The ref to route that should be converted to URL.
  * @returns A function that will in turn return the concrete URL of the `routeRef`, or `undefined` if the route is not available.
  * @public
@@ -41,10 +45,18 @@ export function useRouteRef<TParams extends AnyRouteRefParams>(
 ): RouteFunc<TParams> | undefined {
   const { pathname } = useLocation();
   const routeResolutionApi = useApi(routeResolutionApiRef);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    return routeResolutionApi.subscribe?.(() => {
+      setVersion(v => v + 1);
+    });
+  }, [routeResolutionApi]);
 
   const routeFunc = useMemo(
     () => routeResolutionApi.resolve(routeRef, { sourcePath: pathname }),
-    [routeResolutionApi, routeRef, pathname],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [routeResolutionApi, routeRef, pathname, version],
   );
 
   return routeFunc;

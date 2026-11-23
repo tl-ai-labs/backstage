@@ -2079,6 +2079,7 @@ export interface RouteResolutionApi {
       sourcePath?: string;
     },
   ): RouteFunc<TParams> | undefined;
+  subscribe?(listener: () => void): () => void;
 }
 
 // @public
